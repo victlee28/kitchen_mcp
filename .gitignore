@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.egg-info/
+.idea/
+.env
+logs/
+renders/
+*.db
+!fixtures/*.json
+
+# Local database exports
+database_export.json
+# Archived project snapshots
+_ban_cu_v*/

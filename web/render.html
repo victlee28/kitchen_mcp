@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Render ảnh từ JSON</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body{height:auto;min-height:100vh}
+    .wrap{max-width:1200px;margin:0 auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+    .card{background:#fff;border:1px solid #ddd6cb;border-radius:10px;padding:12px}
+    .bar{display:flex;flex-wrap:wrap;gap:10px;align-items:end}.bar label{display:flex;flex-direction:column;font-size:12px;color:#6d665c;gap:2px}
+    .bar input[type=number]{width:90px}.bar select{min-width:260px}
+    #views{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;margin-top:8px}
+    #out{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:12px}
+    #out figure{margin:0;background:#fff;border:1px solid #ddd6cb;border-radius:8px;padding:8px}
+    #out img{width:100%;border-radius:4px;display:block}#out figcaption{font-size:12px;color:#6d665c;margin-top:6px;display:flex;justify-content:space-between;gap:8px}
+    .ok{color:#267052}.bad{color:#a33b2b}
+  </style>
+</head>
+<body>
+  <header><h1>Render ảnh từ JSON three.js</h1><span class="spacer"></span><a href="./" style="color:#c8c0b4">← Kitchen Editor</a><span id="status" class="status"></span></header>
+  <div class="wrap">
+    <div class="card">
+      <div class="bar">
+        <label>Thiết kế<select id="design"><option value="">— chọn —</option></select></label>
+        <span class="muted">hoặc</span>
+        <label class="file">Mở file JSON three.js<input id="file" type="file" accept=".json,application/json"></label>
+        <label>Rộng<input id="w" type="number" value="1280" min="256" max="4096" step="16"></label>
+        <label>Cao<input id="h" type="number" value="960" min="256" max="4096" step="16"></label>
+        <label>Độ sáng<input id="exp" type="number" value="1.0" min="0.2" max="3" step="0.1"></label>
+        <label><span><input id="save" type="checkbox" checked> Lưu vào thiết kế làm ảnh gốc</span></label>
+        <button id="go" disabled>Render</button>
+        <button id="dlAll" class="ghost" hidden>Tải tất cả PNG</button>
+      </div>
+      <div id="src" class="muted small"></div>
+      <div id="views"></div>
+    </div>
+    <div id="out"></div>
+  </div>
+  <script type="importmap">
+  {"imports":{"three":"./vendor/three/build/three.module.min.js","three/addons/":"./vendor/three/examples/jsm/"}}
+  </script>
+  <script type="module" src="render-page.js"></script>
+</body>
+</html>

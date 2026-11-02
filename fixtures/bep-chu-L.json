@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 2,
+  "ten": "Tủ bếp chữ L – gỗ sồi và trắng",
+  "donVi": "mm",
+  "nguon": "Ước lượng từ phối cảnh ảnh render (hiệu chỉnh camera theo 18 điểm, sai số trung bình 1,4 px), quy về chiều cao mặt bếp 900 mm. Sai số kích thước khoảng ±5–10%.",
+  "goc": "Gốc toạ độ ở góc trong giữa tường sau và tường phải; \"tu\" là khoảng cách từ góc dọc theo tường.",
+  "chung": {
+    "lenChan": 110, "deMatDa": 840, "matDa": 900, "dayMatDa": 60, "sauTuDuoi": 550, "nhoMatDa": 20,
+    "dayTuTren": 1530, "chiaTangTren": 2280, "dinhTu": 2610, "tran": 2640, "sauTuTren": 320,
+    "dayCanh": 18, "kheCanh": 3, "gachOp": [75, 300], "gachNen": [800, 800],
+    "vatLieu": {
+      "tuDuoi": "Laminate vân gỗ sồi sáng", "tuCao": "Laminate vân gỗ sồi sáng", "tuTren": "Trắng mờ",
+      "keGoc": "Vân gỗ sồi", "matDa": "Đá nhân tạo trắng", "opTuong": "Gạch thẻ trắng 75×300 xếp dọc"
+    }
+  },
+  "module": [
+    {"ma": "TC1", "loai": "cao-tu-lanh", "ten": "Tủ cao tủ lạnh", "tuong": "sau", "tu": 1250, "rong": 670, "y": 0, "cao": 2610, "sau": 640, "canh": [335, 335], "hoc": 1630, "ghiChu": "Hốc tủ lạnh cao 1630, phía trên 2 cánh"},
+    {"ma": "TD1", "loai": "duoi", "ten": "Tủ dưới 2 cánh", "tuong": "sau", "tu": 550, "rong": 700, "y": 0, "cao": 840, "sau": 550, "canh": [350, 350]},
+    {"ma": "TT1", "loai": "tren", "ten": "Tủ trên 2 cánh", "tuong": "sau", "tu": 610, "rong": 640, "y": 1530, "cao": 750, "sau": 320, "canh": [320, 320]},
+    {"ma": "TT2", "loai": "tren-noc", "ten": "Tủ nóc 1 cánh", "tuong": "sau", "tu": 610, "rong": 640, "y": 2280, "cao": 330, "sau": 320, "canh": [640]},
+    {"ma": "KG1", "loai": "ke-goc", "ten": "Kệ góc mở chữ L, 3 ngăn, có LED", "tuong": "goc", "canhSau": 610, "canhPhai": 630, "y": 1530, "cao": 1080, "sau": 320, "soNgan": 3, "ghiChu": "Cánh kệ dọc tường sau 610, dọc tường phải 630"},
+    {"ma": "TD2", "loai": "duoi-chau-goc", "ten": "Tủ chậu rửa góc 2 cánh", "tuong": "phai", "tu": 0, "rong": 1440, "y": 0, "cao": 840, "sau": 550, "canh": [450, 440], "gocKhuat": 550, "ghiChu": "550 đầu là phần góc khuất sau dãy tường sau"},
+    {"ma": "TD3", "loai": "duoi", "ten": "Tủ dưới 1 cánh", "tuong": "phai", "tu": 1440, "rong": 370, "y": 0, "cao": 840, "sau": 550, "canh": [370]},
+    {"ma": "TD4", "loai": "duoi-lo", "ten": "Hộc lò vi sóng và ngăn kéo", "tuong": "phai", "tu": 1810, "rong": 630, "y": 0, "cao": 840, "sau": 550, "matTruoc": [{"loai": "hoc", "cao": 420}, {"loai": "ngan-keo", "cao": 270}], "ghiChu": "Hộc cao 420, ngăn kéo dưới cao 270"},
+    {"ma": "TD5", "loai": "duoi-cuoi", "ten": "Tủ 1 cánh cuối dãy", "tuong": "phai", "tu": 2440, "rong": 390, "y": 0, "cao": 840, "sau": 550, "canh": [372], "tamHong": 18, "ghiChu": "Gồm tấm hông cuối 18"},
+    {"ma": "TT3", "loai": "tren-kinh", "ten": "Tủ cánh kính 2 cánh", "tuong": "phai", "tu": 630, "rong": 780, "y": 1530, "cao": 750, "sau": 320, "canh": [390, 390], "ghiChu": "1 đợt giữa, để bát đĩa"},
+    {"ma": "TT4", "loai": "tren", "ten": "Tủ trên 1 cánh", "tuong": "phai", "tu": 1410, "rong": 350, "y": 1530, "cao": 750, "sau": 320, "canh": [350]},
+    {"ma": "TT5", "loai": "tren-hut-mui", "ten": "Tủ trên máy hút mùi 2 cánh", "tuong": "phai", "tu": 1760, "rong": 740, "y": 1700, "cao": 580, "sau": 320, "canh": [370, 370]},
+    {"ma": "TT6", "loai": "tren", "ten": "Tủ trên 1 cánh cuối dãy", "tuong": "phai", "tu": 2500, "rong": 330, "y": 1530, "cao": 750, "sau": 320, "canh": [330]},
+    {"ma": "TT7", "loai": "tren-noc", "ten": "Tủ nóc 1 cánh", "tuong": "phai", "tu": 630, "rong": 800, "y": 2280, "cao": 330, "sau": 320, "canh": [800]},
+    {"ma": "TT8", "loai": "tren-noc", "ten": "Tủ nóc 1 cánh", "tuong": "phai", "tu": 1430, "rong": 690, "y": 2280, "cao": 330, "sau": 320, "canh": [690]},
+    {"ma": "TT9", "loai": "tren-noc", "ten": "Tủ nóc 1 cánh cuối dãy", "tuong": "phai", "tu": 2120, "rong": 710, "y": 2280, "cao": 330, "sau": 320, "canh": [710]}
+  ],
+  "thietBi": [
+    {"ma": "TB1", "loai": "tu-lanh", "ten": "Tủ lạnh 2 cánh, ngăn đá trên", "kichThuoc": "600 × 1600 × 620", "viTri": "Trong hốc TC1", "module": "TC1"},
+    {"ma": "TB2", "loai": "chau", "ten": "Chậu rửa đôi màu tối, lắp dương", "kichThuoc": "780 × 410", "viTri": "Trên TD2, tâm cách góc 1000", "tuong": "phai", "tam": 1000},
+    {"ma": "TB3", "loai": "voi", "ten": "Vòi rửa cổ cao", "kichThuoc": "cao 310", "viTri": "Sau chậu rửa", "tuong": "phai", "tam": 1000},
+    {"ma": "TB4", "loai": "bep", "ten": "Bếp âm 2 vùng nấu, mặt kính đen", "kichThuoc": "730 × 430", "viTri": "Tâm cách góc 2130", "tuong": "phai", "tam": 2130},
+    {"ma": "TB5", "loai": "hut-mui", "ten": "Máy hút mùi âm tủ", "kichThuoc": "730 × 165", "viTri": "Dưới TT5", "module": "TT5"},
+    {"ma": "TB6", "loai": "lo", "ten": "Lò vi sóng âm tủ", "kichThuoc": "560 × 350", "viTri": "Trong hộc TD4", "module": "TD4"},
+    {"ma": "LED", "loai": "den", "ten": "Đèn LED hắt dưới tủ trên và trong kệ góc", "kichThuoc": "ánh sáng ấm", "viTri": "Mép trước đáy tủ"}
+  ],
+  "gocNhin": {
+    "goc-anh-goc": {"ten": "Góc ảnh gốc", "viTri": [-3.9157, 1.3549, 5.2267], "nhinVao": [-2.177, 1.3325, 3.0833], "fovDoc": 45.62},
+    "day-dai": {"ten": "Chính diện dãy dài", "viTri": [-2.75, 1.36, 1.75], "nhinVao": [0, 1.3, 1.75], "fovDoc": 56},
+    "tuong-sau": {"ten": "Chính diện tường sau", "viTri": [-1.15, 1.35, 4.6], "nhinVao": [-0.95, 1.25, 0.2], "fovDoc": 44},
+    "goc-trai": {"ten": "Từ phía tủ lạnh", "viTri": [-3.3, 1.62, 1.05], "nhinVao": [-0.35, 1.22, 2.3], "fovDoc": 54},
+    "tren-cao": {"ten": "Toàn cảnh từ trên", "viTri": [-3.55, 4.35, 4.75], "nhinVao": [-0.85, 0.75, 1.1], "fovDoc": 44},
+    "ke-goc": {"ten": "Cận cảnh kệ góc", "viTri": [-1.6, 1.62, 1.95], "nhinVao": [-0.35, 1.92, 0.5], "fovDoc": 50},
+    "khu-nau": {"ten": "Cận cảnh khu nấu", "viTri": [-1.95, 1.62, 3.3], "nhinVao": [-0.3, 1.15, 2.05], "fovDoc": 48},
+    "mat-bang": {"ten": "Mặt bằng", "viTri": [-0.96, 6, 1.4201], "nhinVao": [-0.96, 0, 1.42], "fovDoc": 36}
+  }
+}

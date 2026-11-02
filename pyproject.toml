@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kitchen-design-mcp"
+version = "0.3.0"
+description = "Thiết kế tủ bếp tham số: MCP server, web editor, rule engine, render ảnh điều khiển cho AI"
+requires-python = ">=3.11"
+dependencies = [
+  "mcp>=2.3,<3",
+  "pydantic>=2.12,<3",
+  "numpy>=1.26",
+  "pillow>=10",
+  "jsonschema>=4.20",
+]
+
+[project.scripts]
+kitchen-design-mcp = "server:main"
+
+[tool.setuptools]
+py-modules = ["server", "web_server"]
+packages = ["kitchen"]

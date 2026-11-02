@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Kitchen Editor</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1>Kitchen Editor</h1>
+    <select id="designSelect" aria-label="Thiết kế"></select>
+    <span id="revInfo" class="muted"></span>
+    <label class="muted">Tiêu chuẩn <select id="qgSelect" aria-label="Quốc gia áp tiêu chuẩn"><option value="">theo thiết kế</option></select></label>
+    <span class="spacer"></span>
+    <a id="openRender" href="render.html" target="_blank" title="Render ảnh từ JSON three.js trong trình duyệt">🖼 Render ảnh</a>
+    <button id="undo" title="Quay về rev trước">↶ Hoàn tác</button>
+    <span id="status" class="status"></span>
+  </header>
+  <main>
+    <aside class="panel" id="left">
+      <section>
+        <h2>Tạo thiết kế</h2>
+        <textarea id="prompt" rows="3" placeholder="Ví dụ: Bếp chữ L cạnh dài 2,8m và 3,2m, có tủ lạnh, mặt đá trắng"></textarea>
+        <button id="fromPrompt">Tạo từ mô tả</button>
+        <details>
+          <summary>Tạo từ mẫu</summary>
+          <div class="grid2">
+            <label>Hình<select id="mHinh"><option>I</option><option>L</option></select></label>
+            <label>Tường sau (mm)<input id="mSau" type="number" value="3000" step="10"></label>
+            <label>Tường phải (mm)<input id="mPhai" type="number" value="2400" step="10"></label>
+            <label>Đỉnh tủ (mm)<input id="mDinh" type="number" value="2200" step="10"></label>
+            <label><input id="mTuLanh" type="checkbox"> Tủ lạnh</label>
+            <label><input id="mNoc" type="checkbox"> Tủ nóc</label>
+            <label>Phong cách<select id="mStyle"><option>Modern</option><option>Classic</option><option>Neoclassical</option><option>Minimalist</option></select></label>
+          </div>
+          <button id="fromTemplate">Tạo từ mẫu</button>
+        </details>
+        <label class="file">Nhập spec JSON<input id="importFile" type="file" accept=".json,application/json"></label>
+        <button id="exportSpec">Tải spec JSON</button>
+        <button id="exportThree" title="JSON theo Complete Kitchen Three.js Scene Schema">Tải JSON three.js</button>
+      </section>
+      <section id="aiExport">
+        <h2>Xuất cho AI tạo ảnh</h2>
+        <p id="aiInfo" class="muted small">Chưa có thiết kế</p>
+        <label class="wide"><span><input id="aiAuto" type="checkbox" checked> Tự xuất JSON sau mỗi lần tạo / sửa</span></label>
+        <label>Ánh sáng ảnh<select id="aiLight" title="Câu lệnh luôn kèm yêu cầu ảnh thật: máy ảnh kiến trúc, vật liệu, bóng tiếp xúc, khe cánh…"><option value="ban-ngay">Ban ngày, sáng tự nhiên</option><option value="nang-chieu">Nắng chiều ấm</option><option value="toi-am">Buổi tối, đèn ấm</option></select></label>
+        <div class="row">
+          <a id="aiJson" class="btn" href="#" download title="JSON gửi AI đã lọc: chỉ dẫn + ảnh đính kèm từng góc">Tải JSON gửi AI</a>
+          <button id="aiZip" type="button" title="Render ảnh còn thiếu, đóng gói JSON + ảnh nét/depth/render">Xuất gói kèm ảnh (.zip)</button>
+          <button id="aiView" type="button" title="Xem file JSON cuối cùng ngay trên trang">Xem JSON</button>
+        </div>
+        <div id="aiLinks" class="muted small"></div>
+      </section>
+      <section>
+        <h2>Phong cách &amp; phào</h2>
+        <div class="grid2">
+          <label>Phong cách<select id="pStyle"><option>Modern</option><option>Classic</option><option>Neoclassical</option><option>Transitional</option><option>Minimalist</option></select></label>
+          <span></span>
+          <label><input id="pCrown" type="checkbox"> Phào nóc</label>
+          <label>Mặt cắt<select id="pCrownProf"></select></label>
+          <label><input id="pBase" type="checkbox"> Phào chân</label>
+          <label>Mặt cắt<select id="pBaseProf"></select></label>
+          <label>Đầu hở<select id="pEnd"><option value="tra-ve-tuong">quay về tường</option><option value="cat-phang">cắt phẳng</option></select></label>
+          <canvas id="pPreview" width="120" height="80" title="Xem trước mặt cắt phào nóc"></canvas>
+        </div>
+        <button id="pApply">Áp dụng phào</button>
+      </section>
+      <section>
+        <h2>Kiểm tra quy tắc</h2>
+        <ul id="issues" class="issues"></ul>
+      </section>
+    </aside>
+    <section class="center">
+      <div class="tabs" role="tablist">
+        <button id="tab3d" class="tab on" role="tab" aria-selected="true">Mô hình 3D</button>
+        <button id="tabImg" class="tab" role="tab" aria-selected="false">Sửa ảnh theo lớp</button>
+      </div>
+      <div class="viewbar">
+        <label>Góc nhìn <select id="viewSelect"></select></label>
+        <span id="bar3d">
+          <button id="renderOne">Render góc này</button>
+          <button id="renderAll">Render tất cả góc</button>
+          <small class="muted">Kéo để xoay · cuộn để zoom · bấm vào tủ để chọn</small>
+        </span>
+        <span id="barImg" hidden>
+          <label><input id="showMask" type="checkbox" checked> Hiện mask</label>
+          <small id="imgInfo" class="muted"></small>
+        </span>
+      </div>
+      <div id="pane3d" class="pane">
+        <div id="viewport"></div>
+        <div id="renders" class="renders"></div>
+      </div>
+      <div id="paneImg" class="pane" hidden>
+        <div class="imgedit">
+          <div class="stagewrap">
+            <div id="stage" class="stage" title="Bấm vào ảnh để chọn chi tiết">
+              <img id="imgBase" alt="Ảnh gốc">
+              <img id="imgAfter" alt="Ảnh sau khi sửa" hidden>
+              <canvas id="maskOverlay"></canvas>
+            </div>
+            <label id="cmpWrap" class="cmp" hidden>Trước ◀ ▶ Sau <input id="cmpSlider" type="range" min="0" max="100" value="50"></label>
+          </div>
+          <div class="imgside">
+            <h3>Layer</h3>
+            <select id="layerSelect" aria-label="Layer"></select>
+            <div id="layerAlt" class="chips"></div>
+            <p id="layerInfo" class="muted small"></p>
+            <div class="grid2">
+              <label>Chế độ<select id="jMode"><option value="thu-nhanh">Thử nhanh (chỉ ảnh)</option><option value="thiet-ke">Sửa thiết kế</option></select></label>
+              <label>Backend<select id="jBackend"></select></label>
+              <label class="span2">Vật liệu mới<input id="jVat" type="text" placeholder="vd Laminate xanh rêu mờ"></label>
+              <label class="span2">Yêu cầu thêm<input id="jInstr" type="text" placeholder="vd matte sage green, fine wood grain"></label>
+              <label>Ảnh gốc<select id="jRef"><option value="auto">Ảnh đã duyệt gần nhất</option><option value="beauty">Render three.js</option><option value="albedo">Albedo (render)</option></select></label>
+              <label>Workflow<select id="jWf"></select></label>
+              <label class="span2">Ánh sáng ảnh đầy đủ (gen-0)<select id="jLight" title="Sửa vùng luôn bám ánh sáng ảnh gốc"><option value="ban-ngay">Ban ngày, sáng tự nhiên</option><option value="nang-chieu">Nắng chiều ấm</option><option value="toi-am">Buổi tối, đèn ấm</option></select></label>
+              <label class="span2">Cấu hình AI theo thao tác<select id="jThao" title="Workflow + trọng số ControlNet chọn sẵn theo loại việc"></select></label>
+            </div>
+            <button id="tAdd" type="button" title="Thêm layer đang chọn + vật liệu/yêu cầu vào danh sách việc">＋ Thêm vào danh sách việc</button>
+            <ol id="taskList" class="tasks"></ol>
+            <label class="wide"><span><input id="jPreview" type="checkbox" checked> Xem trước khi gửi (kiểm tra mask + chỉ dẫn rồi mới gửi AI)</span></label>
+            <button id="jCreate">Tạo job sửa</button>
+            <button id="jGen0" title="Sinh ảnh đầy đủ đầu tiên từ nét + depth">Gen-0</button>
+            <button id="tClear" type="button" class="ghost" hidden>Xóa danh sách</button>
+            <details id="hinhBox" class="hinhbox">
+              <summary>Sửa hình: xóa / thêm / thay vật</summary>
+              <p class="muted small">Áp thao tác lên bản sao thiết kế, render lại cùng camera, AI chỉ vẽ lại vùng thay đổi theo nét của thiết kế mới. Chấp nhận ảnh = ghi rev mới.</p>
+              <div class="grid2">
+                <label>Thao tác<select id="hLoai">
+                  <option value="xoa-module">Xóa module</option>
+                  <option value="kieu-canh">Đổi kiểu cánh</option>
+                  <option value="tay-nam">Đổi kiểu tay nắm (mọi tủ)</option>
+                  <option value="them-module">Thêm module (JSON)</option>
+                  <option value="op">Thao tác thiết kế (JSON, nâng cao)</option>
+                </select></label>
+                <label id="hMaWrap">Module<select id="hMa"></select></label>
+                <label id="hKieuWrap">Kiểu<select id="hKieu"></select></label>
+                <label id="hDonWrap" class="wide"><span><input id="hDonDay" type="checkbox"> Dồn các tủ phía sau lấp chỗ trống</span></label>
+                <label id="hJsonWrap" class="span2" hidden>JSON<textarea id="hJson" rows="4" placeholder='{"module": {...}, "sauModule": "TD3"}'></textarea></label>
+              </div>
+              <button id="hAdd" type="button" class="ghost">＋ Thêm thao tác</button>
+              <ol id="hList" class="tasks"></ol>
+              <button id="hCreate" type="button">Tạo job sửa hình</button>
+            </details>
+            <h3>Job</h3>
+            <ul id="jobList" class="jobs"></ul>
+            <div id="jobDetail" class="jobdetail" hidden></div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <aside class="panel" id="right">
+      <h2>Module</h2>
+      <ul id="moduleList" class="modules"></ul>
+      <form id="moduleForm" hidden>
+        <h3 id="formTitle"></h3>
+        <div class="grid2" id="formFields"></div>
+        <label class="wide">Cánh (mm, cách nhau dấu phẩy)<input name="canh" type="text"></label>
+        <label class="wide"><input name="donDay" type="checkbox" checked> Dồn dãy khi đổi kích thước</label>
+        <div class="row">
+          <button type="submit">Áp dụng</button>
+          <button type="button" id="addAfter">+ Thêm tủ phía sau</button>
+          <button type="button" id="removeModule" class="danger">Xóa</button>
+        </div>
+      </form>
+    </aside>
+  </main>
+  <dialog id="jsonView" class="jv">
+    <div class="jv-bar">
+      <b id="jvTitle">JSON</b><small id="jvMeta" class="muted"></small>
+      <span id="jvVariants" class="jv-variants" role="group" aria-label="Chọn bản JSON" hidden></span><span class="spacer"></span>
+      <button id="jvMode" type="button" class="ghost">Xem dạng chữ</button>
+      <button id="jvCopy" type="button" class="ghost">Chép</button>
+      <button id="jvDownload" type="button">Tải về</button>
+      <button id="jvClose" type="button" class="ghost" aria-label="Đóng">✕</button>
+    </div>
+    <div id="jvTree" class="jv-tree"></div>
+    <pre id="jvRaw" class="jv-raw" hidden></pre>
+  </dialog>
+  <script type="importmap">
+  {"imports":{"three":"./vendor/three/build/three.module.min.js",
+              "three/addons/":"./vendor/three/examples/jsm/"}}
+  </script>
+  <script type="module" src="app.js"></script>
+  <script type="module" src="json-view.js"></script>
+  <script type="module" src="imgedit.js"></script>
+</body>
+</html>
