@@ -21,70 +21,180 @@
     },
     "metadata": {
       "type": "object",
-      "required": ["designId", "projectName", "style"],
+      "required": [
+        "designId",
+        "projectName",
+        "style"
+      ],
       "properties": {
-        "designId": { "$ref": "#/$defs/id" },
-        "projectName": { "type": "string" },
-        "description": { "type": "string" },
+        "designId": {
+          "$ref": "#/$defs/id"
+        },
+        "projectName": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
         "style": {
           "type": "string",
-          "enum": ["Modern", "Classic", "Neoclassical", "Transitional", "Industrial", "Minimalist"]
+          "enum": [
+            "Modern",
+            "Classic",
+            "Neoclassical",
+            "Transitional",
+            "Industrial",
+            "Minimalist"
+          ]
         },
-        "revision": { "type": "integer", "minimum": 1, "default": 1 },
-        "author": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1
+        },
+        "author": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
       }
     },
     "units": {
       "type": "string",
-      "enum": ["mm", "cm", "m"],
+      "enum": [
+        "mm",
+        "cm",
+        "m"
+      ],
       "default": "mm",
       "description": "Units used in JSON data. Three.js render engine converts mm/cm to meters internally."
     },
     "coordinateSystem": {
       "type": "object",
-      "required": ["upAxis", "forwardAxis", "handedness"],
+      "required": [
+        "upAxis",
+        "forwardAxis",
+        "handedness"
+      ],
       "properties": {
-        "upAxis": { "type": "string", "enum": ["+Y", "+Z"], "default": "+Y" },
-        "forwardAxis": { "type": "string", "enum": ["+Z", "-Z", "+X"], "default": "+Z" },
-        "handedness": { "type": "string", "enum": ["right", "left"], "default": "right" },
-        "origin": { "type": "string", "enum": ["room_corner", "kitchen_inner_corner", "center_floor"], "default": "kitchen_inner_corner" },
-        "positionAnchor": { "type": "string", "enum": ["bottom_back_left", "bottom_center", "center"], "default": "bottom_back_left" }
+        "upAxis": {
+          "type": "string",
+          "enum": [
+            "+Y",
+            "+Z"
+          ],
+          "default": "+Y"
+        },
+        "forwardAxis": {
+          "type": "string",
+          "enum": [
+            "+Z",
+            "-Z",
+            "+X"
+          ],
+          "default": "+Z"
+        },
+        "handedness": {
+          "type": "string",
+          "enum": [
+            "right",
+            "left"
+          ],
+          "default": "right"
+        },
+        "origin": {
+          "type": "string",
+          "enum": [
+            "room_corner",
+            "kitchen_inner_corner",
+            "center_floor"
+          ],
+          "default": "kitchen_inner_corner"
+        },
+        "positionAnchor": {
+          "type": "string",
+          "enum": [
+            "bottom_back_left",
+            "bottom_center",
+            "center"
+          ],
+          "default": "bottom_back_left"
+        }
       }
     },
     "room": {
       "type": "object",
-      "required": ["dimensions", "walls", "floor"],
+      "required": [
+        "dimensions",
+        "walls",
+        "floor"
+      ],
       "properties": {
-        "dimensions": { "$ref": "#/$defs/dimensions" },
+        "dimensions": {
+          "$ref": "#/$defs/dimensions"
+        },
         "walls": {
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["id", "start", "end", "height", "thickness"],
+            "required": [
+              "id",
+              "start",
+              "end",
+              "height",
+              "thickness"
+            ],
             "properties": {
-              "id": { "$ref": "#/$defs/id" },
-              "start": { "$ref": "#/$defs/vec3" },
-              "end": { "$ref": "#/$defs/vec3" },
-              "height": { "type": "number", "exclusiveMinimum": 0 },
-              "thickness": { "type": "number", "exclusiveMinimum": 0 },
-              "materialId": { "$ref": "#/$defs/id" }
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "start": {
+                "$ref": "#/$defs/vec3"
+              },
+              "end": {
+                "$ref": "#/$defs/vec3"
+              },
+              "height": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "thickness": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "materialId": {
+                "$ref": "#/$defs/id"
+              }
             }
           }
         },
         "floor": {
           "type": "object",
-          "required": ["materialId"],
+          "required": [
+            "materialId"
+          ],
           "properties": {
-            "materialId": { "$ref": "#/$defs/id" },
-            "thickness": { "type": "number", "default": 0 }
+            "materialId": {
+              "$ref": "#/$defs/id"
+            },
+            "thickness": {
+              "type": "number",
+              "default": 0
+            }
           }
         },
         "ceiling": {
           "type": "object",
           "properties": {
-            "height": { "type": "number", "exclusiveMinimum": 0 },
-            "materialId": { "$ref": "#/$defs/id" }
+            "height": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "materialId": {
+              "$ref": "#/$defs/id"
+            }
           }
         }
       }
@@ -93,72 +203,164 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["id", "type", "color", "intensity"],
+        "required": [
+          "id",
+          "type",
+          "color",
+          "intensity"
+        ],
         "properties": {
-          "id": { "$ref": "#/$defs/id" },
-          "type": { "type": "string", "enum": ["AmbientLight", "DirectionalLight", "PointLight", "SpotLight", "HemisphereLight", "RectAreaLight"] },
-          "color": { "type": "string", "pattern": "^#([0-9a-fA-F]{6})$" },
-          "intensity": { "type": "number", "minimum": 0 },
-          "position": { "$ref": "#/$defs/vec3" },
-          "target": { "$ref": "#/$defs/vec3" },
-          "castShadow": { "type": "boolean", "default": false },
-          "decay": { "type": "number", "default": 2 },
-          "distance": { "type": "number", "default": 0 }
+          "id": {
+            "$ref": "#/$defs/id"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "AmbientLight",
+              "DirectionalLight",
+              "PointLight",
+              "SpotLight",
+              "HemisphereLight",
+              "RectAreaLight"
+            ]
+          },
+          "color": {
+            "type": "string",
+            "pattern": "^#([0-9a-fA-F]{6})$"
+          },
+          "intensity": {
+            "type": "number",
+            "minimum": 0
+          },
+          "position": {
+            "$ref": "#/$defs/vec3"
+          },
+          "target": {
+            "$ref": "#/$defs/vec3"
+          },
+          "castShadow": {
+            "type": "boolean",
+            "default": false
+          },
+          "decay": {
+            "type": "number",
+            "default": 2
+          },
+          "distance": {
+            "type": "number",
+            "default": 0
+          }
         }
       }
     },
     "materials": {
       "type": "array",
-      "items": { "$ref": "#/$defs/material" }
+      "items": {
+        "$ref": "#/$defs/material"
+      }
     },
     "assets": {
       "type": "array",
-      "items": { "$ref": "#/$defs/asset" }
+      "items": {
+        "$ref": "#/$defs/asset"
+      }
     },
     "modules": {
       "type": "array",
-      "items": { "$ref": "#/$defs/module" }
+      "items": {
+        "$ref": "#/$defs/module"
+      }
     },
     "appliances": {
       "type": "array",
-      "items": { "$ref": "#/$defs/appliance" }
+      "items": {
+        "$ref": "#/$defs/appliance"
+      }
     },
     "accessories": {
       "type": "array",
-      "items": { "$ref": "#/$defs/accessoryInstance" }
+      "items": {
+        "$ref": "#/$defs/accessoryInstance"
+      }
     },
     "decorations": {
       "type": "array",
-      "items": { "$ref": "#/$defs/decoration" }
+      "items": {
+        "$ref": "#/$defs/decoration"
+      }
     },
     "cameras": {
       "type": "array",
-      "items": { "$ref": "#/$defs/camera" }
+      "items": {
+        "$ref": "#/$defs/camera"
+      }
     },
     "constraints": {
       "type": "object",
       "properties": {
-        "allowTouching": { "type": "boolean", "default": true },
-        "overlapTolerance": { "type": "number", "default": 1 },
-        "minimumSinkCooktopDistance": { "type": "number", "default": 300 },
-        "minimumWalkwayWidth": { "type": "number", "default": 900 },
-        "enforceRoomBounds": { "type": "boolean", "default": true }
+        "allowTouching": {
+          "type": "boolean",
+          "default": true
+        },
+        "overlapTolerance": {
+          "type": "number",
+          "default": 1
+        },
+        "minimumSinkCooktopDistance": {
+          "type": "number",
+          "default": 300
+        },
+        "minimumWalkwayWidth": {
+          "type": "number",
+          "default": 900
+        },
+        "enforceRoomBounds": {
+          "type": "boolean",
+          "default": true
+        }
       }
     },
     "renderSettings": {
       "type": "object",
       "properties": {
-        "backgroundColor": { "type": "string", "pattern": "^#([0-9a-fA-F]{6})$", "default": "#FFFFFF" },
-        "exposure": { "type": "number", "default": 1.0 },
-        "shadows": { "type": "boolean", "default": true },
-        "antialias": { "type": "boolean", "default": true },
-        "toneMapping": { "type": "string", "enum": ["NoToneMapping", "LinearToneMapping", "ReinhardToneMapping", "ACESFilmicToneMapping"], "default": "ACESFilmicToneMapping" },
-        "outputWidth": { "type": "integer", "default": 1920 },
-        "outputHeight": { "type": "integer", "default": 1080 }
+        "backgroundColor": {
+          "type": "string",
+          "pattern": "^#([0-9a-fA-F]{6})$",
+          "default": "#FFFFFF"
+        },
+        "exposure": {
+          "type": "number",
+          "default": 1.0
+        },
+        "shadows": {
+          "type": "boolean",
+          "default": true
+        },
+        "antialias": {
+          "type": "boolean",
+          "default": true
+        },
+        "toneMapping": {
+          "type": "string",
+          "enum": [
+            "NoToneMapping",
+            "LinearToneMapping",
+            "ReinhardToneMapping",
+            "ACESFilmicToneMapping"
+          ],
+          "default": "ACESFilmicToneMapping"
+        },
+        "outputWidth": {
+          "type": "integer",
+          "default": 1920
+        },
+        "outputHeight": {
+          "type": "integer",
+          "default": 1080
+        }
       }
     }
   },
-
   "$defs": {
     "id": {
       "type": "string",
@@ -167,127 +369,341 @@
     },
     "vec3": {
       "type": "object",
-      "required": ["x", "y", "z"],
+      "required": [
+        "x",
+        "y",
+        "z"
+      ],
       "properties": {
-        "x": { "type": "number" },
-        "y": { "type": "number" },
-        "z": { "type": "number" }
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "z": {
+          "type": "number"
+        }
       }
     },
     "rotation": {
       "type": "object",
-      "required": ["x", "y", "z"],
+      "required": [
+        "x",
+        "y",
+        "z"
+      ],
       "properties": {
-        "x": { "type": "number" },
-        "y": { "type": "number" },
-        "z": { "type": "number" },
-        "unit": { "type": "string", "enum": ["deg", "rad"], "default": "deg" }
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "z": {
+          "type": "number"
+        },
+        "unit": {
+          "type": "string",
+          "enum": [
+            "deg",
+            "rad"
+          ],
+          "default": "deg"
+        }
       }
     },
     "dimensions": {
       "type": "object",
-      "required": ["width", "height", "depth"],
+      "required": [
+        "width",
+        "height",
+        "depth"
+      ],
       "properties": {
-        "width": { "type": "number", "exclusiveMinimum": 0 },
-        "height": { "type": "number", "exclusiveMinimum": 0 },
-        "depth": { "type": "number", "exclusiveMinimum": 0 }
+        "width": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "height": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "depth": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
       }
     },
     "transform": {
       "type": "object",
-      "required": ["position", "rotation"],
+      "required": [
+        "position",
+        "rotation"
+      ],
       "properties": {
-        "position": { "$ref": "#/$defs/vec3" },
-        "rotation": { "$ref": "#/$defs/rotation" },
-        "scale": { "$ref": "#/$defs/vec3" }
+        "position": {
+          "$ref": "#/$defs/vec3"
+        },
+        "rotation": {
+          "$ref": "#/$defs/rotation"
+        },
+        "scale": {
+          "$ref": "#/$defs/vec3"
+        }
       }
     },
     "material": {
       "type": "object",
-      "required": ["id", "name", "threeMaterialType", "color"],
+      "required": [
+        "id",
+        "name",
+        "threeMaterialType",
+        "color"
+      ],
       "properties": {
-        "id": { "$ref": "#/$defs/id" },
-        "name": { "type": "string" },
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "name": {
+          "type": "string"
+        },
         "threeMaterialType": {
           "type": "string",
-          "enum": ["MeshStandardMaterial", "MeshPhysicalMaterial", "MeshBasicMaterial", "MeshPhongMaterial"],
+          "enum": [
+            "MeshStandardMaterial",
+            "MeshPhysicalMaterial",
+            "MeshBasicMaterial",
+            "MeshPhongMaterial"
+          ],
           "default": "MeshStandardMaterial"
         },
-        "color": { "type": "string", "pattern": "^#([0-9a-fA-F]{6}|[0-9a-fA-F]{8})$" },
-        "roughness": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.5 },
-        "metalness": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.0 },
-        "opacity": { "type": "number", "minimum": 0, "maximum": 1, "default": 1.0 },
-        "transparent": { "type": "boolean", "default": false },
-        "transmission": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.0, "description": "Used in MeshPhysicalMaterial for glass" },
-        "ior": { "type": "number", "default": 1.5, "description": "Index of refraction" },
-        "clearcoat": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.0 },
-        "map": { "type": "string", "description": "Base color texture URL" },
-        "normalMap": { "type": "string", "description": "Normal map URL" },
-        "roughnessMap": { "type": "string", "description": "Roughness map URL" },
-        "metalnessMap": { "type": "string", "description": "Metalness map URL" },
-        "aoMap": { "type": "string", "description": "Ambient occlusion map URL" },
-        "repeat": { "$ref": "#/$defs/vec3" }
+        "color": {
+          "type": "string",
+          "pattern": "^#([0-9a-fA-F]{6}|[0-9a-fA-F]{8})$"
+        },
+        "roughness": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.5
+        },
+        "metalness": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.0
+        },
+        "opacity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 1.0
+        },
+        "transparent": {
+          "type": "boolean",
+          "default": false
+        },
+        "transmission": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.0,
+          "description": "Used in MeshPhysicalMaterial for glass"
+        },
+        "ior": {
+          "type": "number",
+          "default": 1.5,
+          "description": "Index of refraction"
+        },
+        "clearcoat": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.0
+        },
+        "map": {
+          "type": "string",
+          "description": "Base color texture URL"
+        },
+        "normalMap": {
+          "type": "string",
+          "description": "Normal map URL"
+        },
+        "roughnessMap": {
+          "type": "string",
+          "description": "Roughness map URL"
+        },
+        "metalnessMap": {
+          "type": "string",
+          "description": "Metalness map URL"
+        },
+        "aoMap": {
+          "type": "string",
+          "description": "Ambient occlusion map URL"
+        },
+        "repeat": {
+          "$ref": "#/$defs/vec3"
+        }
       }
     },
     "asset": {
       "type": "object",
-      "required": ["id", "category", "geometryType", "defaultDimensions"],
+      "required": [
+        "id",
+        "category",
+        "geometryType",
+        "defaultDimensions"
+      ],
       "properties": {
-        "id": { "$ref": "#/$defs/id" },
+        "id": {
+          "$ref": "#/$defs/id"
+        },
         "category": {
           "type": "string",
           "enum": [
-            "carcase", "door_front", "drawer_front", "shelf", "countertop", 
-            "cornice", "molding", "pilaster", "capital", "corbel", 
-            "handle", "hinge", "leg", "plinth", "appliance", "sink", "faucet", "custom"
+            "carcase",
+            "door_front",
+            "drawer_front",
+            "shelf",
+            "countertop",
+            "cornice",
+            "molding",
+            "pilaster",
+            "capital",
+            "corbel",
+            "handle",
+            "hinge",
+            "leg",
+            "plinth",
+            "appliance",
+            "sink",
+            "faucet",
+            "custom"
           ]
         },
         "geometryType": {
           "type": "string",
-          "enum": ["box", "panel", "extrusion", "mesh_gltf", "procedural"]
+          "enum": [
+            "box",
+            "panel",
+            "extrusion",
+            "mesh_gltf",
+            "procedural"
+          ]
         },
-        "modelUrl": { "type": "string", "description": "Path to .gltf/.glb/.obj file if geometryType is mesh_gltf" },
-        "defaultDimensions": { "$ref": "#/$defs/dimensions" },
-        "defaultMaterialId": { "$ref": "#/$defs/id" },
-        "parameters": { "type": "object", "additionalProperties": true },
+        "modelUrl": {
+          "type": "string",
+          "description": "Path to .gltf/.glb/.obj file if geometryType is mesh_gltf"
+        },
+        "defaultDimensions": {
+          "$ref": "#/$defs/dimensions"
+        },
+        "defaultMaterialId": {
+          "$ref": "#/$defs/id"
+        },
+        "parameters": {
+          "type": "object",
+          "additionalProperties": true
+        },
         "anchorPoints": {
           "type": "object",
-          "additionalProperties": { "$ref": "#/$defs/vec3" }
+          "additionalProperties": {
+            "$ref": "#/$defs/vec3"
+          }
         }
       }
     },
     "module": {
       "type": "object",
-      "required": ["id", "moduleType", "name", "dimensions", "transform", "carcaseMaterialId"],
+      "required": [
+        "id",
+        "moduleType",
+        "name",
+        "dimensions",
+        "transform",
+        "carcaseMaterialId"
+      ],
       "properties": {
-        "id": { "$ref": "#/$defs/id" },
+        "id": {
+          "$ref": "#/$defs/id"
+        },
         "moduleType": {
           "type": "string",
           "enum": [
-            "base_cabinet", "wall_cabinet", "tall_pantry", "corner_cabinet", 
-            "island_module", "appliance_cabinet", "open_shelf", "range_hood_canopy", "custom"
+            "base_cabinet",
+            "wall_cabinet",
+            "tall_pantry",
+            "corner_cabinet",
+            "island_module",
+            "appliance_cabinet",
+            "open_shelf",
+            "range_hood_canopy",
+            "custom"
           ]
         },
-        "name": { "type": "string" },
-        "dimensions": { "$ref": "#/$defs/dimensions" },
-        "transform": { "$ref": "#/$defs/transform" },
-        "carcaseMaterialId": { "$ref": "#/$defs/id" },
+        "name": {
+          "type": "string"
+        },
+        "dimensions": {
+          "$ref": "#/$defs/dimensions"
+        },
+        "transform": {
+          "$ref": "#/$defs/transform"
+        },
+        "carcaseMaterialId": {
+          "$ref": "#/$defs/id"
+        },
         "placement": {
           "type": "object",
           "properties": {
-            "wallId": { "$ref": "#/$defs/id" },
-            "alignment": { "type": "string", "enum": ["floor", "countertop", "ceiling", "wall", "free"] },
-            "sequence": { "type": "integer", "minimum": 0 }
+            "wallId": {
+              "$ref": "#/$defs/id"
+            },
+            "alignment": {
+              "type": "string",
+              "enum": [
+                "floor",
+                "countertop",
+                "ceiling",
+                "wall",
+                "free"
+              ]
+            },
+            "sequence": {
+              "type": "integer",
+              "minimum": 0
+            }
           }
         },
         "construction": {
           "type": "object",
           "properties": {
-            "panelThickness": { "type": "number", "default": 18 },
-            "backThickness": { "type": "number", "default": 9 },
-            "toeKickHeight": { "type": "number", "default": 100 },
-            "doorOverlay": { "type": "string", "enum": ["full", "half", "inset"], "default": "full" },
-            "gap": { "type": "number", "default": 2 }
+            "panelThickness": {
+              "type": "number",
+              "default": 18
+            },
+            "backThickness": {
+              "type": "number",
+              "default": 9
+            },
+            "toeKickHeight": {
+              "type": "number",
+              "default": 100
+            },
+            "doorOverlay": {
+              "type": "string",
+              "enum": [
+                "full",
+                "half",
+                "inset"
+              ],
+              "default": "full"
+            },
+            "gap": {
+              "type": "number",
+              "default": 2
+            }
           }
         },
         "doors": {
@@ -295,13 +711,34 @@
           "items": {
             "type": "object",
             "properties": {
-              "id": { "$ref": "#/$defs/id" },
-              "assetId": { "$ref": "#/$defs/id" },
-              "hingeSide": { "type": "string", "enum": ["Left", "Right", "Top", "Bottom", "Double"] },
-              "materialId": { "$ref": "#/$defs/id" },
-              "dimensions": { "$ref": "#/$defs/dimensions" },
-              "transform": { "$ref": "#/$defs/transform" },
-              "hardware": { "$ref": "#/$defs/hardwareRef" }
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "assetId": {
+                "$ref": "#/$defs/id"
+              },
+              "hingeSide": {
+                "type": "string",
+                "enum": [
+                  "Left",
+                  "Right",
+                  "Top",
+                  "Bottom",
+                  "Double"
+                ]
+              },
+              "materialId": {
+                "$ref": "#/$defs/id"
+              },
+              "dimensions": {
+                "$ref": "#/$defs/dimensions"
+              },
+              "transform": {
+                "$ref": "#/$defs/transform"
+              },
+              "hardware": {
+                "$ref": "#/$defs/hardwareRef"
+              }
             }
           }
         },
@@ -310,13 +747,27 @@
           "items": {
             "type": "object",
             "properties": {
-              "id": { "$ref": "#/$defs/id" },
-              "assetId": { "$ref": "#/$defs/id" },
-              "height": { "type": "number" },
-              "materialId": { "$ref": "#/$defs/id" },
-              "dimensions": { "$ref": "#/$defs/dimensions" },
-              "transform": { "$ref": "#/$defs/transform" },
-              "hardware": { "$ref": "#/$defs/hardwareRef" }
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "assetId": {
+                "$ref": "#/$defs/id"
+              },
+              "height": {
+                "type": "number"
+              },
+              "materialId": {
+                "$ref": "#/$defs/id"
+              },
+              "dimensions": {
+                "$ref": "#/$defs/dimensions"
+              },
+              "transform": {
+                "$ref": "#/$defs/transform"
+              },
+              "hardware": {
+                "$ref": "#/$defs/hardwareRef"
+              }
             }
           }
         },
@@ -325,111 +776,298 @@
           "items": {
             "type": "object",
             "properties": {
-              "id": { "$ref": "#/$defs/id" },
-              "heightOffset": { "type": "number" },
-              "materialId": { "$ref": "#/$defs/id" }
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "heightOffset": {
+                "type": "number"
+              },
+              "materialId": {
+                "$ref": "#/$defs/id"
+              }
             }
           }
         },
         "parts": {
           "type": "array",
-          "items": { "$ref": "#/$defs/part" }
+          "items": {
+            "$ref": "#/$defs/part"
+          }
         },
-        "visible": { "type": "boolean", "default": true }
+        "visible": {
+          "type": "boolean",
+          "default": true
+        }
       }
     },
     "part": {
       "type": "object",
-      "required": ["id", "role", "dimensions", "transform"],
+      "required": [
+        "id",
+        "role",
+        "dimensions",
+        "transform"
+      ],
       "properties": {
-        "id": { "$ref": "#/$defs/id" },
+        "id": {
+          "$ref": "#/$defs/id"
+        },
         "role": {
           "type": "string",
           "enum": [
-            "left_side", "right_side", "top", "bottom", "back", "shelf", "divider", 
-            "door", "drawer_front", "toe_kick", "plinth", "countertop", "cornice", "molding", "custom"
+            "left_side",
+            "right_side",
+            "top",
+            "bottom",
+            "back",
+            "shelf",
+            "divider",
+            "door",
+            "drawer_front",
+            "toe_kick",
+            "plinth",
+            "countertop",
+            "cornice",
+            "molding",
+            "custom"
           ]
         },
-        "assetId": { "$ref": "#/$defs/id" },
-        "dimensions": { "$ref": "#/$defs/dimensions" },
-        "transform": { "$ref": "#/$defs/transform" },
-        "materialId": { "$ref": "#/$defs/id" }
+        "assetId": {
+          "$ref": "#/$defs/id"
+        },
+        "dimensions": {
+          "$ref": "#/$defs/dimensions"
+        },
+        "transform": {
+          "$ref": "#/$defs/transform"
+        },
+        "materialId": {
+          "$ref": "#/$defs/id"
+        }
       }
     },
     "hardwareRef": {
       "type": "object",
-      "required": ["type", "assetId"],
+      "required": [
+        "type",
+        "assetId"
+      ],
       "properties": {
-        "id": { "$ref": "#/$defs/id" },
-        "type": { "type": "string", "enum": ["Handle", "Knob", "Pull_Handle", "Hinge"] },
-        "assetId": { "$ref": "#/$defs/id" },
-        "materialId": { "$ref": "#/$defs/id" },
-        "transform": { "$ref": "#/$defs/transform" }
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "Handle",
+            "Knob",
+            "Pull_Handle",
+            "Hinge"
+          ]
+        },
+        "assetId": {
+          "$ref": "#/$defs/id"
+        },
+        "materialId": {
+          "$ref": "#/$defs/id"
+        },
+        "transform": {
+          "$ref": "#/$defs/transform"
+        }
       }
     },
     "appliance": {
       "type": "object",
-      "required": ["id", "type", "dimensions", "transform"],
+      "required": [
+        "id",
+        "type",
+        "dimensions",
+        "transform"
+      ],
       "properties": {
-        "id": { "$ref": "#/$defs/id" },
+        "id": {
+          "$ref": "#/$defs/id"
+        },
         "type": {
           "type": "string",
-          "enum": ["Cooktop_Gas", "Cooktop_Induction", "BuiltIn_Oven", "Range_Hood_Canopy", "Range_Hood_Insert", "Refrigerator", "Dishwasher", "Microwave"]
+          "enum": [
+            "Cooktop_Gas",
+            "Cooktop_Induction",
+            "BuiltIn_Oven",
+            "Range_Hood_Canopy",
+            "Range_Hood_Insert",
+            "Refrigerator",
+            "Dishwasher",
+            "Microwave"
+          ]
         },
-        "name": { "type": "string" },
-        "assetId": { "$ref": "#/$defs/id" },
-        "modelUrl": { "type": "string", "description": "GLTF/GLB path for Three.js GLTFLoader" },
-        "dimensions": { "$ref": "#/$defs/dimensions" },
-        "transform": { "$ref": "#/$defs/transform" },
-        "materialId": { "$ref": "#/$defs/id" },
+        "name": {
+          "type": "string"
+        },
+        "assetId": {
+          "$ref": "#/$defs/id"
+        },
+        "modelUrl": {
+          "type": "string",
+          "description": "GLTF/GLB path for Three.js GLTFLoader"
+        },
+        "dimensions": {
+          "$ref": "#/$defs/dimensions"
+        },
+        "transform": {
+          "$ref": "#/$defs/transform"
+        },
+        "materialId": {
+          "$ref": "#/$defs/id"
+        },
         "installation": {
           "type": "object",
           "properties": {
-            "mountType": { "type": "string", "enum": ["built_in", "countertop", "wall_mounted", "freestanding", "undermount", "drop_in"] },
-            "cutoutDimensions": { "$ref": "#/$defs/dimensions" }
+            "mountType": {
+              "type": "string",
+              "enum": [
+                "built_in",
+                "countertop",
+                "wall_mounted",
+                "freestanding",
+                "undermount",
+                "drop_in"
+              ]
+            },
+            "cutoutDimensions": {
+              "$ref": "#/$defs/dimensions"
+            }
           }
         }
       }
     },
     "accessoryInstance": {
       "type": "object",
-      "required": ["id", "type", "transform"],
+      "required": [
+        "id",
+        "type",
+        "transform"
+      ],
       "properties": {
-        "id": { "$ref": "#/$defs/id" },
-        "type": { "type": "string", "enum": ["Sink_Single", "Sink_Double", "Faucet_Classic", "Countertop", "Backsplash_Tile", "Backsplash_Glass", "Handle", "Knob"] },
-        "assetId": { "$ref": "#/$defs/id" },
-        "parentId": { "$ref": "#/$defs/id" },
-        "dimensions": { "$ref": "#/$defs/dimensions" },
-        "transform": { "$ref": "#/$defs/transform" },
-        "materialId": { "$ref": "#/$defs/id" }
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "Sink_Single",
+            "Sink_Double",
+            "Faucet_Classic",
+            "Countertop",
+            "Backsplash_Tile",
+            "Backsplash_Glass",
+            "Handle",
+            "Knob"
+          ]
+        },
+        "assetId": {
+          "$ref": "#/$defs/id"
+        },
+        "parentId": {
+          "$ref": "#/$defs/id"
+        },
+        "dimensions": {
+          "$ref": "#/$defs/dimensions"
+        },
+        "transform": {
+          "$ref": "#/$defs/transform"
+        },
+        "materialId": {
+          "$ref": "#/$defs/id"
+        }
       }
     },
     "decoration": {
       "type": "object",
-      "required": ["id", "type", "dimensions", "transform"],
+      "required": [
+        "id",
+        "type",
+        "dimensions",
+        "transform"
+      ],
       "properties": {
-        "id": { "$ref": "#/$defs/id" },
-        "type": { "type": "string", "enum": ["Crown_Molding", "Base_Molding", "Fluted_Pilaster", "Carved_Capital", "Corbel", "Applique", "Cornice"] },
-        "name": { "type": "string" },
-        "assetId": { "$ref": "#/$defs/id" },
-        "parentId": { "$ref": "#/$defs/id" },
-        "dimensions": { "$ref": "#/$defs/dimensions" },
-        "transform": { "$ref": "#/$defs/transform" },
-        "materialId": { "$ref": "#/$defs/id" }
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "Crown_Molding",
+            "Base_Molding",
+            "Fluted_Pilaster",
+            "Carved_Capital",
+            "Corbel",
+            "Applique",
+            "Cornice"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "assetId": {
+          "$ref": "#/$defs/id"
+        },
+        "parentId": {
+          "$ref": "#/$defs/id"
+        },
+        "dimensions": {
+          "$ref": "#/$defs/dimensions"
+        },
+        "transform": {
+          "$ref": "#/$defs/transform"
+        },
+        "materialId": {
+          "$ref": "#/$defs/id"
+        }
       }
     },
     "camera": {
       "type": "object",
-      "required": ["id", "position", "target", "projection", "fov"],
+      "required": [
+        "id",
+        "position",
+        "target",
+        "projection",
+        "fov"
+      ],
       "properties": {
-        "id": { "$ref": "#/$defs/id" },
-        "name": { "type": "string" },
-        "position": { "$ref": "#/$defs/vec3" },
-        "target": { "$ref": "#/$defs/vec3" },
-        "projection": { "type": "string", "enum": ["perspective", "orthographic"], "default": "perspective" },
-        "fov": { "type": "number", "default": 50 },
-        "near": { "type": "number", "default": 0.1 },
-        "far": { "type": "number", "default": 1000 }
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "name": {
+          "type": "string"
+        },
+        "position": {
+          "$ref": "#/$defs/vec3"
+        },
+        "target": {
+          "$ref": "#/$defs/vec3"
+        },
+        "projection": {
+          "type": "string",
+          "enum": [
+            "perspective",
+            "orthographic"
+          ],
+          "default": "perspective"
+        },
+        "fov": {
+          "type": "number",
+          "default": 50
+        },
+        "near": {
+          "type": "number",
+          "default": 0.1
+        },
+        "far": {
+          "type": "number",
+          "default": 1000
+        }
       }
     }
   }

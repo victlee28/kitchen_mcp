@@ -6,7 +6,7 @@ Quy ước (ghi cả trong coordinateSystem.notes):
 - Hệ cục bộ của module: x dọc bề rộng (trái -> phải), y lên, z từ hậu ra mặt trước. Vật thể con (part, cánh, ngăn kéo)
   dùng toạ độ cục bộ của module; tay nắm dùng toạ độ cục bộ của cánh/ngăn kéo.
 - Tường sau: rotationY 0 (mặt tủ nhìn +Z); tường phải: -90 (nhìn -X); tường trái: +90 (nhìn +X).
-File xuất ra hợp lệ với CẢ schema gốc v1.0.0 lẫn bản mở rộng v1.1.0.
+File xuất ra hợp lệ với CẢ schema gốc v1.0.0 lẫn bản mở rộng v1.2.0.
 """
 from __future__ import annotations
 
@@ -16,17 +16,17 @@ import re
 from collections import defaultdict
 
 from . import hardware, regions, vocab
-from .geometry import Part, compile_spec, views_of
-from .render import SEG_MAU, _mau_module
-from .spec import KitchenSpec, Module
+from .geometry import Part, backsplash_height, compile_spec, views_of
+from .render import SEGMENT_COLORS, _module_color
+from .spec import Handle, KitchenSpec, Module, effective_handle
 
-ROT = {"sau": 0.0, "phai": -90.0, "trai": 90.0, "goc": 0.0}
-TIER = {"duoi": "base", "tren": "wall", "noc": "top", "cao": "tall", "goc": "corner"}
-MODULE_TYPE = {"duoi": "base_cabinet", "tren": "wall_cabinet", "noc": "wall_cabinet", "cao": "tall_pantry", "goc": "open_shelf"}
-SEMANTIC = {"than": "carcass", "chan": "plinth", "canh": "door", "canh-kinh": "glass_door", "ngan-keo": "drawer", "hong": "panel",
-            "ke": "shelf", "mat-da": "countertop", "tu-lanh": "refrigerator", "chau": "sink", "voi": "faucet", "bep": "cooktop",
-            "hut-mui": "range_hood", "lo": "microwave", "tuong": "wall", "san": "floor", "op-tuong": "backsplash", "tay-nam": "handle",
-            "phao": "molding"}
+ROT = {"back": 0.0, "right": -90.0, "left": 90.0, "corner": 0.0, "island": 180.0}
+TIER = {"base": "base", "upper": "wall", "loft": "top", "tall": "tall", "corner": "corner"}
+MODULE_TYPE = {"base": "base_cabinet", "upper": "wall_cabinet", "loft": "wall_cabinet", "tall": "tall_pantry", "corner": "open_shelf"}
+SEMANTIC = {"carcass": "carcass", "plinth": "plinth", "door": "door", "glass-door": "glass_door", "drawer": "drawer", "side-panel": "panel",
+            "shelf": "shelf", "countertop": "countertop", "fridge": "refrigerator", "sink": "sink", "faucet": "faucet", "cooktop": "cooktop",
+            "hood": "range_hood", "oven": "microwave", "wall": "wall", "floor": "floor", "wall-tile": "backsplash", "handle": "handle",
+            "molding": "molding"}
 
 
 def _hex(rgb) -> str:
@@ -64,37 +64,44 @@ class Frame:
 
     def box_local(self, mn, mx):
         pts = [self.to_local((x, y, z)) for x in (mn[0], mx[0]) for y in (mn[1], mx[1]) for z in (mn[2], mx[2])]
-        lo = [min(p[i] for p in pts) for i in range(3)]
+        openings = [min(p[i] for p in pts) for i in range(3)]
         hi = [max(p[i] for p in pts) for i in range(3)]
-        return lo, hi
+        return openings, hi
 
     @staticmethod
-    def for_aabb(mn, mx, tuong):
+    def for_aabb(mn, mx, wall):
         """Khung đặt vật thẳng trục theo hướng của tường: anchor = góc dưới-sau-trái."""
-        r = ROT.get(tuong or "sau", 0.0)
+        r = ROT.get(wall or "back", 0.0)
         if r == 0:
             pos = (mn[0], mn[1], mn[2])
         elif r == -90:
             pos = (mx[0], mn[1], mn[2])
+        elif r == 180:
+            pos = (mx[0], mn[1], mx[2])
         else:
             pos = (mn[0], mn[1], mx[2])
         return Frame(pos, r)
 
 
 def _module_frame(m: Module, lsau: float) -> tuple[Frame, tuple[float, float, float]]:
-    if m.loai == "ke-goc":
-        return Frame((-m.canhSau, m.y, 0), 0.0), (m.canhSau, m.cao, m.canhPhai)
-    if m.tuong == "sau":
-        return Frame((-(m.tu + m.rong), m.y, 0), 0.0), (m.rong, m.cao, m.sau)
-    if m.tuong == "phai":
-        return Frame((0, m.y, m.tu), -90.0), (m.rong, m.cao, m.sau)
-    return Frame((-lsau, m.y, m.tu + m.rong), 90.0), (m.rong, m.cao, m.sau)
+    if m.type == "corner-shelf":
+        return Frame((-m.backLength, m.y, 0), 0.0), (m.backLength, m.height, m.rightLength)
+    if m.wall == "back":
+        return Frame((-(m.fromCorner + m.width), m.y, 0), 0.0), (m.width, m.height, m.depth)
+    if m.wall == "right":
+        return Frame((0, m.y, m.fromCorner), -90.0), (m.width, m.height, m.depth)
+    if m.wall == "island":  # faces the back wall: local +z points to world -z, anchor = back-left corner seen from the front
+        return Frame((-m.fromCorner, m.y, m.offset + m.depth), 180.0), (m.width, m.height, m.depth)
+    return Frame((-lsau, m.y, m.fromCorner + m.width), 90.0), (m.width, m.height, m.depth)
 
 
 # ------------------------------------------------------------------ vật liệu
 def _guess(text: str) -> dict:
     g = _guess_base(text)
-    c = vocab.mau_ro(text)  # màu nêu rõ (xanh rêu, kem, xám…) ghi đè màu mặc định của chất liệu
+    w = vocab._find(text, vocab.WOOD)  # loài gỗ nêu rõ (óc chó, teak…) quyết định màu gỗ
+    if w and "transmission" not in g:
+        g = {**g, "color": w[1]}
+    c = vocab.explicit_color(text)  # màu nêu rõ (xanh rêu, kem, xám…) ghi đè màu mặc định của chất liệu
     if c and "transmission" not in g:
         g = {**g, "color": c}
     return g
@@ -105,6 +112,16 @@ def _guess_base(text: str) -> dict:
     if "kính" in t or "glass" in t:
         return {"threeMaterialType": "MeshPhysicalMaterial", "color": "#dfe9ec", "roughness": 0.05, "metalness": 0, "transmission": 0.9,
                 "ior": 1.5, "opacity": 0.35, "transparent": True, "side": "DoubleSide"}
+    if "marble" in t or "cẩm thạch" in t:
+        return {"color": "#ecebe7", "roughness": 0.2, "clearcoat": 0.4, "threeMaterialType": "MeshPhysicalMaterial"}
+    if "terrazzo" in t:
+        return {"color": "#cfc9bf", "roughness": 0.35, "clearcoat": 0.2, "threeMaterialType": "MeshPhysicalMaterial"}
+    if "acrylic" in t or "bóng gương" in t:
+        return {"color": "#e9e7e2", "roughness": 0.08, "clearcoat": 0.8, "threeMaterialType": "MeshPhysicalMaterial"}
+    if "zellige" in t:
+        return {"color": "#e4ded0", "roughness": 0.25, "clearcoat": 0.3, "threeMaterialType": "MeshPhysicalMaterial"}
+    if "đồng" in t or "brass" in t:
+        return {"color": "#b5913f", "roughness": 0.35, "metalness": 0.9}
     if "inox" in t or "nhôm" in t or "thép" in t:
         return {"color": "#b9bdc2" if "đen" not in t else "#2b2b2b", "roughness": 0.35, "metalness": 0.9}
     if "granite" in t or "đen" in t or "tối" in t:
@@ -121,52 +138,61 @@ def _guess_base(text: str) -> dict:
 
 
 def _materials(spec: KitchenSpec) -> tuple[list[dict], dict[str, str]]:
-    vl = spec.chung.vatLieu
+    vl = spec.common.material
     defs = {  # vai trò -> (id, tên, mô tả nguồn)
-        "tuDuoi": ("MAT-FRONT-BASE", vl.get("tuDuoi", "Laminate vân gỗ sồi sáng"), "front"),
-        "tuTren": ("MAT-FRONT-WALL", vl.get("tuTren", "Trắng mờ"), "front"),
-        "tuCao": ("MAT-FRONT-TALL", vl.get("tuCao", vl.get("tuDuoi", "Laminate vân gỗ sồi sáng")), "front"),
-        "keGoc": ("MAT-SHELF-CORNER", vl.get("keGoc", vl.get("tuDuoi", "Vân gỗ sồi")), "shelf"),
-        "than": ("MAT-CARCASS", vl.get("than", "Melamine trắng"), "carcass"),
-        "matDa": ("MAT-COUNTERTOP", vl.get("matDa", "Đá nhân tạo trắng"), "countertop"),
-        "opTuong": ("MAT-BACKSPLASH", vl.get("opTuong", "Gạch thẻ trắng"), "backsplash"),
-        "kinh": ("MAT-GLASS", "Kính cánh tủ", "glass_door"),
-        "tayNam": ("MAT-HANDLE", spec.chung.tayNam.vatLieu, "handle"),
-        "chau": ("MAT-SINK", "Chậu rửa màu tối", "sink"),
+        "base": ("MAT-FRONT-BASE", vl.get("base", "Laminate vân gỗ sồi sáng"), "front"),
+        "upper": ("MAT-FRONT-WALL", vl.get("upper", "Trắng mờ"), "front"),
+        "tall": ("MAT-FRONT-TALL", vl.get("tall", vl.get("base", "Laminate vân gỗ sồi sáng")), "front"),
+        "cornerShelf": ("MAT-SHELF-CORNER", vl.get("cornerShelf", vl.get("base", "Vân gỗ sồi")), "shelf"),
+        "carcass": ("MAT-CARCASS", vl.get("carcass", "Melamine trắng"), "carcass"),
+        "countertop": ("MAT-COUNTERTOP", vl.get("countertop", "Đá nhân tạo trắng"), "countertop"),
+        "wallTile": ("MAT-BACKSPLASH", vl.get("wallTile", "Gạch thẻ trắng"), "backsplash"),
+        "glass": ("MAT-GLASS", "Kính cánh tủ", "glass_door"),
+        "handle": ("MAT-HANDLE", spec.common.handle.material, "handle"),
+        "sink": ("MAT-SINK", "Chậu rửa màu tối", "sink"),
         "inox": ("MAT-STEEL", "Inox", "appliance"),
-        "bep": ("MAT-COOKTOP-GLASS", "Mặt kính đen bếp", "cooktop"),
-        "tuong": ("MAT-WALL", vl.get("tuong", "Sơn tường trắng ngà"), "wall"),
-        "san": ("MAT-FLOOR", vl.get("san", "Gạch lát nền 800×800"), "floor"),
-        "chan": ("MAT-PLINTH", "Chân tủ nhựa xám đậm", "plinth"),
+        "cooktop": ("MAT-COOKTOP-GLASS", "Mặt kính đen bếp", "cooktop"),
+        "wall": ("MAT-WALL", vl.get("wall", "Sơn tường trắng ngà"), "wall"),
+        "floor": ("MAT-FLOOR", vl.get("floor", "Gạch lát nền 800×800"), "floor"),
+        "plinth": ("MAT-PLINTH", "Chân tủ nhựa xám đậm", "plinth"),
     }
     out, ids = [], {}
     for key, (mid, name, sem) in defs.items():
         g = {"threeMaterialType": "MeshStandardMaterial", "roughness": 0.5, "metalness": 0.0, **_guess(name)}
-        if key == "chau":
+        if key == "sink":
             g.update(color="#2f3236", roughness=0.35, metalness=0.2)
-        if key == "bep":
+        if key == "cooktop":
             g.update(color="#121212", roughness=0.08, metalness=0.0)
-        if key == "tuong":
+        if key == "wall":
             g.update(color="#ece7de", roughness=0.9)
-        if key == "san":
+        if key == "floor":
             g.update(color="#bdb4a6", roughness=0.6)
-        if key == "chan":
+        if key == "plinth":
             g.update(color="#4a4740", roughness=0.8)
-        mat = {"id": mid, "name": name, **g, "semanticClass": sem}
-        if key == "opTuong" and spec.chung.model_extra and spec.chung.model_extra.get("gachOp"):
-            a, b = spec.chung.model_extra["gachOp"][:2]
-            mat["textureRepeat"] = {"u": round(1000 / a, 3), "v": round(1000 / b, 3)}  # số viên trên mỗi mét
-        if key == "san" and spec.chung.model_extra and spec.chung.model_extra.get("gachNen"):
-            a, b = spec.chung.model_extra["gachNen"][:2]
-            mat["textureRepeat"] = {"u": round(1000 / a, 3), "v": round(1000 / b, 3)}
-        out.append(mat)
+        material_text = {"id": mid, "name": name, **g, "semanticClass": sem}
+        if key == "wallTile" and spec.common.model_extra and spec.common.model_extra.get("wallTile"):
+            a, b = spec.common.model_extra["wallTile"][:2]
+            material_text["textureRepeat"] = {"u": round(1000 / a, 3), "v": round(1000 / b, 3)}  # số viên trên mỗi mét
+        if key == "wallTile" and spec.common.wallTilePattern:
+            material_text["pattern"] = spec.common.wallTilePattern  # kiểu xếp gạch (chưa vẽ từng viên)
+        if key == "floor" and spec.common.model_extra and spec.common.model_extra.get("floorTile"):
+            a, b = spec.common.model_extra["floorTile"][:2]
+            material_text["textureRepeat"] = {"u": round(1000 / a, 3), "v": round(1000 / b, 3)}
+        out.append(material_text)
         ids[key] = mid
     for m in spec.module:  # vật liệu mặt trước riêng từng module
-        if m.vatLieu:
-            mid = "MAT-FRONT-" + re.sub(r"[^A-Za-z0-9_.:-]", "-", m.ma)
-            out.append({"id": mid, "name": m.vatLieu, "threeMaterialType": "MeshStandardMaterial", "roughness": 0.5, "metalness": 0.0,
-                        **_guess(m.vatLieu), "semanticClass": "front"})
-            ids[f"module:{m.ma}"] = mid
+        if m.material:
+            mid = "MAT-FRONT-" + re.sub(r"[^A-Za-z0-9_.:-]", "-", m.id)
+            out.append({"id": mid, "name": m.material, "threeMaterialType": "MeshStandardMaterial", "roughness": 0.5, "metalness": 0.0,
+                        **_guess(m.material), "semanticClass": "front"})
+            ids[f"module:{m.id}"] = mid
+    for m in spec.module:  # handle material of a module that differs from the common one
+        hm = effective_handle(spec.common, m).material
+        if hm != spec.common.handle.material:
+            mid = "MAT-HANDLE-" + re.sub(r"[^A-Za-z0-9_.:-]", "-", m.id)
+            out.append({"id": mid, "name": hm, "threeMaterialType": "MeshStandardMaterial", "roughness": 0.5, "metalness": 0.0,
+                        **_guess(hm), "semanticClass": "handle"})
+            ids[f"handle:{m.id}"] = mid
     return out, ids
 
 
@@ -189,11 +215,11 @@ ASSETS = [
 
 
 # ------------------------------------------------------------------ chi tiết module
-def _split_carcass(lo, hi, t, b) -> list[tuple[str, str | None, list, list]]:
+def _split_carcass(openings, hi, t, b) -> list[tuple[str, str | None, list, list]]:
     """Thân hộp -> hông trái/phải, đáy, nóc, hậu (toạ độ cục bộ)."""
-    (x0, y0, z0), (x1, y1, z1) = lo, hi
+    (x0, y0, z0), (x1, y1, z1) = openings, hi
     if x1 - x0 < 3 * t or y1 - y0 < 3 * t or z1 - z0 < 80:
-        return [("back" if z1 - z0 < 80 else "custom", "niche_back" if z1 - z0 < 80 else None, lo, hi)]
+        return [("back" if z1 - z0 < 80 else "custom", "niche_back" if z1 - z0 < 80 else None, openings, hi)]
     return [("left_side", None, [x0, y0, z0], [x0 + t, y1, z1]),
             ("right_side", None, [x1 - t, y0, z0], [x1, y1, z1]),
             ("bottom", None, [x0 + t, y0, z0 + b], [x1 - t, y0 + t, z1]),
@@ -201,11 +227,11 @@ def _split_carcass(lo, hi, t, b) -> list[tuple[str, str | None, list, list]]:
             ("back", None, [x0 + t, y0 + t, z0], [x1 - t, y1 - t, z0 + b])]
 
 
-def _handle(spec: KitchenSpec, w, h, d, tier, hinge, horizontal=False, source: str | None = None) -> dict | None:
-    hd = hardware.handle(spec.chung.tayNam, w, h, tier, hinge, horizontal)
+def _handle(hn: Handle, material_id: str, w, h, d, tier, hinge, horizontal=False, source: str | None = None) -> dict | None:
+    hd = hardware.handle(hn, w, h, tier, hinge, horizontal)
     if hd is None:
         return None
-    out = {"type": hd["type"], "assetId": hd["assetId"], "materialId": "MAT-HANDLE",
+    out = {"type": hd["type"], "assetId": hd["assetId"], "materialId": material_id,
            "transform": _tf((hd["x"], hd["y"], d)), "dimensions": _dims(*hd["size"])}
     if source:
         out["sourceRef"] = source  # ID chi tiết tay nắm trong bộ biên dịch (= layer sửa ảnh)
@@ -213,85 +239,86 @@ def _handle(spec: KitchenSpec, w, h, d, tier, hinge, horizontal=False, source: s
 
 
 def _module_entry(spec: KitchenSpec, m: Module, parts: list[Part], frame: Frame, size, mats: dict, led: bool) -> dict:
-    c = spec.chung
-    tang = m.tang
-    tier = TIER[tang]
-    front = {"duoi": "tuDuoi", "tren": "tuTren", "noc": "tuTren", "cao": "tuCao", "goc": "keGoc"}[tang]
-    if m.vatLieu:  # vật liệu mặt trước riêng của module (vd đổi màu một tủ từ ảnh AI)
-        front = f"module:{m.ma}"
+    c = spec.common
+    storey = m.storey
+    tier = TIER[storey]
+    hn, hmat = effective_handle(c, m), mats.get(f"handle:{m.id}", mats["handle"])
+    front = {"base": "base", "upper": "upper", "loft": "upper", "tall": "tall", "corner": "cornerShelf"}[storey]
+    if m.material:  # vật liệu mặt trước riêng của module (vd đổi màu một tủ từ ảnh AI)
+        front = f"module:{m.id}"
     entry = {
-        "id": f"MOD-{m.ma}", "moduleType": "corner_cabinet" if m.gocKhuat else ("appliance_cabinet" if m.loai == "cao-tu-lanh" else MODULE_TYPE[tang]),
-        "name": m.ten or m.ma, "dimensions": _dims(*size), "transform": _tf(frame.pos, frame.rot),
-        "carcaseMaterialId": mats["keGoc"] if tang == "goc" else mats["than"], "frontMaterialId": mats[front],
-        "frontStyle": {"kinh": "glass", "khung": "shaker", "phang": "slab"}.get(m.kieuCanh or "", "glass" if m.loai == "tren-kinh" else "slab"),
-        "sourceRef": m.ma, "tier": tier,
-        "placement": {"wallId": "WALL-SAU" if m.tuong == "goc" else f"WALL-{m.tuong.upper()}",
-                      "alignment": "floor" if m.y == 0 else "wall", "offset": m.tu, "elevation": m.y},
-        "construction": {"panelThickness": c.dayCanh, "backThickness": c.dayHau, "toeKickHeight": c.lenChan if m.y == 0 else 0,
-                         "doorOverlay": "full", "gap": c.kheCanh, "grainDirection": "vertical",
+        "id": f"MOD-{m.id}", "moduleType": "corner_cabinet" if m.blindCorner else ("appliance_cabinet" if m.type == "tall-fridge" else MODULE_TYPE[storey]),
+        "name": m.name or m.id, "dimensions": _dims(*size), "transform": _tf(frame.pos, frame.rot),
+        "carcaseMaterialId": mats["cornerShelf"] if storey == "corner" else mats["carcass"], "frontMaterialId": mats[front],
+        "frontStyle": {"glass": "glass", "frame": "shaker", "flat": "slab"}.get(m.doorStyle or "", "glass" if m.type == "upper-glass" else "slab"),
+        "sourceRef": m.id, "storey": storey,
+        "placement": {**({} if m.wall == "island" else {"wallId": "WALL-BACK" if m.wall == "corner" else f"WALL-{m.wall.upper()}"}),
+                      "alignment": "floor" if m.y == 0 else "wall", "offset": m.fromCorner, "elevation": m.y},
+        "construction": {"panelThickness": c.doorThickness, "backThickness": c.backThickness, "plinthHeight": c.plinthHeight if m.y == 0 else 0,
+                         "doorOverlay": "full", "gap": c.doorGap, "grainDirection": "vertical",
                          "edgeBanding": {"thickness": 1, "materialId": mats[front]}},
         "doors": [], "drawers": [], "shelves": [], "parts": [], "visible": True,
     }
-    if m.gocKhuat:
-        entry["blindCorner"] = {"side": "left", "width": m.gocKhuat}
-    if m.tamHong:
-        entry["endPanel"] = {"side": "right", "thickness": m.tamHong}
-    if led and tang in ("tren", "goc"):
+    if m.blindCorner:
+        entry["blindCorner"] = {"side": "left", "width": m.blindCorner}
+    if m.endPanel:
+        entry["endPanel"] = {"side": "right", "thickness": m.endPanel}
+    if led and storey in ("upper", "corner"):
         entry["led"] = True
-    t = c.dayCanh
+    t = c.doorThickness
     door_parts, n = [], defaultdict(int)
 
     def pid(role):
         n[role] += 1
-        return f"{m.ma}-{role}-{n[role]}"
+        return f"{m.id}-{role}-{n[role]}"
 
-    handle_of = {p.parent: p.id for p in parts if p.loai == "tay-nam" and p.parent}
+    handle_of = {p.parent: p.id for p in parts if p.type == "handle" and p.parent}
     for p in parts:
-        if p.loai == "tay-nam":
+        if p.type == "handle":
             continue  # tay nắm xuất ở doors[].hardware / drawers[].hardware
-        lo, hi = frame.box_local(p.min, p.max)
-        if p.loai == "than":
-            for role, crole, a, b in _split_carcass(lo, hi, t, c.dayHau):
+        openings, hi = frame.box_local(p.min, p.max)
+        if p.type == "carcass":
+            for role, crole, a, b in _split_carcass(openings, hi, t, c.backThickness):
                 e = {"id": pid(role), "role": role, "assetId": "ASSET-PANEL", "dimensions": _dims(b[0] - a[0], b[1] - a[1], b[2] - a[2]),
-                     "transform": _tf(a), "materialId": mats["than"], "semanticClass": "carcass", "sourceRef": p.id}
+                     "transform": _tf(a), "materialId": mats["carcass"], "semanticClass": "carcass", "sourceRef": p.id}
                 if crole:
                     e["customRole"] = crole
                 entry["parts"].append(e)
-        elif p.loai in ("canh", "canh-kinh"):
-            door_parts.append((lo, hi, p.loai == "canh-kinh", p.id))
-        elif p.loai == "ngan-keo":
-            w, h, d = (hi[i] - lo[i] for i in range(3))
+        elif p.type in ("door", "glass-door"):
+            door_parts.append((openings, hi, p.type == "glass-door", p.id))
+        elif p.type == "drawer":
+            w, h, d = (hi[i] - openings[i] for i in range(3))
             entry["drawers"].append({"id": pid("drawer"), "assetId": "ASSET-DRAWER-FRONT", "height": round(h, 2), "materialId": mats[front],
-                                     "dimensions": _dims(w, h, d), "transform": _tf(lo), "sourceRef": p.id,
-                                     "hardware": _handle(spec, w, h, d, tier, None, horizontal=True, source=handle_of.get(p.id))})
+                                     "dimensions": _dims(w, h, d), "transform": _tf(openings), "sourceRef": p.id,
+                                     "hardware": _handle(hn, hmat, w, h, d, tier, None, horizontal=True, source=handle_of.get(p.id))})
             if entry["drawers"][-1]["hardware"] is None:
                 entry["drawers"][-1].pop("hardware")
         else:
-            role, crole, mat, sem = {
-                "chan": ("plinth", None, mats["chan"], "plinth"),
-                "ke": ("shelf", "niche_board" if tang == "duoi" else None, mats["keGoc"] if tang == "goc" else mats["than"], "shelf"),
-            }.get(p.loai, (None, None, None, None))
-            if p.loai == "hong":
+            role, crole, material_text, sem = {
+                "plinth": ("plinth", None, mats["plinth"], "plinth"),
+                "shelf": ("shelf", "niche_board" if storey == "base" else None, mats["cornerShelf"] if storey == "corner" else mats["carcass"], "shelf"),
+            }.get(p.type, (None, None, None, None))
+            if p.type == "side-panel":
                 sz = size[0]
-                if m.tamHong and lo[0] >= sz - m.tamHong - 1:
-                    role, crole, mat = "custom", "end_panel", mats[front]
-                elif lo[0] <= 1:
-                    role, mat = "left_side", mats[front] if tang in ("cao", "goc") else mats["than"]
+                if m.endPanel and openings[0] >= sz - m.endPanel - 1:
+                    role, crole, material_text = "custom", "end_panel", mats[front]
+                elif openings[0] <= 1:
+                    role, material_text = "left_side", mats[front] if storey in ("tall", "corner") else mats["carcass"]
                 elif hi[0] >= sz - 1:
-                    role, mat = "right_side", mats[front] if tang in ("cao", "goc") else mats["than"]
+                    role, material_text = "right_side", mats[front] if storey in ("tall", "corner") else mats["carcass"]
                 else:
-                    role, mat = "divider", mats["than"]
+                    role, material_text = "divider", mats["carcass"]
                 sem = "panel"
             if role is None:
-                role, crole, mat, sem = "custom", None, mats["than"], SEMANTIC.get(p.loai, "custom")
+                role, crole, material_text, sem = "custom", None, mats["carcass"], SEMANTIC.get(p.type, "custom")
             e = {"id": pid(role), "role": role, "assetId": "ASSET-PLINTH" if role == "plinth" else "ASSET-SHELF" if role == "shelf" else "ASSET-PANEL",
-                 "dimensions": _dims(*(hi[i] - lo[i] for i in range(3))), "transform": _tf(lo), "materialId": mat, "semanticClass": sem,
+                 "dimensions": _dims(*(hi[i] - openings[i] for i in range(3))), "transform": _tf(openings), "materialId": material_text, "semanticClass": sem,
                  "sourceRef": p.id}
             if crole:
                 e["customRole"] = crole
             entry["parts"].append(e)
             if role == "shelf":
-                entry["shelves"].append({"id": e["id"], "heightOffset": round(lo[1], 2), "materialId": mat})
+                entry["shelves"].append({"id": e["id"], "heightOffset": round(openings[1], 2), "materialId": material_text})
 
     # cánh: bản lề theo moCanh hoặc tự suy (kitchen.hardware, dùng chung với bộ biên dịch hình học)
     door_parts.sort(key=lambda x: (x[0][1], x[0][0]))
@@ -299,15 +326,15 @@ def _module_entry(spec: KitchenSpec, m: Module, parts: list[Part], frame: Frame,
     for d in door_parts:
         rows[round(d[0][1])].append(d)
     flat = [d for _, ds in sorted(rows.items()) for d in sorted(ds, key=lambda x: x[0][0])]
-    hinge_of = hardware.hinges(m, [(lo[0], hi[0], lo[1], hi[1]) for lo, hi, _, _ in flat])
-    for k, (lo, hi, glass, src) in enumerate(flat):
-        w, h, d = (hi[j] - lo[j] for j in range(3))
+    hinge_of = hardware.hinges(m, [(openings[0], hi[0], openings[1], hi[1]) for openings, hi, _, _ in flat])
+    for k, (openings, hi, glass, src) in enumerate(flat):
+        w, h, d = (hi[j] - openings[j] for j in range(3))
         hinge = hinge_of[k]
         door = {"id": pid("door"), "assetId": "ASSET-DOOR-GLASS" if glass else "ASSET-DOOR-SLAB", "hingeSide": hinge,
-                "materialId": mats["kinh"] if glass else mats[front], "dimensions": _dims(w, h, d), "transform": _tf(lo),
+                "materialId": mats["glass"] if glass else mats[front], "dimensions": _dims(w, h, d), "transform": _tf(openings),
                 "glass": glass, "frontStyle": "glass" if glass else entry["frontStyle"], "openingAngle": 0, "sourceRef": src,
                 "hinges": [{"offset": 100}, {"offset": round(h - 100, 1)}] + ([{"offset": round(h / 2, 1)}] if h > 1200 else [])}
-        hw = _handle(spec, w, h, d, tier, hinge, horizontal=hinge in ("Top", "Bottom"), source=handle_of.get(src))
+        hw = _handle(hn, hmat, w, h, d, tier, hinge, horizontal=hinge in ("Top", "Bottom"), source=handle_of.get(src))
         if hw:
             door["hardware"] = hw
         entry["doors"].append(door)
@@ -317,101 +344,100 @@ def _module_entry(spec: KitchenSpec, m: Module, parts: list[Part], frame: Frame,
 
 # ------------------------------------------------------------------ xuất toàn cảnh
 def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: list[dict] | None = None,
-           quoc_gia: str | None = None) -> dict:
+           country: str | None = None) -> dict:
     from .rules import default_rows
     from .rules_kb import select
 
     scene = compile_spec(spec)
-    c = spec.chung
+    c = spec.common
     mats_list, mats = _materials(spec)
-    qg, kv = regions.chuan_hoa(quoc_gia or spec.quocGia, spec.khuVuc)
+    qg, kv = regions.normalize(country or spec.country, spec.region)
     sel = select(kb_rows if kb_rows is not None else default_rows(), qg, kv)
     by_mod = defaultdict(list)
     for p in scene.parts:
         by_mod[p.module].append(p)
-    has_led = any(t.loai == "den" for t in spec.thietBi)
+    has_led = any(t.type == "light" for t in spec.appliances)
 
     # phòng
     lsau, lphai = scene.lsau, scene.lphai
-    walls = [{"id": "WALL-SAU", "start": _v(0, 0, 0), "end": _v(-lsau, 0, 0), "height": c.tran, "thickness": 100,
-              "materialId": mats["tuong"], "interiorNormal": _v(0, 0, 1), "openings": []},
-             {"id": "WALL-PHAI", "start": _v(0, 0, 0), "end": _v(0, 0, lphai), "height": c.tran, "thickness": 100,
-              "materialId": mats["tuong"], "interiorNormal": _v(-1, 0, 0), "openings": []}]
-    if any(m.tuong == "trai" for m in spec.module):
-        walls.append({"id": "WALL-TRAI", "start": _v(-lsau, 0, 0), "end": _v(-lsau, 0, lphai), "height": c.tran, "thickness": 100,
-                      "materialId": mats["tuong"], "interiorNormal": _v(1, 0, 0), "openings": []})
-    if spec.phong:
-        for tw in spec.phong.tuong:
-            wall = next((w for w in walls if w["id"] == f"WALL-{tw.ma.upper()}"), None)
-            if wall:
-                wall["thickness"] = tw.day
-                for i, lo in enumerate(tw.lo):
-                    wall["openings"].append({"id": f"{wall['id']}-LO{i + 1}", "type": "window" if lo.loai == "cua-so" else "door",
-                                             "offset": lo.tu, "width": lo.rong, "height": lo.cao, "sillHeight": lo.caoBauCua})
-    room = {"dimensions": _dims(lsau, c.tran, lphai), "walls": walls, "floor": {"materialId": mats["san"], "thickness": 0},
-            "ceiling": {"height": c.tran, "materialId": mats["tuong"], "render": False}}
+    walls = [{"id": "WALL-BACK", "start": _v(0, 0, 0), "end": _v(-lsau, 0, 0), "height": c.ceiling, "thickness": 100,
+              "materialId": mats["wall"], "interiorNormal": _v(0, 0, 1), "openings": []},
+             {"id": "WALL-RIGHT", "start": _v(0, 0, 0), "end": _v(0, 0, lphai), "height": c.ceiling, "thickness": 100,
+              "materialId": mats["wall"], "interiorNormal": _v(-1, 0, 0), "openings": []}]
+    if any(m.wall == "left" for m in spec.module):
+        walls.append({"id": "WALL-LEFT", "start": _v(-lsau, 0, 0), "end": _v(-lsau, 0, lphai), "height": c.ceiling, "thickness": 100,
+                      "materialId": mats["wall"], "interiorNormal": _v(1, 0, 0), "openings": []})
+    if spec.room:
+        for tw in spec.room.wall:
+            wall_entry = next((w for w in walls if w["id"] == f"WALL-{tw.id.upper()}"), None)
+            if wall_entry:
+                wall_entry["thickness"] = tw.thickness
+                for i, openings in enumerate(tw.openings):
+                    wall_entry["openings"].append({"id": f"{wall_entry['id']}-LO{i + 1}", "type": "window" if openings.type == "window" else "door",
+                                             "offset": openings.fromCorner, "width": openings.width, "height": openings.height, "sillHeight": openings.sillHeight})
+    room = {"dimensions": _dims(lsau, c.ceiling, lphai), "walls": walls, "floor": {"materialId": mats["floor"], "thickness": 0},
+            "ceiling": {"height": c.ceiling, "materialId": mats["wall"], "render": False}}
 
     # module
     modules = []
     for m in spec.module:
         frame, size = _module_frame(m, lsau)
-        modules.append(_module_entry(spec, m, by_mod.get(m.ma, []), frame, size, mats, has_led))
+        modules.append(_module_entry(spec, m, by_mod.get(m.id, []), frame, size, mats, has_led))
 
     # thiết bị & phụ kiện
-    app_type = {"tu-lanh": "Refrigerator", "hut-mui": "Range_Hood_Insert", "lo": "Microwave"}
+    app_type = {"fridge": "Refrigerator", "hood": "Range_Hood_Insert", "oven": "Microwave"}
     appliances, accessories = [], []
-    for tb in spec.thietBi:
-        ps = by_mod.get(tb.ma, [])
+    for tb in spec.appliances:
+        ps = by_mod.get(tb.id, [])
         if not ps:
             continue
         p = ps[0]
-        host = spec.tim(tb.module) if tb.module else next((mm for mm in spec.module if mm.tuong == tb.tuong and mm.tang == "duoi"
-                                                          and tb.tam is not None and mm.tu <= tb.tam < mm.het), None)
-        tuong = host.tuong if host and host.tuong != "goc" else (tb.tuong or "sau")
-        fr = Frame.for_aabb(p.min, p.max, tuong)
-        lo, hi = fr.box_local(p.min, p.max)
-        dims = _dims(*(hi[i] - lo[i] for i in range(3)))
-        name = (tb.ten or "").lower()
-        if tb.loai in app_type or tb.loai == "bep":
-            t = "Cooktop_Gas" if "gas" in name else "Cooktop_Induction" if tb.loai == "bep" else app_type[tb.loai]
-            a = {"id": f"APP-{tb.ma}", "type": t, "name": tb.ten or tb.ma, "assetId": "ASSET-APPLIANCE-BOX", "dimensions": dims,
-                 "transform": _tf(fr.pos, fr.rot), "materialId": mats["bep"] if tb.loai == "bep" else mats["inox"], "sourceRef": tb.ma,
-                 "energy": "gas" if "gas" in name else ("induction" if tb.loai == "bep" else "electric"),
-                 "installation": {"mountType": {"tu-lanh": "freestanding", "bep": "built_in", "hut-mui": "built_in", "lo": "built_in"}[tb.loai]}}
+        host = spec.find(tb.module) if tb.module else next((mm for mm in spec.module if mm.wall == tb.wall and mm.storey == "base"
+                                                          and tb.center is not None and mm.fromCorner <= tb.center < mm.endAt), None)
+        wall = host.wall if host and host.wall != "corner" else (tb.wall or "back")
+        fr = Frame.for_aabb(p.min, p.max, wall)
+        openings, hi = fr.box_local(p.min, p.max)
+        dims = _dims(*(hi[i] - openings[i] for i in range(3)))
+        name = (tb.name or "").lower()
+        if tb.type in app_type or tb.type == "cooktop":
+            t = "Cooktop_Gas" if "gas" in name else "Cooktop_Induction" if tb.type == "cooktop" else app_type[tb.type]
+            a = {"id": f"APP-{tb.id}", "type": t, "name": tb.name or tb.id, "assetId": "ASSET-APPLIANCE-BOX", "dimensions": dims,
+                 "transform": _tf(fr.pos, fr.rot), "materialId": mats["cooktop"] if tb.type == "cooktop" else mats["inox"], "sourceRef": tb.id,
+                 "energy": "gas" if "gas" in name else ("induction" if tb.type == "cooktop" else "electric"),
+                 "installation": {"mountType": {"fridge": "freestanding", "cooktop": "built_in", "hood": "built_in", "oven": "built_in"}[tb.type]}}
             if host:
-                a["parentModuleId"] = f"MOD-{host.ma}"
-            if tb.loai == "bep" and "hut-mui" in sel:
-                a["clearances"] = {"top": sel["hut-mui"]["params"].get("khoang_min", 650)}
+                a["parentModuleId"] = f"MOD-{host.id}"
+            if tb.type == "cooktop" and "hood" in sel:
+                a["clearances"] = {"top": sel["hood"]["params"].get("gap_min", 650)}
             appliances.append(a)
-        elif tb.loai in ("chau", "voi"):
-            accessories.append({"id": f"ACC-{tb.ma}", "type": ("Sink_Double" if "đôi" in name else "Sink_Single") if tb.loai == "chau" else "Faucet_Classic",
-                                "assetId": "ASSET-SINK" if tb.loai == "chau" else "ASSET-FAUCET",
-                                **({"parentId": f"MOD-{host.ma}"} if host else {}), "dimensions": dims, "transform": _tf(fr.pos, fr.rot),
-                                "materialId": mats["chau"] if tb.loai == "chau" else mats["inox"], "sourceRef": tb.ma})
+        elif tb.type in ("sink", "faucet"):
+            accessories.append({"id": f"ACC-{tb.id}", "type": ("Sink_Double" if "đôi" in name else "Sink_Single") if tb.type == "sink" else "Faucet_Classic",
+                                "assetId": "ASSET-SINK" if tb.type == "sink" else "ASSET-FAUCET",
+                                **({"parentId": f"MOD-{host.id}"} if host else {}), "dimensions": dims, "transform": _tf(fr.pos, fr.rot),
+                                "materialId": mats["sink"] if tb.type == "sink" else mats["inox"], "sourceRef": tb.id})
 
     # mặt đá (+ lỗ khoét ước lượng) và ốp tường
     cut_targets = [x for x in appliances if x["type"].startswith("Cooktop")] + [x for x in accessories if x["type"].startswith("Sink")]
-    for i, p in enumerate([p for p in scene.parts if p.loai == "mat-da"]):
-        fr = Frame.for_aabb(p.min, p.max, p.tuong)
-        lo, hi = fr.box_local(p.min, p.max)
-        w, h, d = (hi[k] - lo[k] for k in range(3))
+    for i, p in enumerate([p for p in scene.parts if p.type == "countertop"]):
+        fr = Frame.for_aabb(p.min, p.max, p.wall)
+        openings, hi = fr.box_local(p.min, p.max)
+        w, h, d = (hi[k] - openings[k] for k in range(3))
         cutouts = []
         for tgt in cut_targets:
             src = next(pp for pp in scene.parts if pp.module == tgt["sourceRef"])
-            if src.tuong == p.tuong and all(p.min[k] - 1 <= src.min[k] and src.max[k] <= p.max[k] + 1 for k in (0, 2)):
+            if src.wall == p.wall and all(p.min[k] - 1 <= src.min[k] and src.max[k] <= p.max[k] + 1 for k in (0, 2)):
                 llo, lhi = fr.box_local(src.min, src.max)
                 cw, cd = lhi[0] - llo[0] - 20, lhi[2] - llo[2] - 20
                 cutouts.append({"forId": tgt["id"], "type": "cooktop" if tgt["id"].startswith("APP") else "sink",
                                 "dimensions": _dims(cw, h, cd), "transform": _tf((llo[0] + 10, 0, llo[2] + 10)), "estimated": True})
         accessories.append({"id": f"ACC-COUNTERTOP-{i + 1}", "type": "Countertop", "assetId": "ASSET-COUNTERTOP", "dimensions": _dims(w, h, d),
-                            "transform": _tf(fr.pos, fr.rot), "materialId": mats["matDa"], "edgeProfile": "eased", "overhang": c.nhoMatDa,
-                            "cutouts": cutouts, "sourceRef": f"mat-da-{p.tuong}"})
-        uppers = [mm for mm in spec.module if mm.tuong == p.tuong and mm.tang in ("tren", "cao")]
-        top = min([mm.y for mm in uppers if mm.tang == "tren"] + [c.dayTuTren]) if uppers else c.matDa + 600
-        if c.vatLieu.get("opTuong") and top > c.matDa + 50:  # ốp tường giữa mặt đá và tủ trên, sát tường
+                            "transform": _tf(fr.pos, fr.rot), "materialId": mats["countertop"], "edgeProfile": "eased", "overhang": c.countertopOverhang,
+                            "cutouts": cutouts, "sourceRef": f"countertop-{p.wall}"})
+        height = backsplash_height(spec, p.wall)  # cùng một hàm với hình học 3D
+        if c.material.get("wallTile") and height >= 50:  # ốp tường giữa mặt đá và tủ trên, sát tường
             accessories.append({"id": f"ACC-BACKSPLASH-{i + 1}", "type": "Backsplash_Tile", "assetId": "ASSET-PANEL",
-                                "dimensions": _dims(w, top - c.matDa, 8), "materialId": mats["opTuong"],
-                                "transform": _tf((fr.pos[0], c.matDa, fr.pos[2]), fr.rot), "sourceRef": f"op-tuong-{p.tuong}"})
+                                "dimensions": _dims(w, height, 8), "materialId": mats["wallTile"],
+                                "transform": _tf((fr.pos[0], c.countertop, fr.pos[2]), fr.rot), "sourceRef": f"wall-tile-{p.wall}"})
 
     # phào: mặt cắt -> assets (dùng chung), đường chạy -> decorations
     from . import moldings as _mol
@@ -419,28 +445,28 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
     seen_prof = set()
     for i, run in enumerate(_mol.compute_runs(spec)):
         mol, prof = run.molding, run.profile
-        aid = f"ASSET-MOLDING-{prof.ma}"
+        aid = f"ASSET-MOLDING-{prof.id}"
         us = [u for u, _ in prof.points]
-        if prof.ma not in seen_prof:
-            seen_prof.add(prof.ma)
-            assets.append({"id": aid, "category": "cornice" if mol.kieu == "crown" else "molding", "geometryType": "extrusion",
-                           "defaultDimensions": _dims(1000, prof.cao, max(us) - min(us)),
-                           "parameters": {"profileId": prof.ma, "name": prof.ten, "profile": [[round(u, 2), round(v, 2)] for u, v in prof.points],
+        if prof.id not in seen_prof:
+            seen_prof.add(prof.id)
+            assets.append({"id": aid, "category": "cornice" if mol.variant == "crown" else "molding", "geometryType": "extrusion",
+                           "defaultDimensions": _dims(1000, prof.height, max(us) - min(us)),
+                           "parameters": {"profileId": prof.id, "name": prof.name, "profile": [[round(u, 2), round(v, 2)] for u, v in prof.points],
                                           "convention": "u: nhô ra phía phòng từ mặt trước tủ (âm = lùi vào); v: lên từ đường chạy; đa giác kín, ngược chiều kim đồng hồ"}})
-        if mol.vatLieu:
-            mid = f"MAT-MOLDING-{mol.ma}"
+        if mol.material:
+            mid = f"MAT-MOLDING-{mol.id}"
             if all(m["id"] != mid for m in mats_list):
-                mats_list.append({"id": mid, "name": mol.vatLieu, "threeMaterialType": "MeshStandardMaterial", "roughness": 0.5,
-                                  "metalness": 0.0, **_guess(mol.vatLieu), "semanticClass": "molding"})
+                mats_list.append({"id": mid, "name": mol.material, "threeMaterialType": "MeshStandardMaterial", "roughness": 0.5,
+                                  "metalness": 0.0, **_guess(mol.material), "semanticClass": "molding"})
         else:
-            mid = mats["tuTren"] if mol.kieu == "crown" else mats["tuDuoi"]
+            mid = mats["upper"] if mol.variant == "crown" else mats["base"]
         decorations.append({
-            "id": f"MOLD-{mol.ma}-{i + 1}", "type": "Crown_Molding" if mol.kieu == "crown" else "Base_Molding",
-            "name": f"{'Phào nóc' if mol.kieu == 'crown' else 'Phào chân'} ({', '.join(run.tuong)})", "assetId": aid,
-            "dimensions": _dims(run.length, prof.cao, max(us) - min(us)), "transform": _tf((0, 0, 0)), "materialId": mid,
+            "id": f"MOLD-{mol.id}-{i + 1}", "type": "Crown_Molding" if mol.variant == "crown" else "Base_Molding",
+            "name": f"{'Phào nóc' if mol.variant == 'crown' else 'Phào chân'} ({', '.join(run.wall)})", "assetId": aid,
+            "dimensions": _dims(run.length, prof.height, max(us) - min(us)), "transform": _tf((0, 0, 0)), "materialId": mid,
             "path": {"type": "polyline", "points": [_v(x, run.y, z) for x, z in run.points], "joints": "miter", "ends": "flush",
                      "normalRule": "pháp tuyến phía phòng n = (t.z, 0, -t.x), t = hướng đi của đoạn"},
-            "sourceRef": mol.ma, "semanticClass": "molding", "modules": [f"MOD-{m}" for m in dict.fromkeys(run.modules)]})
+            "sourceRef": mol.id, "semanticClass": "molding", "modules": [f"MOD-{m}" for m in dict.fromkeys(run.modules)]})
 
     # đèn
     lo_b, hi_b = scene.bounds()
@@ -450,7 +476,7 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
                  "target": _v(cx, 800, cz), "castShadow": True}]
     if has_led:
         for mod in modules:
-            if mod.get("led") and mod["tier"] == "wall":
+            if mod.get("led") and mod["storey"] == "upper":
                 w = mod["dimensions"]["width"]
                 f = Frame((mod["transform"]["position"]["x"], mod["transform"]["position"]["y"], mod["transform"]["position"]["z"]),
                           mod["transform"]["rotation"]["y"])
@@ -463,40 +489,44 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
     # camera (gocNhin: m -> mm)
     cameras = []
     for key, v in views_of(spec).items():
-        pos = [x * 1000 for x in v.viTri]
-        tgt = [x * 1000 for x in v.nhinVao]
+        pos = [x * 1000 for x in v.position]
+        tgt = [x * 1000 for x in v.lookAt]
         d = [b - a for a, b in zip(pos, tgt)]
         n = math.sqrt(sum(x * x for x in d)) or 1
         up = _v(0, 0, -1) if abs(d[1] / n) > 0.999 else _v(0, 1, 0)
-        cameras.append({"id": f"CAM-{key}", "name": v.ten or key, "position": _v(*pos), "target": _v(*tgt), "projection": "perspective",
-                        "fov": v.fovDoc, "fovAxis": "vertical", "near": 50, "far": 50000, "up": up, "aspect": round(4 / 3, 4)})
+        cameras.append({"id": f"CAM-{key}", "name": v.name or key, "position": _v(*pos), "target": _v(*tgt), "projection": "perspective",
+                        "fov": v.verticalFov, "fovAxis": "vertical", "near": 50, "far": 50000, "up": up, "aspect": round(4 / 3, 4)})
 
-    p_cb = (sel.get("chau-bep") or {}).get("params", {})
-    p_ld = (sel.get("loi-di") or {}).get("params", {})
-    p_kt = (sel.get("khoang-tu-tren") or {}).get("params", {})
-    p_hm = (sel.get("hut-mui") or {}).get("params", {})
-    constraints = {"allowTouching": True, "overlapTolerance": 1, "minimumSinkCooktopDistance": p_cb.get("chau_bep_min", 300),
-                   "minimumWalkwayWidth": p_ld.get("loiDi_min", p_ld.get("loiDi_1nguoi", 900)), "enforceRoomBounds": True,
-                   "minimumCountertopToWallCabinet": p_kt.get("khoang_tren_min", 450), "minimumHoodClearance": p_hm.get("khoang_min", 650),
-                   "sources": {k: sel[t]["code"] for k, t in (("minimumSinkCooktopDistance", "chau-bep"), ("minimumWalkwayWidth", "loi-di"),
-                                                              ("minimumCountertopToWallCabinet", "khoang-tu-tren"), ("minimumHoodClearance", "hut-mui"))
+    p_cb = (sel.get("sink-cooktop") or {}).get("params", {})
+    p_ld = (sel.get("walkway") or {}).get("params", {})
+    p_kt = (sel.get("upper-gap") or {}).get("params", {})
+    p_hm = (sel.get("hood") or {}).get("params", {})
+    constraints = {"allowTouching": True, "overlapTolerance": 1, "minimumSinkCooktopDistance": p_cb.get("sink_cooktop_min", 300),
+                   "minimumWalkwayWidth": p_ld.get("walkway_min", p_ld.get("walkway_1person", 900)), "enforceRoomBounds": True,
+                   "minimumCountertopToWallCabinet": p_kt.get("upper_gap_min", 450), "minimumHoodClearance": p_hm.get("gap_min", 650),
+                   "sources": {k: sel[t]["code"] for k, t in (("minimumSinkCooktopDistance", "sink-cooktop"), ("minimumWalkwayWidth", "walkway"),
+                                                              ("minimumCountertopToWallCabinet", "upper-gap"), ("minimumHoodClearance", "hood"))
                                if t in sel}}
-    palette = {SEMANTIC.get(k, k): _hex(v) for k, v in SEG_MAU.items()}
-    palette.update({f"module:{m.ma}": _hex(_mau_module(m.ma)) for m in spec.module})
+    palette = {SEMANTIC.get(k, k): _hex(v) for k, v in SEGMENT_COLORS.items()}
+    palette.update({f"module:{m.id}": _hex(_module_color(m.id)) for m in spec.module})
 
     doc = {
-        "schemaVersion": "1.1.0",
-        "metadata": {"designId": re.sub(r"[^A-Za-z0-9_.:-]", "-", design_id) or "design", "projectName": spec.ten,
-                     "description": spec.nguon or "", "style": spec.phongCach, "revision": max(1, rev), "author": "kitchen-design-mcp",
+        "schemaVersion": "1.2.0",
+        "metadata": {"designId": re.sub(r"[^A-Za-z0-9_.:-]", "-", design_id) or "design", "projectName": spec.name,
+                     "description": spec.source or "", "style": spec.style, "revision": max(1, rev), "author": "kitchen-design-mcp",
                      "createdAt": _dt.datetime.now(_dt.timezone.utc).replace(microsecond=0).isoformat(),
                      "region": {"countryCode": qg, "regionCode": kv, "appliedRules": {t: v["code"] for t, v in sel.items()}},
-                     "source": {"generator": "kitchen.threejs_export", "specSchemaVersion": spec.schemaVersion, "specRevision": rev}},
+                     "source": {"generator": "kitchen.threejs_export", "specSchemaVersion": spec.schemaVersion, "specRevision": rev},
+                     **({"styleTags": list(spec.styleTags)} if spec.styleTags else {}),
+                     **({"aiHints": list(spec.aiHints)} if spec.aiHints else {}),
+                     **({"renderPreferences": list(spec.renderPreferences)} if spec.renderPreferences else {}),
+                     **({"promptInterpretation": list(spec.promptInterpretation)} if spec.promptInterpretation else {})},
         "units": "mm",
         "coordinateSystem": {"upAxis": "+Y", "forwardAxis": "+Z", "handedness": "right", "origin": "kitchen_inner_corner",
                              "positionAnchor": "bottom_back_left", "metersPerUnit": 0.001,
-                             "wallFrames": [{"wallId": "WALL-SAU", "origin": _v(0, 0, 0), "alongAxis": _v(-1, 0, 0), "frontAxis": _v(0, 0, 1), "rotationY": 0},
-                                            {"wallId": "WALL-PHAI", "origin": _v(0, 0, 0), "alongAxis": _v(0, 0, 1), "frontAxis": _v(-1, 0, 0), "rotationY": -90},
-                                            {"wallId": "WALL-TRAI", "origin": _v(-lsau, 0, 0), "alongAxis": _v(0, 0, 1), "frontAxis": _v(1, 0, 0), "rotationY": 90}],
+                             "wallFrames": [{"wallId": "WALL-BACK", "origin": _v(0, 0, 0), "alongAxis": _v(-1, 0, 0), "frontAxis": _v(0, 0, 1), "rotationY": 0},
+                                            {"wallId": "WALL-RIGHT", "origin": _v(0, 0, 0), "alongAxis": _v(0, 0, 1), "frontAxis": _v(-1, 0, 0), "rotationY": -90},
+                                            {"wallId": "WALL-LEFT", "origin": _v(-lsau, 0, 0), "alongAxis": _v(0, 0, 1), "frontAxis": _v(1, 0, 0), "rotationY": 90}],
                              "notes": "Gốc ở góc trong tường sau/tường phải. Anchor = góc dưới-sau-trái nhìn từ phía trước. Hệ cục bộ module: "
                                       "x dọc bề rộng, y lên, z từ hậu ra trước. part/cánh/ngăn kéo theo hệ module; tay nắm theo hệ cánh."},
         "room": room, "lighting": lighting, "materials": mats_list, "assets": assets, "modules": modules, "appliances": appliances,

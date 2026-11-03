@@ -1,139 +1,176 @@
-"""Lớp dịch vụ dùng chung cho MCP server và HTTP API (adapter chỉ gọi vào đây)."""
+"""Shared application service used by the MCP server and HTTP API."""
 from __future__ import annotations
-
 import os
 from pathlib import Path
 from typing import Any
-
 from . import edit, geometry, intent, regions, render, rules, threejs_export
+from .intent import KitchenTemplate as KitchenTemplate
 from .spec import KitchenSpec, dump_spec, load_spec
 from .store import Store
-
+from . import legacy as legacy_schema
 ROOT = Path(__file__).resolve().parent.parent
 
-
-def load_dotenv(path: Path = ROOT / ".env") -> None:
-    """Nạp .env đơn giản (KEY=VALUE), không ghi đè biến môi trường đã có."""
+def load_dotenv(path: Path=ROOT / '.env') -> None:
+    """Load KEY=VALUE entries without overriding existing environment values."""
     if not path.exists():
         return
-    for line in path.read_text(encoding="utf-8").splitlines():
+    for line in path.read_text(encoding='utf-8').splitlines():
         line = line.strip()
-        if line and not line.startswith("#") and "=" in line:
-            k, v = line.split("=", 1)
-            os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
-
+        if line and (not line.startswith('#')) and ('=' in line):
+            key, value = line.split('=', 1)
+            os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
 
 class KitchenService:
-    def __init__(self, db_path: str | Path | None = None, render_dir: str | Path | None = None):
+    """Coordinate design, persistence, validation, geometry, and image jobs."""
+
+    def __init__(self, db_path: str | Path | None=None, render_dir: str | Path | None=None):
         load_dotenv()
-        self.store = Store(db_path or os.getenv("KITCHEN_DB") or ROOT / "kitchen.db")
-        self.render_dir = Path(render_dir or os.getenv("KITCHEN_RENDERS") or ROOT / "renders")
+        self.store = Store(db_path or os.getenv('KITCHEN_DB') or ROOT / 'kitchen.db')
+        self.render_dir = Path(render_dir or os.getenv('KITCHEN_RENDERS') or ROOT / 'renders')
+        legacy_schema.migrate_renders(self.render_dir)
         from .imagejobs import ImageJobs
         self.images = ImageJobs(self)
 
-    # ---- tạo
-    def _summary(self, did: str, rev: int, spec: KitchenSpec, **extra) -> dict:
-        v = self.validate_spec(spec)
-        return {"id": did, "rev": rev, "ten": spec.ten, "soModule": len(spec.module), "quocGia": spec.quocGia, "khuVuc": spec.khuVuc,
-                "module": [{"ma": m.ma, "loai": m.loai, "tuong": m.tuong, "tu": m.tu, "rong": m.rong, "y": m.y, "cao": m.cao}
-                           for m in spec.module],
-                "kiemTra": {"hopLe": v["hopLe"], "dem": v["dem"], "issues": v["issues"][:20]},
-                "gocNhin": list(geometry.views_of(spec)), **extra}
+    def _summary(self, design_id: str, revision: int, spec: KitchenSpec, **extra) -> dict:
+        """Build the established API summary for a design revision."""
+        validation = self.validate_spec(spec)
+        return {'id': design_id, 'rev': revision, 'name': spec.name, 'moduleCount': len(spec.module), 'country': spec.country, 'region': spec.region, 'module': [{'id': module.id, 'type': module.type, 'wall': module.wall, 'fromCorner': module.fromCorner, 'width': module.width, 'y': module.y, 'height': module.height} for module in spec.module], 'validation': {'valid': validation['valid'], 'dem': validation['dem'], 'issues': validation['issues'][:20]}, 'cameraViews': list(geometry.views_of(spec)), **extra}
 
-    def create_from_spec(self, spec: dict | KitchenSpec, nguon: str = "spec") -> dict:
-        s = spec if isinstance(spec, KitchenSpec) else load_spec(spec)
-        r = self.store.create_design(s, nguon)
-        return self._summary(r["id"], 1, s)
+    def create_from_spec(self, spec_data: dict | KitchenSpec, source: str='spec', **legacy: Any) -> dict:
+        """Create and persist a design from a complete specification."""
+        source = legacy.pop('source', source)
+        if legacy:
+            raise TypeError(f"Unexpected options: {', '.join(legacy)}")
+        spec = spec_data if isinstance(spec_data, KitchenSpec) else load_spec(spec_data)
+        record = self.store.create_design(spec, source)
+        return self._summary(record['id'], 1, spec)
 
-    def create_from_template(self, mau: dict | intent.MauBep, ten: str = "Thiết kế tủ bếp") -> dict:
-        m = mau if isinstance(mau, intent.MauBep) else intent.MauBep.model_validate(mau)
-        s = intent.from_template(m, ten, self.store.rule_rows())
-        r = self.store.create_design(s, "mau")
-        return self._summary(r["id"], 1, s, mau=m.model_dump())
+    def create_from_template(self, template: dict | KitchenTemplate, name: str='Kitchen design', **legacy: Any) -> dict:
+        """Generate and persist a design from a structured template."""
+        name = legacy.pop('name', name)
+        if legacy:
+            raise TypeError(f"Unexpected options: {', '.join(legacy)}")
+        parsed_template = template if isinstance(template, KitchenTemplate) else KitchenTemplate.model_validate(template)
+        spec = intent.from_template(parsed_template, name, self.store.rule_rows())
+        record = self.store.create_design(spec, 'template')
+        return self._summary(record['id'], 1, spec, color=parsed_template.model_dump())
 
-    def create_from_prompt(self, prompt: str, ten: str | None = None) -> dict:
-        mau, llm = intent.parse_prompt_llm(prompt)
+    def create_from_prompt(self, prompt: str, name: str | None=None, **legacy: Any) -> dict:
+        """Parse free-form text and create a design, falling back to regex parsing."""
+        name = legacy.pop('name', name)
+        if legacy:
+            raise TypeError(f"Unexpected options: {', '.join(legacy)}")
+        template, llm_result = intent.parse_prompt_llm(prompt)
         notes: list[str] = []
-        nguon = "deepseek"
-        if mau is None:
-            mau, notes = intent.parse_prompt(prompt)
-            nguon = "regex"
-        s = intent.from_template(mau, ten or prompt[:60], self.store.rule_rows())
-        r = self.store.create_design(s, f"prompt:{nguon}")
-        return self._summary(r["id"], 1, s, mau=mau.model_dump(), phanTich={"nguon": nguon, "ghiChu": notes, "deepseek": llm})
+        parser_source = 'deepseek'
+        if template is None:
+            template, notes = intent.parse_prompt(prompt)
+            parser_source = 'regex'
+        else:  # DeepSeek không biết các trường mới (phong cách, kiểu cánh, tay nắm, ốp): bổ sung từ bảng thuật ngữ
+            template, notes = intent.merge_lexicon(template, prompt)
+        spec = intent.from_template(template, name or prompt[:60], self.store.rule_rows())
+        record = self.store.create_design(spec, f'prompt:{parser_source}')
+        return self._summary(record['id'], 1, spec, color=template.model_dump(), analysis={'source': parser_source, 'note': notes, 'interpretation': template.promptInterpretation, 'deepseek': llm_result})
 
-    # ---- đọc / sửa
-    def get(self, did: str, rev: int | None = None) -> dict:
-        s, r = self.store.get(did, rev)
-        return {"id": did, "rev": r, "spec": dump_spec(s)}
+    def get(self, design_id: str, revision: int | None=None) -> dict:
+        """Return a design specification at the requested or latest revision."""
+        spec, stored_revision = self.store.get(design_id, revision)
+        return {'id': design_id, 'rev': stored_revision, 'spec': dump_spec(spec)}
 
-    def apply(self, did: str, op: dict[str, Any], base_rev: int | None, nguon: str = "") -> dict:
-        s, cur = self.store.get(did)
-        new = edit.apply_op(s, op)
-        rev = self.store.add_revision(did, base_rev, new, op, nguon)
-        return self._summary(did, rev, new)
+    def apply(self, design_id: str, operation: dict[str, Any], base_revision: int | None, source: str='', **legacy: Any) -> dict:
+        """Apply one operation and append a revision, rejecting stale base revisions."""
+        source = legacy.pop('source', source)
+        if legacy:
+            raise TypeError(f"Unexpected options: {', '.join(legacy)}")
+        spec, _current_revision = self.store.get(design_id)
+        updated_spec = edit.apply_op(spec, operation)
+        new_revision = self.store.add_revision(design_id, base_revision, updated_spec, operation, source)
+        return self._summary(design_id, new_revision, updated_spec)
 
-    def revert(self, did: str, rev: int, base_rev: int | None) -> dict:
-        old, _ = self.store.get(did, rev)
-        return self.apply(did, {"op": "replace", "spec": dump_spec(old), "tuRev": rev}, base_rev, "revert")
+    def revert(self, design_id: str, target_revision: int, base_revision: int | None) -> dict:
+        """Restore an earlier specification by appending a new revision."""
+        old_spec, _ = self.store.get(design_id, target_revision)
+        operation = {'op': 'replace', 'spec': dump_spec(old_spec), 'fromRev': target_revision}
+        return self.apply(design_id, operation, base_revision, 'revert')
 
-    def history(self, did: str) -> list[dict]:
-        return self.store.history(did)
+    def history(self, design_id: str) -> list[dict]:
+        """Return the revision history for a design."""
+        return self.store.history(design_id)
 
     def list_designs(self) -> list[dict]:
+        """List stored designs and their latest revisions."""
         return self.store.list_designs()
 
-    # ---- kiểm tra / hình học / ảnh
-    def validate_spec(self, spec: KitchenSpec, quoc_gia: str | None = None, khu_vuc: str | None = None) -> dict:
-        return rules.validate(spec, self.store.rule_rows(), quoc_gia, khu_vuc)
+    def validate_spec(self, spec: KitchenSpec, country: str | None=None, region: str | None=None, **legacy: Any) -> dict:
+        """Validate a specification against geometry and stored knowledge rules."""
+        country = legacy.pop('country', country)
+        region = legacy.pop('region', region)
+        if legacy:
+            raise TypeError(f"Unexpected options: {', '.join(legacy)}")
+        return rules.validate(spec, self.store.rule_rows(), country, region)
 
-    def validate(self, did: str, rev: int | None = None, quoc_gia: str | None = None, khu_vuc: str | None = None) -> dict:
-        """Kiểm tra theo quốc gia/khu vực (mặc định: của spec)."""
-        s, r = self.store.get(did, rev)
-        return {"id": did, "rev": r, **self.validate_spec(s, quoc_gia, khu_vuc)}
+    def validate(self, design_id: str, revision: int | None=None, country: str | None=None, region: str | None=None, **legacy: Any) -> dict:
+        """Validate a stored revision using its default or overridden jurisdiction."""
+        country = legacy.pop('country', country)
+        region = legacy.pop('region', region)
+        if legacy:
+            raise TypeError(f"Unexpected options: {', '.join(legacy)}")
+        spec, stored_revision = self.store.get(design_id, revision)
+        return {'id': design_id, 'rev': stored_revision, **self.validate_spec(spec, country, region)}
 
-    def scene(self, did: str, rev: int | None = None) -> dict:
-        s, r = self.store.get(did, rev)
-        return {"id": did, "rev": r, **geometry.scene_json(s)}
+    def scene(self, design_id: str, revision: int | None=None) -> dict:
+        """Compile a design revision into the basic geometry scene."""
+        spec, stored_revision = self.store.get(design_id, revision)
+        return {'id': design_id, 'rev': stored_revision, **geometry.scene_json(spec)}
 
-    def threejs(self, did: str, rev: int | None = None, quoc_gia: str | None = None) -> dict:
-        """Tài liệu theo Complete Kitchen Three.js Scene Schema v1.1 (tương thích v1.0)."""
-        s, r = self.store.get(did, rev)
-        return threejs_export.export(s, did, r, self.store.rule_rows(), quoc_gia)
+    def threejs(self, design_id: str, revision: int | None=None, country: str | None=None, **legacy: Any) -> dict:
+        """Export a scene document using the Complete Kitchen Three.js schema."""
+        country = legacy.pop('country', country)
+        if legacy:
+            raise TypeError(f"Unexpected options: {', '.join(legacy)}")
+        spec, stored_revision = self.store.get(design_id, revision)
+        return threejs_export.export(spec, design_id, stored_revision, self.store.rule_rows(), country)
 
-    def render(self, did: str, rev: int | None = None, views: list[str] | None = None,
-               width: int = 1280, height: int = 960) -> dict:
+    def render(self, design_id: str, revision: int | None=None, views: list[str] | None=None, width: int=1280, height: int=960) -> dict:
+        """Render control images for selected views and persist them by revision."""
         if not (256 <= width <= 4096 and 256 <= height <= 4096):
-            raise ValueError("width/height phải trong 256–4096")
-        s, r = self.store.get(did, rev)
-        out = self.render_dir / did / f"rev{r}"
-        res = render.render_views(s, out, views, width, height, meta={"designId": did, "rev": r})
-        return {"id": did, "rev": r, **res}
+            raise ValueError('Width and height must be between 256 and 4096.')
+        spec, stored_revision = self.store.get(design_id, revision)
+        output_dir = self.render_dir / design_id / f'rev{stored_revision}'
+        result = render.render_views(spec, output_dir, views, width, height, meta={'designId': design_id, 'rev': stored_revision})
+        return {'id': design_id, 'rev': stored_revision, **result}
 
-    def ai_export(self, did: str, rev: int | None = None, views: list[str] | None = None, quoc_gia: str | None = None,
-                  with_images: bool = False, embed: bool = False, anh_sang: str = "ban-ngay") -> dict:
-        """Gói JSON cuối cùng gửi AI tạo ảnh (renders/<id>/rev<N>/ai/ai-request.json, + zip khi kèm ảnh;
-        embed=True: ai-request.full.json có nhúng ảnh nên gửi của từng góc)."""
+    def ai_export(self, design_id: str, revision: int | None=None, views: list[str] | None=None, country: str | None=None, with_images: bool=False, embed: bool=False, lighting: str='daylight', **legacy: Any) -> dict:
+        """Build an AI image-generation package for a design revision."""
+        country = legacy.pop('country', country)
+        lighting = legacy.pop('lighting', lighting)
+        if legacy:
+            raise TypeError(f"Unexpected options: {', '.join(legacy)}")
         from . import ai_export
-        return ai_export.build(self, did, rev, views, quoc_gia, with_images, embed, anh_sang)
+        return ai_export.build(self, design_id, revision, views, country, with_images, embed, lighting)
 
-    # ---- tri thức
-    def search_knowledge(self, query: str = "", kinds: list[str] | None = None, quoc_gia: str | None = None,
-                         khu_vuc: str | None = None, chi_vung: bool = False) -> list[dict]:
-        return self.store.knowledge(query, kinds, quoc_gia, khu_vuc, chi_vung)
+    def search_knowledge(self, query: str='', kinds: list[str] | None=None, country: str | None=None, region: str | None=None, region_only: bool=False, **legacy: Any) -> list[dict]:
+        """Search knowledge entries with optional country and region prioritization."""
+        country = legacy.pop('country', country)
+        region = legacy.pop('region', region)
+        region_only = legacy.pop('region_only', region_only)
+        if legacy:
+            raise TypeError(f"Unexpected options: {', '.join(legacy)}")
+        return self.store.knowledge(query, kinds, country, region, region_only)
 
-    def molding_profiles(self, did: str | None = None) -> dict:
+    def molding_profiles(self, design_id: str | None=None) -> dict:
+        """Return built-in molding profiles plus profiles defined by a design."""
         from . import moldings
-        profs = dict(moldings.PRESETS)
-        if did:
-            spec, _ = self.store.get(did)
-            profs.update({p.ma: p for p in spec.moldingProfiles})
-        return {k: {"ma": p.ma, "ten": p.ten, "moTa": p.moTa, "kieu": "base" if "base" in k else "crown", "cao": p.cao, "nho": p.nho,
-                    "points": p.points} for k, p in profs.items()}
+        profiles = dict(moldings.PRESETS)
+        if design_id:
+            spec, _ = self.store.get(design_id)
+            profiles.update({profile.id: profile for profile in spec.moldingProfiles})
+        return {key: {'id': profile.id, 'name': profile.name, 'description': profile.description, 'variant': 'base' if 'base' in key else 'crown', 'height': profile.height, 'overhang': profile.overhang, 'points': profile.points} for key, profile in profiles.items()}
 
     def list_regions(self) -> dict:
-        return {"khuVuc": regions.KHU_VUC, "quocGia": {k: {"ten": v[0], "khuVuc": v[1]} for k, v in regions.QUOC_GIA.items()},
-                "soMuc": self.store.regions_summary()}
+        """Return supported regions, countries, and knowledge-entry counts."""
+        return {'region': regions.REGIONS, 'country': {code: {'name': data[0], 'region': data[1]} for code, data in regions.COUNTRIES.items()}, 'entryCounts': self.store.regions_summary()}
 
-    def add_knowledge(self, **kw) -> dict:
-        return self.store.upsert_knowledge(**kw)
+    def add_knowledge(self, **kwargs) -> dict:
+        """Insert or update a knowledge entry."""
+        return self.store.upsert_knowledge(**kwargs)

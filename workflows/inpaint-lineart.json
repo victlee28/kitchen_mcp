@@ -1,14 +1,14 @@
 {
  "kitchen": {
-  "ten": "Inpaint + ControlNet lineart",
+  "name": "Inpaint + ControlNet lineart",
   "kind": "edit",
-  "anh": [
+  "image": [
    "reference",
    "mask",
    "lines"
   ],
-  "moTa": "Như inpaint, thêm ControlNet lineart từ lines.png (đã đảo: nét trắng nền đen) để giữ đúng mép cánh.",
-  "macDinh": {
+  "description": "Như inpaint, thêm ControlNet lineart từ lines.png (đã đảo: nét trắng nền đen) để giữ đúng mép cánh.",
+  "default": {
    "steps": 28,
    "cfg": 6.0,
    "cn_strength": 0.8

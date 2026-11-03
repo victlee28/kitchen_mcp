@@ -46,7 +46,7 @@ header button{background:#3d3a33;border-color:#57524a;margin:0}
 .jobs{list-style:none;padding:0;margin:0;font-size:12px;max-height:180px;overflow:auto}
 .jobs li{padding:4px 6px;border-radius:6px;cursor:pointer;display:flex;justify-content:space-between;gap:6px}
 .jobs li:hover{background:#f4f1eb}.jobs li.sel{background:#dbe7ff}
-.st{font-weight:600}.st.can-duyet{color:#a36c1a}.st.da-chap-nhan{color:#267052}.st.loi{color:#a33b2b}.st.dang-chay,.st.cho-ket-qua{color:#3c5f8a}
+.st{font-weight:600}.st.needs-review{color:#a36c1a}.st.accepted{color:#267052}.st.error{color:#a33b2b}.st.running,.st.awaiting-result{color:#3c5f8a}
 .jobdetail{font-size:12px;border-top:1px solid #f0ebe3;margin-top:6px;padding-top:6px}.jobdetail p{margin:4px 0}
 .jobdetail .row button{padding:4px 8px;font-size:12px}
 @media(max-width:1100px){.imgedit{grid-template-columns:1fr}}
@@ -64,7 +64,7 @@ dialog.jv:not([open]){display:none}dialog.jv::backdrop{background:rgba(30,28,24,
 .jv-tree details{margin-left:14px}.jv-tree>details{margin-left:0}.jv-tree summary{cursor:pointer}.jv-kids{border-left:1px dashed #e3dbcf;padding-left:6px}
 .jv-row{margin-left:14px;word-break:break-word}.jv-key{color:#6b4f7a}.jv-str{color:#267052}.jv-num{color:#a36c1a}.jv-bool,.jv-null{color:#3c5f8a}.jv-sum{color:#9a9286}
 .jv-img{display:inline-flex;align-items:center;gap:8px;vertical-align:middle}.jv-img img{max-height:90px;max-width:160px;border:1px solid #ddd;border-radius:4px;background:#000}
-.st.cho-gui{color:#6b4f7a}
+.st.awaiting-send{color:#6b4f7a}
 .sendai{margin:4px 0;line-height:1.7}
 .jv-variants{display:inline-flex;border:1px solid #3b665c;border-radius:7px;overflow:hidden}.jv-variants button{white-space:nowrap;margin:0;border:0;border-radius:0;background:#fff;color:#3b665c;padding:5px 10px;font-size:12.5px}.jv-variants button.on{background:#3b665c;color:#fff}
 .jv-bar button{white-space:nowrap}.jv-bar #jvTitle{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:42%}
@@ -73,3 +73,10 @@ dialog.jv:not([open]){display:none}dialog.jv::backdrop{background:rgba(30,28,24,
 .hinhbox{margin:8px 0;padding:6px 8px;border:1px solid var(--line,#ccc);border-radius:6px}.hinhbox summary{cursor:pointer;font-weight:600}
 .hinhbox textarea{width:100%;font:12px ui-monospace,monospace}
 .hinhbox [hidden]{display:none!important}
+.baserow { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+
+.chips.sel button{background:#eef4f2}.chips.sel button.clr{background:#fff;color:#a33b2b;border-color:#a33b2b}
+
+.interp{margin-top:6px;font-size:12px}.interp table{border-collapse:collapse;width:100%}.interp th,.interp td{border:1px solid #d9d4c7;padding:2px 6px;text-align:left;vertical-align:top}
+.interp th{background:#f0ede4}.interp tr.st-unsupported td:nth-child(4){color:#a33b2b;font-weight:600}.interp tr.st-ambiguous td:nth-child(4){color:#a06a00;font-weight:600}
+.interp tr.st-built td:nth-child(4){color:#2f7d4f}.interp tr.st-exported td:nth-child(4),.interp tr.st-ai-only td:nth-child(4){color:#3b665c}

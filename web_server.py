@@ -5,7 +5,7 @@ kiểm tra Host để chặn DNS rebinding.
 
 API:
   GET  /api/designs                      danh sách
-  POST /api/designs                      {"mau": {...}} | {"prompt": "..."} | {"spec": {...}}
+  POST /api/designs                      {"color": {...}} | {"prompt": "..."} | {"spec": {...}}
   GET  /api/designs/<id>[?rev=N]         spec
   GET  /api/designs/<id>/scene[?rev=N]   scene đã biên dịch (khối hộp)
   GET  /api/designs/<id>/threejs[?rev=N&quocGia=VN]  JSON theo Complete Kitchen Three.js Scene Schema v1.1
@@ -21,14 +21,14 @@ API:
 Sửa ảnh theo lớp:
   GET  /api/designs/<id>/layers?view=&rev=&all=1      layer thấy được ở góc nhìn (+ renderKey, ảnh gốc hiện dùng)
   GET  /api/designs/<id>/mask?view=&layer=&rev=       mask PNG (trắng = layer)
-  GET  /api/designs/<id>/pick?view=&x=&y=&rev=        chi tiết tại pixel + các layer chứa nó
+  GET  /api/designs/<id>/pick?view=&x=&y=&rev=&radius= chi tiết tại pixel (radius: ưu tiên tay nắm trong bán kính px) + các layer chứa nó
   POST /api/designs/<id>/image-jobs                   {view, targetLayer, instruction, mode, vatLieu, backend, reference, baseRev, kind, workflow, seed, params}
                                                       hoặc nhiều việc: {view, tasks: [{targetLayer, vatLieu, instruction}, ...], mode, backend, ...}
   GET  /api/image-jobs?design=&view=&status=          danh sách job
   GET  /api/image-jobs/<job>                          chi tiết + url file
   GET  /api/image-jobs/<job>/request[?dang=ai|day-du|gemini|web]  request gửi AI đã lọc / thân Gemini API (inline_data) / hướng dẫn Gemini web
-  POST /api/image-jobs/<job>/result                   {"imageBase64": "..."} (backend goi-job)
-  POST /api/image-jobs/<job>/accept                   {"apVaoThietKe": bool, "baseRev": N}
+  POST /api/image-jobs/<job>/result                   {"imageBase64": "..."} (backend job-package)
+  POST /api/image-jobs/<job>/accept                   {"applyToDesign": bool, "baseRev": N}
   POST /api/image-jobs/<job>/reject | /regenerate     {}
   POST /api/image-jobs/<job>/send                     gửi job tạo với xemTruoc=true (đang 'cho-gui') sang backend
   GET  /api/image-backends                            backend + workflow ComfyUI có sẵn
@@ -36,6 +36,7 @@ Sửa ảnh theo lớp:
   GET  /api/designs/<id>/ai-export[?rev=&views=&nhungAnh=1|dang=day-du]  JSON gửi AI (rút gọn, nhúng ảnh) / bản đầy đủ
   POST /api/designs/<id>/ai-export                    {rev?, views?, kemAnh?} ghi renders/<id>/rev<N>/ai/ (+ ai-package.zip)
   POST /api/designs/<id>/beauty                       {view, rev, imageBase64} ảnh render three.js (web/render.html) -> beauty.png
+  POST /api/designs/<id>/base-image                   {view, rev, imageBase64, fit?: reject|crop|pad} replace the base image (ChatGPT render) -> base_imported.png; {view, rev, remove: true} restores the default
 """
 from __future__ import annotations
 
@@ -130,7 +131,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._static(p)
         if p == "/api/knowledge" and method == "GET":
             kinds = [k for k in (q.get("kinds") or "").split(",") if k] or None
-            return self._json(200, s.search_knowledge(q.get("q", ""), kinds, q.get("quocGia"), q.get("khuVuc"), q.get("chiVung") == "1"))
+            return self._json(200, s.search_knowledge(q.get("q", ""), kinds, q.get("country"), q.get("region"), q.get("regionOnly") == "1"))
         if p == "/api/molding-profiles" and method == "GET":
             return self._json(200, s.molding_profiles(q.get("design")))
         if p == "/api/regions" and method == "GET":
@@ -145,7 +146,7 @@ class Handler(BaseHTTPRequestHandler):
                 if not str(b["prompt"]).strip():
                     raise ApiError(400, "prompt rỗng")
                 return self._json(201, s.create_from_prompt(str(b["prompt"])))
-            return self._json(201, s.create_from_template(b.get("mau") or {}, b.get("ten") or "Thiết kế tủ bếp"))
+            return self._json(201, s.create_from_template(b.get("color") or {}, b.get("name") or "Thiết kế tủ bếp"))
         if p == "/api/design" and method == "POST":  # tương thích bản cũ
             b = self._body()
             prompt = str(b.get("customer_prompt", "")).strip()
@@ -156,9 +157,9 @@ class Handler(BaseHTTPRequestHandler):
             from kitchen import request_check
             return self._json(200, request_check.check_text(str(self._body(MAX_IMAGE_BODY).get("text", ""))))
         if p == "/api/image-backends" and method == "GET":
-            from kitchen import backends, hinh
-            return self._json(200, {"backends": backends.BACKENDS, "workflows": backends.workflow_names(), "thaoTac": hinh.THAO_TAC, "anhSang": __import__("kitchen.realism", fromlist=["x"]).ANH_SANG_VI,
-                                    "macDinh": os.getenv("KITCHEN_IMAGE_BACKEND") or "to-mau",
+            from kitchen import backends, geometry_edit
+            return self._json(200, {"backends": backends.BACKENDS, "workflows": backends.workflow_names(), "operation": geometry_edit.OPERATIONS, "lighting": __import__("kitchen.realism", fromlist=["x"]).LIGHTING_VI,
+                                    "default": os.getenv("KITCHEN_IMAGE_BACKEND") or "recolor",
                                     "comfyuiUrl": os.getenv("COMFYUI_URL", "http://127.0.0.1:8188")})
         if p == "/api/image-jobs" and method == "GET":
             return self._json(200, [self._job_out(j) for j in s.images.list(q.get("design"), q.get("view"), q.get("status"))])
@@ -166,12 +167,12 @@ class Handler(BaseHTTPRequestHandler):
         if m:
             jid, sub = m.groups()
             if method == "GET" and sub == "request":  # ?dang=ai (mặc định, đã lọc) | day-du (kiểm tra) | gemini (thân API) | web (hướng dẫn chat)
-                dang = q.get("dang", "ai")
-                f = s.images.export_full(jid) if dang == "day-du" else s.images.export_request(jid)
-                f = {"gemini": f.with_name("gemini-request.json"), "web": f.with_name("GUI-GEMINI-WEB.txt")}.get(dang, f)
+                format = q.get("format", "ai")
+                f = s.images.export_full(jid) if format == "full" else s.images.export_request(jid)
+                f = {"gemini": f.with_name("gemini-request.json"), "web": f.with_name("GEMINI-WEB-GUIDE.txt")}.get(format, f)
                 body = f.read_bytes()
                 self.send_response(200)
-                self.send_header("Content-Type", "text/plain; charset=utf-8" if dang == "web" else "application/json; charset=utf-8")
+                self.send_header("Content-Type", "text/plain; charset=utf-8" if format == "web" else "application/json; charset=utf-8")
                 self.send_header("Content-Disposition", f'attachment; filename="{jid}-{f.name}"')
                 self.send_header("Content-Length", str(len(body)))
                 self.send_header("Cache-Control", "no-store")
@@ -189,7 +190,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(200, self._job_out(s.images.submit_result(jid, raw)))
             if method == "POST" and sub == "accept":
                 b = self._body()
-                return self._json(200, self._job_out(s.images.accept(jid, bool(b.get("apVaoThietKe")), b.get("baseRev"))))
+                return self._json(200, self._job_out(s.images.accept(jid, bool(b.get("applyToDesign")), b.get("baseRev"))))
             if method == "POST" and sub == "send":
                 self._body()
                 return self._json(200, self._job_out(s.images.send(jid)))
@@ -200,7 +201,7 @@ class Handler(BaseHTTPRequestHandler):
                 b = self._body()
                 return self._json(201, self._job_out(s.images.regenerate(jid, b.get("seed"))))
             raise ApiError(405, "Phương thức không hỗ trợ")
-        m = re.fullmatch(r"/api/designs/([a-z0-9-]+)(?:/(scene|threejs|validate|history|ops|revert|render|layers|mask|pick|image-jobs|beauty|ai-export))?", p)
+        m = re.fullmatch(r"/api/designs/([a-z0-9-]+)(?:/(scene|threejs|validate|history|ops|revert|render|layers|mask|pick|image-jobs|beauty|base-image|ai-export))?", p)
         if not m:
             raise ApiError(404, "Không có endpoint")
         did, sub = m.groups()
@@ -210,15 +211,15 @@ class Handler(BaseHTTPRequestHandler):
             if sub == "scene":
                 return self._json(200, s.scene(did, rev))
             if sub == "threejs":
-                return self._json(200, s.threejs(did, rev, q.get("quocGia")))
+                return self._json(200, s.threejs(did, rev, q.get("country")))
             if sub == "validate":
-                return self._json(200, s.validate(did, rev, q.get("quocGia"), q.get("khuVuc")))
+                return self._json(200, s.validate(did, rev, q.get("country"), q.get("region")))
             if sub == "history":
                 return self._json(200, s.history(did))
             if sub == "ai-export":  # tải thẳng JSON cuối cùng (không ghi ảnh)
-                emb = q.get("nhungAnh") == "1" and q.get("dang") != "day-du"  # day-du = ai-request.json đầy đủ (cảnh three.js…)
-                res = s.ai_export(did, rev, [v for v in (q.get("views") or "").split(",") if v] or None, q.get("quocGia"), False, emb,
-                                  q.get("anhSang") or "ban-ngay")
+                emb = q.get("embedImages") == "1" and q.get("format") != "full"  # day-du = ai-request.json đầy đủ (cảnh three.js…)
+                res = s.ai_export(did, rev, [v for v in (q.get("views") or "").split(",") if v] or None, q.get("country"), False, emb,
+                                  q.get("lighting") or "daylight")
                 body = Path(res["file"]).read_bytes()
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -231,14 +232,14 @@ class Handler(BaseHTTPRequestHandler):
             if sub == "layers":
                 res = s.images.layers(did, self._need(q, "view"), rev, q.get("all") == "1")
                 res["url"] = self._url(res.pop("dir"))
-                res["anhGoc"]["url"] = self._ref_url(res)
+                res["baseImage"]["url"] = self._ref_url(res)
                 return self._json(200, res)
             if sub == "mask":
                 return self._send(200, s.images.mask_png(did, self._need(q, "view"), self._need(q, "layer"), rev), "image/png")
             if sub == "pick":
-                return self._json(200, s.images.pick(did, self._need(q, "view"), int(self._need(q, "x")), int(self._need(q, "y")), rev))
+                return self._json(200, s.images.pick(did, self._need(q, "view"), int(self._need(q, "x")), int(self._need(q, "y")), rev, int(q.get("radius") or 0)))
         if method == "POST":
-            b = self._body(MAX_IMAGE_BODY if sub == "beauty" else MAX_BODY)
+            b = self._body(MAX_IMAGE_BODY if sub in ("beauty", "base-image") else MAX_BODY)
             if sub == "beauty":
                 try:
                     raw = base64.b64decode(str(b.get("imageBase64", "")).split(",")[-1], validate=True)
@@ -247,9 +248,21 @@ class Handler(BaseHTTPRequestHandler):
                 res = s.images.save_beauty(did, str(b.get("view") or ""), raw, b.get("rev"))
                 res["url"] = (self._url(res.pop("dir")) or "") + "beauty.png"
                 return self._json(200, res)
+            if sub == "base-image":
+                if b.get("remove"):
+                    res = s.images.clear_imported_base(did, str(b.get("view") or ""), b.get("rev"))
+                    res.pop("dir")
+                    return self._json(200, res)
+                try:
+                    raw = base64.b64decode(str(b.get("imageBase64", "")).split(",")[-1], validate=True)
+                except (binascii.Error, ValueError):
+                    raise ApiError(400, "imageBase64 không hợp lệ")
+                res = s.images.import_base(did, str(b.get("view") or ""), raw, b.get("rev"), "ChatGPT (manual import)", str(b.get("fit") or "reject"))
+                res["url"] = (self._url(res.pop("dir")) or "") + "base_imported.png"
+                return self._json(200, res)
             if sub == "ai-export":
                 views = b.get("views") if isinstance(b.get("views"), list) else None
-                res = s.ai_export(did, b.get("rev"), views, b.get("quocGia"), bool(b.get("kemAnh")), False, b.get("anhSang") or "ban-ngay")
+                res = s.ai_export(did, b.get("rev"), views, b.get("country"), bool(b.get("withImage")), False, b.get("lighting") or "daylight")
                 u = self._url(res.pop("dir"))
                 res["url"] = {"json": u and u + "ai-request.json", **({"zip": u and u + "ai-package.zip"} if res.get("zip") else {})}
                 res.pop("file"); res.pop("zip", None)
@@ -262,12 +275,12 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(200, s.revert(did, int(b["rev"]), b.get("baseRev")))
             if sub == "image-jobs":
                 job = s.images.create(did, str(b.get("view") or ""), b.get("targetLayer"), str(b.get("instruction") or ""),
-                                      b.get("mode") or "thu-nhanh", b.get("vatLieu") or None, b.get("backend") or "to-mau",
+                                      b.get("mode") or "quick", b.get("material") or None, b.get("backend") or "recolor",
                                       b.get("reference"), b.get("baseRev"), b.get("kind") or "edit", b.get("workflow"),
                                       b.get("seed"), b.get("params") if isinstance(b.get("params"), dict) else None,
                                       b.get("tasks") if isinstance(b.get("tasks"), list) and b.get("tasks") else None,
-                                      bool(b.get("xemTruoc")), b.get("hinh") if isinstance(b.get("hinh"), list) else None,
-                                      b.get("thaoTac") or None, b.get("anhSang") or None)
+                                      bool(b.get("preview")), b.get("geometry_edit") if isinstance(b.get("geometry_edit"), list) else None,
+                                      b.get("operation") or None, b.get("lighting") or None)
                 return self._json(201, self._job_out(job))
             if sub == "render":
                 res = s.render(did, b.get("rev"), b.get("views"), int(b.get("width", 1280)), int(b.get("height", 960)))
@@ -290,20 +303,21 @@ class Handler(BaseHTTPRequestHandler):
             return None  # thư mục render ngoài dự án (test)
 
     def _ref_url(self, layers_res: dict) -> str | None:
-        ref = layers_res["anhGoc"]
-        if ref["loai"] == "job":
+        ref = layers_res["baseImage"]
+        if ref["type"] == "job":
             u = self._url(SVC.images.get(ref["jobId"])["result"]["dir"])
             return u and u + "composite.png"
-        return layers_res["url"] and layers_res["url"] + ("beauty.png" if ref["loai"] == "beauty" else "albedo.png")
+        name = {"beauty": "beauty.png", "imported": "base_imported.png"}.get(ref["type"], "albedo.png")
+        return layers_res["url"] and layers_res["url"] + name
 
     def _job_out(self, j: dict) -> dict:
         d = j["result"].get("dir")
         u = self._url(d) if d else None
         if u:
-            anh = sorted(x.name for x in Path(d).glob("anh-[0-9]-*.png"))  # ảnh đính kèm gửi AI, đánh số theo thứ tự
-            files = [f for f in ("request.json", "request.full.json", "gemini-request.json", "GUI-GEMINI-WEB.txt", *anh,
-                                 "reference.png", "reference_danh_dau.png", "hinh_moi.png", "target.png", "mask.png", "mask_mau.png", "raw.png", "composite.png",
-                                 "workflow_api.json", "HUONG-DAN.txt", "report.json") if (Path(d) / f).exists()]
+            image = sorted(x.name for x in Path(d).glob("image-[0-9]-*.png"))  # ảnh đính kèm gửi AI, đánh số theo thứ tự
+            files = [f for f in ("request.json", "request.full.json", "gemini-request.json", "GEMINI-WEB-GUIDE.txt", *image,
+                                 "reference.png", "reference_marked.png", "new_geometry.png", "target.png", "mask.png", "mask_color.png", "raw.png", "composite.png",
+                                 "workflow_api.json", "INSTRUCTIONS.txt", "report.json") if (Path(d) / f).exists()]
             j = {**j, "url": u, "files": {f: u + f for f in files}}
         return j
 
@@ -320,8 +334,8 @@ class Handler(BaseHTTPRequestHandler):
         except FileNotFoundError as e:
             self._json(404, {"error": str(e)})
         except ValidationError as e:
-            self._json(422, {"error": "Dữ liệu không hợp lệ", "chiTiet": [
-                {"viTri": ".".join(map(str, x["loc"])), "loi": x["msg"]} for x in e.errors()[:10]]})
+            self._json(422, {"error": "Dữ liệu không hợp lệ", "part": [
+                {"position": ".".join(map(str, x["loc"])), "errors": x["msg"]} for x in e.errors()[:10]]})
         except (KeyError, ValueError) as e:
             self._json(404 if isinstance(e, KeyError) else 400, {"error": str(e).strip("'\"")})
         except Exception:

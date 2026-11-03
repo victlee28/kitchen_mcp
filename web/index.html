@@ -22,15 +22,21 @@
         <h2>Tạo thiết kế</h2>
         <textarea id="prompt" rows="3" placeholder="Ví dụ: Bếp chữ L cạnh dài 2,8m và 3,2m, có tủ lạnh, mặt đá trắng"></textarea>
         <button id="fromPrompt">Tạo từ mô tả</button>
+        <div id="promptResult" class="interp" hidden></div>
         <details>
           <summary>Tạo từ mẫu</summary>
           <div class="grid2">
-            <label>Hình<select id="mHinh"><option>I</option><option>L</option></select></label>
-            <label>Tường sau (mm)<input id="mSau" type="number" value="3000" step="10"></label>
-            <label>Tường phải (mm)<input id="mPhai" type="number" value="2400" step="10"></label>
-            <label>Đỉnh tủ (mm)<input id="mDinh" type="number" value="2200" step="10"></label>
-            <label><input id="mTuLanh" type="checkbox"> Tủ lạnh</label>
-            <label><input id="mNoc" type="checkbox"> Tủ nóc</label>
+            <label>Hình<select id="mShape"><option>I</option><option>L</option><option>U</option></select></label>
+            <label>Tường sau (mm)<input id="mBack" type="number" value="3000" step="10"></label>
+            <label>Tường phải (mm)<input id="mRight" type="number" value="2400" step="10"></label>
+            <label>Tường trái (mm)<input id="mLeft" type="number" value="2400" step="10"></label>
+            <label>Đỉnh tủ (mm)<input id="mTop" type="number" value="2200" step="10"></label>
+            <label>Ốp đá<select id="mBacksplash"><option value="standard">Cao vừa đủ (600 mm)</option><option value="to-upper">Lên sát tủ trên</option><option value="to-ceiling">Tới trần</option></select></label>
+            <label><input id="mFridge" type="checkbox"> Tủ lạnh</label>
+            <label><input id="mLoft" type="checkbox"> Tủ nóc</label>
+            <label><input id="mIsland" type="checkbox"> Đảo bếp</label>
+            <label><input id="mPeninsula" type="checkbox"> Bán đảo</label>
+            <label><input id="mOpenShelf" type="checkbox"> Kệ mở</label>
             <label>Phong cách<select id="mStyle"><option>Modern</option><option>Classic</option><option>Neoclassical</option><option>Minimalist</option></select></label>
           </div>
           <button id="fromTemplate">Tạo từ mẫu</button>
@@ -43,7 +49,7 @@
         <h2>Xuất cho AI tạo ảnh</h2>
         <p id="aiInfo" class="muted small">Chưa có thiết kế</p>
         <label class="wide"><span><input id="aiAuto" type="checkbox" checked> Tự xuất JSON sau mỗi lần tạo / sửa</span></label>
-        <label>Ánh sáng ảnh<select id="aiLight" title="Câu lệnh luôn kèm yêu cầu ảnh thật: máy ảnh kiến trúc, vật liệu, bóng tiếp xúc, khe cánh…"><option value="ban-ngay">Ban ngày, sáng tự nhiên</option><option value="nang-chieu">Nắng chiều ấm</option><option value="toi-am">Buổi tối, đèn ấm</option></select></label>
+        <label>Ánh sáng ảnh<select id="aiLight" title="Câu lệnh luôn kèm yêu cầu ảnh thật: máy ảnh kiến trúc, vật liệu, bóng tiếp xúc, khe cánh…"><option value="daylight">Ban ngày, sáng tự nhiên</option><option value="late-afternoon">Nắng chiều ấm</option><option value="dim-evening">Buổi tối, đèn ấm</option></select></label>
         <div class="row">
           <a id="aiJson" class="btn" href="#" download title="JSON gửi AI đã lọc: chỉ dẫn + ảnh đính kèm từng góc">Tải JSON gửi AI</a>
           <button id="aiZip" type="button" title="Render ảnh còn thiếu, đóng gói JSON + ảnh nét/depth/render">Xuất gói kèm ảnh (.zip)</button>
@@ -60,7 +66,7 @@
           <label>Mặt cắt<select id="pCrownProf"></select></label>
           <label><input id="pBase" type="checkbox"> Phào chân</label>
           <label>Mặt cắt<select id="pBaseProf"></select></label>
-          <label>Đầu hở<select id="pEnd"><option value="tra-ve-tuong">quay về tường</option><option value="cat-phang">cắt phẳng</option></select></label>
+          <label>Đầu hở<select id="pEnd"><option value="return-to-wall">quay về tường</option><option value="flat-cut">cắt phẳng</option></select></label>
           <canvas id="pPreview" width="120" height="80" title="Xem trước mặt cắt phào nóc"></canvas>
         </div>
         <button id="pApply">Áp dụng phào</button>
@@ -100,21 +106,29 @@
               <canvas id="maskOverlay"></canvas>
             </div>
             <label id="cmpWrap" class="cmp" hidden>Trước ◀ ▶ Sau <input id="cmpSlider" type="range" min="0" max="100" value="50"></label>
+            <div class="baserow">
+              <button id="baseImport" type="button" title="Thay ảnh gốc của góc nhìn này bằng ảnh đã tạo ở ChatGPT (ảnh đủ ánh sáng). Các job sửa sau đó sẽ dùng ảnh này làm ảnh gốc.">Nhập ảnh kết quả từ ChatGPT → thay ảnh nền</button>
+              <button id="baseClear" type="button" class="ghost" hidden title="Bỏ ảnh đã nhập, quay về ảnh đã duyệt / render">Dùng lại ảnh mặc định</button>
+              <select id="baseFit" aria-label="Khi ảnh khác tỉ lệ" title="Nếu ảnh ChatGPT không cùng tỉ lệ với ảnh render"><option value="reject">Đúng tỉ lệ ảnh render</option><option value="crop">Khác tỉ lệ: cắt giữa</option><option value="pad">Khác tỉ lệ: thêm viền</option></select>
+              <input id="baseFile" type="file" accept="image/*" hidden>
+            </div>
           </div>
           <div class="imgside">
             <h3>Layer</h3>
             <select id="layerSelect" aria-label="Layer"></select>
             <div id="layerAlt" class="chips"></div>
+            <div id="selList" class="chips sel" hidden></div>
+            <p class="muted small">Bấm: chọn một chi tiết · <b>Ctrl</b>+bấm: thêm/bớt chi tiết cùng loại (cánh ↔ tay nắm của nó) · <b>Shift</b>+bấm: cả nhóm cùng vai trò trong tầng (vd mọi tay nắm tủ dưới)</p>
             <p id="layerInfo" class="muted small"></p>
             <div class="grid2">
-              <label>Chế độ<select id="jMode"><option value="thu-nhanh">Thử nhanh (chỉ ảnh)</option><option value="thiet-ke">Sửa thiết kế</option></select></label>
+              <label>Chế độ<select id="jMode"><option value="quick">Thử nhanh (chỉ ảnh)</option><option value="design">Sửa thiết kế</option></select></label>
               <label>Backend<select id="jBackend"></select></label>
-              <label class="span2">Vật liệu mới<input id="jVat" type="text" placeholder="vd Laminate xanh rêu mờ"></label>
+              <label class="span2">Vật liệu mới<input id="jItem" type="text" placeholder="vd Laminate xanh rêu mờ"></label>
               <label class="span2">Yêu cầu thêm<input id="jInstr" type="text" placeholder="vd matte sage green, fine wood grain"></label>
-              <label>Ảnh gốc<select id="jRef"><option value="auto">Ảnh đã duyệt gần nhất</option><option value="beauty">Render three.js</option><option value="albedo">Albedo (render)</option></select></label>
+              <label>Ảnh gốc<select id="jRef"><option value="auto">Ảnh đã duyệt gần nhất</option><option value="beauty">Render three.js</option><option value="imported">Ảnh nhập từ ChatGPT</option><option value="albedo">Albedo (render)</option></select></label>
               <label>Workflow<select id="jWf"></select></label>
-              <label class="span2">Ánh sáng ảnh đầy đủ (gen-0)<select id="jLight" title="Sửa vùng luôn bám ánh sáng ảnh gốc"><option value="ban-ngay">Ban ngày, sáng tự nhiên</option><option value="nang-chieu">Nắng chiều ấm</option><option value="toi-am">Buổi tối, đèn ấm</option></select></label>
-              <label class="span2">Cấu hình AI theo thao tác<select id="jThao" title="Workflow + trọng số ControlNet chọn sẵn theo loại việc"></select></label>
+              <label class="span2">Ánh sáng ảnh đầy đủ (gen-0)<select id="jLight" title="Sửa vùng luôn bám ánh sáng ảnh gốc"><option value="daylight">Ban ngày, sáng tự nhiên</option><option value="late-afternoon">Nắng chiều ấm</option><option value="dim-evening">Buổi tối, đèn ấm</option></select></label>
+              <label class="span2">Cấu hình AI theo thao tác<select id="jOperation" title="Workflow + trọng số ControlNet chọn sẵn theo loại việc"></select></label>
             </div>
             <button id="tAdd" type="button" title="Thêm layer đang chọn + vật liệu/yêu cầu vào danh sách việc">＋ Thêm vào danh sách việc</button>
             <ol id="taskList" class="tasks"></ol>
@@ -122,20 +136,20 @@
             <button id="jCreate">Tạo job sửa</button>
             <button id="jGen0" title="Sinh ảnh đầy đủ đầu tiên từ nét + depth">Gen-0</button>
             <button id="tClear" type="button" class="ghost" hidden>Xóa danh sách</button>
-            <details id="hinhBox" class="hinhbox">
+            <details id="geometryBox" class="hinhbox">
               <summary>Sửa hình: xóa / thêm / thay vật</summary>
               <p class="muted small">Áp thao tác lên bản sao thiết kế, render lại cùng camera, AI chỉ vẽ lại vùng thay đổi theo nét của thiết kế mới. Chấp nhận ảnh = ghi rev mới.</p>
               <div class="grid2">
-                <label>Thao tác<select id="hLoai">
-                  <option value="xoa-module">Xóa module</option>
-                  <option value="kieu-canh">Đổi kiểu cánh</option>
-                  <option value="tay-nam">Đổi kiểu tay nắm (mọi tủ)</option>
-                  <option value="them-module">Thêm module (JSON)</option>
+                <label>Thao tác<select id="hType">
+                  <option value="remove-module">Xóa module</option>
+                  <option value="door-style">Đổi kiểu cánh</option>
+                  <option value="handle">Đổi kiểu tay nắm (mọi tủ)</option>
+                  <option value="add-module">Thêm module (JSON)</option>
                   <option value="op">Thao tác thiết kế (JSON, nâng cao)</option>
                 </select></label>
-                <label id="hMaWrap">Module<select id="hMa"></select></label>
-                <label id="hKieuWrap">Kiểu<select id="hKieu"></select></label>
-                <label id="hDonWrap" class="wide"><span><input id="hDonDay" type="checkbox"> Dồn các tủ phía sau lấp chỗ trống</span></label>
+                <label id="hIdWrap">Module<select id="hId"></select></label>
+                <label id="hStyleWrap">Kiểu<select id="hStyle"></select></label>
+                <label id="hCloseGapWrap" class="wide"><span><input id="hCloseGap" type="checkbox"> Dồn các tủ phía sau lấp chỗ trống</span></label>
                 <label id="hJsonWrap" class="span2" hidden>JSON<textarea id="hJson" rows="4" placeholder='{"module": {...}, "sauModule": "TD3"}'></textarea></label>
               </div>
               <button id="hAdd" type="button" class="ghost">＋ Thêm thao tác</button>
@@ -155,8 +169,8 @@
       <form id="moduleForm" hidden>
         <h3 id="formTitle"></h3>
         <div class="grid2" id="formFields"></div>
-        <label class="wide">Cánh (mm, cách nhau dấu phẩy)<input name="canh" type="text"></label>
-        <label class="wide"><input name="donDay" type="checkbox" checked> Dồn dãy khi đổi kích thước</label>
+        <label class="wide">Cánh (mm, cách nhau dấu phẩy)<input name="doors" type="text"></label>
+        <label class="wide"><input name="closeGap" type="checkbox" checked> Dồn dãy khi đổi kích thước</label>
         <div class="row">
           <button type="submit">Áp dụng</button>
           <button type="button" id="addAfter">+ Thêm tủ phía sau</button>

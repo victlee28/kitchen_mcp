@@ -1,9 +1,9 @@
 """Render ảnh từ JSON three.js bằng trình duyệt (Chromium không giao diện), không cần API AI.
 
 Dùng:
-  python render_browser.py fixtures/bep-chu-L.threejs.json            # ảnh vào renders/browser/<tên file>/
+  python render_browser.py fixtures/l-shaped-kitchen.threejs.json            # ảnh vào renders/browser/<tên file>/
   python render_browser.py --design <id> [--rev N]                     # JSON mới nhất của thiết kế, lưu thêm beauty.png
-  python render_browser.py file.json --views goc-anh-goc,day-dai --size 1920x1440 --out anh/
+  python render_browser.py file.json --views original-angle,long-run --size 1920x1440 --out anh/
 
 Cần: pip install playwright && python -m playwright install chromium
 (Hoặc không cài gì: chạy run.bat, mở http://localhost:8080/web/render.html trong trình duyệt của bạn.)
@@ -21,17 +21,17 @@ ROOT = Path(__file__).resolve().parent
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("json", nargs="?", help="file JSON three.js (Complete Kitchen Three.js Scene Schema)")
-    ap.add_argument("--design", help="id thiết kế trong kitchen.db (thay cho file JSON)")
-    ap.add_argument("--rev", type=int)
-    ap.add_argument("--views", help="danh sách góc, cách nhau dấu phẩy (mặc định: mọi camera)")
-    ap.add_argument("--size", default="1280x960", help="RỘNGxCAO, mặc định 1280x960 (khớp ảnh điều khiển)")
-    ap.add_argument("--exposure", type=float, default=1.0)
-    ap.add_argument("--out", help="thư mục ảnh ra")
-    a = ap.parse_args(argv)
+    apply = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    apply.add_argument("json", nargs="?", help="file JSON three.js (Complete Kitchen Three.js Scene Schema)")
+    apply.add_argument("--design", help="id thiết kế trong kitchen.db (thay cho file JSON)")
+    apply.add_argument("--rev", type=int)
+    apply.add_argument("--views", help="danh sách góc, cách nhau dấu phẩy (mặc định: mọi camera)")
+    apply.add_argument("--size", default="1280x960", help="RỘNGxCAO, mặc định 1280x960 (khớp ảnh điều khiển)")
+    apply.add_argument("--exposure", type=float, default=1.0)
+    apply.add_argument("--out", help="thư mục ảnh ra")
+    a = apply.parse_args(argv)
     if bool(a.json) == bool(a.design):
-        ap.error("truyền đúng một trong hai: file JSON hoặc --design")
+        apply.error("truyền đúng một trong hai: file JSON hoặc --design")
     try:
         from playwright.sync_api import sync_playwright
     except ImportError:
@@ -78,8 +78,8 @@ def main(argv: list[str] | None = None) -> int:
             line = f"{f}"
             if a.design:
                 info = svc.images.save_beauty(a.design, r["view"], png, a.rev)
-                k = info["khopNet"]
-                line += f"  -> beauty.png (khớp nét: {k.get('diem')}{'' if k.get('khop') is not False else ', LỆCH?'})"
+                k = info["lineMatch"]
+                line += f"  -> beauty.png (khớp nét: {k.get('score')}{'' if k.get('khop') is not False else ', LỆCH?'})"
             print(line)
         print(f"Xong {len(res)} ảnh trong {out}")
         return 0 if res else 1

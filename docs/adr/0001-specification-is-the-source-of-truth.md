@@ -1,0 +1,3 @@
+# The specification is the single source of truth; images never change a design until accepted
+
+Geometry, renders, exports and validation are all derived from the specification, and images are derived artifacts. An image job may carry a design change, but that change is applied only when the job is accepted, against the base revision recorded on the job, and a conflict is reported if the design has moved on. We rejected treating generated images as authoritative (recognising the design back from pixels) because it would let a failed or rejected generation silently alter the design and make revisions unreproducible.

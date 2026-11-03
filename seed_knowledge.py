@@ -18,6 +18,6 @@ db = sys.argv[1] if len(sys.argv) > 1 else os.getenv("KITCHEN_DB") or str(Path(_
 conn = sqlite3.connect(db)
 with conn:
     res = knowledge_seed.apply(conn)
-tong = conn.execute("SELECT khu_vuc, COUNT(*) FROM knowledge WHERE active=1 GROUP BY khu_vuc ORDER BY khu_vuc").fetchall()
-print(json.dumps({"db": db, **res, "theoKhuVuc": dict(tong)}, ensure_ascii=False, indent=1))
+total = conn.execute("SELECT region, COUNT(*) FROM knowledge WHERE active=1 GROUP BY region ORDER BY region").fetchall()
+print(json.dumps({"db": db, **res, "byRegion": dict(total)}, ensure_ascii=False, indent=1))
 conn.close()

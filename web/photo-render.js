@@ -6,7 +6,7 @@ import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUnifo
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { buildKitchen } from './scene-loader.js';
 
-export const viewOf = (camId) => camId.replace(/^CAM-/, '');
+export const viewOf = (cameraId) => cameraId.replace(/^CAM-/, '');
 
 // Đèn bổ sung khi tài liệu chỉ có ánh sáng tối thiểu: nắng xiên từ phía phòng + đèn trần
 function fillLights(scene, bounds, opts) {
@@ -56,16 +56,16 @@ export async function renderDoc(doc, opts = {}) {
 
   const want = opts.views ? new Set(opts.views) : null;
   const out = [];
-  for (const [camId, c] of Object.entries(k.cameras)) {
-    const view = viewOf(camId);
-    if (want && !want.has(view) && !want.has(camId)) continue;
-    const cam = new THREE.PerspectiveCamera(c.fov, W / H, c.near, c.far);
-    cam.up.set(...c.up);
-    cam.position.set(...c.position);
-    cam.lookAt(new THREE.Vector3(...c.target));
-    cam.updateProjectionMatrix();
-    renderer.render(scene, cam);
-    out.push({ camId, view, name: c.name, width: W, height: H, dataUrl: canvas.toDataURL('image/png') });
+  for (const [cameraId, c] of Object.entries(k.cameras)) {
+    const view = viewOf(cameraId);
+    if (want && !want.has(view) && !want.has(cameraId)) continue;
+    const camera = new THREE.PerspectiveCamera(c.fov, W / H, c.near, c.far);
+    camera.up.set(...c.up);
+    camera.position.set(...c.position);
+    camera.lookAt(new THREE.Vector3(...c.target));
+    camera.updateProjectionMatrix();
+    renderer.render(scene, camera);
+    out.push({ cameraId, view, name: c.name, width: W, height: H, dataUrl: canvas.toDataURL('image/png') });
     if (opts.onProgress) await opts.onProgress(out[out.length - 1], out.length);
     await new Promise((r) => setTimeout(r, 0)); // nhường luồng giao diện
   }

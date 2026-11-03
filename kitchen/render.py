@@ -23,16 +23,16 @@ import numpy as np
 from PIL import Image
 
 from .geometry import Scene, compile_spec, views_of
-from .spec import GocNhin, KitchenSpec
+from .spec import ViewAngle, KitchenSpec
 
 NEAR = 0.05  # m
 
-SEG_MAU = {  # màu mask ngữ nghĩa (cố định giữa các lần render)
-    "than": (230, 159, 0), "chan": (86, 180, 233), "canh": (0, 158, 115), "canh-kinh": (0, 114, 178),
-    "ngan-keo": (213, 94, 0), "hong": (204, 121, 167), "ke": (240, 228, 66), "mat-da": (255, 255, 255),
-    "tu-lanh": (120, 120, 200), "chau": (40, 40, 40), "voi": (160, 160, 160), "bep": (90, 0, 90),
-    "hut-mui": (0, 90, 90), "lo": (120, 60, 20), "tuong": (180, 170, 150), "san": (110, 100, 90),
-    "phao": (168, 117, 66), "tay-nam": (255, 0, 140),
+SEGMENT_COLORS = {  # màu mask ngữ nghĩa (cố định giữa các lần render)
+    "carcass": (230, 159, 0), "plinth": (86, 180, 233), "door": (0, 158, 115), "glass-door": (0, 114, 178),
+    "drawer": (213, 94, 0), "side-panel": (204, 121, 167), "shelf": (240, 228, 66), "countertop": (255, 255, 255),
+    "fridge": (120, 120, 200), "sink": (40, 40, 40), "faucet": (160, 160, 160), "cooktop": (90, 0, 90),
+    "hood": (0, 90, 90), "oven": (120, 60, 20), "wall": (180, 170, 150), "floor": (110, 100, 90),
+    "molding": (168, 117, 66), "handle": (255, 0, 140),
 }
 
 # 6 mặt của hộp: (chỉ số đỉnh, normal)
@@ -43,16 +43,16 @@ _FACES = [
 ]
 
 
-def _mau_module(ma: str) -> tuple[int, int, int]:
-    h = int(hashlib.md5(ma.encode()).hexdigest()[:6], 16) / 0xFFFFFF
+def _module_color(id: str) -> tuple[int, int, int]:
+    h = int(hashlib.md5(id.encode()).hexdigest()[:6], 16) / 0xFFFFFF
     r, g, b = colorsys.hsv_to_rgb(h, 0.75, 0.95)
     return int(r * 255), int(g * 255), int(b * 255)
 
 
 class Camera:
-    def __init__(self, view: GocNhin, width: int, height: int):
-        self.p = np.array(view.viTri, float)
-        t = np.array(view.nhinVao, float)
+    def __init__(self, view: ViewAngle, width: int, height: int):
+        self.p = np.array(view.position, float)
+        t = np.array(view.lookAt, float)
         f = t - self.p
         f /= np.linalg.norm(f)
         up = np.array([0.0, 1.0, 0.0])
@@ -62,9 +62,9 @@ class Camera:
         u = np.cross(r, f)
         self.f, self.r, self.u = f, r, u
         self.w, self.h = width, height
-        self.focal = (height / 2) / math.tan(math.radians(view.fovDoc) / 2)
+        self.focal = (height / 2) / math.tan(math.radians(view.verticalFov) / 2)
 
-    def to_cam(self, pts: np.ndarray) -> np.ndarray:
+    def to_camera(self, pts: np.ndarray) -> np.ndarray:
         d = pts - self.p
         return np.stack([d @ self.r, d @ self.u, d @ self.f], axis=-1)
 
@@ -89,8 +89,8 @@ def _clip_near(poly: list[np.ndarray]) -> list[np.ndarray]:
     return out
 
 
-def rasterize(scene: Scene, cam: Camera):
-    W, H = cam.w, cam.h
+def rasterize(scene: Scene, camera: Camera):
+    W, H = camera.w, camera.h
     zbuf = np.full((H, W), np.inf)
     pid = np.full((H, W), -1, np.int32)
     nid = np.full((H, W), -1, np.int8)
@@ -100,20 +100,20 @@ def rasterize(scene: Scene, cam: Camera):
         mn, mx = np.array(part.min) / 1000, np.array(part.max) / 1000
         corners = np.array([[mn[0] if i & 1 == 0 else mx[0], mn[1] if i & 2 == 0 else mx[1], mn[2] if i & 4 == 0 else mx[2]]
                             for i in range(8)])
-        cc = cam.to_cam(corners)
+        cc = camera.to_camera(corners)
         if (cc[:, 2] < NEAR).all():
             continue
         for fi, (idx, normal) in enumerate(_FACES):
             # bỏ mặt quay lưng
             center = corners[list(idx)].mean(0)
-            if np.dot(np.array(normal), cam.p - center) <= 0:
+            if np.dot(np.array(normal), camera.p - center) <= 0:
                 continue
             poly = _clip_near([cc[i] for i in idx])
             if len(poly) < 3:
                 continue
             P = np.array(poly)
-            sx = W / 2 + cam.focal * P[:, 0] / P[:, 2]
-            sy = H / 2 - cam.focal * P[:, 1] / P[:, 2]
+            sx = W / 2 + camera.focal * P[:, 0] / P[:, 2]
+            sy = H / 2 - camera.focal * P[:, 1] / P[:, 2]
             iz = 1.0 / P[:, 2]
             for t in range(1, len(P) - 1):
                 tri = [0, t, t + 1]
@@ -142,7 +142,7 @@ def rasterize(scene: Scene, cam: Camera):
     base = len(scene.parts)
     for mi, mesh in enumerate(scene.meshes):
         V = np.asarray(mesh.vertices, float) / 1000
-        VC = cam.to_cam(V)
+        VC = camera.to_camera(V)
         nprof = _profile_len(mesh)
         for f_idx, (a, b, c) in enumerate(mesh.faces):
             tri_w = V[[a, b, c]]
@@ -151,14 +151,14 @@ def rasterize(scene: Scene, cam: Camera):
             if ln < 1e-12:
                 continue
             n = n / ln
-            if np.dot(n, cam.p - tri_w.mean(0)) < 0:
+            if np.dot(n, camera.p - tri_w.mean(0)) < 0:
                 n = -n  # pháp tuyến hướng về camera
             poly = _clip_near([VC[a], VC[b], VC[c]])
             if len(poly) < 3:
                 continue
             P = np.array(poly)
-            sx = W / 2 + cam.focal * P[:, 0] / P[:, 2]
-            sy = H / 2 - cam.focal * P[:, 1] / P[:, 2]
+            sx = W / 2 + camera.focal * P[:, 0] / P[:, 2]
+            sy = H / 2 - camera.focal * P[:, 1] / P[:, 2]
             iz = 1.0 / P[:, 2]
             group = _face_group(f_idx, nprof, len(mesh.faces))
             for t in range(1, len(P) - 1):
@@ -208,20 +208,20 @@ def _face_group(f_idx: int, nprof: int, nfaces: int) -> int:
     return 120 if f_idx < side + (nprof - 2) else 121
 
 
-_LIEN_MAT = ("mat-da", "tuong", "san", "than", "chan")  # bề mặt liền: không vẽ đường nối giữa các mảnh đồng phẳng
+_JOINED_FACE = ("countertop", "wall", "floor", "carcass", "plinth")  # bề mặt liền: không vẽ đường nối giữa các mảnh đồng phẳng
 
 
-def _edges(pid: np.ndarray, nid: np.ndarray, zbuf: np.ndarray, loai: np.ndarray) -> np.ndarray:  # noqa: C901
+def _edges(pid: np.ndarray, nid: np.ndarray, zbuf: np.ndarray, type: np.ndarray) -> np.ndarray:  # noqa: C901
     """Nét = biên giữa hai chi tiết khác nhau hoặc hai mặt khác nhau của cùng chi tiết.
     Riêng các bề mặt liền (mặt đá, tường, sàn, thân, chân) đồng phẳng thì không vẽ đường nối."""
     e = np.zeros(pid.shape, bool)
     key = pid.astype(np.int64) * 256 + nid
-    lien = np.isin(loai, [i for i, _ in enumerate(_LIEN_MAT)])
+    joined = np.isin(type, [i for i, _ in enumerate(_JOINED_FACE)])
     with np.errstate(invalid="ignore"):
         for a, b in (((slice(None), slice(1, None)), (slice(None), slice(None, -1))),
                      ((slice(1, None), slice(None)), (slice(None, -1), slice(None)))):
             diff = key[a] != key[b]
-            coplanar = (nid[a] == nid[b]) & (loai[a] == loai[b]) & lien[a] & \
+            coplanar = (nid[a] == nid[b]) & (type[a] == type[b]) & joined[a] & \
                 (np.abs(zbuf[a] - zbuf[b]) < 0.0008 * np.minimum(zbuf[a], zbuf[b]))
             e[a] |= diff & ~coplanar
     return e
@@ -231,32 +231,32 @@ def scene_hash(scene: Scene) -> str:
     """Băm hình học đã biên dịch (không gồm vật liệu): đổi màu không đổi băm, nên mask cũ dùng lại được."""
     h = hashlib.sha256()
     for p in scene.parts:
-        h.update(f"{p.id}|{p.loai}|{p.module}|{[round(v, 2) for v in p.min]}|{[round(v, 2) for v in p.max]}\n".encode())
+        h.update(f"{p.id}|{p.type}|{p.module}|{[round(v, 2) for v in p.min]}|{[round(v, 2) for v in p.max]}\n".encode())
     for m in scene.meshes:
-        h.update(f"{m.id}|{m.loai}|{m.module}|{len(m.faces)}|".encode())
+        h.update(f"{m.id}|{m.type}|{m.module}|{len(m.faces)}|".encode())
         h.update(np.round(np.asarray(m.vertices, float), 2).tobytes())
     return h.hexdigest()
 
 
-def render_key(scene: Scene, view: GocNhin, width: int, height: int) -> str:
+def render_key(scene: Scene, view: ViewAngle, width: int, height: int) -> str:
     v = json.dumps(view.model_dump(mode="json"), sort_keys=True)
     return hashlib.sha256(f"{scene_hash(scene)}|{v}|{width}x{height}".encode()).hexdigest()[:16]
 
 
-_DEN = np.array([0.35, 0.85, 0.40]) / np.linalg.norm([0.35, 0.85, 0.40])
+_DARK = np.array([0.35, 0.85, 0.40]) / np.linalg.norm([0.35, 0.85, 0.40])
 
 
-def render_view(scene: Scene, view: GocNhin, out_dir: Path, width: int = 1280, height: int = 960,
+def render_view(scene: Scene, view: ViewAngle, out_dir: Path, width: int = 1280, height: int = 960,
                 legend: dict | None = None, colors: list | None = None, meta: dict | None = None) -> dict:
     out_dir.mkdir(parents=True, exist_ok=True)
-    cam = Camera(view, width, height)
-    zbuf, pid, nid, mesh_n = rasterize(scene, cam)
+    camera = Camera(view, width, height)
+    zbuf, pid, nid, mesh_n = rasterize(scene, camera)
     nparts = len(scene.parts)
     all_parts = list(scene.parts) + list(scene.meshes)
     hit = pid >= 0
 
     # nét
-    lut = np.array([_LIEN_MAT.index(p.loai) if p.loai in _LIEN_MAT else 99 for p in all_parts] + [98], np.int16)
+    lut = np.array([_JOINED_FACE.index(p.type) if p.type in _JOINED_FACE else 99 for p in all_parts] + [98], np.int16)
     lines = _edges(pid, nid, zbuf, lut[pid])
     if width >= 1600:
         lines[1:, :] |= lines[:-1, :]
@@ -277,29 +277,29 @@ def render_view(scene: Scene, view: GocNhin, out_dir: Path, width: int = 1280, h
 
     # normal (hệ camera)
     normals_world = np.array([n for _, n in _FACES], float)
-    ncam = np.stack([normals_world @ cam.r, normals_world @ cam.u, -(normals_world @ cam.f)], axis=-1)
+    ncam = np.stack([normals_world @ camera.r, normals_world @ camera.u, -(normals_world @ camera.f)], axis=-1)
     nimg = np.zeros((height, width, 3), np.uint8)
     box_hit = hit & (pid < nparts)
     nimg[box_hit] = ((ncam[nid[box_hit]] * 0.5 + 0.5) * 255).astype(np.uint8)
     mesh_hit = hit & (pid >= nparts)
     if mesh_hit.any():
         nw = mesh_n[mesh_hit].astype(float)
-        nc = np.stack([nw @ cam.r, nw @ cam.u, -(nw @ cam.f)], axis=-1)
+        nc = np.stack([nw @ camera.r, nw @ camera.u, -(nw @ camera.f)], axis=-1)
         nimg[mesh_hit] = ((nc * 0.5 + 0.5) * 255).clip(0, 255).astype(np.uint8)
     Image.fromarray(nimg, "RGB").save(out_dir / "normal.png")
 
     # mask
     seg = np.zeros((height, width, 3), np.uint8)
     segm = np.zeros((height, width, 3), np.uint8)
-    loai_lut = np.array([SEG_MAU.get(p.loai, (128, 128, 128)) for p in all_parts], np.uint8)
-    mod_lut = np.array([_mau_module(p.module) if p.module else (0, 0, 0) for p in all_parts], np.uint8)
-    seg[hit] = loai_lut[pid[hit]]
+    type_lut = np.array([SEGMENT_COLORS.get(p.type, (128, 128, 128)) for p in all_parts], np.uint8)
+    mod_lut = np.array([_module_color(p.module) if p.module else (0, 0, 0) for p in all_parts], np.uint8)
+    seg[hit] = type_lut[pid[hit]]
     segm[hit] = mod_lut[pid[hit]]
     Image.fromarray(seg, "RGB").save(out_dir / "seg.png")
     Image.fromarray(segm, "RGB").save(out_dir / "seg_module.png")
 
-    cam_info = {"view": view.model_dump(mode="json"), **cam.json()}
-    (out_dir / "camera.json").write_text(json.dumps(cam_info, ensure_ascii=False, indent=2), encoding="utf-8")
+    camera_info = {"view": view.model_dump(mode="json"), **camera.json()}
+    (out_dir / "camera.json").write_text(json.dumps(camera_info, ensure_ascii=False, indent=2), encoding="utf-8")
     visible = sorted({all_parts[i].module for i in np.unique(pid[hit]) if all_parts[i].module})
 
     # instance: số nguyên, không khử răng cưa, đã qua z-buffer (chỉ phần nhìn thấy)
@@ -312,7 +312,7 @@ def render_view(scene: Scene, view: GocNhin, out_dir: Path, width: int = 1280, h
     for v, n in zip(vals.tolist(), counts.tolist()):
         ys, xs = np.nonzero(pid == v)
         p = all_parts[v]
-        instances.append({"value": v + 1, "id": p.id, "module": p.module, "loai": p.loai, "pixels": n,
+        instances.append({"value": v + 1, "id": p.id, "module": p.module, "type": p.type, "pixels": n,
                           "bbox": [int(xs.min()), int(ys.min()), int(xs.max()) + 1, int(ys.max()) + 1]})
     (out_dir / "instances.json").write_text(json.dumps({"encoding": "instance.png 16-bit: giá trị = value, 0 = nền",
                                                         "width": width, "height": height, "instances": instances},
@@ -324,7 +324,7 @@ def render_view(scene: Scene, view: GocNhin, out_dir: Path, width: int = 1280, h
     nw[box_hit] = normals_world[nid[box_hit]]
     if mesh_hit.any():
         nw[mesh_hit] = mesh_n[mesh_hit]
-    shade = 0.74 + 0.26 * np.clip(nw @ _DEN, 0, 1)
+    shade = 0.74 + 0.26 * np.clip(nw @ _DARK, 0, 1)
     alb = np.full((height, width, 3), 244.0)
     alb[hit] = col[pid[hit]] * shade[hit][:, None]
     alb[lines] *= 0.72
@@ -338,12 +338,12 @@ def render_view(scene: Scene, view: GocNhin, out_dir: Path, width: int = 1280, h
                 "instanceEncoding": "uint16 = chỉ số chi tiết + 1"}
     (out_dir / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
     return {"dir": str(out_dir), "files": files + ["manifest.json"], "renderKey": key,
-            "phuTrongAnh": round(float(hit.mean()), 3), "moduleThayDuoc": visible}
+            "imageOverlay": round(float(hit.mean()), 3), "editableModule": visible}
 
 
 def _hex_rgb_part(p) -> tuple[int, int, int]:
-    from .geometry import MAU
-    h = MAU.get(p.loai, "#c0c0c0").lstrip("#")
+    from .geometry import COLORS
+    h = COLORS.get(p.type, "#c0c0c0").lstrip("#")
     return int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
 
 
@@ -352,8 +352,8 @@ def part_colors(spec: KitchenSpec, scene: Scene) -> list[tuple[int, int, int]]:
     from . import layers, vocab
     out = []
     for p in list(scene.parts) + list(scene.meshes):
-        _, name = layers.material_slot(spec, p.module, p.loai)
-        c = vocab.mau(name) if p.loai not in ("chau", "bep", "lo", "canh-kinh", "chan", "tu-lanh", "voi", "hut-mui") else None
+        _, name = layers.material_slot(spec, p.module, p.type)
+        c = vocab.color(name) if p.type not in ("sink", "cooktop", "oven", "glass-door", "plinth", "fridge", "faucet", "hood") else None
         out.append(vocab.hex_rgb(c) if c else _hex_rgb_part(p))
     return out
 
@@ -368,9 +368,9 @@ def render_views(spec: KitchenSpec, out_root: Path, views: list[str] | None = No
     if unknown:
         raise ValueError(f"Không có góc nhìn: {unknown}. Có: {list(all_views)}")
     out_root.mkdir(parents=True, exist_ok=True)
-    legend = {"seg": {k: list(v) for k, v in SEG_MAU.items()},
-              "seg_module": {**{m.ma: list(_mau_module(m.ma)) for m in spec.module},
-                             **{x.ma: list(_mau_module(x.ma)) for x in spec.moldings}}}
+    legend = {"seg": {k: list(v) for k, v in SEGMENT_COLORS.items()},
+              "seg_module": {**{m.id: list(_module_color(m.id)) for m in spec.module},
+                             **{x.id: list(_module_color(x.id)) for x in spec.moldings}}}
     (out_root / "legend.json").write_text(json.dumps(legend, ensure_ascii=False, indent=2), encoding="utf-8")
     results = {v: render_view(scene, all_views[v], out_root / v, width, height, colors=colors, meta=meta) for v in chosen}
     return {"outDir": str(out_root), "views": results, "legend": "legend.json"}

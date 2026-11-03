@@ -16,16 +16,35 @@ from pathlib import Path
 from . import backends, geometry, layers, realism, vocab
 
 SCHEMA = "kitchen-ai-image-request/1.0"
-ANH = ("beauty.png", "albedo.png", "lines.png", "depth.png", "normal.png", "seg.png", "instance.png")
-_KIEU_CANH = {"slab": "flat slab cabinet doors without frames or panels", "shaker": "shaker-style framed cabinet doors",
+
+_HANDLE_TEXT = {"bar": "slim bar pull handles", "knob": "round knob handles", "concealed": "recessed finger-pull handles",
+                "none": "handleless push-to-open fronts"}
+_STOREY_TEXT = {"base": "base cabinets", "upper": "wall cabinets", "loft": "top-row cabinets", "tall": "tall cabinets", "corner": "corner shelves"}
+
+
+def _hardware_text(spec) -> str:
+    """Handle description for the prompt: one sentence when every cabinet has the same handle, otherwise one clause per storey."""
+    from .spec import effective_handle
+    per_storey: dict[str, list[str]] = {}
+    for m in spec.module:
+        h = effective_handle(spec.common, m)
+        text = _HANDLE_TEXT[h.variant] + (f" in {vocab.to_english(h.material)}" if h.variant != "none" and vocab.to_english(h.material) else "")
+        if text not in per_storey.setdefault(m.storey, []):
+            per_storey[m.storey].append(text)
+    distinct = {t for texts in per_storey.values() for t in texts}
+    if len(distinct) <= 1:
+        return next(iter(distinct), _HANDLE_TEXT[spec.common.handle.variant])
+    return "; ".join(f"{_STOREY_TEXT[s]}: {' / '.join(texts)}" for s, texts in per_storey.items())
+IMAGE = ("beauty.png", "albedo.png", "lines.png", "depth.png", "normal.png", "seg.png", "instance.png")
+_DOOR_STYLES = {"slab": "flat slab cabinet doors without frames or panels", "shaker": "shaker-style framed cabinet doors",
               "glass": "glass-front cabinet doors"}
 
 
-def _vat_lieu(doc: dict) -> list[dict]:
+def _material(doc: dict) -> list[dict]:
     out = []
     for m in doc.get("materials", []):
-        out.append({"id": m["id"], "vaiTro": m.get("semanticClass"), "ten": m.get("name"), "tiengAnh": vocab.tieng_anh(m.get("name", "")),
-                    "mau": m.get("color"), "roughness": m.get("roughness"), "metalness": m.get("metalness")})
+        out.append({"id": m["id"], "role": m.get("semanticClass"), "name": m.get("name"), "english": vocab.to_english(m.get("name", "")),
+                    "color": m.get("color"), "roughness": m.get("roughness"), "metalness": m.get("metalness")})
     return out
 
 
@@ -36,12 +55,12 @@ def _door_style(doc: dict) -> str:
     return c.most_common(1)[0][0]
 
 
-def build(svc, did: str, rev: int | None = None, views: list[str] | None = None, quoc_gia: str | None = None,
-          with_images: bool = False, embed: bool = False, anh_sang: str = "ban-ngay") -> dict:
+def build(svc, did: str, rev: int | None = None, views: list[str] | None = None, country: str | None = None,
+          with_images: bool = False, embed: bool = False, lighting: str = "daylight") -> dict:
     """with_images: chép ảnh + zip. embed: nhúng ảnh nên gửi của từng góc (base64) ngay trong JSON -> một file tự chứa."""
     import base64
     spec, r = svc.store.get(did, rev)
-    doc = svc.threejs(did, r, quoc_gia)
+    doc = svc.threejs(did, r, country)
     all_views = geometry.views_of(spec)
     chosen = views or list(all_views)
     bad = [v for v in chosen if v not in all_views]
@@ -51,16 +70,13 @@ def build(svc, did: str, rev: int | None = None, views: list[str] | None = None,
     out_dir.mkdir(parents=True, exist_ok=True)
 
     style = _door_style(doc)
-    tn = spec.chung.tayNam
-    handle = {"thanh": "slim bar pull handles", "num": "round knob handles", "am": "recessed finger-pull handles",
-              "khong": "handleless push-to-open fronts"}[tn.kieu]
-    tn_en = vocab.tieng_anh(tn.vatLieu)
-    chi_tiet = (f"Door style: {_KIEU_CANH.get(style, style)}. Hardware: {handle}" + (f" in {tn_en}" if tn_en else "") + ". "
+    tn = spec.common.handle
+    part = (f"Door style: {_DOOR_STYLES.get(style, style)}. Hardware: {_hardware_text(spec)}. "
                 + ("Classic crown and base moldings as drawn. " if spec.moldings else "No crown molding. "))
-    chung = layers.global_prompt(spec)
+    common = layers.global_prompt(spec)
     negative = ", ".join(layers.NEGATIVE + ["changed door style", "extra cabinets", "missing cabinets", "different layout"] + realism.NEGATIVE)
-    anh_sang = anh_sang if anh_sang in realism.ANH_SANG else "ban-ngay"
-    anh_that = realism.full(spec, anh_sang)
+    lighting = lighting if lighting in realism.LIGHTING else "daylight"
+    photo_image = realism.full(spec, lighting)
 
     v_out = []
     for v in chosen:
@@ -72,44 +88,44 @@ def build(svc, did: str, rev: int | None = None, views: list[str] | None = None,
         if with_images:
             vd = out_dir / v
             vd.mkdir(exist_ok=True)
-            for f in ANH:
+            for f in IMAGE:
                 if (rd / f).exists():
                     shutil.copyfile(rd / f, vd / f)
                     files[f.removesuffix(".png")] = f"{v}/{f}"
         else:
-            for f in ANH:
+            for f in IMAGE:
                 if (rd / f).exists():
                     files[f.removesuffix(".png")] = f"../{v}/{f}"
         man = json.loads((rd / "manifest.json").read_text(encoding="utf-8")) if (rd / "manifest.json").exists() else {}
-        cam = next((c for c in doc["cameras"] if c["id"] == f"CAM-{v}"), None)
+        camera = next((c for c in doc["cameras"] if c["id"] == f"CAM-{v}"), None)
         v_out.append({
-            "id": v, "ten": g.ten or v, "kichThuoc": [man.get("width", 1280), man.get("height", 960)],
-            "renderKey": man.get("renderKey"), "camera": cam,
-            "anhDauVaoGoiY": "beauty" if "beauty" in files else ("albedo" if "albedo" in files else "lines"),
-            "prompt": backends.gemini_text("gen0", "", chi_tiet, chung, realism=anh_that),
-            "anh": files,
+            "id": v, "name": g.name or v, "dimensions": [man.get("width", 1280), man.get("height", 960)],
+            "renderKey": man.get("renderKey"), "camera": camera,
+            "suggestedInputImages": "beauty" if "beauty" in files else ("albedo" if "albedo" in files else "lines"),
+            "prompt": backends.gemini_text("gen0", "", part, common, realism=photo_image),
+            "image": files,
         })
         if embed:
             src = rd / ("beauty.png" if (rd / "beauty.png").exists() else "albedo.png")
-            v_out[-1]["anhNhung"] = {"vaiTro": "anh-dau-vao", "loai": src.stem, "file": src.name,
+            v_out[-1]["embeddedImages"] = {"role": "input-image", "type": src.stem, "file": src.name,
                                      "dataUrl": "data:image/png;base64," + base64.b64encode(src.read_bytes()).decode()}
 
     req = {
         "schema": SCHEMA,
-        "taoLuc": _dt.datetime.now(_dt.timezone.utc).replace(microsecond=0).isoformat(),
-        "thietKe": {"id": did, "revision": r, "ten": spec.ten, "phongCach": spec.phongCach, "quocGia": spec.quocGia,
-                    "soModule": len(spec.module), "kieuCanh": style, "tayNam": {"kieu": tn.kieu, "vatLieu": tn.vatLieu},
-                    "phao": [m.ma for m in spec.moldings if m.bat]},
-        "huongDan": ("Gửi views[].anhNhung (nếu có, ảnh đã nhúng sẵn) hoặc ảnh trong views[].anh theo anhDauVaoGoiY (beauty = render three.js, albedo = màu phẳng, lines = nét) "
+        "createdAt": _dt.datetime.now(_dt.timezone.utc).replace(microsecond=0).isoformat(),
+        "design": {"id": did, "revision": r, "name": spec.name, "style": spec.style, "country": spec.country,
+                    "moduleCount": len(spec.module), "doorStyle": style, "handle": {"variant": tn.variant, "material": tn.material},
+                    "molding": [m.id for m in spec.moldings if m.enabled]},
+        "instructions": ("Gửi views[].anhNhung (nếu có, ảnh đã nhúng sẵn) hoặc ảnh trong views[].anh theo anhDauVaoGoiY (beauty = render three.js, albedo = màu phẳng, lines = nét) "
                      "kèm views[].prompt cho AI tạo ảnh (Gemini, ComfyUI img2img/ControlNet…). Ảnh kết quả nộp lại qua "
-                     "tab 'Sửa ảnh theo lớp' (job gen-0, backend goi-job) hoặc MCP submit_image_result."),
-        "promptChung": chung,
-        "anhSang": anh_sang,
-        "yeuCauAnhThat": anh_that,
-        "promptComfyUI": f"{chung}, {realism.tags(spec, anh_sang)}",
-        "chiTiet": chi_tiet.strip(),
+                     "tab 'Sửa ảnh theo lớp' (job gen-0, backend job-package) hoặc MCP submit_image_result."),
+        "commonPrompt": common,
+        "lighting": lighting,
+        "photoRequest": photo_image,
+        "promptComfyUI": f"{common}, {realism.tags(spec, lighting)}",
+        "part": part.strip(),
         "negativePrompt": negative,
-        "vatLieu": _vat_lieu(doc),
+        "material": _material(doc),
         "views": v_out,
         "threejs": doc,
     }
@@ -119,35 +135,35 @@ def build(svc, did: str, rev: int | None = None, views: list[str] | None = None,
         gem.mkdir(exist_ok=True)
         lean_views = []
         for x in v_out:
-            a = x.pop("anhNhung")
+            a = x.pop("embeddedImages")
             src = svc.render_dir / did / f"rev{r}" / x["id"] / a["file"]
-            fname = f"{x['id']}-anh-1-{a['loai']}.png"
+            fname = f"{x['id']}-image-1-{a['type']}.png"
             shutil.copyfile(src, gem / fname)
-            (gem / f"{x['id']}.json").write_text(json.dumps(backends.gemini_body(x["prompt"], [src], tuple(x["kichThuoc"])),
+            (gem / f"{x['id']}.json").write_text(json.dumps(backends.gemini_body(x["prompt"], [src], tuple(x["dimensions"])),
                                                              ensure_ascii=False), encoding="utf-8")
-            lean_views.append({"id": x["id"], "ten": x["ten"], "kichThuoc": x["kichThuoc"], "chiDan": x["prompt"],
-                               "anhDinhKem": [{"thuTu": 1, "vaiTro": "anh-dau-vao", "loai": a["loai"], "file": f"gemini/{fname}",
+            lean_views.append({"id": x["id"], "name": x["name"], "dimensions": x["dimensions"], "instruction": x["prompt"],
+                               "attachedImages": [{"order": 1, "role": "input-image", "type": a["type"], "file": f"gemini/{fname}",
                                                "dataUrl": a["dataUrl"]}],
                                "geminiApi": f"gemini/{x['id']}.json"})
-        lean = {"schema": "kitchen-ai-image-request-lite/1.0", "designId": did, "revision": r, "taoLuc": req["taoLuc"],
-                "anhSang": anh_sang,
-                "cachDung": ("Gemini API: gửi nguyên gemini/<góc>.json (ảnh trong inline_data được Gemini tự giải mã). "
+        lean = {"schema": "kitchen-ai-image-request-lite/1.0", "designId": did, "revision": r, "createdAt": req["createdAt"],
+                "lighting": lighting,
+                "usage": ("Gemini API: gửi nguyên gemini/<góc>.json (ảnh trong inline_data được Gemini tự giải mã). "
                              "Gemini web / chat: đính kèm ảnh 'anhDinhKem' của góc cần tạo rồi dán 'chiDan' — không dán chuỗi base64 "
                              "vào khung chat (AI đọc như chữ, không thấy ảnh)."),
-                "khongDuoc": negative, "views": lean_views}
-        p = out_dir / "gui-ai.json"
+                "notAllowed": negative, "views": lean_views}
+        p = out_dir / "ai-request-short.json"
         p.write_text(json.dumps(lean, ensure_ascii=False, indent=1), encoding="utf-8")
     else:
         p = out_dir / "ai-request.json"
         p.write_text(json.dumps(req, ensure_ascii=False, indent=1), encoding="utf-8")
     res = {"id": did, "rev": r, "file": str(p), "dir": str(out_dir), "views": [x["id"] for x in v_out],
-           "kemAnh": with_images, "nhungAnh": embed, "taoLuc": req["taoLuc"]}
+           "withImage": with_images, "embedImages": embed, "createdAt": req["createdAt"]}
     if with_images:
         z = out_dir / "ai-package.zip"
         with zipfile.ZipFile(z, "w", zipfile.ZIP_DEFLATED) as zf:
             zf.write(p, "ai-request.json")
             for x in v_out:
-                for rel in x["anh"].values():
+                for rel in x["image"].values():
                     zf.write(out_dir / rel, rel)
         res["zip"] = str(z)
     return res

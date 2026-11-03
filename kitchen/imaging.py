@@ -33,12 +33,29 @@ def mask_of(render_dir: Path, part_ids: list[str]) -> np.ndarray:
     return np.isin(inst, list(want)) if want else np.zeros(inst.shape, bool)
 
 
-def pick(render_dir: Path, x: int, y: int) -> dict | None:
+def pick(render_dir: Path, x: int, y: int, radius: int = 0) -> dict | None:
+    """Instance at a pixel. With radius > 0 a handle within that many pixels wins over a non-handle hit: handles are only a few pixels wide."""
     inst, meta = load_instances(render_dir)
     if not (0 <= y < inst.shape[0] and 0 <= x < inst.shape[1]):
         raise ValueError("Toạ độ ngoài ảnh")
+    by_value = {i["value"]: i for i in meta["instances"]}
     v = int(inst[y, x])
-    return next((i for i in meta["instances"] if i["value"] == v), None) if v else None
+    hit = by_value.get(v) if v else None
+    if radius > 0 and not (hit and "-handle-" in hit["id"]):
+        y0, x0 = max(0, y - radius), max(0, x - radius)
+        win = inst[y0:y + radius + 1, x0:x + radius + 1]
+        best, best_d = None, None
+        for val in np.unique(win):
+            item = by_value.get(int(val))
+            if not item or "-handle-" not in item["id"]:
+                continue
+            ys, xs = np.nonzero(win == val)
+            d = int(((ys + y0 - y) ** 2 + (xs + x0 - x) ** 2).min())
+            if best_d is None or d < best_d:
+                best, best_d = item, d
+        if best is not None:
+            return best
+    return hit
 
 
 def _pil(mask: np.ndarray) -> Image.Image:
@@ -142,14 +159,14 @@ def edge_alignment(img: np.ndarray, lines: np.ndarray) -> dict:
     """Ảnh AI có giữ đúng hình học không: tỷ lệ pixel nét (lines.png) có cạnh trong ảnh, so với vùng cách nét 6-10 px.
     Ảnh khớp: tyLeTrenNet cao hơn hẳn tyLeNgoaiNet. Ảnh bị lệch/vẽ lại: hai số gần nhau."""
     if img.shape[:2] != lines.shape[:2]:
-        return {"khop": None, "ghiChu": "khác kích thước"}
+        return {"khop": None, "note": "khác kích thước"}
     edge = np.array(Image.fromarray((_grad(img) > 14).astype(np.uint8) * 255).filter(ImageFilter.MaxFilter(5))) > 0
     on = lines < 128
     far = grow(on, 10) & ~grow(on, 6)
     if not on.any() or not far.any():
         return {"khop": None}
     a, b = float(edge[on].mean()), float(edge[far].mean())
-    return {"tyLeTrenNet": round(a, 3), "tyLeNgoaiNet": round(b, 3), "diem": round(a - b, 3), "khop": (a - b) >= 0.15}
+    return {"onLineRatio": round(a, 3), "outsideLineRatio": round(b, 3), "score": round(a - b, 3), "khop": (a - b) >= 0.15}
 
 
 def check(ref: np.ndarray, raw: np.ndarray, comp: np.ndarray, target: np.ndarray, edit_region: np.ndarray,
@@ -158,15 +175,15 @@ def check(ref: np.ndarray, raw: np.ndarray, comp: np.ndarray, target: np.ndarray
     rep: dict = {}
     outside = ~target
     d_out = np.abs(comp.astype(np.int16) - ref.astype(np.int16)).max(-1)
-    rep["ngoaiMask"] = {"pixelKhacGoc": int((d_out[outside] > 0).sum()), "datBaoToan": bool((d_out[outside] == 0).all())}
+    rep["outsideMask"] = {"pixelsChanged": int((d_out[outside] > 0).sum()), "setPreserve": bool((d_out[outside] == 0).all())}
     d_in = np.abs(comp.astype(np.int16) - ref.astype(np.int16)).mean(-1)
     tin = float(d_in[target].mean()) if target.any() else 0.0
-    rep["trongMask"] = {"thayDoiTrungBinh": round(tin, 2), "coThayDoi": tin >= 3.0,
-                        "mauTrungBinh": [int(v) for v in comp[target].mean(0)] if target.any() else None}
+    rep["insideMask"] = {"meanChange": round(tin, 2), "changed": tin >= 3.0,
+                        "meanColor": [int(v) for v in comp[target].mean(0)] if target.any() else None}
     far = ~grow(edit_region, 8)
     d_raw = np.abs(raw.astype(np.int16) - ref.astype(np.int16)).mean(-1)
-    rep["anhTho"] = {"thayDoiNgoaiVungSua": round(float(d_raw[far].mean()), 2) if far.any() else 0.0,
-                     "ghiChu": "chỉ để chẩn đoán model; ảnh cuối luôn lấy pixel gốc ngoài mask"}
+    rep["rawImage"] = {"changesOutsideEditZone": round(float(d_raw[far].mean()), 2) if far.any() else 0.0,
+                     "note": "chỉ để chẩn đoán model; ảnh cuối luôn lấy pixel gốc ngoài mask"}
     if lines is not None:
         band = grow(target, 3) & ~shrink(target, 3)
         ln = (lines < 128) & band
@@ -175,8 +192,8 @@ def check(ref: np.ndarray, raw: np.ndarray, comp: np.ndarray, target: np.ndarray
                 g = np.array(Image.fromarray((_grad(img) > 12).astype(np.uint8) * 255).filter(ImageFilter.MaxFilter(3))) > 0
                 return float(g[ln].mean())
             r_ref, r_comp = ratio(ref), ratio(comp)
-            rep["bien"] = {"tyLeNetGoc": round(r_ref, 3), "tyLeNetKetQua": round(r_comp, 3),
-                           "datBien": r_comp >= 0.8 * r_ref - 1e-9}
+            rep["bien"] = {"baseLineRatio": round(r_ref, 3), "resultLineRatio": round(r_comp, 3),
+                           "setEdge": r_comp >= 0.8 * r_ref - 1e-9}
     return rep
 
 

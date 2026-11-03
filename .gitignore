@@ -7,8 +7,12 @@ logs/
 renders/
 *.db
 !fixtures/*.json
+.claude/
 
 # Local database exports
 database_export.json
 # Archived project snapshots
 _ban_cu_v*/
+
+_backup_before_english_rename.tgz
+_to_delete/

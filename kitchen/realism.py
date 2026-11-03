@@ -13,15 +13,15 @@ from __future__ import annotations
 from . import vocab
 from .spec import KitchenSpec
 
-ANH_SANG = {
-    "ban-ngay": ("bright natural daylight on an overcast-to-sunny morning, neutral white balance around 5000K, soft large-source "
+LIGHTING = {
+    "daylight": ("bright natural daylight on an overcast-to-sunny morning, neutral white balance around 5000K, soft large-source "
                  "light with gentle falloff across the room"),
-    "nang-chieu": ("warm late-afternoon sunlight raking low across the room, around 4000K, long soft-edged shadows and a warm "
+    "late-afternoon": ("warm late-afternoon sunlight raking low across the room, around 4000K, long soft-edged shadows and a warm "
                    "glow on the cabinet fronts, balanced by cool ambient fill"),
-    "toi-am": ("evening interior lighting: warm 2700–3000K recessed ceiling downlights and under-cabinet LED strips as the main "
+    "dim-evening": ("evening interior lighting: warm 2700–3000K recessed ceiling downlights and under-cabinet LED strips as the main "
                "light, dark window, cozy pools of light on the countertop, no harsh flash"),
 }
-ANH_SANG_VI = {"ban-ngay": "Ban ngày, sáng tự nhiên", "nang-chieu": "Nắng chiều ấm", "toi-am": "Buổi tối, đèn ấm"}
+LIGHTING_VI = {"daylight": "Ban ngày, sáng tự nhiên", "late-afternoon": "Nắng chiều ấm", "dim-evening": "Buổi tối, đèn ấm"}
 
 NEGATIVE = ["CGI", "3D render look", "video game graphics", "plastic-looking surfaces", "flat uniform lighting",
             "oversaturated colors", "HDR halos", "overexposed highlights", "crushed black shadows", "cartoon", "illustration",
@@ -31,16 +31,17 @@ NEGATIVE = ["CGI", "3D render look", "video game graphics", "plastic-looking sur
 
 
 def _has_window(spec: KitchenSpec) -> bool:
-    return bool(spec.phong and any(lo.loai == "cua-so" for t in spec.phong.tuong for lo in t.lo))
+    return bool(spec.room and any(openings.type == "window" for t in spec.room.wall for openings in t.openings))
 
 
-def _ten_vat_lieu(spec: KitchenSpec) -> list[str]:
-    return [*spec.chung.vatLieu.values(), *(m.vatLieu or "" for m in spec.module), spec.chung.tayNam.vatLieu or ""]
+def _material_name(spec: KitchenSpec) -> list[str]:
+    return [*spec.common.material.values(), *(m.material or "" for m in spec.module), spec.common.handle.material or "",
+            *(h.material or "" for h in (spec.common.handleByStorey or {}).values()), *(m.handle.material or "" for m in spec.module if m.handle)]
 
 
 def _materials(spec: KitchenSpec | None, extra: list[str] | None = None) -> list[str]:
     """Mô tả bề mặt theo tên vật liệu (của cả thiết kế nếu có spec, cộng thêm extra), mỗi loại một câu ngắn, không lặp."""
-    names = " ".join([*(_ten_vat_lieu(spec) if spec is not None else []), *(extra or [])]).lower()
+    names = " ".join([*(_material_name(spec) if spec is not None else []), *(extra or [])]).lower()
     t = vocab._norm(names)  # bỏ dấu, chữ thường
     out = []
     if any(vocab._has(t, k) for k in ("vân gỗ", "gỗ", "sồi", "óc chó", "tần bì", "xoan đào", "teak", "veneer")):
@@ -69,34 +70,35 @@ def _contact(spec: KitchenSpec) -> list[str]:
            "soft ambient-occlusion contact shadows where cabinets meet the wall, floor and ceiling, and in inside corners",
            "a soft shadow under the countertop overhang and inside the toe-kick recess",
            "door and panel edges have tiny rounded bevels that catch a thin line of light"]
-    if any(m.tang in ("tren", "noc") for m in spec.module):
+    if any(m.storey in ("upper", "loft") for m in spec.module):
         out.append("a soft shadow band on the backsplash under the wall cabinets")
     return out
 
 
-def _lights(spec: KitchenSpec, anh_sang: str) -> list[str]:
-    out = [ANH_SANG.get(anh_sang, ANH_SANG["ban-ngay"])]
-    if _has_window(spec) and anh_sang != "toi-am":
+def _lights(spec: KitchenSpec, lighting: str) -> list[str]:
+    out = [LIGHTING.get(lighting, LIGHTING["daylight"])]
+    if _has_window(spec) and lighting != "dim-evening":
         out.append("daylight enters through the window as the key light, brightest near it, with a natural exposure that keeps "
                    "the window view slightly bright but not blown out")
-    if any(m.tang in ("tren", "noc") for m in spec.module):
+    if any(m.storey in ("upper", "loft") for m in spec.module):
         out.append("warm LED strip light under the wall cabinets washes the backsplash and countertop"
-                   + (" (subtle in daylight)" if anh_sang != "toi-am" else ""))
+                   + (" (subtle in daylight)" if lighting != "dim-evening" else ""))
     return out
 
 
-def full(spec: KitchenSpec, anh_sang: str = "ban-ngay") -> str:
+def full(spec: KitchenSpec, lighting: str = "daylight") -> str:
     """Đoạn yêu cầu ảnh thật cho ảnh ĐẦY ĐỦ (gen-0 / xuất cho AI)."""
-    cam = ("Shoot it as a professional architectural interior photograph: full-frame camera, 24–35 mm rectilinear lens at "
+    camera = ("Shoot it as a professional architectural interior photograph: full-frame camera, 24–35 mm rectilinear lens at "
            "eye level about 1.5 m, f/8 with everything in focus, vertical lines kept perfectly vertical, no fisheye.")
-    light = "Lighting: " + "; ".join(_lights(spec, anh_sang)) + "."
+    light = "Lighting: " + "; ".join(_lights(spec, lighting)) + "."
     mats = _materials(spec)
-    mat = ("Materials: " + "; ".join(mats) + ".") if mats else ""
+    material_text = ("Materials: " + "; ".join(mats) + ".") if mats else ""
     contact = "Physically plausible detail: " + "; ".join(_contact(spec)) + "."
     post = ("Natural color, realistic dynamic range (no HDR look), very fine natural sensor grain, accurate white balance; "
             "the room looks clean and newly installed, with no people, text or clutter. It must be indistinguishable from a "
             "real photograph, not a 3D render.")
-    return " ".join(x for x in (cam, light, mat, contact, post) if x)
+    preferences = ("Image preferences: " + "; ".join(spec.renderPreferences) + ".") if spec.renderPreferences else ""
+    return " ".join(x for x in (camera, light, material_text, contact, preferences, post) if x)
 
 
 def local(spec: KitchenSpec | None, extra_materials: list[str] | None = None) -> str:
@@ -111,10 +113,12 @@ def local(spec: KitchenSpec | None, extra_materials: list[str] | None = None) ->
             + (" Surface detail: " + "; ".join(mats) + "." if mats else ""))
 
 
-def tags(spec: KitchenSpec, anh_sang: str = "ban-ngay") -> str:
+def tags(spec: KitchenSpec, lighting: str = "daylight") -> str:
     """Cụm từ khoá ảnh thật cho prompt ComfyUI (SD/SDXL/Flux hiểu dạng tag tốt hơn câu dài)."""
-    light = {"ban-ngay": "soft natural daylight, 5000K", "nang-chieu": "warm late afternoon sunlight, long soft shadows",
-             "toi-am": "warm evening downlights, under-cabinet LED, 2700K"}.get(anh_sang, "soft natural daylight")
+    light = {"daylight": "soft natural daylight, 5000K", "late-afternoon": "warm late afternoon sunlight, long soft shadows",
+             "dim-evening": "warm evening downlights, under-cabinet LED, 2700K"}.get(lighting, "soft natural daylight")
+    preferences = ", ".join(spec.renderPreferences)
     return ("RAW photo, professional architectural interior photography, 24mm rectilinear lens, eye level, f/8, "
             f"{light}, global illumination, soft contact shadows, ambient occlusion in corners, realistic material textures, "
-            "fine wood grain, subtle reflections, straight vertical lines, natural color grading, fine film grain, 8k detail")
+            "fine wood grain, subtle reflections, straight vertical lines, natural color grading, fine film grain, 8k detail"
+            + (", " + preferences if preferences else ""))

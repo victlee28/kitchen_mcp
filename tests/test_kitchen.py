@@ -11,7 +11,7 @@ from pathlib import Path
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parent.parent
-FIXTURE = json.loads((ROOT / "fixtures" / "bep-chu-L.json").read_text(encoding="utf-8"))
+FIXTURE = json.loads((ROOT / "fixtures" / "l-shaped-kitchen.json").read_text(encoding="utf-8"))
 
 from kitchen import edit, geometry, intent, rules  # noqa: E402
 from kitchen.render import render_views  # noqa: E402
@@ -35,30 +35,30 @@ class TestIntent(unittest.TestCase):
     def p(self, s):
         return intent.parse_prompt(s)[0]
 
-    def test_mm_khong_bi_nhan_1000(self):
+    def test_mm_not_multiplied_by_1000(self):
         m = self.p("Tủ bếp dài 3000mm, sâu 600 mm, cao 2200mm")
-        self.assertEqual((m.daiTuongSau, m.sauTuDuoi, m.dinhTu), (3000, 600, 2200))
+        self.assertEqual((m.backWallLength, m.baseDepth, m.cabinetTop), (3000, 600, 2200))
 
-    def test_cao_cap_khong_phai_chieu_cao(self):
-        self.assertEqual(self.p("Tủ bếp cao cấp dài 3m, cao 2.4m").dinhTu, 2400)
+    def test_premium_is_not_height(self):
+        self.assertEqual(self.p("Tủ bếp cao cấp dài 3m, cao 2.4m").cabinetTop, 2400)
 
-    def test_chu_L_hai_canh(self):
+    def test_l_shape_two_wings(self):
         m = self.p("Bếp chữ L cạnh dài 2,8m và 3,2m")
-        self.assertEqual((m.hinh, m.daiTuongSau, m.daiTuongPhai), ("L", 2800, 3200))
+        self.assertEqual((m.geometry_edit, m.backWallLength, m.rightWallLength), ("L", 2800, 3200))
 
     def test_nfd(self):
-        self.assertEqual(self.p(unicodedata.normalize("NFD", "Tủ bếp dài 4m")).daiTuongSau, 4000)
+        self.assertEqual(self.p(unicodedata.normalize("NFD", "Tủ bếp dài 4m")).backWallLength, 4000)
 
-    def test_vat_lieu_mat_da_trang(self):
-        self.assertEqual(self.p("tủ sồi, mặt đá trắng").vatLieu.get("matDa"), "Đá nhân tạo trắng")
+    def test_white_countertop_material(self):
+        self.assertEqual(self.p("tủ sồi, mặt đá trắng").material.get("countertop"), "Đá nhân tạo trắng")
 
-    def test_mau_hop_le(self):
+    def test_template_valid(self):
         for prompt in ["Tủ bếp chữ I dài 3.6m có tủ lạnh", "Bếp chữ L dài 2,4m x 2m", "Tủ bếp dài 2m, tủ nóc"]:
             spec = intent.from_template(self.p(prompt))
             v = rules.validate(spec)
             self.assertEqual(v["dem"]["error"], 0, (prompt, v["issues"]))
             # cảnh báo chỉ được là khuyến nghị NKBA (bếp nhỏ thiếu mặt bàn thao tác), không lỗi hình học
-            self.assertEqual([i for i in v["issues"] if i["mucDo"] == "warning" and not i["quyTac"].startswith("NKBA")], [], prompt)
+            self.assertEqual([i for i in v["issues"] if i["severity"] == "warning" and not i["rule"].startswith("NKBA")], [], prompt)
 
 
 class TestSpecGeometry(unittest.TestCase):
@@ -67,11 +67,11 @@ class TestSpecGeometry(unittest.TestCase):
         self.assertEqual(len(s.module), 16)
         sc = geometry.compile_spec(s)
         mods = {p.module for p in sc.parts if p.module}
-        self.assertTrue({m.ma for m in s.module} <= mods)
-        top = max(p.max[1] for p in sc.parts if p.loai == "mat-da")
+        self.assertTrue({m.id for m in s.module} <= mods)
+        top = max(p.max[1] for p in sc.parts if p.type == "countertop")
         self.assertEqual(top, 900)  # mặt đá đúng cao độ (bản cũ: 1120)
 
-    def test_quy_uoc_tuong(self):
+    def test_wall_convention(self):
         sc = geometry.compile_spec(load_spec(FIXTURE))
         td1 = [p for p in sc.parts if p.module == "TD1"]
         self.assertLessEqual(max(p.max[0] for p in td1), -550 + 1e-6)  # tường sau chạy theo -x
@@ -80,66 +80,66 @@ class TestSpecGeometry(unittest.TestCase):
 
 
 class TestRules(unittest.TestCase):
-    def test_fixture_khong_quoc_gia(self):
+    def test_fixture_has_no_country(self):
         v = rules.validate(load_spec(FIXTURE))
-        self.assertTrue(v["hopLe"])
-        warn = {i["quyTac"] for i in v["issues"] if i["mucDo"] != "info"}
+        self.assertTrue(v["valid"])
+        warn = {i["rule"] for i in v["issues"] if i["severity"] != "info"}
         self.assertEqual(warn, {"KITCHEN-DEFAULT-001"})  # chỉ mục toàn cầu; tiêu chuẩn các nước chỉ tham khảo
-        self.assertTrue(all(i.get("thamKhao") for i in v["issues"] if i["quyTac"].startswith(("NKBA", "AS-", "EN-"))))
-        self.assertFalse(any(i["quyTac"] == "GEO-CAO-DO" for i in v["issues"]))  # TT5 hút mùi được miễn
+        self.assertTrue(all(i.get("reference") for i in v["issues"] if i["rule"].startswith(("NKBA", "AS-", "EN-"))))
+        self.assertFalse(any(i["rule"] == "GEO-HEIGHTS" for i in v["issues"]))  # TT5 hút mùi được miễn
 
-    def test_uu_tien_theo_quoc_gia(self):
+    def test_priority_by_country(self):
         f = load_spec(FIXTURE)
-        got = lambda qg: {i["quyTac"]: i for i in rules.validate(f, quoc_gia=qg)["issues"]}
+        got = lambda qg: {i["rule"]: i for i in rules.validate(f, country=qg)["issues"]}
         us = got("US")
-        self.assertEqual((us["NKBA-10"]["mucDo"], us["NKBA-10"]["doDuoc"]), ("warning", [610, 375]))
+        self.assertEqual((us["NKBA-10"]["severity"], us["NKBA-10"]["measured"]), ("warning", [610, 375]))
         au = got("AU")
-        self.assertEqual((au["AS-NZS-5601-1"]["mucDo"], au["AS-NZS-5601-1"]["doDuoc"]), ("error", 635))  # 1700-165-900
-        self.assertEqual(got("GB")["HUT-MUI-001"]["mucDo"], "warning")
-        self.assertEqual(got("DE")["EN-1116"]["mucDo"], "warning")  # mặt bàn sâu 570 < 600
-        vn = rules.validate(f, quoc_gia="VN")
+        self.assertEqual((au["AS-NZS-5601-1"]["severity"], au["AS-NZS-5601-1"]["measured"]), ("error", 635))  # 1700-165-900
+        self.assertEqual(got("GB")["HOOD-001"]["severity"], "warning")
+        self.assertEqual(got("DE")["EN-1116"]["severity"], "warning")  # mặt bàn sâu 570 < 600
+        vn = rules.validate(f, country="VN")
         self.assertEqual(vn["dem"]["warning"] + vn["dem"]["error"], 0)  # VN chỉ có quy ước thị trường -> info
-        self.assertIn("VN-TU-BEP-PHO-BIEN", vn["quyTacDaDung"]["mat-da-cao"])
+        self.assertIn("VN-KITCHEN-COMMON-PRACTICE", vn["appliedRules"]["countertop-height"])
 
-    def test_tham_so_tu_kb(self):
-        rows = [{"code": "KITCHEN-DEFAULT-001", "khu_vuc": "GLOBAL", "quoc_gia": "",
-                 "metadata": {"kiemTra": ["sau-tu-duoi"], "params": {"sauTuDuoi_min": 500, "sauTuDuoi_max": 650}}}]
-        self.assertFalse(any(i["quyTac"] == "KITCHEN-DEFAULT-001" for i in rules.validate(load_spec(FIXTURE), rows)["issues"]))
+    def test_params_from_kb(self):
+        rows = [{"code": "KITCHEN-DEFAULT-001", "region": "GLOBAL", "country": "",
+                 "metadata": {"validation": ["base-depth"], "params": {"baseDepth_min": 500, "baseDepth_max": 650}}}]
+        self.assertFalse(any(i["rule"] == "KITCHEN-DEFAULT-001" for i in rules.validate(load_spec(FIXTURE), rows)["issues"]))
 
-    def test_tat_quy_tac_qua_kb(self):
-        codes = {i["quyTac"] for i in rules.validate(load_spec(FIXTURE), [], "AU")["issues"]}
+    def test_disable_rules_via_kb(self):
+        codes = {i["rule"] for i in rules.validate(load_spec(FIXTURE), [], "AU")["issues"]}
         self.assertFalse(codes & {"AS-NZS-5601-1", "NKBA-10", "KITCHEN-DEFAULT-001"})
 
 
-    def test_va_cham(self):
-        s = edit.update_module(load_spec(FIXTURE), "TD3", {"tu": 1300}, don_day=False)
+    def test_collision(self):
+        s = edit.update_module(load_spec(FIXTURE), "TD3", {"fromCorner": 1300}, close_gap=False)
         v = rules.validate(s)
-        self.assertTrue(any(i["quyTac"] == "GEO-VA-CHAM" and set(i["module"]) == {"TD2", "TD3"} for i in v["issues"]))
+        self.assertTrue(any(i["rule"] == "GEO-COLLISION" and set(i["module"]) == {"TD2", "TD3"} for i in v["issues"]))
 
 
 
 class TestRegions(Tmp):
-    def test_mau_theo_vung(self):
-        for qg, mat in (("VN", 850), ("DE", 900), (None, 900)):
-            s = intent.from_template(intent.MauBep(quocGia=qg, daiTuongSau=3600, tuLanh=True))
-            self.assertEqual((s.chung.matDa, s.quocGia), (mat, qg))
+    def test_template_by_zone(self):
+        for qg, material_text in (("VN", 850), ("DE", 900), (None, 900)):
+            s = intent.from_template(intent.KitchenTemplate(country=qg, backWallLength=3600, fridge=True))
+            self.assertEqual((s.common.countertop, s.country), (material_text, qg))
             v = rules.validate(s)
-            self.assertFalse(any(i.get("chuDe") == "hut-mui" for i in v["issues"]), qg)
+            self.assertFalse(any(i.get("topic") == "hood" for i in v["issues"]), qg)
 
-    def test_nhan_quoc_gia_tu_mo_ta(self):
-        self.assertEqual(intent.parse_prompt("Bếp chữ L chuẩn Úc dài 3m")[0].quocGia, "AU")
-        self.assertIsNone(intent.parse_prompt("tủ bếp thẩm mỹ, ý tưởng hiện đại")[0].quocGia)
+    def test_country_from_description(self):
+        self.assertEqual(intent.parse_prompt("Bếp chữ L chuẩn Úc dài 3m")[0].country, "AU")
+        self.assertIsNone(intent.parse_prompt("tủ bếp thẩm mỹ, ý tưởng hiện đại")[0].country)
 
-    def test_tra_cuu_uu_tien(self):
+    def test_lookup_priority(self):
         self.assertEqual(self.svc.search_knowledge("hút mùi", None, "AU")[0]["code"], "AS-NZS-5601-1")
-        self.assertEqual(self.svc.search_knowledge("hút mùi", None, "GB")[0]["code"], "HUT-MUI-001")
-        vn_only = self.svc.search_knowledge("", ["rule", "standard"], "VN", chi_vung=True)
+        self.assertEqual(self.svc.search_knowledge("hút mùi", None, "GB")[0]["code"], "HOOD-001")
+        vn_only = self.svc.search_knowledge("", ["rule", "standard"], "VN", region_only=True)
         self.assertTrue(vn_only)
-        self.assertTrue(all(r["khu_vuc"] in ("GLOBAL", "SEA") for r in vn_only))
+        self.assertTrue(all(r["region"] in ("GLOBAL", "SEA") for r in vn_only))
         with self.assertRaises(ValueError):
             self.svc.search_knowledge("", None, "XX")
 
-    def test_migration_db_cu(self):
+    def test_legacy_db_migration(self):
         import sqlite3
         from kitchen import knowledge_seed
         c = sqlite3.connect(self.tmp / "old.db")
@@ -149,10 +149,10 @@ class TestRegions(Tmp):
                         "INSERT INTO knowledge(kind,code,title,content,source_url) VALUES('rule','NKBA-10','x','do nguoi dung sua','');")
         r = knowledge_seed.apply(c)
         c.commit()
-        self.assertEqual(r["cotMoi"], ["khu_vuc", "quoc_gia"])
-        row = c.execute("SELECT khu_vuc, quoc_gia, content FROM knowledge WHERE code='NKBA-10'").fetchone()
+        self.assertEqual(r["newColumn"], ["region", "country"])
+        row = c.execute("SELECT region, country, content FROM knowledge WHERE code='NKBA-10'").fetchone()
         self.assertEqual(row, ("NA", "US,CA", "do nguoi dung sua"))  # gán vùng nhưng giữ nội dung người dùng
-        self.assertEqual(knowledge_seed.apply(c)["themMoi"], [])
+        self.assertEqual(knowledge_seed.apply(c)["addNew"], [])
         c.close()
 
 class TestThreejs(unittest.TestCase):
@@ -183,29 +183,29 @@ class TestThreejs(unittest.TestCase):
         w = [tuple(a + b for a, b in zip(mf.pos, _rot(c, mf.rot))) for c in corners]
         return [min(x[i] for x in w) for i in range(3)], [max(x[i] for x in w) for i in range(3)]
 
-    def test_fixture_hop_le_va_khop_hinh_hoc(self):
+    def test_fixture_valid_and_matches_geometry(self):
         spec = load_spec(FIXTURE)
-        doc = self.check(spec, quoc_gia="VN")
+        doc = self.check(spec, country="VN")
         self.assertEqual(len(doc["modules"]), 16)
         self.assertEqual(len(doc["cameras"]), 8)
         self.assertEqual(doc["metadata"]["region"]["countryCode"], "VN")
         parts = geometry.compile_spec(spec).parts
         for m in doc["modules"]:
-            ref = [p for p in parts if p.module == m["sourceRef"] and p.loai != "tay-nam"]  # tay nắm kiểm riêng
+            ref = [p for p in parts if p.module == m["sourceRef"] and p.type != "handle"]  # tay nắm kiểm riêng
             doors = sorted(tuple(map(lambda v: round(v, 1), self.world_box(m["transform"], d["transform"], d["dimensions"])[0]))
                            for d in m["doors"])
-            want = sorted(tuple(round(v, 1) for v in p.min) for p in ref if p.loai in ("canh", "canh-kinh"))
+            want = sorted(tuple(round(v, 1) for v in p.min) for p in ref if p.type in ("door", "glass-door"))
             self.assertEqual(doors, want, m["sourceRef"])
             boxes = [self.world_box(m["transform"], x["transform"], x["dimensions"]) for x in m["parts"] + m["doors"] + m["drawers"]]
-            lo = [min(b[0][i] for b in boxes) for i in range(3)]
+            openings = [min(b[0][i] for b in boxes) for i in range(3)]
             hi = [max(b[1][i] for b in boxes) for i in range(3)]
             rlo = [min(p.min[i] for p in ref) for i in range(3)]
             rhi = [max(p.max[i] for p in ref) for i in range(3)]
             for i in range(3):
-                self.assertAlmostEqual(lo[i], rlo[i], delta=0.1, msg=m["sourceRef"])
+                self.assertAlmostEqual(openings[i], rlo[i], delta=0.1, msg=m["sourceRef"])
                 self.assertAlmostEqual(hi[i], rhi[i], delta=0.1, msg=m["sourceRef"])
 
-    def test_ban_le_tay_nam_va_mat_da(self):
+    def test_hinge_handle_and_countertop(self):
         doc = self.check(load_spec(FIXTURE))
         td1 = next(m for m in doc["modules"] if m["sourceRef"] == "TD1")
         self.assertEqual([d["hingeSide"] for d in td1["doors"]], ["Left", "Right"])
@@ -216,15 +216,15 @@ class TestThreejs(unittest.TestCase):
         self.assertEqual(sorted(c["type"] for t in tops for c in t["cutouts"]), ["cooktop", "sink"])
         self.assertTrue(any(l["type"] == "RectAreaLight" for l in doc["lighting"]))  # LED dưới tủ trên
 
-    def test_mau_va_sau_khi_sua(self):
+    def test_template_and_after_edit(self):
         for qg in ("VN", "AU", None):
-            self.check(intent.from_template(intent.MauBep(hinh="L", daiTuongSau=3000, daiTuongPhai=2600, tuLanh=True, tuNoc=True, quocGia=qg)))
-        s = edit.add_module(load_spec(FIXTURE), {"rong": 450, "canh": [450]}, sau_module="TD3")
+            self.check(intent.from_template(intent.KitchenTemplate(geometry_edit="L", backWallLength=3000, rightWallLength=2600, fridge=True, loft=True, country=qg)))
+        s = edit.add_module(load_spec(FIXTURE), {"width": 450, "doors": [450]}, after_module="TD3")
         self.check(edit.remove_module(s, "TT4"))
 
-    def test_khong_tay_nam(self):
+    def test_no_handle(self):
         s = load_spec(FIXTURE)
-        s.chung.tayNam.kieu = "khong"
+        s.common.handle.variant = "none"
         doc = self.check(s)
         self.assertFalse(any("hardware" in d for m in doc["modules"] for d in m["doors"]))
 
@@ -238,55 +238,55 @@ class TestMoldings(Tmp):
         s.moldings = M.default_moldings()
         return s, M
 
-    def test_profile_hop_le(self):
+    def test_profile_valid(self):
         from kitchen.spec import MoldingProfile
         from pydantic import ValidationError
-        p = MoldingProfile(ma="x", points=[(0, 0), (0, 10), (10, 10), (10, 0)])  # chiều kim đồng hồ -> tự đảo
+        p = MoldingProfile(id="x", points=[(0, 0), (0, 10), (10, 10), (10, 0)])  # chiều kim đồng hồ -> tự đảo
         self.assertEqual(p.points[0], (10.0, 0.0))
         for bad in ([(0, 0), (1, 1)], [(0, 0), (10, 10), (10, 0), (0, 10)], [(0, -5), (10, -5), (10, 10)]):
             with self.assertRaises(ValidationError):
-                MoldingProfile(ma="b", points=bad)
+                MoldingProfile(id="b", points=bad)
 
-    def test_mau_co_dien(self):
+    def test_classic_template(self):
         m = intent.parse_prompt("Tạo tủ bếp chữ L phong cách cổ điển, có phào nóc và phào chân, dài 3m x 2,6m")[0]
         s = intent.from_template(m)
-        self.assertEqual((s.phongCach, [x.kieu for x in s.moldings]), ("Classic", ["crown", "base"]))
+        self.assertEqual((s.style, [x.variant for x in s.moldings]), ("Classic", ["crown", "base"]))
         self.assertEqual(rules.validate(s)["dem"]["error"], 0)  # mẫu chừa chỗ phào dưới trần
         s2 = intent.from_template(intent.parse_prompt("Tủ bếp hiện đại dài 3m")[0])
         self.assertEqual(s2.moldings, [])
 
-    def test_duong_chay_chu_L(self):
+    def test_l_shape_run_path(self):
         s, M = self.classic()
-        runs = {(r.molding.ma, tuple(r.tuong)): r for r in M.compute_runs(s)}
-        crown = runs[("phao-noc", ("phai", "sau"))]
+        runs = {(r.molding.id, tuple(r.wall)): r for r in M.compute_runs(s)}
+        crown = runs[("crown-molding", ("right", "back"))]
         self.assertIn((-320.0, 320.0), crown.points)  # góc trong chữ L: một đỉnh vát góc, không nối thẳng
         self.assertEqual(crown.points[0], (0.0, 2830.0))  # đầu hở tường phải quay về tường
-        tc1 = runs[("phao-noc", ("sau",))]
+        tc1 = runs[("crown-molding", ("back",))]
         self.assertEqual(tc1.modules, ["TC1"])  # tủ cao sâu hơn: đoạn riêng, quay về tường ở đầu hở
-        base = runs[("phao-chan", ("phai", "sau"))]
+        base = runs[("base-molding", ("right", "back"))]
         self.assertNotIn("TC1", base.modules)  # không chạy phào chân qua hốc tủ lạnh
         self.assertAlmostEqual(base.length, 550 + 2830 - 550 + 1250 - 550 + 550, delta=1)
 
-    def test_vuot_tran_va_hanh_dong(self):
+    def test_ceiling_overflow_and_action(self):
         s, M = self.classic()
         v = rules.validate(s)
-        i = next(x for x in v["issues"] if x["quyTac"] == "MOLDING-TRAN-001")
-        self.assertEqual((i["mucDo"], i["doDuoc"], i["gioiHan"]), ("error", 2700, 2640))
-        ha, giu = i["hanhDong"]
-        s2 = edit.apply_op(s, ha["op"])
-        self.assertEqual((s2.chung.dinhTu, s2.tim("TC1").cao, s2.tim("TT2").cao), (2550, 2550, 270))
-        self.assertFalse(any(x["quyTac"] == "MOLDING-TRAN-001" for x in rules.validate(s2)["issues"]))
-        s3 = edit.apply_op(s, giu["op"])
-        i3 = next(x for x in rules.validate(s3)["issues"] if x["quyTac"] == "MOLDING-TRAN-001")
-        self.assertEqual(i3["mucDo"], "info")
-        self.assertTrue(any(x["quyTac"] == "AS-NZS-5601-1" for x in rules.validate(s2, quoc_gia="AU")["issues"]))  # hút mùi vẫn kiểm
+        i = next(x for x in v["issues"] if x["rule"] == "MOLDING-CEILING-001")
+        self.assertEqual((i["severity"], i["measured"], i["limit"]), ("error", 2700, 2640))
+        lower, keep = i["action"]
+        s2 = edit.apply_op(s, lower["op"])
+        self.assertEqual((s2.common.cabinetTop, s2.find("TC1").height, s2.find("TT2").height), (2550, 2550, 270))
+        self.assertFalse(any(x["rule"] == "MOLDING-CEILING-001" for x in rules.validate(s2)["issues"]))
+        s3 = edit.apply_op(s, keep["op"])
+        i3 = next(x for x in rules.validate(s3)["issues"] if x["rule"] == "MOLDING-CEILING-001")
+        self.assertEqual(i3["severity"], "info")
+        self.assertTrue(any(x["rule"] == "AS-NZS-5601-1" for x in rules.validate(s2, country="AU")["issues"]))  # hút mùi vẫn kiểm
 
-    def test_canh_lat_len(self):
+    def test_flip_up_door(self):
         s, M = self.classic()
-        i = next(x for x in rules.validate(s)["issues"] if x["quyTac"] == "MOLDING-CANH-LAT-001")
+        i = next(x for x in rules.validate(s)["issues"] if x["rule"] == "MOLDING-FLIPUP-001")
         self.assertEqual(set(i["module"]), {"TT2", "TT7", "TT8", "TT9"})
 
-    def test_xuat_threejs(self):
+    def test_threejs_export(self):
         import jsonschema
         from kitchen import threejs_export as tx
         s, M = self.classic()
@@ -299,19 +299,19 @@ class TestMoldings(Tmp):
         self.assertTrue(all(a["parameters"]["profile"] for a in doc["assets"] if a["id"].startswith("ASSET-MOLDING")))
         self.assertEqual(tx.export(load_spec(FIXTURE), "x", 1)["decorations"], [])  # spec cũ: không có phào
 
-    def test_render_co_phao(self):
+    def test_render_with_molding(self):
         import numpy as np
-        from kitchen.render import SEG_MAU
+        from kitchen.render import SEGMENT_COLORS
         s, M = self.classic()
         s = M.lower_top(s, 2550)
-        res = render_views(s, self.tmp / "m", ["goc-anh-goc"], 480, 360)
-        d = Path(res["views"]["goc-anh-goc"]["dir"])
+        res = render_views(s, self.tmp / "m", ["original-angle"], 480, 360)
+        d = Path(res["views"]["original-angle"]["dir"])
         seg = np.asarray(Image.open(d / "seg.png"))
-        self.assertGreater(int((seg == np.array(SEG_MAU["phao"], np.uint8)).all(-1).sum()), 200)
-        self.assertIn("phao-noc", res["views"]["goc-anh-goc"]["moduleThayDuoc"])
-        self.assertIn("phao-chan", res["views"]["goc-anh-goc"]["moduleThayDuoc"])
+        self.assertGreater(int((seg == np.array(SEGMENT_COLORS["molding"], np.uint8)).all(-1).sum()), 200)
+        self.assertIn("crown-molding", res["views"]["original-angle"]["editableModule"])
+        self.assertIn("base-molding", res["views"]["original-angle"]["editableModule"])
 
-    def test_js_sweep_khop_python(self):
+    def test_js_sweep_matches_python(self):
         import shutil as sh
         import subprocess
         node = sh.which("node")
@@ -336,41 +336,41 @@ class TestEdit(unittest.TestCase):
     def setUp(self):
         self.s = load_spec(FIXTURE)
 
-    def test_them_don_day(self):
-        s = edit.add_module(self.s, {"rong": 450, "canh": [450]}, sau_module="TD3")
-        new = [m for m in s.module if m.ma not in {x.ma for x in self.s.module}][0]
-        self.assertEqual((new.tuong, new.tu, new.cao), ("phai", 1810, 840))
-        self.assertEqual(s.tim("TD4").tu, 2260)
-        self.assertEqual(s.tim("TT3").tu, 630)  # tầng trên không bị dịch
-        self.assertEqual(next(t for t in s.thietBi if t.ma == "TB4").tam, 2580)  # bếp dịch theo
-        self.assertFalse(any(i["mucDo"] == "error" for i in rules.validate(s)["issues"]))
+    def test_add_close_gap(self):
+        s = edit.add_module(self.s, {"width": 450, "doors": [450]}, after_module="TD3")
+        new = [m for m in s.module if m.id not in {x.id for x in self.s.module}][0]
+        self.assertEqual((new.wall, new.fromCorner, new.height), ("right", 1810, 840))
+        self.assertEqual(s.find("TD4").fromCorner, 2260)
+        self.assertEqual(s.find("TT3").fromCorner, 630)  # tầng trên không bị dịch
+        self.assertEqual(next(t for t in s.appliances if t.id == "TB4").center, 2580)  # bếp dịch theo
+        self.assertFalse(any(i["severity"] == "error" for i in rules.validate(s)["issues"]))
 
-    def test_xoa_don_day(self):
+    def test_remove_close_gap(self):
         s = edit.remove_module(self.s, "TD3")
-        self.assertEqual(s.tim("TD4").tu, 1440)
+        self.assertEqual(s.find("TD4").fromCorner, 1440)
 
-    def test_doi_rong_giu_ti_le_canh(self):
-        s = edit.update_module(self.s, "TD1", {"rong": 800})
-        self.assertEqual(s.tim("TD1").canh, [400, 400])
-        self.assertEqual(s.tim("TC1").tu, 1350)
+    def test_resize_keeps_door_ratio(self):
+        s = edit.update_module(self.s, "TD1", {"width": 800})
+        self.assertEqual(s.find("TD1").doors, [400, 400])
+        self.assertEqual(s.find("TC1").fromCorner, 1350)
 
-    def test_khong_sua_tai_cho(self):
+    def test_no_in_place_edit(self):
         edit.remove_module(self.s, "TD3")
         self.assertEqual(len(self.s.module), 16)
 
 
 class TestStore(Tmp):
-    def test_revisions_va_xung_dot(self):
+    def test_revisions_and_conflict(self):
         r = self.svc.create_from_spec(FIXTURE)
-        a = self.svc.apply(r["id"], {"op": "remove", "ma": "TD3"}, 1)
+        a = self.svc.apply(r["id"], {"op": "remove", "id": "TD3"}, 1)
         self.assertEqual(a["rev"], 2)
         with self.assertRaises(ConflictError):
-            self.svc.apply(r["id"], {"op": "remove", "ma": "TD4"}, 1)
+            self.svc.apply(r["id"], {"op": "remove", "id": "TD4"}, 1)
         b = self.svc.revert(r["id"], 1, 2)
-        self.assertEqual(b["soModule"], 16)
+        self.assertEqual(b["moduleCount"], 16)
         self.assertEqual([h["rev"] for h in self.svc.history(r["id"])], [1, 2, 3])
 
-    def test_knowledge_upsert_va_tim(self):
+    def test_knowledge_upsert_and_search(self):
         self.svc.add_knowledge(kind="material", code="MAT-WOOD-OAK", title="Oak 2", content="x")
         rows = [r for r in self.svc.search_knowledge("", ["material"]) if r["code"] == "MAT-WOOD-OAK"]
         self.assertEqual(len(rows), 1)
@@ -379,7 +379,7 @@ class TestStore(Tmp):
 
 class TestRender(Tmp):
     def test_render_fixture(self):
-        res = render_views(load_spec(FIXTURE), self.tmp / "r", ["goc-anh-goc", "mat-bang"], 480, 360)
+        res = render_views(load_spec(FIXTURE), self.tmp / "r", ["original-angle", "plan"], 480, 360)
         for v in res["views"].values():
             d = Path(v["dir"])
             for f in v["files"]:
@@ -388,15 +388,15 @@ class TestRender(Tmp):
             self.assertEqual(lines.size, (480, 360))
             dark = int((__import__("numpy").asarray(lines) < 128).sum())
             self.assertGreater(dark, 2000)
-            self.assertGreater(len(v["moduleThayDuoc"]), 8)
-        cam = json.loads((Path(res["views"]["goc-anh-goc"]["dir"]) / "camera.json").read_text(encoding="utf-8"))
-        self.assertAlmostEqual(cam["cx"], 240)
+            self.assertGreater(len(v["editableModule"]), 8)
+        camera = json.loads((Path(res["views"]["original-angle"]["dir"]) / "camera.json").read_text(encoding="utf-8"))
+        self.assertAlmostEqual(camera["cx"], 240)
 
-    def test_render_xac_dinh(self):
+    def test_render_deterministic(self):
         s = load_spec(FIXTURE)
-        a = render_views(s, self.tmp / "a", ["khu-nau"], 320, 240)
-        b = render_views(s, self.tmp / "b", ["khu-nau"], 320, 240)
-        pa, pb = (Path(x["views"]["khu-nau"]["dir"]) / "lines.png" for x in (a, b))
+        a = render_views(s, self.tmp / "a", ["cooking-area"], 320, 240)
+        b = render_views(s, self.tmp / "b", ["cooking-area"], 320, 240)
+        pa, pb = (Path(x["views"]["cooking-area"]["dir"]) / "lines.png" for x in (a, b))
         self.assertEqual(pa.read_bytes(), pb.read_bytes())
 
 
@@ -425,32 +425,32 @@ class TestHttp(Tmp):
         c.close()
         return r.status, dict(r.getheaders()), data
 
-    def test_chi_phuc_vu_web(self):
+    def test_serves_web_only(self):
         self.assertEqual(self.req("GET", "/web/")[0], 200)
         for p in ["/kitchen.db", "/server.py", "/.env", "/web/../server.py", "/renders/../kitchen.db"]:
             self.assertEqual(self.req("GET", p)[0], 404, p)
 
-    def test_cors_va_content_type(self):
-        st, h, _ = self.req("POST", "/api/designs", json.dumps({"mau": {}}), ctype="text/plain")
+    def test_cors_and_content_type(self):
+        st, h, _ = self.req("POST", "/api/designs", json.dumps({"color": {}}), ctype="text/plain")
         self.assertEqual(st, 415)
         self.assertNotIn("Access-Control-Allow-Origin", h)
         self.assertEqual(self.req("GET", "/api/designs", host="evil.example")[0], 403)
 
-    def test_luong_api(self):
+    def test_api_flow(self):
         st, _, d = self.req("POST", "/api/designs", {"spec": FIXTURE})
         self.assertEqual(st, 201)
         did = json.loads(d)["id"]
-        st, _, d = self.req("POST", f"/api/designs/{did}/ops", {"baseRev": 1, "op": {"op": "update", "ma": "TD1", "thayDoi": {"rong": 800}}})
+        st, _, d = self.req("POST", f"/api/designs/{did}/ops", {"baseRev": 1, "op": {"op": "update", "id": "TD1", "changes": {"width": 800}}})
         self.assertEqual((st, json.loads(d)["rev"]), (200, 2))
-        st, _, d = self.req("POST", f"/api/designs/{did}/ops", {"baseRev": 1, "op": {"op": "remove", "ma": "TD1"}})
+        st, _, d = self.req("POST", f"/api/designs/{did}/ops", {"baseRev": 1, "op": {"op": "remove", "id": "TD1"}})
         self.assertEqual(st, 409)
-        st, _, d = self.req("POST", f"/api/designs/{did}/ops", {"baseRev": 2, "op": {"op": "update", "ma": "TD1", "thayDoi": {"cao": -5}}})
+        st, _, d = self.req("POST", f"/api/designs/{did}/ops", {"baseRev": 2, "op": {"op": "update", "id": "TD1", "changes": {"height": -5}}})
         self.assertEqual(st, 422)
         st, _, d = self.req("GET", f"/api/designs/{did}/scene")
         self.assertGreater(len(json.loads(d)["parts"]), 50)
-        st, _, d = self.req("GET", f"/api/designs/{did}/threejs?quocGia=AU")
+        st, _, d = self.req("GET", f"/api/designs/{did}/threejs?country=AU")
         doc = json.loads(d)
-        self.assertEqual((st, doc["schemaVersion"], doc["metadata"]["region"]["countryCode"]), (200, "1.1.0", "AU"))
+        self.assertEqual((st, doc["schemaVersion"], doc["metadata"]["region"]["countryCode"]), (200, "1.2.0", "AU"))
 
 
 if __name__ == "__main__":

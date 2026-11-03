@@ -1,4 +1,4 @@
-"""Sinh schema mở rộng v1.1.0 từ schema gốc v1.0.0 của người dùng.
+"""Sinh schema mở rộng v1.2.0 (gồm các bổ sung v1.1) từ schema gốc v1.0.0 của người dùng.
 
 Nguyên tắc: KHÔNG đổi/bớt gì của bản gốc; chỉ thêm thuộc tính TÙY CHỌN vào $defs và các object con
 (những chỗ bản gốc không khóa additionalProperties). Nhờ vậy mọi file xuất ra hợp lệ với CẢ HAI bản.
@@ -12,6 +12,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 ADD = "Bổ sung v1.1 (VicKitchenCabinet)"
+ADD2 = "Bổ sung v1.2 (VicKitchenCabinet)"
 
 
 def opt(schema: dict, desc: str) -> dict:
@@ -21,11 +22,11 @@ def opt(schema: dict, desc: str) -> dict:
 def main():
     base = json.loads((HERE / "kitchen-threejs.v1.0.0.schema.json").read_text(encoding="utf-8"))
     s = copy.deepcopy(base)
-    s["$id"] = "https://example.com/schemas/kitchen-threejs-full.v1.1.0.schema.json"
-    s["title"] = base["title"] + " (v1.1)"
-    s["description"] = base["description"] + " v1.1 thêm trường tùy chọn cho tủ tham số, vùng tiêu chuẩn và ảnh điều khiển AI; tương thích ngược v1.0.0."
+    s["$id"] = "https://example.com/schemas/kitchen-threejs-full.v1.2.0.schema.json"
+    s["title"] = base["title"] + " (v1.2)"
+    s["description"] = base["description"] + " v1.1 thêm trường tùy chọn cho tủ tham số, vùng tiêu chuẩn và ảnh điều khiển AI; v1.2 thêm phong cách phụ, gợi ý ảnh AI và bảng diễn giải mô tả; tương thích ngược v1.0.0."
     P, D = s["properties"], s["$defs"]
-    P["schemaVersion"]["default"] = "1.1.0"
+    P["schemaVersion"]["default"] = "1.2.0"
 
     D["vec2"] = {"type": "object", "required": ["u", "v"], "properties": {"u": {"type": "number"}, "v": {"type": "number"}},
                  "description": f"[{ADD}] Véc-tơ 2D cho lặp texture"}
@@ -41,6 +42,17 @@ def main():
     m["source"] = opt({"type": "object", "properties": {"generator": {"type": "string"}, "specSchemaVersion": {"type": "integer"},
                                                         "specRevision": {"type": "integer"}}}, "Nguồn sinh file (KitchenSpec + rev)")
     m["tags"] = opt({"type": "array", "items": {"type": "string"}}, "Nhãn tự do")
+    m["styleTags"] = {"type": "array", "items": {"type": "string"},
+                      "description": f"[{ADD2}] Phong cách không có hình học riêng (Scandinavian, Japandi, Farmhouse, Country, Mid-Century Modern, Luxury); `style` giữ phong cách hình học gần nhất"}
+    m["aiHints"] = {"type": "array", "items": {"type": "string"}, "description": f"[{ADD2}] Cụm tiếng Anh chỉ dùng cho prompt ảnh AI (kính sọc, gạch xương cá…)"}
+    m["renderPreferences"] = {"type": "array", "items": {"type": "string"}, "description": f"[{ADD2}] Cụm tiếng Anh về góc máy, ánh sáng, chất lượng ảnh từ mô tả (chỉ cho ảnh AI)"}
+    m["promptInterpretation"] = {"type": "array", "description": f"[{ADD2}] Cách hiểu từng thuật ngữ trong mô tả tạo thiết kế",
+                                 "items": {"type": "object", "required": ["term", "status"],
+                                           "properties": {"term": {"type": "string"}, "id": {"type": "string"}, "kind": {"type": "string"},
+                                                          "canonical": {"type": "string"}, "scope": {"type": "array", "items": {"type": "string"}},
+                                                          "target": {"type": "string"},
+                                                          "status": {"type": "string", "enum": ["built", "exported", "ai-only", "unsupported", "ambiguous"]},
+                                                          "message": {"type": "string"}}}}
 
     # hệ toạ độ: khung từng tường để đặt module theo tường + khoảng cách
     c = P["coordinateSystem"]["properties"]
@@ -82,12 +94,13 @@ def main():
     mt["emissive"] = opt({"type": "string", "pattern": "^#([0-9a-fA-F]{6})$"}, "Màu phát sáng")
     mt["emissiveIntensity"] = opt({"type": "number", "minimum": 0}, "")
     mt["semanticClass"] = opt({"type": "string"}, "Lớp ngữ nghĩa cho mask AI")
+    mt["pattern"] = {"type": "string", "description": f"[{ADD2}] Kiểu xếp gạch (herringbone, running-bond); chỉ mô tả, chưa dựng từng viên"}
     mt["sourceKnowledgeCode"] = opt({"type": "string"}, "Mã vật liệu trong kho tri thức")
 
     # module
     md = D["module"]["properties"]
     md["sourceRef"] = opt({"type": "string"}, "Mã module trong KitchenSpec (vd TD1)")
-    md["tier"] = opt({"type": "string", "enum": ["base", "wall", "top", "tall", "corner", "island"]}, "Tầng tủ")
+    md["storey"] = opt({"type": "string", "enum": ["base", "upper", "loft", "tall", "corner", "island"]}, "Tầng tủ")
     md["frontMaterialId"] = opt({"$ref": "#/$defs/id"}, "Vật liệu mặt cánh mặc định")
     md["frontStyle"] = opt({"type": "string", "enum": ["slab", "shaker", "glass"]}, "Kiểu cánh")
     md["blindCorner"] = opt({"type": "object", "properties": {"side": {"type": "string", "enum": ["left", "right"]}, "width": {"type": "number"}}},
@@ -101,6 +114,9 @@ def main():
     md["placement"]["properties"]["offset"] = opt({"type": "number"}, "Khoảng cách từ góc dọc theo tường (mm)")
     md["placement"]["properties"]["elevation"] = opt({"type": "number"}, "Cao độ đáy module (mm)")
     cons = md["construction"]["properties"]
+    renamed = {("plinthHeight" if k == "toeKickHeight" else k): v for k, v in cons.items()}  # v1.0.0 calls it toeKickHeight
+    cons.clear()
+    cons.update(renamed)
     cons["edgeBanding"] = opt({"type": "object", "properties": {"thickness": {"type": "number"}, "materialId": {"$ref": "#/$defs/id"}}}, "Nẹp cạnh")
     cons["grainDirection"] = opt({"type": "string", "enum": ["horizontal", "vertical"]}, "Hướng vân mặt cánh")
     cons["hingeCountPerDoor"] = opt({"type": "integer", "minimum": 0}, "Số bản lề mỗi cánh")
@@ -124,11 +140,11 @@ def main():
     D["hardwareRef"].setdefault("properties", {})["sourceRef"] = opt({"type": "string"}, "ID chi tiết tay nắm trong bộ biên dịch (= layer sửa ảnh, vd TD1-tay-nam-1)")
 
     # thiết bị, phụ kiện
-    ap = D["appliance"]["properties"]
-    ap["sourceRef"] = opt({"type": "string"}, "Mã thiết bị trong KitchenSpec")
-    ap["parentModuleId"] = opt({"$ref": "#/$defs/id"}, "Module chứa thiết bị")
-    ap["energy"] = opt({"type": "string", "enum": ["electric", "induction", "gas", "none"]}, "Nguồn năng lượng")
-    ap["clearances"] = opt({"type": "object", "properties": {"top": {"type": "number"}, "sides": {"type": "number"}, "back": {"type": "number"}}},
+    apply = D["appliance"]["properties"]
+    apply["sourceRef"] = opt({"type": "string"}, "Mã thiết bị trong KitchenSpec")
+    apply["parentModuleId"] = opt({"$ref": "#/$defs/id"}, "Module chứa thiết bị")
+    apply["energy"] = opt({"type": "string", "enum": ["electric", "induction", "gas", "none"]}, "Nguồn năng lượng")
+    apply["clearances"] = opt({"type": "object", "properties": {"top": {"type": "number"}, "sides": {"type": "number"}, "back": {"type": "number"}}},
                            "Khoảng hở yêu cầu")
     ac = D["accessoryInstance"]["properties"]
     ac["sourceRef"] = opt({"type": "string"}, "Mã trong KitchenSpec")

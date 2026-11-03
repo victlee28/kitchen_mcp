@@ -3,10 +3,10 @@
 | File | Nội dung |
 |---|---|
 | `kitchen-threejs.v1.0.0.schema.json` | Schema gốc của bạn, giữ nguyên |
-| `kitchen-threejs.schema.json` | Bản mở rộng v1.1.0, sinh bằng `python schemas/build_schema.py` |
-| `../fixtures/bep-chu-L.threejs.json` | Ví dụ xuất từ bếp chữ L, hợp lệ cả hai bản |
+| `kitchen-threejs.schema.json` | Bản mở rộng v1.2.0 (gồm v1.1), sinh bằng `python schemas/build_schema.py`. Khác bản gốc: `modules[].construction.toeKickHeight` đổi tên thành `plinthHeight` |
+| `../fixtures/l-shaped-kitchen.threejs.json` | Ví dụ xuất từ bếp chữ L, hợp lệ cả hai bản |
 
-Xuất: MCP `export_threejs(design_id)`, web `GET /api/designs/<id>/threejs?quocGia=VN` (nút **Tải JSON three.js**).
+Xuất: MCP `export_threejs(design_id)`, web `GET /api/designs/<id>/threejs?country=VN` (nút **Tải JSON three.js**).
 Dựng trong three.js: `web/scene-loader.js` → `buildKitchen(doc, THREE, { RectAreaLightUniformsLib })`.
 
 ## Quy ước bắt buộc (schema gốc chưa nói rõ)
@@ -27,7 +27,7 @@ Dựng trong three.js: `web/scene-loader.js` → `buildKitchen(doc, THREE, { Rec
 | `room.ceiling` | `render` | Tắt trần để camera nhìn từ trên |
 | `lighting[]` | `groundColor`, `width`, `height`, `angle`, `penumbra`, `parentId` | Tham số constructor three.js của HemisphereLight / RectAreaLight / SpotLight mà bản gốc thiếu |
 | `materials[]` | `textureRepeat` (vec2), `textureRotation`, `side`, `emissive*`, `semanticClass`, `sourceKnowledgeCode` | `repeat` gốc là vec3 trong khi texture 2D; kính cần `DoubleSide` |
-| `modules[]` | `sourceRef`, `tier`, `frontMaterialId`, `frontStyle`, `blindCorner`, `endPanel`, `niches`, `led`, `placement.offset/elevation` | Liên kết tủ trong spec; tủ góc khuất, tấm hông, hộc thiết bị |
+| `modules[]` | `sourceRef`, `storey`, `frontMaterialId`, `frontStyle`, `blindCorner`, `endPanel`, `niches`, `led`, `placement.offset/elevation` | Liên kết tủ trong spec; tủ góc khuất, tấm hông, hộc thiết bị |
 | `modules[].construction` | `edgeBanding`, `grainDirection`, `hingeCountPerDoor` | Chi tiết sản xuất |
 | `modules[].doors[]` | `glass`, `openingAngle`, `frontStyle`, `hinges[]` | Cánh kính; minh họa cánh mở |
 | `$defs.part` | `customRole` (end_panel, filler, niche_back, niche_board, blind_panel), `semanticClass`, `edgeBanding` | Vai trò ngoài enum gốc mà không phá enum |
@@ -38,6 +38,16 @@ Dựng trong three.js: `web/scene-loader.js` → `buildKitchen(doc, THREE, { Rec
 | `decorations[]` | `path` (polyline, miter), `sourceRef`, `semanticClass`, `modules` | Phào quét theo đường chạy; mặt cắt ở `assets[assetId].parameters.profile` (category cornice/molding, geometryType extrusion) |
 | `renderSettings` | `pixelRatio`, `environment`, `controlPasses` (thêm `instance`, `albedo`), `segmentationPalette` | Ảnh điều khiển (nét, depth, normal, mask) cho AI, màu mask cố định |
 | `modules[].doors[]`, `drawers[]`, `$defs.part`, `…hardware` | `sourceRef` | ID chi tiết của bộ biên dịch = layer ID sửa ảnh (vd `TD1-canh-1`) |
+
+## Trường bổ sung ở v1.2 (đều tùy chọn, file vẫn hợp lệ với v1.0.0 và v1.1.0)
+
+| Chỗ | Trường | Vì sao cần |
+|---|---|---|
+| `metadata` | `styleTags` | Phong cách không có hình học riêng (Scandinavian, Japandi, Farmhouse, Country, Mid-Century Modern, Luxury); `style` vẫn là phong cách hình học gần nhất |
+| `metadata` | `aiHints` | Cụm tiếng Anh chỉ dành cho ảnh AI (kính sọc, gạch xương cá…) |
+| `metadata` | `renderPreferences` | Cụm tiếng Anh về góc máy, ánh sáng, chất lượng ảnh (đèn thả, 8K, wide-angle…); chỉ cho ảnh AI |
+| `metadata` | `promptInterpretation[]` | Mỗi thuật ngữ trong mô tả đã được hiểu thế nào: `term`, `canonical`, `scope`, `target`, `status` (built / exported / ai-only / unsupported / ambiguous), `message` |
+| `materials[]` | `pattern` | Kiểu xếp gạch ốp (herringbone, running-bond); chưa dựng từng viên |
 
 ## Điểm cần lưu ý trong schema gốc
 

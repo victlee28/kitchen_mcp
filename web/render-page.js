@@ -62,7 +62,7 @@ async function go() {
       if (S.designId && $('save').checked) {
         try {
           const res = await api(`/api/designs/${S.designId}/beauty`, 'POST', { view: r.view, rev: S.rev, imageBase64: r.dataUrl });
-          const k = res.khopNet || {};
+          const k = res.lineMatch || {};
           cap.append(el('span', { class: k.khop === false ? 'bad' : 'ok', textContent: k.khop === false ? 'đã lưu · lệch nét?' : 'đã lưu ✓' }));
         } catch (err) { cap.append(el('span', { class: 'bad', textContent: err.message })); }
       }
@@ -85,7 +85,7 @@ window.__render = (doc, opts) => renderDoc(doc, opts);
 (async () => {
   try {
     const list = await api('/api/designs');
-    for (const d of list) $('design').append(el('option', { value: d.id, textContent: `${d.ten} · rev ${d.rev}` }));
+    for (const d of list) $('design').append(el('option', { value: d.id, textContent: `${d.name} · rev ${d.rev}` }));
     const q = new URLSearchParams(location.search).get('design');
     if (q) { $('design').value = q; $('design').dispatchEvent(new Event('change')); }
   } catch { $('src').textContent = 'Không có máy chủ thiết kế: vẫn mở được file JSON.'; $('save').disabled = true; }

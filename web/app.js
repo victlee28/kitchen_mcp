@@ -15,7 +15,7 @@ async function api(path, method = 'GET', body) {
   const r = await fetch(path, opt);
   const data = await r.json().catch(() => ({}));
   if (!r.ok) {
-    const detail = data.chiTiet ? ' — ' + data.chiTiet.map((x) => `${x.viTri}: ${x.loi}`).join('; ') : '';
+    const detail = data.part ? ' — ' + data.part.map((x) => `${x.position}: ${x.errors}`).join('; ') : '';
     throw new Error((data.error || `HTTP ${r.status}`) + detail);
   }
   return data;
@@ -85,14 +85,14 @@ function highlight() {
 }
 function applyView(key) {
   const v = state.views[key]; if (!v) return;
-  camera.position.set(...v.viTri); camera.fov = v.fovDoc; camera.updateProjectionMatrix();
-  controls.target.set(...v.nhinVao); controls.update();
+  camera.position.set(...v.position); camera.fov = v.verticalFov; camera.updateProjectionMatrix();
+  controls.target.set(...v.lookAt); controls.update();
 }
 renderer.domElement.addEventListener('click', (ev) => {
   const r = renderer.domElement.getBoundingClientRect();
   pointer.set(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1);
   raycaster.setFromCamera(pointer, camera);
-  const hit = raycaster.intersectObjects(meshes, false).find((h) => h.object.userData.module && state.spec.module.some((m) => m.ma === h.object.userData.module));
+  const hit = raycaster.intersectObjects(meshes, false).find((h) => h.object.userData.module && state.spec.module.some((m) => m.id === h.object.userData.module));
   if (hit) selectModule(hit.object.userData.module);
 });
 
@@ -100,22 +100,22 @@ renderer.domElement.addEventListener('click', (ev) => {
 async function loadDesigns(selectId) {
   const list = await api('/api/designs');
   const sel = $('designSelect'); sel.replaceChildren();
-  for (const d of list) sel.append(el('option', { value: d.id, textContent: `${d.ten} · rev ${d.rev}` }));
+  for (const d of list) sel.append(el('option', { value: d.id, textContent: `${d.name} · rev ${d.rev}` }));
   if (!list.length) sel.append(el('option', { value: '', textContent: '(chưa có thiết kế)' }));
   const id = selectId || (list[0] && list[0].id);
   if (id) { sel.value = id; await openDesign(id); }
 }
 async function openDesign(id, keepView = false) {
-  const [d, sc, v, doc] = await Promise.all([api(`/api/designs/${id}`), api(`/api/designs/${id}/scene`), api(`/api/designs/${id}/validate${state.qg ? `?quocGia=${state.qg}` : ''}`),
-    api(`/api/designs/${id}/threejs${state.qg ? `?quocGia=${state.qg}` : ''}`)]);
+  const [d, sc, v, doc] = await Promise.all([api(`/api/designs/${id}`), api(`/api/designs/${id}/scene`), api(`/api/designs/${id}/validate${state.qg ? `?country=${state.qg}` : ''}`),
+    api(`/api/designs/${id}/threejs${state.qg ? `?country=${state.qg}` : ''}`)]);
   Object.assign(state, { id, rev: d.rev, spec: d.spec, scene: sc, views: sc.views });
   $('revInfo').textContent = `rev ${d.rev}`;
   buildScene(doc); state.doc = doc;
   const vs = $('viewSelect'); const prev = vs.value; vs.replaceChildren();
-  for (const [k, g] of Object.entries(sc.views)) vs.append(el('option', { value: k, textContent: g.ten || k }));
+  for (const [k, g] of Object.entries(sc.views)) vs.append(el('option', { value: k, textContent: g.name || k }));
   if (keepView && sc.views[prev]) vs.value = prev; else applyView(vs.value);
   renderIssues(v); renderModuleList(); syncMoldingPanel();
-  if (state.selected && !d.spec.module.some((m) => m.ma === state.selected)) state.selected = null;
+  if (state.selected && !d.spec.module.some((m) => m.id === state.selected)) state.selected = null;
   if (state.selected) selectModule(state.selected); else $('moduleForm').hidden = true;
   $('openRender').href = `render.html?design=${encodeURIComponent(id)}`;
   syncAiExport().catch((e) => setStatus('Xuất JSON cho AI lỗi: ' + e.message, 'warn'));
@@ -127,17 +127,17 @@ async function afterChange(res) {
 }
 function renderIssues(v) {
   const ul = $('issues'); ul.replaceChildren();
-  ul.append(el('li', { class: 'muted' }, `Áp tiêu chuẩn: ${v.quocGia || v.khuVuc || 'toàn cầu (chưa chọn quốc gia)'}`));
-  ul.append(el('li', { class: v.hopLe ? 'ok' : 'warn' }, v.hopLe ? `Hợp lệ · ${v.dem.warning} cảnh báo · ${v.dem.info} ghi chú` : `${v.dem.error} lỗi · ${v.dem.warning} cảnh báo`));
+  ul.append(el('li', { class: 'muted' }, `Áp tiêu chuẩn: ${v.country || v.region || 'toàn cầu (chưa chọn quốc gia)'}`));
+  ul.append(el('li', { class: v.valid ? 'ok' : 'warn' }, v.valid ? `Hợp lệ · ${v.dem.warning} cảnh báo · ${v.dem.info} ghi chú` : `${v.dem.error} lỗi · ${v.dem.warning} cảnh báo`));
   for (const i of v.issues) {
-    const li = el('li', { class: 'issue ' + i.mucDo }, el('b', {}, `[${i.mucDo}] ${i.quyTac}`), ' ', i.noiDung,
+    const li = el('li', { class: 'issue ' + i.severity }, el('b', {}, `[${i.severity}] ${i.rule}`), ' ', i.content,
       i.theo ? el('small', { class: 'muted' }, ` — ${i.theo}`) : '');
-    if (i.module.length) li.addEventListener('click', () => { if (state.spec.module.some((m) => m.ma === i.module[0])) selectModule(i.module[0]); });
-    if (i.hanhDong?.length) {  // nút chọn cách xử lý (vd phào vượt trần: hạ đỉnh tủ / để nguyên)
+    if (i.module.length) li.addEventListener('click', () => { if (state.spec.module.some((m) => m.id === i.module[0])) selectModule(i.module[0]); });
+    if (i.action?.length) {  // nút chọn cách xử lý (vd phào vượt trần: hạ đỉnh tủ / để nguyên)
       const row = el('div', { class: 'actions' });
-      for (const a of i.hanhDong) {
-        row.append(el('button', { type: 'button', textContent: a.nhan, onclick: (ev) => { ev.stopPropagation();
-          run(a.nhan, async () => afterChange(await api(`/api/designs/${state.id}/ops`, 'POST', { baseRev: state.rev, op: a.op }))); } }));
+      for (const a of i.action) {
+        row.append(el('button', { type: 'button', textContent: a.label, onclick: (ev) => { ev.stopPropagation();
+          run(a.label, async () => afterChange(await api(`/api/designs/${state.id}/ops`, 'POST', { baseRev: state.rev, op: a.op }))); } }));
       }
       li.append(row);
     }
@@ -146,50 +146,50 @@ function renderIssues(v) {
 }
 function renderModuleList() {
   const ul = $('moduleList'); ul.replaceChildren();
-  const order = { sau: 0, goc: 1, phai: 2, trai: 3 };
-  const mods = [...state.spec.module].sort((a, b) => (order[a.tuong] - order[b.tuong]) || (a.y - b.y) || ((a.tu || 0) - (b.tu || 0)));
+  const order = { back: 0, corner: 1, right: 2, left: 3, island: 4 };
+  const mods = [...state.spec.module].sort((a, b) => (order[a.wall] - order[b.wall]) || (a.y - b.y) || ((a.fromCorner || 0) - (b.fromCorner || 0)));
   for (const m of mods) {
-    const li = el('li', { class: m.ma === state.selected ? 'sel' : '', onclick: () => selectModule(m.ma) },
-      el('b', {}, m.ma), ` ${m.loai} · ${m.tuong} · ${m.tu ?? 0}+${m.rong ?? m.canhSau}`);
+    const li = el('li', { class: m.id === state.selected ? 'sel' : '', onclick: () => selectModule(m.id) },
+      el('b', {}, m.id), ` ${m.type} · ${m.wall} · ${m.fromCorner ?? 0}+${m.width ?? m.backLength}`);
     ul.append(li);
   }
 }
-const FIELDS = [['loai', 'text'], ['tuong', 'text'], ['tu', 'number'], ['rong', 'number'], ['y', 'number'], ['cao', 'number'], ['sau', 'number'], ['gocKhuat', 'number'], ['tamHong', 'number']];
-function selectModule(ma) {
-  state.selected = ma; highlight(); renderModuleList();
-  const m = state.spec.module.find((x) => x.ma === ma); if (!m) return;
+const FIELDS = [['type', 'text'], ['wall', 'text'], ['fromCorner', 'number'], ['width', 'number'], ['y', 'number'], ['tall', 'number'], ['back', 'number'], ['blindCorner', 'number'], ['endPanel', 'number']];
+function selectModule(id) {
+  state.selected = id; highlight(); renderModuleList();
+  const m = state.spec.module.find((x) => x.id === id); if (!m) return;
   const f = $('moduleForm'); f.hidden = false;
-  $('formTitle').textContent = `${m.ma} — ${m.ten || m.loai}`;
+  $('formTitle').textContent = `${m.id} — ${m.name || m.type}`;
   const box = $('formFields'); box.replaceChildren();
   for (const [k, type] of FIELDS) {
     box.append(el('label', {}, k, el('input', { name: k, type, value: m[k] ?? '', step: type === 'number' ? '10' : undefined })));
   }
-  f.elements.canh.value = (m.canh || []).join(', ');
+  f.elements.doors.value = (m.doors || []).join(', ');
 }
 $('moduleForm').addEventListener('submit', (ev) => {
   ev.preventDefault();
-  const f = ev.target; const m = state.spec.module.find((x) => x.ma === state.selected);
-  const thayDoi = {};
+  const f = ev.target; const m = state.spec.module.find((x) => x.id === state.selected);
+  const changes = {};
   for (const [k, type] of FIELDS) {
     const raw = f.elements[k].value;
     const val = type === 'number' ? (raw === '' ? undefined : Number(raw)) : raw;
-    if (val !== undefined && val !== (m[k] ?? (type === 'number' ? 0 : ''))) thayDoi[k] = val;
+    if (val !== undefined && val !== (m[k] ?? (type === 'number' ? 0 : ''))) changes[k] = val;
   }
-  const canh = f.elements.canh.value.split(',').map((s) => s.trim()).filter(Boolean).map(Number);
-  if (canh.join() !== (m.canh || []).join()) thayDoi.canh = canh;
-  if (!Object.keys(thayDoi).length) return setStatus('Không có thay đổi');
-  run(`sửa ${m.ma}`, async () => afterChange(await api(`/api/designs/${state.id}/ops`, 'POST',
-    { baseRev: state.rev, op: { op: 'update', ma: m.ma, thayDoi, donDay: f.elements.donDay.checked } })));
+  const doors = f.elements.doors.value.split(',').map((s) => s.trim()).filter(Boolean).map(Number);
+  if (doors.join() !== (m.doors || []).join()) changes.doors = doors;
+  if (!Object.keys(changes).length) return setStatus('Không có thay đổi');
+  run(`sửa ${m.id}`, async () => afterChange(await api(`/api/designs/${state.id}/ops`, 'POST',
+    { baseRev: state.rev, op: { op: 'update', id: m.id, changes, closeGap: f.elements.closeGap.checked } })));
 });
 $('addAfter').addEventListener('click', () => {
-  const m = state.spec.module.find((x) => x.ma === state.selected); if (!m) return;
-  const rong = Number(prompt('Bề rộng tủ mới (mm)', '600')); if (!rong) return;
+  const m = state.spec.module.find((x) => x.id === state.selected); if (!m) return;
+  const width = Number(prompt('Bề rộng tủ mới (mm)', '600')); if (!width) return;
   run('thêm tủ', async () => afterChange(await api(`/api/designs/${state.id}/ops`, 'POST',
-    { baseRev: state.rev, op: { op: 'add', sauModule: m.ma, module: { rong, canh: rong >= 600 ? [rong / 2, rong / 2] : [rong] }, donDay: true } })));
+    { baseRev: state.rev, op: { op: 'add', afterModule: m.id, module: { width, doors: width >= 600 ? [width / 2, width / 2] : [width] }, closeGap: true } })));
 });
 $('removeModule').addEventListener('click', () => {
-  const ma = state.selected; if (!ma) return;
-  run(`xóa ${ma}`, async () => { state.selected = null; await afterChange(await api(`/api/designs/${state.id}/ops`, 'POST', { baseRev: state.rev, op: { op: 'remove', ma, donDay: true } })); });
+  const id = state.selected; if (!id) return;
+  run(`xóa ${id}`, async () => { state.selected = null; await afterChange(await api(`/api/designs/${state.id}/ops`, 'POST', { baseRev: state.rev, op: { op: 'remove', id, closeGap: true } })); });
 });
 $('undo').addEventListener('click', () => {
   if (!state.id || state.rev <= 1) return setStatus('Không còn bản trước');
@@ -197,14 +197,38 @@ $('undo').addEventListener('click', () => {
 });
 
 // ---------------- tạo / nhập / xuất
+// Bảng "đã hiểu gì từ mô tả": mỗi thuật ngữ kèm vùng áp, trường đích và trạng thái hỗ trợ (chữ qua textContent)
+const STATUS_VI = { built: 'đã dựng', exported: 'ghi vào thiết kế/file 3D', 'ai-only': 'chỉ cho ảnh AI', unsupported: 'chưa hỗ trợ', ambiguous: 'chưa rõ' };
+const SCOPE_VI = { base: 'tủ dưới', upper: 'tủ trên', tall: 'tủ cao', countertop: 'mặt bàn', wallTile: 'ốp tường', handle: 'tay nắm', floor: 'sàn', wall: 'tường', whole: 'toàn bếp', '?': 'chưa rõ' };
+function showInterpretation(items) {
+  const box = $('promptResult'); box.replaceChildren();
+  box.hidden = !items.length; if (!items.length) return;
+  const rows = items.map((i) => {
+    const tr = document.createElement('tr'); tr.className = 'st-' + i.status;
+    for (const text of [i.term || '—', i.canonical || '', (i.scope || []).map((s) => SCOPE_VI[s] || s).join(', '), STATUS_VI[i.status] || i.status, i.message || '']) {
+      const td = document.createElement('td'); td.textContent = text; tr.append(td);
+    }
+    return tr;
+  });
+  const table = document.createElement('table');
+  const head = document.createElement('tr');
+  for (const h of ['Từ trong mô tả', 'Hiểu là', 'Áp cho', 'Trạng thái', 'Ghi chú']) { const th = document.createElement('th'); th.textContent = h; head.append(th); }
+  table.append(head, ...rows);
+  const title = document.createElement('p'); title.className = 'muted small'; title.textContent = 'Hệ thống đã hiểu mô tả như sau:';
+  box.append(title, table);
+}
 $('fromPrompt').addEventListener('click', () => {
   const p = $('prompt').value.trim(); if (!p) return setStatus('Hãy nhập mô tả', 'warn');
-  run('tạo từ mô tả', async () => { const r = await api('/api/designs', 'POST', { prompt: p }); state.selected = null; await loadDesigns(r.id); });
+  run('tạo từ mô tả', async () => {
+    const r = await api('/api/designs', 'POST', { prompt: p }); state.selected = null; await loadDesigns(r.id);
+    showInterpretation(r.analysis?.interpretation || []);
+  });
 });
 $('fromTemplate').addEventListener('click', () => {
-  const mau = { quocGia: state.qg || null, hinh: $('mHinh').value, daiTuongSau: Number($('mSau').value), dinhTu: Number($('mDinh').value), tuLanh: $('mTuLanh').checked, tuNoc: $('mNoc').checked, phongCach: $('mStyle').value };
-  if (mau.hinh === 'L') mau.daiTuongPhai = Number($('mPhai').value);
-  run('tạo từ mẫu', async () => { const r = await api('/api/designs', 'POST', { mau, ten: `Bếp chữ ${mau.hinh}` }); state.selected = null; await loadDesigns(r.id); });
+  const color = { country: state.qg || null, geometry_edit: $('mShape').value, backWallLength: Number($('mBack').value), cabinetTop: Number($('mTop').value), backsplashHeight: $('mBacksplash').value, fridge: $('mFridge').checked, loft: $('mLoft').checked, island: $('mIsland').checked, peninsula: $('mPeninsula').checked, openShelf: $('mOpenShelf').checked, style: $('mStyle').value };
+  if (color.geometry_edit !== 'I') color.rightWallLength = Number($('mRight').value);
+  if (color.geometry_edit === 'U') color.leftWallLength = Number($('mLeft').value);
+  run('tạo từ mẫu', async () => { const r = await api('/api/designs', 'POST', { color, name: `Bếp chữ ${color.geometry_edit}` }); state.selected = null; await loadDesigns(r.id); });
 });
 $('importFile').addEventListener('change', (e) => {
   const file = e.target.files[0]; if (!file) return;
@@ -224,11 +248,11 @@ $('designSelect').addEventListener('change', (e) => e.target.value && run('mở 
 $('viewSelect').addEventListener('change', (e) => applyView(e.target.value));
 
 // ---------------- render ảnh điều khiển
-async function doRender(views) {
+async function runRender(views) {
   const res = await api(`/api/designs/${state.id}/render`, 'POST', { rev: state.rev, views });
   const box = $('renders'); box.replaceChildren();
   for (const [k, v] of Object.entries(res.views)) {
-    const fig = el('figure', {}, el('figcaption', {}, `${state.views[k]?.ten || k} · rev ${res.rev}`));
+    const fig = el('figure', {}, el('figcaption', {}, `${state.views[k]?.name || k} · rev ${res.rev}`));
     for (const f of ['lines', 'depth', 'normal', 'seg_module']) {
       const url = `${v.url}${f}.png?t=${Date.now()}`;
       fig.append(el('a', { href: url, target: '_blank', title: f }, el('img', { src: url, alt: f, loading: 'lazy' })));
@@ -236,20 +260,20 @@ async function doRender(views) {
     box.append(fig);
   }
 }
-$('renderOne').addEventListener('click', () => state.id && run('render', () => doRender([$('viewSelect').value])));
-$('renderAll').addEventListener('click', () => state.id && run('render tất cả góc', () => doRender(null)));
+$('renderOne').addEventListener('click', () => state.id && run('render', () => runRender([$('viewSelect').value])));
+$('renderAll').addEventListener('click', () => state.id && run('render tất cả góc', () => runRender(null)));
 
 $('qgSelect').addEventListener('change', (e) => { state.qg = e.target.value; if (state.id) run('kiểm tra theo tiêu chuẩn', () => openDesign(state.id, true)); });
 async function loadRegions() {
   const r = await api('/api/regions'); const sel = $('qgSelect');
-  for (const [code, q] of Object.entries(r.quocGia)) sel.append(el('option', { value: code, textContent: `${q.ten} (${code})` }));
+  for (const [code, q] of Object.entries(r.country)) sel.append(el('option', { value: code, textContent: `${q.name} (${code})` }));
 }
 // ---------------- phong cách & phào
 let profiles = {};
 async function loadProfiles() {
   profiles = await api('/api/molding-profiles');
-  for (const [sel, kieu] of [['pCrownProf', 'crown'], ['pBaseProf', 'base']]) {
-    $(sel).replaceChildren(...Object.values(profiles).filter((p) => p.kieu === kieu).map((p) => el('option', { value: p.ma, textContent: `${p.ten} (${p.cao}×${p.nho})` })));
+  for (const [sel, variant] of [['pCrownProf', 'crown'], ['pBaseProf', 'base']]) {
+    $(sel).replaceChildren(...Object.values(profiles).filter((p) => p.variant === variant).map((p) => el('option', { value: p.id, textContent: `${p.name} (${p.height}×${p.overhang})` })));
   }
   $('pCrownProf').value = 'classic-crown-layered'; $('pBaseProf').value = 'classic-base';
   $('pCrownProf').addEventListener('change', drawProfile); drawProfile();
@@ -265,21 +289,21 @@ function drawProfile() {
 }
 function syncMoldingPanel() {
   const ms = state.spec.moldings || [];
-  const crown = ms.find((m) => m.kieu === 'crown'), base = ms.find((m) => m.kieu === 'base');
-  $('pStyle').value = state.spec.phongCach || 'Modern';
-  $('pCrown').checked = !!crown?.bat; $('pBase').checked = !!base?.bat;
+  const crown = ms.find((m) => m.variant === 'crown'), base = ms.find((m) => m.variant === 'base');
+  $('pStyle').value = state.spec.style || 'Modern';
+  $('pCrown').checked = !!crown?.enabled; $('pBase').checked = !!base?.enabled;
   if (crown) $('pCrownProf').value = crown.profile; if (base) $('pBaseProf').value = base.profile;
-  if (crown || base) $('pEnd').value = (crown || base).dauHo; drawProfile();
+  if (crown || base) $('pEnd').value = (crown || base).openEnd; drawProfile();
 }
 $('pStyle').addEventListener('change', () => { const c = ['Classic', 'Neoclassical', 'Transitional'].includes($('pStyle').value); $('pCrown').checked = c; $('pBase').checked = c; });
 $('pApply').addEventListener('click', () => {
   if (!state.id) return;
-  const old = Object.fromEntries((state.spec.moldings || []).map((m) => [m.ma, m]));
+  const old = Object.fromEntries((state.spec.moldings || []).map((m) => [m.id, m]));
   const moldings = [];
-  if ($('pCrown').checked) moldings.push({ ...(old['phao-noc'] || {}), ma: 'phao-noc', kieu: 'crown', profile: $('pCrownProf').value, dauHo: $('pEnd').value, bat: true });
-  if ($('pBase').checked) moldings.push({ ...(old['phao-chan'] || {}), ma: 'phao-chan', kieu: 'base', profile: $('pBaseProf').value, dauHo: $('pEnd').value, bat: true });
+  if ($('pCrown').checked) moldings.push({ ...(old['crown-molding'] || {}), id: 'crown-molding', variant: 'crown', profile: $('pCrownProf').value, openEnd: $('pEnd').value, enabled: true });
+  if ($('pBase').checked) moldings.push({ ...(old['base-molding'] || {}), id: 'base-molding', variant: 'base', profile: $('pBaseProf').value, openEnd: $('pEnd').value, enabled: true });
   run('áp dụng phào', async () => afterChange(await api(`/api/designs/${state.id}/ops`, 'POST',
-    { baseRev: state.rev, op: { op: 'phao-dat', moldings, phongCach: $('pStyle').value } })));
+    { baseRev: state.rev, op: { op: 'set-moldings', moldings, style: $('pStyle').value } })));
 });
 
 // ---------------- xuất JSON cuối cùng cho AI tạo ảnh
@@ -288,25 +312,25 @@ try { const v = localStorage.getItem('aiAuto'); if (v !== null) $('aiAuto').chec
 $('aiAuto').addEventListener('change', (e) => { try { localStorage.setItem('aiAuto', e.target.checked ? '1' : '0'); } catch { /* bỏ qua */ } if (e.target.checked) syncAiExport(true).catch(console.error); });
 function aiInfo(res) {
   const t = new Date(res.taoLuc).toLocaleTimeString();
-  $('aiInfo').textContent = `Bản cuối: rev ${res.rev} · ${res.views.length} góc · xuất lúc ${t}${res.kemAnh ? ' · kèm ảnh' : ''}`;
+  $('aiInfo').textContent = `Bản cuối: rev ${res.rev} · ${res.views.length} góc · xuất lúc ${t}${res.withImage ? ' · kèm ảnh' : ''}`;
   const box = $('aiLinks'); box.replaceChildren();
   for (const [k, u] of Object.entries(res.url || {})) if (u) box.append(el('a', { href: u, target: '_blank', textContent: k === 'zip' ? 'ai-package.zip' : 'ai-request.json' }));
 }
 async function syncAiExport(force = false) {
   if (!state.id) return;
   const light = $('aiLight').value;
-  $('aiJson').href = `/api/designs/${state.id}/ai-export?nhungAnh=1&anhSang=${light}`;  // một file: nhúng sẵn ảnh nên gửi của từng góc
-  $('aiJson').setAttribute('download', `${state.id}-rev${state.rev}-gui-ai.json`);
+  $('aiJson').href = `/api/designs/${state.id}/ai-export?embedImages=1&lighting=${light}`;  // một file: nhúng sẵn ảnh nên gửi của từng góc
+  $('aiJson').setAttribute('download', `${state.id}-rev${state.rev}-ai-request-short.json`);
   if (!$('aiAuto').checked || (!force && aiDone[state.id] === state.rev)) {
     if (aiDone[state.id] !== state.rev) $('aiInfo').textContent = `Thiết kế đang ở rev ${state.rev} — chưa xuất bản này`;
     return;
   }
-  const res = await api(`/api/designs/${state.id}/ai-export`, 'POST', { rev: state.rev, anhSang: light });
+  const res = await api(`/api/designs/${state.id}/ai-export`, 'POST', { rev: state.rev, lighting: light });
   aiDone[state.id] = res.rev; aiInfo(res);
 }
 $('aiLight').addEventListener('change', () => run('xuất lại cho AI', () => syncAiExport(true)));
 $('aiZip').addEventListener('click', () => state.id && run('xuất gói kèm ảnh cho AI', async () => {
-  const res = await api(`/api/designs/${state.id}/ai-export`, 'POST', { rev: state.rev, kemAnh: true, anhSang: $('aiLight').value });
+  const res = await api(`/api/designs/${state.id}/ai-export`, 'POST', { rev: state.rev, withImage: true, lighting: $('aiLight').value });
   aiDone[state.id] = res.rev; aiInfo(res);
   if (res.url?.zip) el('a', { href: res.url.zip, download: `${state.id}-rev${res.rev}-ai-package.zip` }).click();
 }));
@@ -315,8 +339,8 @@ $('aiView').addEventListener('click', () => {
   if (!state.id) return;
   const base = `/api/designs/${state.id}/ai-export`, tag = `${state.id} · rev ${state.rev}`, L = `anhSang=${$('aiLight').value}`;
   const variants = [
-    { label: 'Rút gọn', hint: 'Bản gửi AI: chỉ dẫn + ảnh đính kèm', url: `${base}?nhungAnh=1&${L}`, name: `${state.id}-rev${state.rev}-gui-ai.json`, title: `JSON gửi AI (rút gọn, kèm ảnh) · ${tag}` },
-    { label: 'Đầy đủ', hint: 'Bản kiểm tra, không gửi AI', url: `${base}?dang=day-du&${L}`, name: `${state.id}-rev${state.rev}-ai-request.json`, title: `JSON đầy đủ (cảnh three.js, vật liệu, camera) · ${tag}` },
+    { label: 'Rút gọn', hint: 'Bản gửi AI: chỉ dẫn + ảnh đính kèm', url: `${base}?embedImages=1&${L}`, name: `${state.id}-rev${state.rev}-ai-request-short.json`, title: `JSON gửi AI (rút gọn, kèm ảnh) · ${tag}` },
+    { label: 'Đầy đủ', hint: 'Bản kiểm tra, không gửi AI', url: `${base}?format=day-du&${L}`, name: `${state.id}-rev${state.rev}-ai-request.json`, title: `JSON đầy đủ (cảnh three.js, vật liệu, camera) · ${tag}` },
   ];
   run('mở JSON cuối cùng', () => window.kitchenJson.showJsonUrl(variants[0].title, variants[0].url, variants[0].name, variants));
 });

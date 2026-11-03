@@ -1,0 +1,3 @@
+# All identifiers are English; old Vietnamese data is converted by one legacy module
+
+Field names, operation names, API and MCP parameters, stored values, database columns and file names were renamed from Vietnamese to English in one deliberate breaking change. Vietnamese remains only in user-facing text and in the vocabulary tables that parse user input. `kitchen/legacy.py` is the only place that knows the old names: it migrates `kitchen.db` (guarded by `PRAGMA user_version`) and `renders/` automatically on first start and can convert old specification files. We chose a clean one-way break over keeping both vocabularies or aliases, because two parallel vocabularies would keep the codebase and the docs inconsistent.

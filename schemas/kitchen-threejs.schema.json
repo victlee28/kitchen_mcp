@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://example.com/schemas/kitchen-threejs-full.v1.1.0.schema.json",
-  "title": "Complete Kitchen Three.js Scene Schema (v1.1)",
-  "description": "Comprehensive parametric schema for rendering fully-detailed kitchen scenes and cabinet systems in Three.js. v1.1 thêm trường tùy chọn cho tủ tham số, vùng tiêu chuẩn và ảnh điều khiển AI; tương thích ngược v1.0.0.",
+  "$id": "https://example.com/schemas/kitchen-threejs-full.v1.2.0.schema.json",
+  "title": "Complete Kitchen Three.js Scene Schema (v1.2)",
+  "description": "Comprehensive parametric schema for rendering fully-detailed kitchen scenes and cabinet systems in Three.js. v1.1 thêm trường tùy chọn cho tủ tham số, vùng tiêu chuẩn và ảnh điều khiển AI; v1.2 thêm phong cách phụ, gợi ý ảnh AI và bảng diễn giải mô tả; tương thích ngược v1.0.0.",
   "type": "object",
   "required": [
     "schemaVersion",
@@ -17,7 +17,7 @@
   "properties": {
     "schemaVersion": {
       "type": "string",
-      "default": "1.1.0"
+      "default": "1.2.0"
     },
     "metadata": {
       "type": "object",
@@ -83,6 +83,74 @@
             "type": "string"
           },
           "description": "[Bổ sung v1.1 (VicKitchenCabinet)] Nhãn tự do"
+        },
+        "styleTags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "[Bổ sung v1.2 (VicKitchenCabinet)] Phong cách không có hình học riêng (Scandinavian, Japandi, Farmhouse, Country, Mid-Century Modern, Luxury); `style` giữ phong cách hình học gần nhất"
+        },
+        "aiHints": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "[Bổ sung v1.2 (VicKitchenCabinet)] Cụm tiếng Anh chỉ dùng cho prompt ảnh AI (kính sọc, gạch xương cá…)"
+        },
+        "renderPreferences": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "[Bổ sung v1.2 (VicKitchenCabinet)] Cụm tiếng Anh về góc máy, ánh sáng, chất lượng ảnh từ mô tả (chỉ cho ảnh AI)"
+        },
+        "promptInterpretation": {
+          "type": "array",
+          "description": "[Bổ sung v1.2 (VicKitchenCabinet)] Cách hiểu từng thuật ngữ trong mô tả tạo thiết kế",
+          "items": {
+            "type": "object",
+            "required": [
+              "term",
+              "status"
+            ],
+            "properties": {
+              "term": {
+                "type": "string"
+              },
+              "id": {
+                "type": "string"
+              },
+              "kind": {
+                "type": "string"
+              },
+              "canonical": {
+                "type": "string"
+              },
+              "scope": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "target": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "built",
+                  "exported",
+                  "ai-only",
+                  "unsupported",
+                  "ambiguous"
+                ]
+              },
+              "message": {
+                "type": "string"
+              }
+            }
+          }
         }
       }
     },
@@ -769,6 +837,10 @@
           "type": "string",
           "description": "[Bổ sung v1.1 (VicKitchenCabinet)] Lớp ngữ nghĩa cho mask AI"
         },
+        "pattern": {
+          "type": "string",
+          "description": "[Bổ sung v1.2 (VicKitchenCabinet)] Kiểu xếp gạch (herringbone, running-bond); chỉ mô tả, chưa dựng từng viên"
+        },
         "sourceKnowledgeCode": {
           "type": "string",
           "description": "[Bổ sung v1.1 (VicKitchenCabinet)] Mã vật liệu trong kho tri thức"
@@ -923,7 +995,7 @@
               "type": "number",
               "default": 9
             },
-            "toeKickHeight": {
+            "plinthHeight": {
               "type": "number",
               "default": 100
             },
@@ -1101,12 +1173,12 @@
           "type": "string",
           "description": "[Bổ sung v1.1 (VicKitchenCabinet)] Mã module trong KitchenSpec (vd TD1)"
         },
-        "tier": {
+        "storey": {
           "type": "string",
           "enum": [
             "base",
-            "wall",
-            "top",
+            "upper",
+            "loft",
             "tall",
             "corner",
             "island"

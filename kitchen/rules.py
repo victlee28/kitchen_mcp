@@ -14,30 +14,32 @@ from .spec import KitchenSpec, Module
 TOL = 1.0  # mm
 
 
-def _issue(code, muc, mods, msg, measured=None, limit=None):
-    d = {"quyTac": code, "mucDo": muc, "module": list(mods), "noiDung": msg}
+def _issue(code, level, mods, msg, measured=None, limit=None):
+    d = {"rule": code, "severity": level, "module": list(mods), "content": msg}
     if measured is not None:
-        d["doDuoc"] = measured
+        d["measured"] = measured
     if limit is not None:
-        d["gioiHan"] = limit
+        d["limit"] = limit
     return d
 
 
 def _envelopes(spec: KitchenSpec) -> list[tuple[str, tuple, tuple]]:
-    """Khối bao của từng module (ke-goc tách 2 cánh) trong toạ độ thế giới."""
+    """Khối bao của từng module (corner-shelf tách 2 cánh) trong toạ độ thế giới."""
     out = []
-    lsau = (spec.phong.dai("sau") if spec.phong else None) or max([m.het for m in spec.module if m.tuong == "sau"] + [0]) + 600
+    lsau = (spec.room.length("back") if spec.room else None) or max([m.endAt for m in spec.module if m.wall == "back"] + [0]) + 600
     for m in spec.module:
-        y0, y1 = m.y, m.y + m.cao
-        if m.loai == "ke-goc":
-            out.append((m.ma, (-m.canhSau, y0, 0), (0, y1, m.sau)))
-            out.append((m.ma, (-m.sau, y0, 0), (0, y1, m.canhPhai)))
-        elif m.tuong == "sau":
-            out.append((m.ma, (-m.het, y0, 0), (-m.tu, y1, m.sau)))
-        elif m.tuong == "phai":
-            out.append((m.ma, (-m.sau, y0, m.tu), (0, y1, m.het)))
+        y0, y1 = m.y, m.y + m.height
+        if m.type == "corner-shelf":
+            out.append((m.id, (-m.backLength, y0, 0), (0, y1, m.depth)))
+            out.append((m.id, (-m.depth, y0, 0), (0, y1, m.rightLength)))
+        elif m.wall == "back":
+            out.append((m.id, (-m.endAt, y0, 0), (-m.fromCorner, y1, m.depth)))
+        elif m.wall == "right":
+            out.append((m.id, (-m.depth, y0, m.fromCorner), (0, y1, m.endAt)))
+        elif m.wall == "island":
+            out.append((m.id, (-m.endAt, y0, m.offset), (-m.fromCorner, y1, m.offset + m.depth)))
         else:
-            out.append((m.ma, (-lsau, y0, m.tu), (-lsau + m.sau, y1, m.het)))
+            out.append((m.id, (-lsau, y0, m.fromCorner), (-lsau + m.depth, y1, m.endAt)))
     return out
 
 
@@ -49,63 +51,63 @@ def _overlap(a, b) -> float:
 
 
 def check_geometry(spec: KitchenSpec) -> list[dict]:
-    c = spec.chung
+    c = spec.common
     issues = []
     env = _envelopes(spec)
-    for (ma, mn, mx), (mb, nn, nx) in combinations(env, 2):
-        if ma != mb and _overlap((mn, mx), (nn, nx)) > 0:
-            issues.append(_issue("GEO-VA-CHAM", "error", [ma, mb], f"{ma} và {mb} chồng lên nhau"))
-    muc_tang = {"duoi": c.deMatDa, "tren": c.chiaTangTren, "noc": c.dinhTu, "cao": c.dinhTu, "goc": None}
+    for (id, mn, mx), (mb, nn, nx) in combinations(env, 2):
+        if id != mb and _overlap((mn, mx), (nn, nx)) > 0:
+            issues.append(_issue("GEO-COLLISION", "error", [id, mb], f"{id} và {mb} chồng lên nhau"))
+    tier_level = {"base": c.baseTop, "upper": c.upperTierSplit, "loft": c.cabinetTop, "tall": c.cabinetTop, "corner": None}
     for m in spec.module:
-        top = m.y + m.cao
-        lim = muc_tang[m.tang]
+        top = m.y + m.height
+        lim = tier_level[m.storey]
         if lim is not None and abs(top - lim) > TOL:
-            issues.append(_issue("GEO-CAO-DO", "warning", [m.ma], f"{m.ma}: đỉnh {top:g} lệch cao độ tầng {m.tang} ({lim:g})", top, lim))
-        if m.tang == "tren" and m.loai != "tren-hut-mui" and abs(m.y - c.dayTuTren) > TOL:
-            issues.append(_issue("GEO-CAO-DO", "warning", [m.ma], f"{m.ma}: đáy {m.y:g} khác dayTuTren {c.dayTuTren:g}", m.y, c.dayTuTren))
-        if m.canh:
-            tong = sum(m.canh) + m.gocKhuat + m.tamHong
-            if abs(tong - m.rong) > TOL:
-                issues.append(_issue("GEO-CANH", "warning", [m.ma],
-                                     f"{m.ma}: tổng cánh + góc khuất + tấm hông = {tong:g} ≠ rộng {m.rong:g}", tong, m.rong))
-        if spec.phong and m.tuong in ("sau", "phai", "trai"):
-            L = spec.phong.dai(m.tuong)
-            if L and m.het > L + TOL:
-                issues.append(_issue("GEO-TUONG", "error", [m.ma], f"{m.ma} vượt chiều dài tường {m.tuong} ({m.het:g} > {L:g})", m.het, L))
-    if c.dinhTu > c.tran + TOL:
-        issues.append(_issue("GEO-TRAN", "error", [], f"Đỉnh tủ {c.dinhTu:g} cao hơn trần {c.tran:g}", c.dinhTu, c.tran))
-    if abs(c.matDa - (c.deMatDa + c.dayMatDa)) > TOL:
-        issues.append(_issue("GEO-MAT-DA", "warning", [], f"matDa {c.matDa:g} ≠ deMatDa + dayMatDa = {c.deMatDa + c.dayMatDa:g}"))
+            issues.append(_issue("GEO-HEIGHTS", "warning", [m.id], f"{m.id}: đỉnh {top:g} lệch cao độ tầng {m.storey} ({lim:g})", top, lim))
+        if m.storey == "upper" and m.type != "upper-hood" and abs(m.y - c.upperBottom) > TOL:
+            issues.append(_issue("GEO-HEIGHTS", "warning", [m.id], f"{m.id}: đáy {m.y:g} khác dayTuTren {c.upperBottom:g}", m.y, c.upperBottom))
+        if m.doors:
+            total = sum(m.doors) + m.blindCorner + m.endPanel
+            if abs(total - m.width) > TOL:
+                issues.append(_issue("GEO-DOOR", "warning", [m.id],
+                                     f"{m.id}: tổng cánh + góc khuất + tấm hông = {total:g} ≠ rộng {m.width:g}", total, m.width))
+        if spec.room and m.wall in ("back", "right", "left"):
+            L = spec.room.length(m.wall)
+            if L and m.endAt > L + TOL:
+                issues.append(_issue("GEO-WALL", "error", [m.id], f"{m.id} vượt chiều dài tường {m.wall} ({m.endAt:g} > {L:g})", m.endAt, L))
+    if c.cabinetTop > c.ceiling + TOL:
+        issues.append(_issue("GEO-CEILING", "error", [], f"Đỉnh tủ {c.cabinetTop:g} cao hơn trần {c.ceiling:g}", c.cabinetTop, c.ceiling))
+    if abs(c.countertop - (c.baseTop + c.countertopThickness)) > TOL:
+        issues.append(_issue("GEO-COUNTERTOP", "warning", [], f"matDa {c.countertop:g} ≠ deMatDa + dayMatDa = {c.baseTop + c.countertopThickness:g}"))
     # khe hở giữa các module liền kề trong cùng tường/tầng
-    for tuong in ("sau", "phai", "trai"):
-        for tang in ("duoi", "tren", "noc"):
-            ms = sorted((m for m in spec.module if m.tuong == tuong and m.tang in (tang, "cao")), key=lambda m: m.tu)
+    for wall in ("back", "right", "left"):
+        for storey in ("base", "upper", "loft"):
+            ms = sorted((m for m in spec.module if m.wall == wall and m.storey in (storey, "tall")), key=lambda m: m.fromCorner)
             for a, b in zip(ms, ms[1:]):
-                if a.tang == b.tang == "cao":
+                if a.storey == b.storey == "tall":
                     continue
-                gap = b.tu - a.het
+                gap = b.fromCorner - a.endAt
                 if gap > TOL:
-                    issues.append(_issue("GEO-KHE-HO", "info", [a.ma, b.ma], f"Khe hở {gap:g} mm giữa {a.ma} và {b.ma} (tường {tuong})", gap))
+                    issues.append(_issue("GEO-GAPS", "info", [a.id, b.id], f"Khe hở {gap:g} mm giữa {a.id} và {b.id} (tường {wall})", gap))
     # thiết bị lọt module
-    for tb in spec.thietBi:
-        k = tb.kich_thuoc_so()
+    for tb in spec.appliances:
+        k = tb.numeric_dimensions()
         if not tb.module:
             continue
         try:
-            m = spec.tim(tb.module)
+            m = spec.find(tb.module)
         except KeyError:
-            issues.append(_issue("TB-MODULE", "error", [], f"{tb.ma}: module '{tb.module}' không tồn tại"))
+            issues.append(_issue("TB-MODULE", "error", [], f"{tb.id}: module '{tb.module}' không tồn tại"))
             continue
-        if tb.loai == "tu-lanh" and len(k) >= 3:
+        if tb.type == "fridge" and len(k) >= 3:
             w, h, d = k[:3]
-            inner = m.rong - 2 * c.dayCanh
-            if w > inner + TOL or (m.hoc and h > m.hoc + TOL) or d > m.sau + TOL:
-                issues.append(_issue("TB-LOT-HOC", "error", [m.ma, tb.ma], f"{tb.ma} {w:g}×{h:g}×{d:g} không lọt hốc {m.ma}"))
-        if tb.loai == "lo" and len(k) >= 2:
+            inner = m.width - 2 * c.doorThickness
+            if w > inner + TOL or (m.niche and h > m.niche + TOL) or d > m.depth + TOL:
+                issues.append(_issue("APPLIANCE-NICHE", "error", [m.id, tb.id], f"{tb.id} {w:g}×{h:g}×{d:g} không lọt hốc {m.id}"))
+        if tb.type == "oven" and len(k) >= 2:
             w, h = k[:2]
-            hoc = next((t.cao for t in m.matTruoc if t.loai == "hoc"), None)
-            if w > m.rong - 2 * c.dayCanh + TOL or (hoc and h > hoc - 2 * c.dayCanh + TOL):
-                issues.append(_issue("TB-LOT-HOC", "error", [m.ma, tb.ma], f"{tb.ma} không lọt hộc {m.ma}"))
+            niche = next((t.height for t in m.frontSections if t.type == "niche"), None)
+            if w > m.width - 2 * c.doorThickness + TOL or (niche and h > niche - 2 * c.doorThickness + TOL):
+                issues.append(_issue("APPLIANCE-NICHE", "error", [m.id, tb.id], f"{tb.id} không lọt hộc {m.id}"))
     return issues
 
 
@@ -114,21 +116,21 @@ def default_rows() -> list[dict]:
     return [{"id": i + 1, **k} for i, k in enumerate(knowledge_seed.KNOWLEDGE) if k["kind"] in ("rule", "standard")]
 
 
-def validate(spec: KitchenSpec, kb_rules: list[dict] | None = None, quoc_gia: str | None = None,
-             khu_vuc: str | None = None) -> dict:
+def validate(spec: KitchenSpec, kb_rules: list[dict] | None = None, country: str | None = None,
+             region: str | None = None) -> dict:
     """kb_rules: các dòng tri thức kind rule/standard đang active (đã parse metadata); None -> kho nền.
     Quốc gia/khu vực: tham số > spec.quocGia/spec.khuVuc > không chỉ định (ưu tiên mục toàn cầu, rồi nguồn mạnh nhất)."""
-    qg, kv = regions.chuan_hoa(quoc_gia or spec.quocGia, khu_vuc or spec.khuVuc)
+    qg, kv = regions.normalize(country or spec.country, region or spec.region)
     rows = default_rows() if kb_rules is None else kb_rules
     sel = rules_kb.select(rows, qg, kv)
     issues = check_geometry(spec) + rules_kb.check(spec, sel) + moldings.check(spec)
     if not (qg or kv):
-        issues.append({"quyTac": "VUNG", "mucDo": "info", "module": [], "noiDung": "Chưa chọn quốc gia/khu vực (spec.quocGia): "
+        issues.append({"rule": "VUNG", "severity": "info", "module": [], "content": "Chưa chọn quốc gia/khu vực (spec.quocGia): "
                        "chỉ tiêu chuẩn toàn cầu được áp, tiêu chuẩn của các nước chỉ để tham khảo"})
     order = {"error": 0, "warning": 1, "info": 2}
-    issues.sort(key=lambda i: order[i["mucDo"]])
-    dem = {k: sum(i["mucDo"] == k for i in issues) for k in order}
-    dung = {t: f"{v['code']} ({v['vung']}, {v['uuTien']})" for t, v in sel.items()}
-    chua = [r["code"] for r in rows if not (r.get("metadata") or {}).get("kiemTra")]
-    return {"hopLe": dem["error"] == 0, "dem": dem, "issues": issues, "quocGia": qg, "khuVuc": kv,
-            "quyTacDaDung": dung, "chuaKiemTra": chua}
+    issues.sort(key=lambda i: order[i["severity"]])
+    dem = {k: sum(i["severity"] == k for i in issues) for k in order}
+    dung = {t: f"{v['code']} ({v['zone']}, {v['priority']})" for t, v in sel.items()}
+    chua = [r["code"] for r in rows if not (r.get("metadata") or {}).get("validation")]
+    return {"valid": dem["error"] == 0, "dem": dem, "issues": issues, "country": qg, "region": kv,
+            "appliedRules": dung, "unchecked": chua}

@@ -10,33 +10,33 @@ from __future__ import annotations
 import math
 
 from . import regions
-from .spec import KitchenSpec, ThietBi
+from .spec import KitchenSpec, Appliance
 
-CHU_DE = {
-    "mat-da-cao": "Chiều cao mặt bàn", "sau-tu-duoi": "Chiều sâu tủ dưới", "sau-mat-da": "Chiều sâu mặt bàn",
-    "chau-bep": "Khoảng cách chậu – bếp", "loi-di": "Lối đi làm việc", "ban-chau": "Mặt bàn hai bên chậu",
-    "ban-bep": "Mặt bàn hai bên bếp", "ban-tu-lanh": "Mặt bàn cạnh tủ lạnh", "hut-mui": "Máy hút mùi – mặt bếp",
-    "tren-bep": "Khoảng trên bếp khi không có hút mùi", "khoang-tu-tren": "Mặt bàn – đáy tủ trên",
-    "sau-tu-tren": "Chiều sâu tủ trên", "chan-tu": "Chiều cao chân tủ", "lo-vi-song": "Vị trí lò vi sóng",
-    "tam-giac": "Tam giác làm việc", "chieu-cao-thong-thuy": "Chiều cao thông thủy bếp",
+TOPICS = {
+    "countertop-height": "Chiều cao mặt bàn", "base-depth": "Chiều sâu tủ dưới", "countertop-depth": "Chiều sâu mặt bàn",
+    "sink-cooktop": "Khoảng cách chậu – bếp", "walkway": "Lối đi làm việc", "sink-table": "Mặt bàn hai bên chậu",
+    "cooktop-table": "Mặt bàn hai bên bếp", "fridge-table": "Mặt bàn cạnh tủ lạnh", "hood": "Máy hút mùi – mặt bếp",
+    "above-cooktop": "Khoảng trên bếp khi không có hút mùi", "upper-gap": "Mặt bàn – đáy tủ trên",
+    "upper-depth": "Chiều sâu tủ trên", "cabinet-plinth": "Chiều cao chân tủ", "microwave": "Vị trí lò vi sóng",
+    "triangle": "Tam giác làm việc", "clear-height": "Chiều cao thông thủy bếp",
 }
 
 
-def select(rows: list[dict], quoc_gia: str | None, khu_vuc: str | None) -> dict[str, dict]:
+def select(rows: list[dict], country: str | None, region: str | None) -> dict[str, dict]:
     """rows: các mục tri thức (đã parse metadata). Trả {chủ đề: {code, params, mucDo, uuTien, thamKhao}}."""
     out: dict[str, dict] = {}
-    for r in regions.sap_xep(rows, quoc_gia, khu_vuc):
+    for r in regions.sort_rows(rows, country, region):
         meta = r.get("metadata") or {}
-        for topic in meta.get("kiemTra") or []:
-            if topic in out or topic not in CHU_DE:
+        for topic in meta.get("validation") or []:
+            if topic in out or topic not in TOPICS:
                 continue
-            diem = regions.diem_uu_tien(r, quoc_gia, khu_vuc)
-            muc = regions.MUC_DO_THEO_NGUON.get(meta.get("loaiNguon", "chua-ro"), "warning")
-            tham_khao = diem < 10  # tiêu chuẩn của nước khác (hoặc chưa chọn quốc gia): chỉ tham khảo -> info
-            nhan = regions.nhan_uu_tien(diem) if (quoc_gia or khu_vuc) or diem >= 10 else "tham khảo (chưa chọn quốc gia)"
-            out[topic] = {"code": r["code"], "params": meta.get("params") or {}, "mucDo": "info" if tham_khao else muc,
-                          "uuTien": nhan, "thamKhao": tham_khao,
-                          "vung": f"{r.get('khu_vuc') or 'GLOBAL'}{'/' + r['quoc_gia'] if r.get('quoc_gia') else ''}"}
+            score = regions.priority_score(r, country, region)
+            level = regions.SEVERITY_BY_SOURCE.get(meta.get("sourceType", "unknown"), "warning")
+            reference = score < 10  # tiêu chuẩn của nước khác (hoặc chưa chọn quốc gia): chỉ tham khảo -> info
+            priority_text = regions.priority_label(score) if (country or region) or score >= 10 else "tham khảo (chưa chọn quốc gia)"
+            out[topic] = {"code": r["code"], "params": meta.get("params") or {}, "severity": "info" if reference else level,
+                          "priority": priority_text, "reference": reference,
+                          "zone": f"{r.get('region') or 'GLOBAL'}{'/' + r['country'] if r.get('country') else ''}"}
     return out
 
 
@@ -50,41 +50,41 @@ class _Ctx:
 
     def add(self, topic, mods, msg, measured=None, limit=None):
         s = self.sel[topic]
-        d = {"quyTac": s["code"], "chuDe": topic, "mucDo": s["mucDo"], "module": list(mods), "noiDung": msg,
-             "theo": f"{s['vung']} · {s['uuTien']}"}
-        if s["thamKhao"]:
-            d["thamKhao"] = True
+        d = {"rule": s["code"], "topic": topic, "severity": s["severity"], "module": list(mods), "content": msg,
+             "theo": f"{s['zone']} · {s['priority']}"}
+        if s["reference"]:
+            d["reference"] = True
         if measured is not None:
-            d["doDuoc"] = round(measured, 1) if isinstance(measured, float) else measured
+            d["measured"] = round(measured, 1) if isinstance(measured, float) else measured
         if limit is not None:
-            d["gioiHan"] = limit
+            d["limit"] = limit
         self.out.append(d)
 
 
-def _runs(spec: KitchenSpec, tuong: str) -> list[tuple[float, float]]:
-    ms = sorted((m for m in spec.module if m.tuong == tuong and m.tang == "duoi"), key=lambda m: m.tu)
+def _runs(spec: KitchenSpec, wall: str) -> list[tuple[float, float]]:
+    ms = sorted((m for m in spec.module if m.wall == wall and m.storey == "base"), key=lambda m: m.fromCorner)
     runs: list[list[float]] = []
     for m in ms:
-        if runs and m.tu <= runs[-1][1] + 1:
-            runs[-1][1] = max(runs[-1][1], m.het)
+        if runs and m.fromCorner <= runs[-1][1] + 1:
+            runs[-1][1] = max(runs[-1][1], m.endAt)
         else:
-            runs.append([m.tu, m.het])
+            runs.append([m.fromCorner, m.endAt])
     return [(a, b) for a, b in runs]
 
 
-def _span(tb: ThietBi) -> tuple[float, float]:
-    w = (tb.kich_thuoc_so() or [0])[0]
-    return tb.tam - w / 2, tb.tam + w / 2
+def _span(tb: Appliance) -> tuple[float, float]:
+    w = (tb.numeric_dimensions() or [0])[0]
+    return tb.center - w / 2, tb.center + w / 2
 
 
-def _landing(spec: KitchenSpec, tb: ThietBi):
+def _landing(spec: KitchenSpec, tb: Appliance):
     s0, s1 = _span(tb)
-    run = next(((a, b) for a, b in _runs(spec, tb.tuong) if a - 1 <= s0 and s1 <= b + 1), None)
+    run = next(((a, b) for a, b in _runs(spec, tb.wall) if a - 1 <= s0 and s1 <= b + 1), None)
     if not run:
         return None
     left, right = run
-    for o in spec.thietBi:
-        if o is tb or o.tuong != tb.tuong or o.tam is None or o.loai not in ("chau", "bep"):
+    for o in spec.appliances:
+        if o is tb or o.wall != tb.wall or o.center is None or o.type not in ("sink", "cooktop"):
             continue
         o0, o1 = _span(o)
         if o1 <= s0:
@@ -94,12 +94,12 @@ def _landing(spec: KitchenSpec, tb: ThietBi):
     return s0 - left, right - s1
 
 
-def _plan_point(spec, tuong, s, d):
-    if tuong == "sau":
+def _plan_point(spec, wall, s, d):
+    if wall == "back":
         return -s, d
-    if tuong == "phai":
+    if wall == "right":
         return -d, s
-    lsau = (spec.phong.dai("sau") if spec.phong else None) or max([m.het for m in spec.module if m.tuong == "sau"] + [0]) + 600
+    lsau = (spec.room.length("back") if spec.room else None) or max([m.endAt for m in spec.module if m.wall == "back"] + [0]) + 600
     return -lsau + d, s
 
 
@@ -107,148 +107,148 @@ def _range(ctx, topic, value, lo_key, hi_key, label, mods=()):
     p = ctx.p(topic)
     if not p:
         return
-    lo, hi = p.get(lo_key), p.get(hi_key)
-    if (lo is not None and value < lo - 1) or (hi is not None and value > hi + 1):
-        lim = f"{lo if lo is not None else '…'}–{hi if hi is not None else '…'}"
-        ctx.add(topic, mods, f"{label} {value:g} mm ngoài {lim} mm", value, [lo, hi])
+    openings, hi = p.get(lo_key), p.get(hi_key)
+    if (openings is not None and value < openings - 1) or (hi is not None and value > hi + 1):
+        lim = f"{openings if openings is not None else '…'}–{hi if hi is not None else '…'}"
+        ctx.add(topic, mods, f"{label} {value:g} mm ngoài {lim} mm", value, [openings, hi])
 
 
 def check(spec: KitchenSpec, sel: dict[str, dict]) -> list[dict]:
-    c = spec.chung
+    c = spec.common
     ctx = _Ctx(spec, sel)
-    chau = [t for t in spec.thietBi if t.loai == "chau" and t.tuong and t.tam is not None]
-    bep = [t for t in spec.thietBi if t.loai == "bep" and t.tuong and t.tam is not None]
-    tu_lanh = [t for t in spec.thietBi if t.loai == "tu-lanh" and t.module]
-    lows = [m for m in spec.module if m.tang == "duoi"]
-    ups = [m for m in spec.module if m.tang in ("tren", "noc")]
+    sink = [t for t in spec.appliances if t.type == "sink" and t.wall and t.center is not None]
+    cooktop = [t for t in spec.appliances if t.type == "cooktop" and t.wall and t.center is not None]
+    fridge = [t for t in spec.appliances if t.type == "fridge" and t.module]
+    lows = [m for m in spec.module if m.storey == "base"]
+    ups = [m for m in spec.module if m.storey in ("upper", "loft")]
 
     # kích thước
-    if (p := ctx.p("mat-da-cao")):
-        _range(ctx, "mat-da-cao", c.matDa, "matDa_min", "matDa_max", "Cao mặt bàn")
-        allowed = p.get("matDa_cho_phep")
-        if allowed and all(abs(c.matDa - a) > 1 for a in allowed) and p.get("matDa_min", 0) - 1 <= c.matDa <= p.get("matDa_max", 1e9) + 1:
-            ctx.add("mat-da-cao", [], f"Cao mặt bàn {c.matDa:g} mm không thuộc các mức phối hợp {allowed}", c.matDa, allowed)
-    if (p := ctx.p("sau-tu-duoi")):
-        bad = [m.ma for m in lows if not p.get("sauTuDuoi_min", 0) - 1 <= m.sau <= p.get("sauTuDuoi_max", 1e9) + 1]
+    if (p := ctx.p("countertop-height")):
+        _range(ctx, "countertop-height", c.countertop, "countertop_min", "countertop_max", "Cao mặt bàn")
+        allowed = p.get("countertop_allowed")
+        if allowed and all(abs(c.countertop - a) > 1 for a in allowed) and p.get("countertop_min", 0) - 1 <= c.countertop <= p.get("countertop_max", 1e9) + 1:
+            ctx.add("countertop-height", [], f"Cao mặt bàn {c.countertop:g} mm không thuộc các mức phối hợp {allowed}", c.countertop, allowed)
+    if (p := ctx.p("base-depth")):
+        bad = [m.id for m in lows if not p.get("baseDepth_min", 0) - 1 <= m.depth <= p.get("baseDepth_max", 1e9) + 1]
         if bad:
-            ctx.add("sau-tu-duoi", bad, f"Sâu tủ dưới ngoài {p.get('sauTuDuoi_min')}–{p.get('sauTuDuoi_max')} mm",
-                    sorted({spec.tim(b).sau for b in bad}), [p.get("sauTuDuoi_min"), p.get("sauTuDuoi_max")])
-    if (p := ctx.p("sau-mat-da")) and lows:
-        d = max(m.sau for m in lows) + c.nhoMatDa
-        if d < p.get("sauMatDa_min", 0) - 1:
-            ctx.add("sau-mat-da", [], f"Mặt bàn sâu {d:g} mm < {p['sauMatDa_min']}", d, p["sauMatDa_min"])
-    if (p := ctx.p("sau-tu-tren")):
-        bad = [m.ma for m in ups if not p.get("sauTuTren_min", 0) - 1 <= m.sau <= p.get("sauTuTren_max", 1e9) + 1]
+            ctx.add("base-depth", bad, f"Sâu tủ dưới ngoài {p.get('baseDepth_min')}–{p.get('baseDepth_max')} mm",
+                    sorted({spec.find(b).depth for b in bad}), [p.get("baseDepth_min"), p.get("baseDepth_max")])
+    if (p := ctx.p("countertop-depth")) and lows:
+        d = max(m.depth for m in lows) + c.countertopOverhang
+        if d < p.get("countertopDepth_min", 0) - 1:
+            ctx.add("countertop-depth", [], f"Mặt bàn sâu {d:g} mm < {p['countertopDepth_min']}", d, p["countertopDepth_min"])
+    if (p := ctx.p("upper-depth")):
+        bad = [m.id for m in ups if not p.get("upperDepth_min", 0) - 1 <= m.depth <= p.get("upperDepth_max", 1e9) + 1]
         if bad:
-            ctx.add("sau-tu-tren", bad, f"Sâu tủ trên ngoài {p.get('sauTuTren_min')}–{p.get('sauTuTren_max')} mm",
-                    sorted({spec.tim(b).sau for b in bad}), [p.get("sauTuTren_min"), p.get("sauTuTren_max")])
+            ctx.add("upper-depth", bad, f"Sâu tủ trên ngoài {p.get('upperDepth_min')}–{p.get('upperDepth_max')} mm",
+                    sorted({spec.find(b).depth for b in bad}), [p.get("upperDepth_min"), p.get("upperDepth_max")])
     if ups:
-        _range(ctx, "khoang-tu-tren", c.dayTuTren - c.matDa, "khoang_tren_min", "khoang_tren_max", "Mặt bàn tới đáy tủ trên")
+        _range(ctx, "upper-gap", c.upperBottom - c.countertop, "upper_gap_min", "upper_gap_max", "Mặt bàn tới đáy tủ trên")
     if lows:
-        _range(ctx, "chan-tu", c.lenChan, "lenChan_min", "lenChan_max", "Chân tủ cao")
-    _range(ctx, "chieu-cao-thong-thuy", c.tran, "tran_min", None, "Chiều cao thông thủy (trần)")
+        _range(ctx, "cabinet-plinth", c.plinthHeight, "plinthHeight_min", "plinthHeight_max", "Chân tủ cao")
+    _range(ctx, "clear-height", c.ceiling, "ceiling_min", None, "Chiều cao thông thủy (trần)")
 
     # chậu – bếp
-    if (p := ctx.p("chau-bep")):
-        for a in chau:
-            for b in bep:
-                if a.tuong == b.tuong:
-                    gap = abs(a.tam - b.tam) - (a.kich_thuoc_so() or [0])[0] / 2 - (b.kich_thuoc_so() or [0])[0] / 2
-                    if gap < p["chau_bep_min"] - 1:
-                        ctx.add("chau-bep", [a.ma, b.ma], f"Chậu {a.ma} cách bếp {b.ma} {gap:g} mm < {p['chau_bep_min']}", gap, p["chau_bep_min"])
+    if (p := ctx.p("sink-cooktop")):
+        for a in sink:
+            for b in cooktop:
+                if a.wall == b.wall:
+                    gap = abs(a.center - b.center) - (a.numeric_dimensions() or [0])[0] / 2 - (b.numeric_dimensions() or [0])[0] / 2
+                    if gap < p["sink_cooktop_min"] - 1:
+                        ctx.add("sink-cooktop", [a.id, b.id], f"Chậu {a.id} cách bếp {b.id} {gap:g} mm < {p['sink_cooktop_min']}", gap, p["sink_cooktop_min"])
     # mặt bàn thao tác
-    for topic, items, ten in (("ban-chau", chau, "chậu"), ("ban-bep", bep, "bếp")):
+    for topic, items, name in (("sink-table", sink, "chậu"), ("cooktop-table", cooktop, "bếp")):
         if (p := ctx.p(topic)):
             for t in items:
                 sides = _landing(spec, t)
                 if not sides:
                     continue
                 a, b = sorted(sides, reverse=True)
-                if a < p["ben_lon"] - 1 or b < p["ben_nho"] - 1:
-                    ctx.add(topic, [t.ma], f"Mặt bàn trống hai bên {ten} {t.ma}: {sides[0]:.0f} / {sides[1]:.0f} mm "
-                            f"(cần ≥{p['ben_lon']} một bên, ≥{p['ben_nho']} bên kia)", [round(sides[0]), round(sides[1])],
-                            [p["ben_lon"], p["ben_nho"]])
-    if (p := ctx.p("ban-tu-lanh")):
-        for t in tu_lanh:
+                if a < p["larger_side"] - 1 or b < p["smaller_side"] - 1:
+                    ctx.add(topic, [t.id], f"Mặt bàn trống hai bên {name} {t.id}: {sides[0]:.0f} / {sides[1]:.0f} mm "
+                            f"(cần ≥{p['larger_side']} một bên, ≥{p['smaller_side']} bên kia)", [round(sides[0]), round(sides[1])],
+                            [p["larger_side"], p["smaller_side"]])
+    if (p := ctx.p("fridge-table")):
+        for t in fridge:
             try:
-                m = spec.tim(t.module)
+                m = spec.find(t.module)
             except KeyError:
                 continue
             best = 0.0
-            for a, b in _runs(spec, m.tuong):
-                if abs(a - m.het) <= 1 or abs(b - m.tu) <= 1:
-                    near_start = abs(a - m.het) <= 1
+            for a, b in _runs(spec, m.wall):
+                if abs(a - m.endAt) <= 1 or abs(b - m.fromCorner) <= 1:
+                    near_start = abs(a - m.endAt) <= 1
                     free = b - a
-                    for o in spec.thietBi:
-                        if o.tuong == m.tuong and o.tam is not None and o.loai in ("chau", "bep"):
+                    for o in spec.appliances:
+                        if o.wall == m.wall and o.center is not None and o.type in ("sink", "cooktop"):
                             o0, o1 = _span(o)
                             if a - 1 <= o0 and o1 <= b + 1:
                                 free = min(free, (o0 - a) if near_start else (b - o1))
                     best = max(best, free)
-            if best < p["mat_dat_min"] - 1:
-                ctx.add("ban-tu-lanh", [m.ma, t.ma], f"Mặt bàn cạnh tủ lạnh {t.ma} chỉ {best:.0f} mm (cần ≥{p['mat_dat_min']})",
-                        best, p["mat_dat_min"])
+            if best < p["floor_min"] - 1:
+                ctx.add("fridge-table", [m.id, t.id], f"Mặt bàn cạnh tủ lạnh {t.id} chỉ {best:.0f} mm (cần ≥{p['floor_min']})",
+                        best, p["floor_min"])
     # phía trên bếp
-    hut = {t.module: t for t in spec.thietBi if t.loai == "hut-mui" and t.module}
-    for t in bep:
+    hood = {t.module: t for t in spec.appliances if t.type == "hood" and t.module}
+    for t in cooktop:
         s0, s1 = _span(t)
-        above = [m for m in ups if m.tuong == t.tuong and m.tu < s1 and m.het > s0]
+        above = [m for m in ups if m.wall == t.wall and m.fromCorner < s1 and m.endAt > s0]
         if not above:
             continue
-        direct = [m for m in above if m.tu <= t.tam < m.het]
+        direct = [m for m in above if m.fromCorner <= t.center < m.endAt]
         lowest = min(direct or above, key=lambda m: m.y)
-        if lowest.ma in hut and (p := ctx.p("hut-mui")):
-            h = (hut[lowest.ma].kich_thuoc_so() + [0, 0])[1]
-            gap = lowest.y - h - c.matDa
-            if gap < p["khoang_min"] - 1:
-                ctx.add("hut-mui", [lowest.ma, t.ma, hut[lowest.ma].ma], f"Đáy máy hút mùi cách mặt bếp {gap:.0f} mm < {p['khoang_min']}",
-                        gap, p["khoang_min"])
-        elif lowest.ma not in hut and (p := ctx.p("tren-bep")):
-            gap = lowest.y - c.matDa
-            if gap < p["khong_hut_mui_min"] - 1:
-                ctx.add("tren-bep", [lowest.ma, t.ma], f"Tủ trên {lowest.ma} ngay trên bếp {t.ma}, cách {gap:.0f} mm, không có hút mùi "
-                        f"(cần ≥{p['khong_hut_mui_min']})", gap, p["khong_hut_mui_min"])
+        if lowest.id in hood and (p := ctx.p("hood")):
+            h = (hood[lowest.id].numeric_dimensions() + [0, 0])[1]
+            gap = lowest.y - h - c.countertop
+            if gap < p["gap_min"] - 1:
+                ctx.add("hood", [lowest.id, t.id, hood[lowest.id].id], f"Đáy máy hút mùi cách mặt bếp {gap:.0f} mm < {p['gap_min']}",
+                        gap, p["gap_min"])
+        elif lowest.id not in hood and (p := ctx.p("above-cooktop")):
+            gap = lowest.y - c.countertop
+            if gap < p["no_hood_min"] - 1:
+                ctx.add("above-cooktop", [lowest.id, t.id], f"Tủ trên {lowest.id} ngay trên bếp {t.id}, cách {gap:.0f} mm, không có hút mùi "
+                        f"(cần ≥{p['no_hood_min']})", gap, p["no_hood_min"])
     # lò vi sóng
-    if (p := ctx.p("lo-vi-song")):
+    if (p := ctx.p("microwave")):
         from .geometry import compile_spec
         parts = None
-        for t in spec.thietBi:
-            if t.loai != "lo" or not t.module:
+        for t in spec.appliances:
+            if t.type != "oven" or not t.module:
                 continue
             parts = parts or compile_spec(spec).parts
-            ps = [x for x in parts if x.module == t.ma]
+            ps = [x for x in parts if x.module == t.id]
             if ps:
                 y0 = ps[0].min[1]
-                if y0 < c.deMatDa and y0 < p["day_duoi_mat_da_min"] - 1:
-                    ctx.add("lo-vi-song", [t.module, t.ma], f"Đáy lò {t.ma} cao {y0:.0f} mm (dưới mặt bàn cần ≥{p['day_duoi_mat_da_min']})",
-                            y0, p["day_duoi_mat_da_min"])
-                elif y0 > p["day_max"] + 1:
-                    ctx.add("lo-vi-song", [t.module, t.ma], f"Đáy lò {t.ma} cao {y0:.0f} mm > {p['day_max']}", y0, p["day_max"])
+                if y0 < c.baseTop and y0 < p["gap_under_countertop_min"] - 1:
+                    ctx.add("microwave", [t.module, t.id], f"Đáy lò {t.id} cao {y0:.0f} mm (dưới mặt bàn cần ≥{p['gap_under_countertop_min']})",
+                            y0, p["gap_under_countertop_min"])
+                elif y0 > p["bottom_max"] + 1:
+                    ctx.add("microwave", [t.module, t.id], f"Đáy lò {t.id} cao {y0:.0f} mm > {p['bottom_max']}", y0, p["bottom_max"])
     # tam giác làm việc
-    if (p := ctx.p("tam-giac")) and chau and bep and tu_lanh:
+    if (p := ctx.p("triangle")) and sink and cooktop and fridge:
         try:
-            m = spec.tim(tu_lanh[0].module)
-            dm = c.sauTuDuoi / 2
-            pts = {"chậu": _plan_point(spec, chau[0].tuong, chau[0].tam, dm), "bếp": _plan_point(spec, bep[0].tuong, bep[0].tam, dm),
-                   "tủ lạnh": _plan_point(spec, m.tuong, m.tu + m.rong / 2, m.sau)}
+            m = spec.find(fridge[0].module)
+            dm = c.baseDepth / 2
+            pts = {"chậu": _plan_point(spec, sink[0].wall, sink[0].center, dm), "bếp": _plan_point(spec, cooktop[0].wall, cooktop[0].center, dm),
+                   "tủ lạnh": _plan_point(spec, m.wall, m.fromCorner + m.width / 2, m.depth)}
             names = list(pts)
             legs = {f"{a}–{b}": math.dist(pts[a], pts[b]) for i, a in enumerate(names) for b in names[i + 1:]}
-            tong = sum(legs.values())
-            bad = [k for k, v in legs.items() if not p.get("canh_min", 0) - 1 <= v <= p.get("canh_max", 1e9) + 1]
-            if bad or tong > p.get("tong_max", 1e9) + 1:
-                ctx.add("tam-giac", [chau[0].ma, bep[0].ma, tu_lanh[0].ma],
-                        f"Tam giác làm việc: {', '.join(f'{k} {v:.0f}' for k, v in legs.items())} mm, tổng {tong:.0f} "
-                        f"(cạnh {p.get('canh_min', 0)}–{p.get('canh_max', '…')}, tổng ≤{p.get('tong_max', '…')})",
-                        {k: round(v) for k, v in legs.items()}, {k: p.get(k) for k in ("canh_min", "canh_max", "tong_max")})
+            total = sum(legs.values())
+            bad = [k for k, v in legs.items() if not p.get("door_min", 0) - 1 <= v <= p.get("door_max", 1e9) + 1]
+            if bad or total > p.get("total_max", 1e9) + 1:
+                ctx.add("triangle", [sink[0].id, cooktop[0].id, fridge[0].id],
+                        f"Tam giác làm việc: {', '.join(f'{k} {v:.0f}' for k, v in legs.items())} mm, tổng {total:.0f} "
+                        f"(cạnh {p.get('door_min', 0)}–{p.get('door_max', '…')}, tổng ≤{p.get('total_max', '…')})",
+                        {k: round(v) for k, v in legs.items()}, {k: p.get(k) for k in ("door_min", "door_max", "total_max")})
         except KeyError:
             pass
     # lối đi
-    if (p := ctx.p("loi-di")):
-        lim = p.get("loiDi_min", p.get("loiDi_1nguoi"))
-        if not spec.phong or spec.phong.loiDi is None:
-            s = sel["loi-di"]
-            ctx.out.append({"quyTac": s["code"], "chuDe": "loi-di", "mucDo": "info", "module": [],
-                            "noiDung": f"Không kiểm được lối đi (cần ≥{lim} mm): spec chưa có phong.loiDi", "theo": f"{s['vung']} · {s['uuTien']}"})
-        elif lim and spec.phong.loiDi < lim - 1:
-            ctx.add("loi-di", [], f"Lối đi {spec.phong.loiDi:g} mm < {lim}", spec.phong.loiDi, lim)
+    if (p := ctx.p("walkway")):
+        lim = p.get("walkway_min", p.get("walkway_1person"))
+        if not spec.room or spec.room.walkway is None:
+            s = sel["walkway"]
+            ctx.out.append({"rule": s["code"], "topic": "walkway", "severity": "info", "module": [],
+                            "content": f"Không kiểm được lối đi (cần ≥{lim} mm): spec chưa có phong.loiDi", "theo": f"{s['zone']} · {s['priority']}"})
+        elif lim and spec.room.walkway < lim - 1:
+            ctx.add("walkway", [], f"Lối đi {spec.room.walkway:g} mm < {lim}", spec.room.walkway, lim)
     return ctx.out

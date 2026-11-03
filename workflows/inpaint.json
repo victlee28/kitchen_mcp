@@ -1,13 +1,13 @@
 {
  "kitchen": {
-  "ten": "Inpaint (node lõi ComfyUI)",
+  "name": "Inpaint (node lõi ComfyUI)",
   "kind": "edit",
-  "anh": [
+  "image": [
    "reference",
    "mask"
   ],
-  "moTa": "Sửa vùng mask trên ảnh gốc. Chỉ cần checkpoint (tốt nhất là bản inpaint, vd SDXL inpainting).",
-  "macDinh": {
+  "description": "Sửa vùng mask trên ảnh gốc. Chỉ cần checkpoint (tốt nhất là bản inpaint, vd SDXL inpainting).",
+  "default": {
    "steps": 28,
    "cfg": 6.0
   }

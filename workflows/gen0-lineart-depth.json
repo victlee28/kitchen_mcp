@@ -1,13 +1,13 @@
 {
  "kitchen": {
-  "ten": "Gen-0: ảnh đầy đủ từ nét + depth",
+  "name": "Gen-0: ảnh đầy đủ từ nét + depth",
   "kind": "gen0",
-  "anh": [
+  "image": [
    "lines",
    "depth"
   ],
-  "moTa": "Sinh ảnh thật đầu tiên của một góc nhìn từ lines.png (đảo) và depth.png bằng hai ControlNet nối tiếp.",
-  "macDinh": {
+  "description": "Sinh ảnh thật đầu tiên của một góc nhìn từ lines.png (đảo) và depth.png bằng hai ControlNet nối tiếp.",
+  "default": {
    "steps": 30,
    "cfg": 6.5,
    "cn_strength": 0.85,

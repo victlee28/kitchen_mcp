@@ -24,8 +24,8 @@ from kitchen.service import KitchenService  # noqa: E402
 from kitchen.spec import load_spec  # noqa: E402
 from kitchen.store import ConflictError  # noqa: E402
 
-FIX = ROOT / "fixtures" / "bep-chu-L.json"
-VIEW = "goc-anh-goc"
+FIX = ROOT / "fixtures" / "l-shaped-kitchen.json"
+VIEW = "original-angle"
 
 
 def _spec():
@@ -60,22 +60,22 @@ class TestInstanceAndLayers(_Base):
 
     def test_two_doors_same_module_disjoint(self):
         d = self.tmp / "renders" / self.did / "rev1" / VIEW
-        a, b = imaging.mask_of(d, ["TD1-canh-1"]), imaging.mask_of(d, ["TD1-canh-2"])
+        a, b = imaging.mask_of(d, ["TD1-door-1"]), imaging.mask_of(d, ["TD1-door-2"])
         self.assertTrue(a.any() and b.any())
         self.assertFalse((a & b).any())
-        g = imaging.mask_of(d, ["TD1-canh-1", "TD1-canh-2"])
+        g = imaging.mask_of(d, ["TD1-door-1", "TD1-door-2"])
         self.assertEqual(int(g.sum()), int(a.sum() + b.sum()))
 
     def test_render_key_ignores_material(self):
         s = _spec()
         s2 = s.model_copy(deep=True)
-        s2.chung.vatLieu["tuDuoi"] = "Laminate xanh rêu"
+        s2.common.material["base"] = "Laminate xanh rêu"
         v = geometry.views_of(s)[VIEW]
         k1 = render.render_key(geometry.compile_spec(s), v, 640, 480)
         k2 = render.render_key(geometry.compile_spec(s2), v, 640, 480)
         self.assertEqual(k1, k2)
         s3 = s.model_copy(deep=True)
-        s3.module[1].cao += 10
+        s3.module[1].height += 10
         self.assertNotEqual(k1, render.render_key(geometry.compile_spec(s3), v, 640, 480))
 
     def test_catalogue_ids_unique_and_refs_valid(self):
@@ -83,22 +83,22 @@ class TestInstanceAndLayers(_Base):
         cat = layers.catalogue(s, geometry.compile_spec(s))
         ids = [x["id"] for x in cat]
         self.assertEqual(len(ids), len(set(ids)))
-        singles = {x["id"] for x in cat if x["kieu"] == "chi-tiet"}
+        singles = {x["id"] for x in cat if x["variant"] == "part"}
         for g in cat:
-            for t in g.get("thanhPhan") or []:
+            for t in g.get("component") or []:
                 self.assertIn(t, singles)
 
     def test_layers_api_and_pick(self):
         r = self.svc.images.layers(self.did, VIEW)
-        self.assertEqual(r["anhGoc"]["loai"], "albedo")
+        self.assertEqual(r["baseImage"]["type"], "albedo")
         lid = {x["id"]: x for x in r["layers"]}
-        self.assertIn("matTruoc:TD1", lid)
-        self.assertEqual(lid["TD1-canh-1"]["suaThietKe"], "cả mặt trước module TD1")
-        inst = imaging.mask_of(Path(r["dir"]), ["TD1-canh-1"])
+        self.assertIn("frontSections:TD1", lid)
+        self.assertEqual(lid["TD1-door-1"]["designEdit"], "cả mặt trước module TD1")
+        inst = imaging.mask_of(Path(r["dir"]), ["TD1-door-1"])
         ys, xs = np.nonzero(inst)
         p = self.svc.images.pick(self.did, VIEW, int(xs[len(xs) // 2]), int(ys[len(ys) // 2]))
-        self.assertEqual(p["chiTiet"]["id"], "TD1-canh-1")
-        self.assertIn("matTruoc:TD1", p["layers"])
+        self.assertEqual(p["part"]["id"], "TD1-door-1")
+        self.assertIn("frontSections:TD1", p["layers"])
 
     def test_threejs_sourceref_points_to_compiled_parts(self):
         s = _spec()
@@ -113,96 +113,96 @@ class TestInstanceAndLayers(_Base):
 class TestImageJobs(_Base):
     def test_quick_edit_strict_composite(self):
         rev0 = self.svc.store.get(self.did)[1]
-        j = self.svc.images.create(self.did, VIEW, "TD1-canh-1", mode="thu-nhanh", vat_lieu="Laminate xanh rêu mờ")
-        self.assertEqual(j["status"], "can-duyet")
+        j = self.svc.images.create(self.did, VIEW, "TD1-door-1", mode="quick", material="Laminate xanh rêu mờ")
+        self.assertEqual(j["status"], "needs-review")
         rep = j["result"]["report"]
-        self.assertTrue(rep["ngoaiMask"]["datBaoToan"])
-        self.assertTrue(rep["trongMask"]["coThayDoi"])
+        self.assertTrue(rep["outsideMask"]["setPreserve"])
+        self.assertTrue(rep["insideMask"]["changed"])
         d = Path(j["result"]["dir"])
         ref = np.array(Image.open(d / "reference.png"))
         comp = np.array(Image.open(d / "composite.png"))
         tgt = np.array(Image.open(d / "target.png").convert("L")) > 127
         self.assertTrue((ref[~tgt] == comp[~tgt]).all(), "ngoài mask phải đúng từng pixel ảnh gốc")
-        other = imaging.mask_of(Path(self.svc.images.layers(self.did, VIEW)["dir"]), ["TD1-canh-2"])
+        other = imaging.mask_of(Path(self.svc.images.layers(self.did, VIEW)["dir"]), ["TD1-door-2"])
         self.assertTrue((ref[other] == comp[other]).all(), "cánh bên cạnh không bị ảnh hưởng")
         self.assertEqual(self.svc.store.get(self.did)[1], rev0, "thử nhanh không đổi thiết kế")
 
     def test_design_mode_applies_only_on_accept(self):
         rev0 = self.svc.store.get(self.did)[1]
-        j = self.svc.images.create(self.did, VIEW, "TD1-canh-1", mode="thiet-ke", vat_lieu="Acrylic kem bóng")
-        self.assertEqual(sorted(j["request"]["targetParts"]), ["TD1-canh-1", "TD1-canh-2"])
+        j = self.svc.images.create(self.did, VIEW, "TD1-door-1", mode="design", material="Acrylic kem bóng")
+        self.assertEqual(sorted(j["request"]["targetParts"]), ["TD1-door-1", "TD1-door-2"])
         self.assertEqual(self.svc.store.get(self.did)[1], rev0, "chưa duyệt thì chưa đổi thiết kế")
         a = self.svc.images.accept(j["id"])
-        self.assertEqual(a["status"], "da-chap-nhan")
+        self.assertEqual(a["status"], "accepted")
         spec, rev = self.svc.store.get(self.did)
         self.assertEqual(rev, rev0 + 1)
-        self.assertEqual(spec.tim("TD1").vatLieu, "Acrylic kem bóng")
+        self.assertEqual(spec.find("TD1").material, "Acrylic kem bóng")
         r = self.svc.images.layers(self.did, VIEW)
-        self.assertEqual(r["anhGoc"], {"loai": "job", "jobId": j["id"]}, "ảnh đã duyệt thành ảnh gốc, renderKey giữ nguyên")
+        self.assertEqual(r["baseImage"], {"type": "job", "jobId": j["id"]}, "ảnh đã duyệt thành ảnh gốc, renderKey giữ nguyên")
 
     def test_rejections(self):
         im = self.svc.images
         rev0 = self.svc.store.get(self.did)[1]
         with self.assertRaises(KeyError):
-            im.create(self.did, VIEW, "KHONG-CO", vat_lieu="xanh rêu")
+            im.create(self.did, VIEW, "NONE", material="xanh rêu")
         with self.assertRaises(ValueError):
-            im.create(self.did, "khong-co-goc", "TD1-canh-1", vat_lieu="xanh rêu")
+            im.create(self.did, "no-corner", "TD1-door-1", material="xanh rêu")
         with self.assertRaises(ConflictError):
-            im.create(self.did, VIEW, "TD1-canh-1", vat_lieu="xanh rêu", base_rev=0)
+            im.create(self.did, VIEW, "TD1-door-1", material="xanh rêu", base_rev=0)
         with self.assertRaises(ValueError):
-            im.create(self.did, VIEW, "TD1-canh-1", mode="thiet-ke")  # thiếu vật liệu
+            im.create(self.did, VIEW, "TD1-door-1", mode="design")  # thiếu vật liệu
         with self.assertRaises(ValueError):
-            im.create(self.did, VIEW, "loai:chan", mode="thiet-ke", vat_lieu="xanh rêu")  # len chân chưa sửa được trong thiết kế
-        j = im.create(self.did, VIEW, "TD1-canh-1", vat_lieu="Vân đá")  # to-mau không suy được màu
-        self.assertEqual(j["status"], "loi:khong-ho-tro")
+            im.create(self.did, VIEW, "type:plinth", mode="design", material="xanh rêu")  # len chân chưa sửa được trong thiết kế
+        j = im.create(self.did, VIEW, "TD1-door-1", material="Vân đá")  # to-mau không suy được màu
+        self.assertEqual(j["status"], "error:unsupported")
         self.assertEqual(self.svc.store.get(self.did)[1], rev0, "lỗi backend không đổi thiết kế")
 
     def test_package_and_submit(self):
         im = self.svc.images
-        j = im.create(self.did, VIEW, "loai:mat-da", mode="thu-nhanh", vat_lieu="Đá trắng vân mây", backend="goi-job")
-        self.assertEqual(j["status"], "cho-ket-qua")
+        j = im.create(self.did, VIEW, "type:countertop", mode="quick", material="Đá trắng vân mây", backend="job-package")
+        self.assertEqual(j["status"], "awaiting-result")
         d = Path(j["result"]["dir"])
         wf = json.loads((d / "workflow_api.json").read_text(encoding="utf-8"))
         self.assertNotIn("{{", json.dumps(wf))
         self.assertEqual(wf["2"]["inputs"]["image"], f"{j['id']}_reference.png")
         same = (d / "reference.png").read_bytes()
         bad = im.submit_result(j["id"], same)
-        self.assertEqual(bad["status"], "loi:khong-dat-kiem-tra", "ảnh không đổi vùng đích bị đánh dấu")
+        self.assertEqual(bad["status"], "error:check-failed", "ảnh không đổi vùng đích bị đánh dấu")
         ref = np.array(Image.open(d / "reference.png"))
         raw = ref.copy()
         raw[...] = (200, 40, 40)  # model "vẽ lan" ra cả ảnh
         buf = io.BytesIO(); Image.fromarray(raw).save(buf, "PNG")
         ok = im.submit_result(j["id"], buf.getvalue())
         rep = ok["result"]["report"]
-        self.assertEqual(ok["status"], "can-duyet")
-        self.assertTrue(rep["ngoaiMask"]["datBaoToan"])
-        self.assertGreater(rep["anhTho"]["thayDoiNgoaiVungSua"], 50, "chẩn đoán phát hiện model vẽ ngoài mask")
+        self.assertEqual(ok["status"], "needs-review")
+        self.assertTrue(rep["outsideMask"]["setPreserve"])
+        self.assertGreater(rep["rawImage"]["changesOutsideEditZone"], 50, "chẩn đoán phát hiện model vẽ ngoài mask")
         with self.assertRaises(ValueError):
             im.submit_result(j["id"], b"not an image")
 
     def test_accept_conflict(self):
         im = self.svc.images
-        j = im.create(self.did, VIEW, "TD1-canh-2", mode="thiet-ke", vat_lieu="Laminate xanh navy")
-        self.svc.apply(self.did, {"op": "chung", "thayDoi": {"kheCanh": 3}}, None, "test")
+        j = im.create(self.did, VIEW, "TD1-door-2", mode="design", material="Laminate xanh navy")
+        self.svc.apply(self.did, {"op": "common", "changes": {"doorGap": 3}}, None, "test")
         with self.assertRaises(ConflictError):
             im.accept(j["id"])
-        self.assertEqual(im.get(j["id"])["status"], "can-duyet")
+        self.assertEqual(im.get(j["id"])["status"], "needs-review")
 
 
 class TestHandles(_Base):
     def test_handles_in_geometry_render_and_layers(self):
         s = _spec()
         sc = geometry.compile_spec(s)
-        hs = [p for p in sc.parts if p.loai == "tay-nam"]
-        fronts = {p.id for p in sc.parts if p.loai in ("canh", "canh-kinh", "ngan-keo")}
+        hs = [p for p in sc.parts if p.type == "handle"]
+        fronts = {p.id for p in sc.parts if p.type in ("door", "glass-door", "drawer")}
         self.assertEqual(len(hs), len(fronts), "mỗi cánh/ngăn kéo một tay nắm (kiểu thanh)")
         self.assertTrue(all(h.parent in fronts for h in hs))
         r = self.svc.images.layers(self.did, VIEW)
         ids = {x["id"]: x for x in r["layers"]}
-        self.assertIn("tayNam:TD1", ids)
-        self.assertEqual(ids["loai:tay-nam"]["suaThietKe"], "mọi tay nắm")
-        a = imaging.mask_of(Path(r["dir"]), ["TD1-tay-nam-1"])
-        door = imaging.mask_of(Path(r["dir"]), [next(h.parent for h in hs if h.id == "TD1-tay-nam-1")])
+        self.assertIn("handle:TD1", ids)
+        self.assertEqual(ids["type:handle"]["designEdit"], "mọi tay nắm")
+        a = imaging.mask_of(Path(r["dir"]), ["TD1-handle-1"])
+        door = imaging.mask_of(Path(r["dir"]), [next(h.parent for h in hs if h.id == "TD1-handle-1")])
         self.assertTrue(a.any())
         self.assertFalse((a & door).any(), "tay nắm che cánh: pixel thuộc tay nắm, không thuộc cánh")
         doc = threejs_export.export(s, "x", 1)
@@ -211,123 +211,127 @@ class TestHandles(_Base):
 
     def test_handle_style_none_and_knob(self):
         s = _spec()
-        s.chung.tayNam.kieu = "khong"
-        self.assertFalse([p for p in geometry.compile_spec(s).parts if p.loai == "tay-nam"])
-        s.chung.tayNam.kieu = "num"
-        hs = [p for p in geometry.compile_spec(s).parts if p.loai == "tay-nam"]
+        s.common.handle.variant = "none"
+        self.assertFalse([p for p in geometry.compile_spec(s).parts if p.type == "handle"])
+        s.common.handle.variant = "knob"
+        hs = [p for p in geometry.compile_spec(s).parts if p.type == "handle"]
         self.assertTrue(hs)
         self.assertTrue(all(abs((h.max[1] - h.min[1]) - 30) < 0.01 for h in hs))
 
     def test_handle_material_job_design_mode(self):
-        j = self.svc.images.create(self.did, VIEW, "tayNam:TD1", mode="thiet-ke", vat_lieu="Đồng vàng xước")
-        self.assertEqual(j["request"]["phamVi"], "mọi tay nắm")
-        self.assertGreater(len(j["request"]["targetParts"]), 2, "đổi vật liệu tay nắm chung -> mask mọi tay nắm")
+        j = self.svc.images.create(self.did, VIEW, "handle:TD1", mode="design", material="Đồng vàng xước")
+        self.assertEqual(j["request"]["scope"], "tay nắm module TD1")
+        self.assertEqual(len(j["request"]["tasks"][0]["targetParts"]), 2, "handles are stored per module: only TD1's handles change")
+        self.svc.images.reject(j["id"])
+        j = self.svc.images.create(self.did, VIEW, "type:handle", mode="design", material="Đồng vàng xước")
+        self.assertEqual(j["request"]["scope"], "mọi tay nắm")
+        self.assertGreater(len(j["request"]["tasks"][0]["targetParts"]), 2, "every handle selected -> common handle material")
         self.svc.images.reject(j["id"])
 
 
 class TestMultiTask(_Base):
-    TASKS = [{"targetLayer": "matTruoc:TD1", "vatLieu": "Laminate xanh rêu mờ"},
-             {"targetLayer": "loai:mat-da", "vatLieu": "Đá nhân tạo đen"},
-             {"targetLayer": "loai:tay-nam", "vatLieu": "Inox vàng", "instruction": "brushed brass"}]
+    TASKS = [{"targetLayer": "frontSections:TD1", "material": "Laminate xanh rêu mờ"},
+             {"targetLayer": "type:countertop", "material": "Đá nhân tạo đen"},
+             {"targetLayer": "type:handle", "material": "Inox vàng", "instruction": "brushed brass"}]
 
     def test_multi_quick_and_accept_one_rev(self):
         im = self.svc.images
         rev0 = self.svc.store.get(self.did)[1]
         tasks = [dict(t) for t in self.TASKS]
-        tasks[2]["vatLieu"] = "Kim loại vàng"
-        j = im.create(self.did, VIEW, tasks=tasks, mode="thu-nhanh")
-        self.assertEqual(j["status"], "can-duyet", j["error"])
+        tasks[2]["material"] = "Kim loại vàng"
+        j = im.create(self.did, VIEW, tasks=tasks, mode="quick")
+        self.assertEqual(j["status"], "needs-review", j["error"])
         rep = j["result"]["report"]
-        self.assertEqual(len(rep["viec"]), 3)
-        self.assertTrue(all(v["trongMask"]["coThayDoi"] for v in rep["viec"]))
-        self.assertTrue(rep["ngoaiMask"]["datBaoToan"])
-        self.assertEqual(j["target"], "matTruoc:TD1 +2")
+        self.assertEqual(len(rep["task"]), 3)
+        self.assertTrue(all(v["insideMask"]["changed"] for v in rep["task"]))
+        self.assertTrue(rep["outsideMask"]["setPreserve"])
+        self.assertEqual(j["target"], "frontSections:TD1 +2")
         d = Path(j["result"]["dir"])
         for i in (1, 2, 3):
             self.assertTrue((d / f"target_{i}.png").exists())
-        a = im.accept(j["id"], ap_vao_thiet_ke=True)
+        a = im.accept(j["id"], apply_to_design=True)
         spec, rev = self.svc.store.get(self.did)
         self.assertEqual(rev, rev0 + 1, "mọi việc ghi thành một rev")
-        self.assertEqual(a["result"]["thietKe"]["op"]["op"], "nhieu")
-        self.assertEqual(spec.tim("TD1").vatLieu, "Laminate xanh rêu mờ")
-        self.assertEqual(spec.chung.vatLieu["matDa"], "Đá nhân tạo đen")
-        self.assertEqual(spec.chung.tayNam.vatLieu, "Kim loại vàng")
+        self.assertEqual(a["result"]["design"]["op"]["op"], "multi")
+        self.assertEqual(spec.find("TD1").material, "Laminate xanh rêu mờ")
+        self.assertEqual(spec.common.material["countertop"], "Đá nhân tạo đen")
+        self.assertEqual(spec.common.handle.material, "Kim loại vàng")
 
     def test_request_json_self_contained(self):
         im = self.svc.images
-        j = im.create(self.did, VIEW, backend="goi-job", tasks=[dict(t) for t in self.TASKS])
+        j = im.create(self.did, VIEW, backend="job-package", tasks=[dict(t) for t in self.TASKS])
         d = Path(j["result"]["dir"])
         r = json.loads((d / "request.json").read_text(encoding="utf-8"))
         self.assertEqual(r["schema"], "kitchen-ai-edit-request/2.0")
-        for bo in ("renderKey", "tasks", "nopKetQua", "job"):
+        for bo in ("renderKey", "tasks", "submitResult", "job"):
             self.assertNotIn(bo, r, "đã lọc thông tin hệ thống AI không dùng")
-        self.assertLessEqual({"viec", "nhan", "mauVien", "mauVung", "ten", "doiTuong", "viTri", "khungPhanTram", "vatLieu", "tiengAnh"},
-                             set(r["viec"][0]))
-        self.assertEqual([a["vaiTro"] for a in r["anhDinhKem"]], ["anh-goc-danh-dau", "mask-mau"])
-        self.assertTrue(r["kiemTra"]["ok"], r["kiemTra"])
-        self.assertEqual([a["thuTu"] for a in r["anhDinhKem"]], [1, 2])
-        self.assertIn("Region 1 (RED outline)", r["chiDan"])
-        self.assertIn("REMOVE the colored outlines", r["chiDan"])
-        ref = np.array(Image.open(io.BytesIO(base64.b64decode(r["anhDinhKem"][0]["dataUrl"].split(",")[1]))).convert("RGB"))
-        self.assertEqual(list(ref.shape[1::-1]), r["kichThuoc"])
+        self.assertLessEqual({"task", "label", "borderColor", "zoneColor", "name", "target", "position", "boxPercent", "material", "english"},
+                             set(r["task"][0]))
+        self.assertEqual([a["role"] for a in r["attachedImages"]], ["marked-base-image", "color-mask"])
+        self.assertTrue(r["validation"]["ok"], r["validation"])
+        self.assertEqual([a["order"] for a in r["attachedImages"]], [1, 2])
+        self.assertIn("Region 1 (RED outline)", r["instruction"])
+        self.assertIn("REMOVE the colored outlines", r["instruction"])
+        ref = np.array(Image.open(io.BytesIO(base64.b64decode(r["attachedImages"][0]["dataUrl"].split(",")[1]))).convert("RGB"))
+        self.assertEqual(list(ref.shape[1::-1]), r["dimensions"])
         g = json.loads((d / "gemini-request.json").read_text(encoding="utf-8"))
         parts = g["contents"][0]["parts"]
-        self.assertEqual(parts[0]["text"], r["chiDan"])
+        self.assertEqual(parts[0]["text"], r["instruction"])
         self.assertEqual([p_["inline_data"]["mime_type"] for p_ in parts[1:]], ["image/png", "image/png"], "ảnh ở inline_data để Gemini tự giải mã")
-        self.assertEqual(parts[1]["inline_data"]["data"], r["anhDinhKem"][0]["dataUrl"].split(",")[1])
-        self.assertTrue((d / "anh-1-anh-goc-danh-dau.png").exists() and (d / "anh-2-mask-mau.png").exists())
-        self.assertIn("KHÔNG dán file JSON", (d / "GUI-GEMINI-WEB.txt").read_text(encoding="utf-8"))
-        self.assertIn("anh-2-mask-mau.png", (d / "GUI-GEMINI-WEB.txt").read_text(encoding="utf-8"))
+        self.assertEqual(parts[1]["inline_data"]["data"], r["attachedImages"][0]["dataUrl"].split(",")[1])
+        self.assertTrue((d / "image-1-marked-base-image.png").exists() and (d / "image-2-color-mask.png").exists())
+        self.assertIn("KHÔNG dán file JSON", (d / "GEMINI-WEB-GUIDE.txt").read_text(encoding="utf-8"))
+        self.assertIn("image-2-color-mask.png", (d / "GEMINI-WEB-GUIDE.txt").read_text(encoding="utf-8"))
         full = json.loads(im.export_full(j["id"]).read_text(encoding="utf-8"))
         self.assertEqual(full["schema"], "kitchen-ai-edit-request-full/1.0")
         self.assertEqual(full["job"]["render_key"], j["render_key"], "bản đầy đủ giữ thông tin nội bộ")
-        self.assertEqual(len(full["yeuCau"]["tasks"]), 3)
-        self.assertIn("targetParts", full["yeuCau"]["tasks"][0])
-        for k in ("reference", "mask_mau", "target_1", "mask_3"):
-            self.assertTrue(full["anh"][k].startswith("data:image/png;base64,"), k)
-        self.assertFalse(any(k.startswith("anh-") for k in full["anh"]), "không lặp bản sao đánh số")
+        self.assertEqual(len(full["request"]["tasks"]), 3)
+        self.assertIn("targetParts", full["request"]["tasks"][0])
+        for k in ("reference", "mask_color", "target_1", "mask_3"):
+            self.assertTrue(full["image"][k].startswith("data:image/png;base64,"), k)
+        self.assertFalse(any(k.startswith("image-") for k in full["image"]), "không lặp bản sao đánh số")
         lean = json.loads(Path(self.svc.ai_export(self.did, views=[VIEW], embed=True)["file"]).read_text(encoding="utf-8"))
         self.assertNotIn("threejs", lean)
         v = lean["views"][0]
-        self.assertTrue(v["anhDinhKem"][0]["dataUrl"].startswith("data:image/png;base64,"))
+        self.assertTrue(v["attachedImages"][0]["dataUrl"].startswith("data:image/png;base64,"))
         api = json.loads((Path(self.svc.render_dir) / self.did / f"rev{lean['revision']}" / "ai" / v["geminiApi"]).read_text(encoding="utf-8"))
-        self.assertEqual(api["contents"][0]["parts"][0]["text"], v["chiDan"])
+        self.assertEqual(api["contents"][0]["parts"][0]["text"], v["instruction"])
 
     def test_overlap_and_errors(self):
         im = self.svc.images
         with self.assertRaises(ValueError) as e:
-            im.create(self.did, VIEW, tasks=[{"targetLayer": "TD1-canh-1", "vatLieu": "xanh rêu"},
-                                             {"targetLayer": "matTruoc:TD1", "vatLieu": "kem"}])
+            im.create(self.did, VIEW, tasks=[{"targetLayer": "TD1-door-1", "material": "xanh rêu"},
+                                             {"targetLayer": "frontSections:TD1", "material": "kem"}])
         self.assertIn("cùng sửa chi tiết", str(e.exception))
         with self.assertRaises(ValueError):
-            im.create(self.did, VIEW, tasks=[{"targetLayer": "TD1-canh-1"}] * 9)
+            im.create(self.did, VIEW, tasks=[{"targetLayer": "TD1-door-1"}] * 9)
         with self.assertRaises(ValueError):
-            im.create(self.did, VIEW, tasks=[{"vatLieu": "kem"}])
+            im.create(self.did, VIEW, tasks=[{"material": "kem"}])
         # thiết kế: hai việc cùng đổi một khóa vật liệu chung -> việc sau trùng chi tiết của việc trước
         with self.assertRaises(ValueError):
-            im.create(self.did, VIEW, mode="thiet-ke", tasks=[{"targetLayer": "loai:mat-da", "vatLieu": "Đá đen"},
-                                                              {"targetLayer": "loai:mat-da", "vatLieu": "Đá xám"}])
-        j = im.create(self.did, VIEW, tasks=[{"targetLayer": "TD1-canh-1", "vatLieu": "xanh rêu"},
-                                             {"targetLayer": "TD1-canh-2", "vatLieu": "Vân đá"}])
-        self.assertEqual(j["status"], "loi:khong-ho-tro")
+            im.create(self.did, VIEW, mode="design", tasks=[{"targetLayer": "type:countertop", "material": "Đá đen"},
+                                                              {"targetLayer": "type:countertop", "material": "Đá xám"}])
+        j = im.create(self.did, VIEW, tasks=[{"targetLayer": "TD1-door-1", "material": "xanh rêu"},
+                                             {"targetLayer": "TD1-door-2", "material": "Vân đá"}])
+        self.assertEqual(j["status"], "error:unsupported")
         self.assertIn("Việc 2", j["error"])
 
     def test_multi_package_and_partial(self):
         im = self.svc.images
-        j = im.create(self.did, VIEW, tasks=self.TASKS[:2], backend="goi-job", mode="thiet-ke")
-        self.assertEqual(j["status"], "cho-ket-qua")
+        j = im.create(self.did, VIEW, tasks=self.TASKS[:2], backend="job-package", mode="design")
+        self.assertEqual(j["status"], "awaiting-result")
         d = Path(j["result"]["dir"])
         self.assertTrue((d / "workflow_api_1.json").exists() and (d / "workflow_api_2.json").exists())
         wf2 = json.loads((d / "workflow_api_2.json").read_text(encoding="utf-8"))
         self.assertEqual(wf2["2"]["inputs"]["image"], f"{j['id']}_ket_qua_1.png", "việc 2 lấy ảnh ra của việc 1")
-        self.assertTrue((d / "mask_mau.png").exists())
+        self.assertTrue((d / "mask_color.png").exists())
         ref = imaging.read(d / "reference.png")
         raw = ref.copy()
         m1 = imaging.read(d / "target_1.png", "L") > 127
         raw[m1] = (30, 160, 60)  # chỉ làm việc 1
         buf = io.BytesIO(); Image.fromarray(raw).save(buf, "PNG")
         r = im.submit_result(j["id"], buf.getvalue())
-        self.assertEqual(r["status"], "can-duyet")
+        self.assertEqual(r["status"], "needs-review")
         self.assertIn("Việc 2", r["error"])
 
 
@@ -336,11 +340,11 @@ class TestMarkingAndChecks(_Base):
 
     def test_outline_never_inside_targets(self):
         im = self.svc.images
-        j = im.create(self.did, VIEW, backend="goi-job", tasks=[{"targetLayer": "matTruoc:TD1", "vatLieu": "Laminate xanh rêu"},
-                                                                 {"targetLayer": "tayNam:TD1", "vatLieu": "Đồng vàng"}])
+        j = im.create(self.did, VIEW, backend="job-package", tasks=[{"targetLayer": "frontSections:TD1", "material": "Laminate xanh rêu"},
+                                                                 {"targetLayer": "handle:TD1", "material": "Đồng vàng"}])
         d = Path(j["result"]["dir"])
         ref = imaging.read(d / "reference.png")
-        mk = imaging.read(d / "reference_danh_dau.png")
+        mk = imaging.read(d / "reference_marked.png")
         diff = np.abs(mk.astype(int) - ref.astype(int)).max(-1) > 0
         region = imaging.read(d / "mask.png", "L") > 127
         self.assertTrue(diff.any(), "có vẽ viền")
@@ -351,44 +355,44 @@ class TestMarkingAndChecks(_Base):
             self.assertTrue((diff & ring).any(), f"việc {i} có viền bao quanh")
         tasks = j["request"]["tasks"]
         self.assertEqual(tasks[0]["roleEn"], "cabinet door front")
-        self.assertRegex(tasks[0]["viTri"]["en"], r"x \d+–\d+%, y \d+–\d+%")
-        x0, y0, x1, y1 = tasks[0]["viTri"]["khung"]
+        self.assertRegex(tasks[0]["position"]["en"], r"x \d+–\d+%, y \d+–\d+%")
+        x0, y0, x1, y1 = tasks[0]["position"]["frame"]
         self.assertTrue(0 <= x0 < x1 <= 100 and 0 <= y0 < y1 <= 100)
-        self.assertGreater(tasks[0]["conLai"], 0, "đếm các cánh khác cùng loại để dặn giữ nguyên")
+        self.assertGreater(tasks[0]["remaining"], 0, "đếm các cánh khác cùng loại để dặn giữ nguyên")
 
-    def test_vi_tri_words(self):
-        from kitchen.imagejobs import vi_tri
+    def test_position_words(self):
+        from kitchen.imagejobs import describe_position
         m = np.zeros((100, 200), bool); m[5:20, 10:40] = True
-        self.assertTrue(vi_tri(m)["en"].startswith("upper-left area"))
+        self.assertTrue(describe_position(m)["en"].startswith("upper-left area"))
         m = np.zeros((100, 200), bool); m[80:95, 5:195] = True
-        self.assertIn("full width", vi_tri(m)["en"])
-        self.assertIsNone(vi_tri(np.zeros((10, 10), bool)))
+        self.assertIn("full width", describe_position(m)["en"])
+        self.assertIsNone(describe_position(np.zeros((10, 10), bool)))
 
     def test_check_detects_broken_requests(self):
         from kitchen import request_check
         im = self.svc.images
-        j = im.create(self.did, VIEW, backend="goi-job", target="loai:mat-da", vat_lieu="Đá nhân tạo đen")
+        j = im.create(self.did, VIEW, backend="job-package", target="type:countertop", material="Đá nhân tạo đen")
         text = (Path(j["result"]["dir"]) / "request.json").read_text(encoding="utf-8")
         self.assertTrue(request_check.check_text(text)["ok"])
         cut = request_check.check_text(text[: len(text) // 3])
-        self.assertFalse(cut["ok"]); self.assertIn("CẮT", cut["loi"][0])
+        self.assertFalse(cut["ok"]); self.assertIn("CẮT", cut["errors"][0])
         lean = json.loads(text)
-        lean["anhDinhKem"] = lean["anhDinhKem"][:1]
-        self.assertIn("Thiếu ảnh mask", " ".join(request_check.check_lean(lean)["loi"]))
+        lean["attachedImages"] = lean["attachedImages"][:1]
+        self.assertIn("Thiếu ảnh mask", " ".join(request_check.check_lean(lean)["errors"]))
         lean = json.loads(text)
-        lean["anhDinhKem"][1]["dataUrl"] = lean["anhDinhKem"][1]["dataUrl"][:-7]
+        lean["attachedImages"][1]["dataUrl"] = lean["attachedImages"][1]["dataUrl"][:-7]
         self.assertFalse(request_check.check_lean(lean)["ok"], "base64 bị cắt")
         g = (Path(j["result"]["dir"]) / "gemini-request.json").read_text(encoding="utf-8")
         self.assertTrue(request_check.check_text(g)["ok"])
-        self.assertTrue(request_check.check_text(g.replace(" ", "\u00a0", 3))["canhBao"])
+        self.assertTrue(request_check.check_text(g.replace(" ", "\u00a0", 3))["warning"])
 
     def test_send_blocked_when_check_fails(self):
         im = self.svc.images
-        j = im.create(self.did, VIEW, backend="goi-job", preview=True, target="loai:mat-da", vat_lieu="Đá nhân tạo đen")
+        j = im.create(self.did, VIEW, backend="job-package", preview=True, target="type:countertop", material="Đá nhân tạo đen")
         (Path(j["result"]["dir"]) / "mask.png").write_bytes(b"")  # mask hỏng -> không đọc được
         with self.assertRaises(Exception):
             im.send(j["id"])
-        self.assertEqual(im.get(j["id"])["status"], "cho-gui", "không gửi khi kiểm tra lỗi")
+        self.assertEqual(im.get(j["id"])["status"], "awaiting-send", "không gửi khi kiểm tra lỗi")
 
 
 class TestGeometryEdit(_Base):
@@ -397,80 +401,80 @@ class TestGeometryEdit(_Base):
     def test_remove_module_flow(self):
         im = self.svc.images
         rev0 = self.svc.store.get(self.did)[1]
-        j = im.create(self.did, VIEW, backend="to-mau", kind="hinh", hinh_items=[{"loai": "xoa-module", "ma": "TD3"}])
-        self.assertEqual(j["status"], "can-duyet", j["error"])
+        j = im.create(self.did, VIEW, backend="recolor", kind="geometry_edit", geometry_items=[{"type": "remove-module", "id": "TD3"}])
+        self.assertEqual(j["status"], "needs-review", j["error"])
         r = j["request"]
-        self.assertEqual(r["thaoTac"], "xoa-vat")
-        self.assertEqual(r["designOp"], {"op": "remove", "ma": "TD3", "donDay": False})
+        self.assertEqual(r["operation"], "remove-item")
+        self.assertEqual(r["designOp"], {"op": "remove", "id": "TD3", "closeGap": False})
         self.assertEqual(r["params"]["cn_strength"], 0.55, "trọng số theo bảng thao tác")
-        self.assertIn("TD3-canh-1", r["khacBiet"]["xoa"])
+        self.assertIn("TD3-door-1", r["different"]["xoa"])
         d = Path(j["result"]["dir"])
         m = imaging.read(d / "target.png", "L") > 127
-        old = imaging.mask_of(Path(self.svc.images._render_dir(self.did, rev0, VIEW)), ["TD3-canh-1"])
+        old = imaging.mask_of(Path(self.svc.images._render_dir(self.did, rev0, VIEW)), ["TD3-door-1"])
         self.assertTrue((m | ~old).all(), "vùng đổi phủ hết cánh bị xóa")
         self.assertLess(m.mean(), 0.3, "chỉ vùng thay đổi, không phải cả ảnh")
         self.assertFalse((imaging.read(d / "lines_moi.png", "L") == imaging.read(
             Path(self.svc.images._render_dir(self.did, rev0, VIEW)) / "lines.png", "L")).all(), "nét gửi model là của thiết kế mới")
-        self.assertTrue(j["result"]["report"]["ngoaiMask"]["datBaoToan"])
+        self.assertTrue(j["result"]["report"]["outsideMask"]["setPreserve"])
         req = json.loads((d / "request.json").read_text(encoding="utf-8"))
-        self.assertEqual(req["loai"], "hinh")
-        self.assertEqual([a["vaiTro"] for a in req["anhDinhKem"]], ["anh-goc-danh-dau", "mask", "hinh-moi"])
-        self.assertTrue(req["kiemTra"]["ok"], req["kiemTra"])
-        self.assertIn("IMAGE 3", req["chiDan"])
-        self.assertIn("remove the base cabinet", req["chiDan"])
+        self.assertEqual(req["type"], "geometry_edit")
+        self.assertEqual([a["role"] for a in req["attachedImages"]], ["marked-base-image", "mask", "new-geometry"])
+        self.assertTrue(req["validation"]["ok"], req["validation"])
+        self.assertIn("IMAGE 3", req["instruction"])
+        self.assertIn("remove the base cabinet", req["instruction"])
         a = im.accept(j["id"])
         spec, rev = self.svc.store.get(self.did)
         self.assertEqual(rev, rev0 + 1)
-        self.assertNotIn("TD3", [x.ma for x in spec.module])
-        self.assertEqual(a["result"]["thietKe"]["rev"], rev)
+        self.assertNotIn("TD3", [x.id for x in spec.module])
+        self.assertEqual(a["result"]["design"]["rev"], rev)
         lay = im.layers(self.did, VIEW)
-        self.assertEqual(lay["renderKey"], r["renderKeyMoi"])
-        self.assertEqual(lay["anhGoc"], {"loai": "job", "jobId": j["id"]}, "ảnh đã duyệt thành ảnh gốc của rev mới")
+        self.assertEqual(lay["renderKey"], r["newRenderKey"])
+        self.assertEqual(lay["baseImage"], {"type": "job", "jobId": j["id"]}, "ảnh đã duyệt thành ảnh gốc của rev mới")
 
     def test_handles_and_door_style(self):
         im = self.svc.images
-        j = im.create(self.did, VIEW, backend="goi-job", kind="hinh", hinh_items=[{"loai": "tay-nam", "kieu": "num"}])
-        self.assertEqual(j["status"], "cho-ket-qua", j["error"])
+        j = im.create(self.did, VIEW, backend="job-package", kind="geometry_edit", geometry_items=[{"type": "handle", "variant": "knob"}])
+        self.assertEqual(j["status"], "awaiting-result", j["error"])
         self.assertGreater(j["request"]["maskPixels"], 0)
         self.assertEqual(j["request"]["workflow"], "inpaint-lineart")
         d = Path(j["result"]["dir"])
         self.assertTrue((d / "workflow_api.json").exists())
-        k = im.create(self.did, VIEW, backend="to-mau", kind="hinh", hinh_items=[{"loai": "kieu-canh", "ma": "TD1", "kieu": "khung"}])
-        self.assertEqual(k["status"], "can-duyet", k["error"])
-        self.assertEqual(k["request"]["khacBiet"]["pixels"], 0, "render nhanh không dựng khung cánh")
+        k = im.create(self.did, VIEW, backend="recolor", kind="geometry_edit", geometry_items=[{"type": "door-style", "id": "TD1", "variant": "frame"}])
+        self.assertEqual(k["status"], "needs-review", k["error"])
+        self.assertEqual(k["request"]["different"]["pixels"], 0, "render nhanh không dựng khung cánh")
         self.assertGreater(k["request"]["maskPixels"], 0, "vẫn bắt buộc vẽ lại mặt trước TD1")
         kd = Path(k["result"]["dir"])
         old = Path(self.svc.images._render_dir(self.did, k["rev"], VIEW)) / "lines.png"
         self.assertGreater(int((imaging.read(kd / "lines_moi.png", "L") < 128).sum()), int((imaging.read(old, "L") < 128).sum()),
                            "có thêm nét khung shaker")
         with self.assertRaises(ValueError):
-            im.create(self.did, VIEW, backend="to-mau", kind="hinh", hinh_items=[{"loai": "tay-nam", "kieu": "sai"}])
+            im.create(self.did, VIEW, backend="recolor", kind="geometry_edit", geometry_items=[{"type": "handle", "variant": "sai"}])
         with self.assertRaises(ValueError):
-            im.create(self.did, VIEW, backend="to-mau", kind="hinh", hinh_items=[])
+            im.create(self.did, VIEW, backend="recolor", kind="geometry_edit", geometry_items=[])
 
     def test_conflict_and_presets(self):
         im = self.svc.images
-        j = im.create(self.did, VIEW, backend="to-mau", kind="hinh", hinh_items=[{"loai": "xoa-module", "ma": "TD4"}])
+        j = im.create(self.did, VIEW, backend="recolor", kind="geometry_edit", geometry_items=[{"type": "remove-module", "id": "TD4"}])
         spec, rev = self.svc.store.get(self.did)
-        self.svc.apply(self.did, {"op": "chung", "thayDoi": {"tayNam": {**spec.chung.tayNam.model_dump(mode="json"), "dai": 200}}}, rev)
+        self.svc.apply(self.did, {"op": "common", "changes": {"handle": {**spec.common.handle.model_dump(mode="json"), "length": 200}}}, rev)
         with self.assertRaises(ConflictError):
             im.accept(j["id"])
-        e = im.create(self.did, VIEW, backend="goi-job", target="loai:mat-da", vat_lieu="Đá đen", thao_tac="doi-vat-lieu")
+        e = im.create(self.did, VIEW, backend="job-package", target="type:countertop", material="Đá đen", operation="change-material")
         self.assertEqual(e["request"]["workflow"], "inpaint-lineart")
         self.assertEqual(e["request"]["params"]["cn_strength"], 0.45)
         with self.assertRaises(ValueError):
-            im.create(self.did, VIEW, backend="goi-job", target="loai:mat-da", vat_lieu="Đá đen", thao_tac="xoa-vat")
+            im.create(self.did, VIEW, backend="job-package", target="type:countertop", material="Đá đen", operation="remove-item")
 
     def test_pin_cameras(self):
-        from kitchen import edit, hinh
-        spec = _spec().model_copy(update={"gocNhin": {}})
-        nxt = edit.apply_op(spec, {"op": "remove", "ma": "TC1"})  # tủ cao ở mép: khung bao đổi
-        pin = hinh.pin_cameras(spec, nxt)
+        from kitchen import edit, geometry_edit
+        spec = _spec().model_copy(update={"cameraViews": {}})
+        nxt = edit.apply_op(spec, {"op": "remove", "id": "TC1"})  # tủ cao ở mép: khung bao đổi
+        pin = geometry_edit.pin_cameras(spec, nxt)
         self.assertIsNotNone(pin, "góc nhìn mặc định dịch theo khung bao")
         fixed = edit.apply_op(nxt, pin)
         self.assertEqual({k: v.model_dump() for k, v in geometry.views_of(fixed).items()},
                          {k: v.model_dump() for k, v in geometry.views_of(spec).items()})
-        self.assertIsNone(hinh.pin_cameras(_spec(), edit.apply_op(_spec(), {"op": "remove", "ma": "TD5"})), "đã có gocNhin cố định")
+        self.assertIsNone(geometry_edit.pin_cameras(_spec(), edit.apply_op(_spec(), {"op": "remove", "id": "TD5"})), "đã có gocNhin cố định")
 
 
 class TestRealism(_Base):
@@ -479,25 +483,25 @@ class TestRealism(_Base):
     def test_prompts(self):
         from kitchen import realism
         im = self.svc.images
-        g = im.create(self.did, VIEW, backend="goi-job", kind="gen0", anh_sang="toi-am")
+        g = im.create(self.did, VIEW, backend="job-package", kind="gen0", lighting="dim-evening")
         r = json.loads((Path(g["result"]["dir"]) / "request.json").read_text(encoding="utf-8"))
-        self.assertIn("rectilinear lens", r["chiDan"])
-        self.assertIn("2700", r["chiDan"], "ánh sáng buổi tối")
-        self.assertNotIn("natural daylight", r["chiDan"], "không lẫn ánh sáng mâu thuẫn")
-        self.assertIn("reveal gaps", r["chiDan"])
+        self.assertIn("rectilinear lens", r["instruction"])
+        self.assertIn("2700", r["instruction"], "ánh sáng buổi tối")
+        self.assertNotIn("natural daylight", r["instruction"], "không lẫn ánh sáng mâu thuẫn")
+        self.assertIn("reveal gaps", r["instruction"])
         self.assertIn("RAW photo", g["request"]["prompt"], "prompt ComfyUI có cụm ảnh thật")
         self.assertIn("CGI", g["request"]["negativePrompt"])
-        e = im.create(self.did, VIEW, backend="goi-job", target="loai:mat-da", vat_lieu="Đá marble trắng vân mây")
-        t = json.loads((Path(e["result"]["dir"]) / "request.json").read_text(encoding="utf-8"))["chiDan"]
+        e = im.create(self.did, VIEW, backend="job-package", target="type:countertop", material="Đá marble trắng vân mây")
+        t = json.loads((Path(e["result"]["dir"]) / "request.json").read_text(encoding="utf-8"))["instruction"]
         self.assertIn("as if captured in the same shot", t)
         self.assertIn("veining", t, "mô tả bề mặt theo vật liệu mới")
         self.assertNotIn("wood surfaces", t, "chỉ mô tả vật liệu của vùng sửa")
         with self.assertRaises(ValueError):
-            im.create(self.did, VIEW, backend="goi-job", kind="gen0", anh_sang="sai")
-        lean = json.loads(Path(self.svc.ai_export(self.did, views=[VIEW], embed=True, anh_sang="nang-chieu")["file"]).read_text(encoding="utf-8"))
-        self.assertEqual(lean["anhSang"], "nang-chieu")
-        self.assertIn("late-afternoon", lean["views"][0]["chiDan"])
-        self.assertIn("window", realism.full(_spec()) if any(lo for t in (_spec().phong.tuong if _spec().phong else []) for lo in t.lo)
+            im.create(self.did, VIEW, backend="job-package", kind="gen0", lighting="sai")
+        lean = json.loads(Path(self.svc.ai_export(self.did, views=[VIEW], embed=True, lighting="late-afternoon")["file"]).read_text(encoding="utf-8"))
+        self.assertEqual(lean["lighting"], "late-afternoon")
+        self.assertIn("late-afternoon", lean["views"][0]["instruction"])
+        self.assertIn("window", realism.full(_spec()) if any(openings for t in (_spec().room.wall if _spec().room else []) for openings in t.openings)
                       else "window")
 
 
@@ -505,21 +509,71 @@ class TestBeauty(_Base):
     def test_save_beauty_and_reference_order(self):
         im = self.svc.images
         r = im.layers(self.did, VIEW)
-        self.assertEqual(r["anhGoc"]["loai"], "albedo")
+        self.assertEqual(r["baseImage"]["type"], "albedo")
         d = Path(r["dir"])
         buf = io.BytesIO(); Image.open(d / "albedo.png").resize((1280, 960)).save(buf, "PNG")  # cùng tỉ lệ, khác cỡ -> co về
         info = im.save_beauty(self.did, VIEW, buf.getvalue())
         self.assertEqual(info["size"], [640, 480])
-        self.assertTrue(info["khopNet"]["khop"])
-        self.assertEqual(im.layers(self.did, VIEW)["anhGoc"]["loai"], "beauty", "chưa có ảnh duyệt: ưu tiên render three.js")
-        j = im.create(self.did, VIEW, "TD1-canh-1", vat_lieu="xanh rêu")
-        self.assertEqual(j["request"]["referenceImage"]["loai"], "beauty")
+        self.assertTrue(info["lineMatch"]["khop"])
+        self.assertEqual(im.layers(self.did, VIEW)["baseImage"]["type"], "beauty", "chưa có ảnh duyệt: ưu tiên render three.js")
+        j = im.create(self.did, VIEW, "TD1-door-1", material="xanh rêu")
+        self.assertEqual(j["request"]["referenceImage"]["type"], "beauty")
         im.accept(j["id"])
-        self.assertEqual(im.layers(self.did, VIEW)["anhGoc"]["loai"], "job", "ảnh đã duyệt đứng trước")
-        self.assertEqual(im.create(self.did, VIEW, "TD1-canh-2", vat_lieu="kem", reference="beauty")["request"]["referenceImage"]["loai"], "beauty")
+        self.assertEqual(im.layers(self.did, VIEW)["baseImage"]["type"], "job", "ảnh đã duyệt đứng trước")
+        self.assertEqual(im.create(self.did, VIEW, "TD1-door-2", material="kem", reference="beauty")["request"]["referenceImage"]["type"], "beauty")
         buf = io.BytesIO(); Image.new("RGB", (500, 500)).save(buf, "PNG")
         with self.assertRaises(ValueError):
             im.save_beauty(self.did, VIEW, buf.getvalue())
+
+
+class TestImportedBase(_Base):
+    def _png(self, size):
+        d = Path(self.svc.images.layers(self.did, VIEW)["dir"])
+        buf = io.BytesIO(); Image.open(d / "albedo.png").resize(size).save(buf, "PNG")
+        return buf.getvalue()
+
+    def test_import_replaces_base_and_newest_wins(self):
+        im = self.svc.images
+        info = im.import_base(self.did, VIEW, self._png((1280, 960)))  # same ratio, other size -> resized
+        self.assertEqual(info["size"], [640, 480])
+        self.assertEqual(im.layers(self.did, VIEW)["baseImage"]["type"], "imported")
+        j = im.create(self.did, VIEW, "TD1-door-1", material="xanh rêu")
+        self.assertEqual(j["request"]["referenceImage"]["type"], "imported")
+        im.accept(j["id"])
+        self.assertEqual(im.layers(self.did, VIEW)["baseImage"]["type"], "job", "a job accepted after the import is the base")
+        im.import_base(self.did, VIEW, self._png((640, 480)))
+        self.assertEqual(im.layers(self.did, VIEW)["baseImage"]["type"], "imported", "a newer import replaces the accepted job")
+        self.assertEqual(im.create(self.did, VIEW, "TD1-door-2", material="kem", reference="imported")["request"]["referenceImage"]["type"], "imported")
+
+    def test_clear_and_bad_input(self):
+        im = self.svc.images
+        with self.assertRaises(ValueError):
+            im.create(self.did, VIEW, "TD1-door-1", material="kem", reference="imported")  # nothing imported yet
+        im.import_base(self.did, VIEW, self._png((640, 480)))
+        self.assertTrue(im.clear_imported_base(self.did, VIEW)["removed"])
+        self.assertEqual(im.layers(self.did, VIEW)["baseImage"]["type"], "albedo")
+        self.assertFalse(im.clear_imported_base(self.did, VIEW)["removed"])
+        buf = io.BytesIO(); Image.new("RGB", (500, 500)).save(buf, "PNG")
+        with self.assertRaises(ValueError):
+            im.import_base(self.did, VIEW, buf.getvalue())
+        with self.assertRaises(ValueError):
+            im.import_base(self.did, VIEW, b"not an image")
+
+
+    def test_fit_crop_pad_and_stale_status(self):
+        im = self.svc.images
+        sq = io.BytesIO(); Image.new("RGB", (500, 500), (200, 120, 60)).save(sq, "PNG")
+        for fit in ("crop", "pad"):
+            info = im.import_base(self.did, VIEW, sq.getvalue(), fit=fit)
+            self.assertEqual((info["size"], info["fit"]), ([640, 480], fit))
+        with self.assertRaises(ValueError):
+            im.import_base(self.did, VIEW, sq.getvalue(), fit="stretch")
+        # a job left in 'running' by a stopped process is marked interrupted
+        j = im.create(self.did, VIEW, "TD1-door-1", material="kem")
+        with self.svc.store._conn() as c:
+            c.execute("UPDATE image_jobs SET status='running' WHERE id=?", (j["id"],))
+        self.assertEqual(self.svc.store.mark_stale_jobs(), 1)
+        self.assertEqual(self.svc.store.get_job(j["id"])["status"], "error:interrupted")
 
 
 class TestAiExport(_Base):
@@ -528,20 +582,20 @@ class TestAiExport(_Base):
         r = self.svc.ai_export(self.did)
         doc = json.loads(Path(r["file"]).read_text(encoding="utf-8"))
         self.assertEqual(doc["schema"], "kitchen-ai-image-request/1.0")
-        self.assertEqual(doc["thietKe"]["revision"], self.svc.store.get(self.did)[1])
+        self.assertEqual(doc["design"]["revision"], self.svc.store.get(self.did)[1])
         self.assertEqual(len(doc["views"]), 8)
         v = next(x for x in doc["views"] if x["id"] == VIEW)
         self.assertIn("flat slab cabinet doors", v["prompt"], "giữ kiểu cánh phẳng (Gemini hay tự đổi sang khung)")
         self.assertEqual(v["camera"]["id"], f"CAM-{VIEW}")
         self.assertIn("modules", doc["threejs"])
-        self.assertTrue(any(m["tiengAnh"] for m in doc["vatLieu"]))
-        z = self.svc.ai_export(self.did, views=[VIEW, "day-dai"], with_images=True)
+        self.assertTrue(any(m["english"] for m in doc["material"]))
+        z = self.svc.ai_export(self.did, views=[VIEW, "long-run"], with_images=True)
         names = zipfile.ZipFile(z["zip"]).namelist()
         self.assertIn("ai-request.json", names)
         self.assertIn(f"{VIEW}/lines.png", names)
-        self.assertIn("day-dai/depth.png", names)
+        self.assertIn("long-run/depth.png", names)
         with self.assertRaises(ValueError):
-            self.svc.ai_export(self.did, views=["khong-co"])
+            self.svc.ai_export(self.did, views=["none"])
 
 
 class _FakeComfy(BaseHTTPRequestHandler):
@@ -612,34 +666,34 @@ class TestComfyUIAdapter(_Base):
 
     def test_edit_via_comfyui(self):
         _FakeComfy.fail = False
-        j = self.svc.images.create(self.did, VIEW, "TD1-canh-1", "matte sage green", backend="comfyui", seed=42)
+        j = self.svc.images.create(self.did, VIEW, "TD1-door-1", "matte sage green", backend="comfyui", seed=42)
         j = self.svc.images.wait(j["id"], 30)
-        self.assertEqual(j["status"], "can-duyet", j["error"])
+        self.assertEqual(j["status"], "needs-review", j["error"])
         p = list(_FakeComfy.prompts.values())[-1]
         self.assertEqual(p["7"]["inputs"]["seed"], 42)
         self.assertIn("matte sage green", p["4"]["inputs"]["text"])
-        self.assertTrue(j["result"]["report"]["ngoaiMask"]["datBaoToan"])
+        self.assertTrue(j["result"]["report"]["outsideMask"]["setPreserve"])
 
     def test_gen0_and_failure(self):
         _FakeComfy.fail = False
         g = self.svc.images.wait(self.svc.images.create(self.did, VIEW, kind="gen0", backend="comfyui")["id"], 30)
-        self.assertEqual(g["status"], "can-duyet", g["error"])
+        self.assertEqual(g["status"], "needs-review", g["error"])
         p = list(_FakeComfy.prompts.values())[-1]
         self.assertEqual((p["16"]["inputs"]["width"], p["16"]["inputs"]["height"]), (640, 480))
         self.svc.images.accept(g["id"])
-        self.assertEqual(self.svc.images.layers(self.did, VIEW)["anhGoc"]["jobId"], g["id"])
+        self.assertEqual(self.svc.images.layers(self.did, VIEW)["baseImage"]["jobId"], g["id"])
         _FakeComfy.fail = True
-        f = self.svc.images.wait(self.svc.images.create(self.did, VIEW, "TD1-canh-1", "x", backend="comfyui")["id"], 30)
-        self.assertEqual(f["status"], "loi:sinh-that-bai")
+        f = self.svc.images.wait(self.svc.images.create(self.did, VIEW, "TD1-door-1", "x", backend="comfyui")["id"], 30)
+        self.assertEqual(f["status"], "error:generation-failed")
         _FakeComfy.fail = False
 
     def test_multi_sequential(self):
         _FakeComfy.fail = False
         n0 = len(_FakeComfy.prompts)
-        j = self.svc.images.create(self.did, VIEW, backend="comfyui", tasks=[{"targetLayer": "TD1-canh-1", "instruction": "green"},
-                                                                             {"targetLayer": "TD1-canh-2", "instruction": "blue"}])
+        j = self.svc.images.create(self.did, VIEW, backend="comfyui", tasks=[{"targetLayer": "TD1-door-1", "instruction": "green"},
+                                                                             {"targetLayer": "TD1-door-2", "instruction": "blue"}])
         j = self.svc.images.wait(j["id"], 30)
-        self.assertEqual(j["status"], "can-duyet", j["error"])
+        self.assertEqual(j["status"], "needs-review", j["error"])
         self.assertEqual(len(_FakeComfy.prompts) - n0, 2, "mỗi việc một lần chạy")
         last = list(_FakeComfy.prompts.values())[-1]
         self.assertTrue(last["2"]["inputs"]["image"].endswith("_2_reference.png"))
@@ -649,8 +703,8 @@ class TestComfyUIAdapter(_Base):
         old = os.environ["COMFYUI_URL"]
         os.environ["COMFYUI_URL"] = "http://127.0.0.1:9"
         try:
-            f = self.svc.images.wait(self.svc.images.create(self.did, VIEW, "TD1-canh-1", "x", backend="comfyui")["id"], 30)
-            self.assertEqual(f["status"], "loi:qua-tai")
+            f = self.svc.images.wait(self.svc.images.create(self.did, VIEW, "TD1-door-1", "x", backend="comfyui")["id"], 30)
+            self.assertEqual(f["status"], "error:overloaded")
         finally:
             os.environ["COMFYUI_URL"] = old
 
@@ -691,7 +745,7 @@ class TestGeminiAdapter(_Base):
         cls.srv = ThreadingHTTPServer(("127.0.0.1", 0), _FakeGemini)
         threading.Thread(target=cls.srv.serve_forever, daemon=True).start()
         cls.envfile = cls.tmp / "mcp-image.env"
-        cls.envfile.write_text("GEMINI_API_KEY=khoa-thu\nGEMINI_IMAGE_MODEL=gemini-thu\n", encoding="utf-8")
+        cls.envfile.write_text("GEMINI_API_KEY=test-key\nGEMINI_IMAGE_MODEL=gemini-thu\n", encoding="utf-8")
         cls._old = {k: os.environ.get(k) for k in ("GEMINI_ENV_FILE", "GEMINI_BASE_URL", "GEMINI_API_KEY")}
         os.environ.pop("GEMINI_API_KEY", None)
         os.environ["GEMINI_ENV_FILE"] = str(cls.envfile)
@@ -711,28 +765,28 @@ class TestGeminiAdapter(_Base):
     def test_gen0_and_edit(self):
         _FakeGemini.mode = "ok"
         g = self._run(kind="gen0", instruction="warm evening light")
-        self.assertEqual(g["status"], "can-duyet", g["error"])
+        self.assertEqual(g["status"], "needs-review", g["error"])
         call = _FakeGemini.calls[-1]
-        self.assertEqual(call["key"], "khoa-thu")
+        self.assertEqual(call["key"], "test-key")
         self.assertIn("/models/gemini-thu:generateContent", call["path"])
         self.assertEqual(call["body"]["generationConfig"]["imageConfig"]["aspectRatio"], "4:3")
         self.assertIn("warm evening light", call["body"]["contents"][0]["parts"][0]["text"])
-        self.assertTrue(g["result"]["report"]["khopNet"]["khop"], "ảnh giữ nguyên hình học thì khớp nét")
+        self.assertTrue(g["result"]["report"]["lineMatch"]["khop"], "ảnh giữ nguyên hình học thì khớp nét")
         self.svc.images.accept(g["id"])
-        e = self._run(target="TD1-canh-1", vat_lieu="Laminate xanh rêu mờ")
-        self.assertEqual(e["status"], "can-duyet", e["error"])
+        e = self._run(target="TD1-door-1", material="Laminate xanh rêu mờ")
+        self.assertEqual(e["status"], "needs-review", e["error"])
         self.assertEqual(e["request"]["referenceImage"]["jobId"], g["id"])
         self.assertEqual(len([p for p in _FakeGemini.calls[-1]["body"]["contents"][0]["parts"] if "inline_data" in p]), 2)
         self.assertIn("sage green", e["result"]["geminiPrompt"])
         rep = e["result"]["report"]
-        self.assertTrue(rep["doiKichThuoc"])
-        self.assertTrue(rep["ngoaiMask"]["datBaoToan"])
+        self.assertTrue(rep["resize"])
+        self.assertTrue(rep["outsideMask"]["setPreserve"])
 
     def test_geometry_three_images(self):
         _FakeGemini.mode = "ok"
-        e = self.svc.images.wait(self.svc.images.create(self.did, VIEW, backend="gemini", kind="hinh",
-                                                        hinh_items=[{"loai": "xoa-module", "ma": "TD5"}])["id"], 30)
-        self.assertEqual(e["status"], "can-duyet", e["error"])
+        e = self.svc.images.wait(self.svc.images.create(self.did, VIEW, backend="gemini", kind="geometry_edit",
+                                                        geometry_items=[{"type": "remove-module", "id": "TD5"}])["id"], 30)
+        self.assertEqual(e["status"], "needs-review", e["error"])
         parts = _FakeGemini.calls[-1]["body"]["contents"][0]["parts"]
         self.assertEqual(len([p for p in parts if "inline_data" in p]), 3, "ảnh đánh dấu + mask + hình mẫu thiết kế mới")
         self.assertIn("IMAGE 3", parts[0]["text"])
@@ -740,9 +794,9 @@ class TestGeminiAdapter(_Base):
     def test_multi_one_call(self):
         _FakeGemini.mode = "ok"
         n0 = len(_FakeGemini.calls)
-        e = self._run(tasks=[{"targetLayer": "matTruoc:TD1", "vatLieu": "Laminate xanh rêu"},
-                             {"targetLayer": "tayNam:TD1", "vatLieu": "Đồng vàng"}])
-        self.assertEqual(e["status"], "can-duyet", e["error"])
+        e = self._run(tasks=[{"targetLayer": "frontSections:TD1", "material": "Laminate xanh rêu"},
+                             {"targetLayer": "handle:TD1", "material": "Đồng vàng"}])
+        self.assertEqual(e["status"], "needs-review", e["error"])
         self.assertEqual(len(_FakeGemini.calls) - n0, 1, "nhiều việc, một lần gọi Gemini")
         text = _FakeGemini.calls[-1]["body"]["contents"][0]["parts"][0]["text"]
         self.assertIn("Region 1 (RED outline): the cabinet door front in the", text)
@@ -755,41 +809,41 @@ class TestGeminiAdapter(_Base):
         im = self.svc.images
         n0 = len(_FakeGemini.calls)
         j = im.create(self.did, VIEW, backend="gemini", preview=True,
-                      tasks=[{"targetLayer": "matTruoc:TD1", "vatLieu": "Laminate xanh rêu"}, {"targetLayer": "tayNam:TD1", "vatLieu": "Đồng vàng"}])
-        self.assertEqual(j["status"], "cho-gui")
+                      tasks=[{"targetLayer": "frontSections:TD1", "material": "Laminate xanh rêu"}, {"targetLayer": "handle:TD1", "material": "Đồng vàng"}])
+        self.assertEqual(j["status"], "awaiting-send")
         self.assertEqual(len(_FakeGemini.calls), n0, "xem trước: chưa gọi Gemini")
         req = json.loads((Path(j["result"]["dir"]) / "request.json").read_text(encoding="utf-8"))
         s = im.wait(im.send(j["id"])["id"], 30)
-        self.assertEqual(s["status"], "can-duyet", s["error"])
+        self.assertEqual(s["status"], "needs-review", s["error"])
         sent = _FakeGemini.calls[-1]["body"]["contents"][0]["parts"]
-        self.assertEqual(sent[0]["text"], req["chiDan"], "gửi đúng chỉ dẫn đã xem trước")
-        self.assertEqual(sent[1]["inline_data"]["data"], req["anhDinhKem"][0]["dataUrl"].split(",")[1], "gửi đúng ảnh gốc đã xem trước")
+        self.assertEqual(sent[0]["text"], req["instruction"], "gửi đúng chỉ dẫn đã xem trước")
+        self.assertEqual(sent[1]["inline_data"]["data"], req["attachedImages"][0]["dataUrl"].split(",")[1], "gửi đúng ảnh gốc đã xem trước")
         api = json.loads((Path(j["result"]["dir"]) / "gemini-request.json").read_text(encoding="utf-8"))
         self.assertEqual(api["contents"], _FakeGemini.calls[-1]["body"]["contents"], "gemini-request.json = đúng thân request đã gửi")
         with self.assertRaises(ValueError):
             im.send(j["id"])
-        h = im.create(self.did, VIEW, "TD1-canh-1", "x", backend="gemini", preview=True)
-        self.assertEqual(im.reject(h["id"])["status"], "tu-choi")
-        k = im.create(self.did, VIEW, "TD1-canh-1", "x", backend="gemini", preview=True)
-        self.svc.apply(self.did, {"op": "update", "ma": "TD1", "thayDoi": {"cao": 700}}, None, "test")
+        h = im.create(self.did, VIEW, "TD1-door-1", "x", backend="gemini", preview=True)
+        self.assertEqual(im.reject(h["id"])["status"], "rejected")
+        k = im.create(self.did, VIEW, "TD1-door-1", "x", backend="gemini", preview=True)
+        self.svc.apply(self.did, {"op": "update", "id": "TD1", "changes": {"height": 700}}, None, "test")
         with self.assertRaises(ValueError) as e:
             im.send(k["id"])
         self.assertIn("đổi hình học", str(e.exception))
 
     def test_errors(self):
         _FakeGemini.mode = "429"
-        self.assertEqual(self._run(target="TD1-canh-1", instruction="x")["status"], "loi:qua-tai")
+        self.assertEqual(self._run(target="TD1-door-1", instruction="x")["status"], "error:overloaded")
         _FakeGemini.mode = "noimage"
-        f = self._run(target="TD1-canh-1", instruction="x")
-        self.assertEqual(f["status"], "loi:sinh-that-bai")
+        f = self._run(target="TD1-door-1", instruction="x")
+        self.assertEqual(f["status"], "error:generation-failed")
         self.assertIn("SAFETY", f["error"])
         _FakeGemini.mode = "ok"
         old = os.environ.pop("GEMINI_ENV_FILE")
         try:
-            self.assertEqual(self._run(target="TD1-canh-1", instruction="x")["status"], "loi:khong-ho-tro")
+            self.assertEqual(self._run(target="TD1-door-1", instruction="x")["status"], "error:unsupported")
         finally:
             os.environ["GEMINI_ENV_FILE"] = old
-        self.assertNotIn("khoa-thu", json.dumps(self.svc.images.list(self.did)), "không lộ khóa trong job")
+        self.assertNotIn("test-key", json.dumps(self.svc.images.list(self.did)), "không lộ khóa trong job")
 
 
 class TestHttpApi(_Base):
@@ -808,20 +862,20 @@ class TestHttpApi(_Base):
         try:
             data, _ = call(f"/api/designs/{self.did}/layers?view={VIEW}")
             self.assertTrue(json.loads(data)["layers"])
-            png, ct = call(f"/api/designs/{self.did}/mask?view={VIEW}&layer=TD1-canh-1")
+            png, ct = call(f"/api/designs/{self.did}/mask?view={VIEW}&layer=TD1-door-1")
             self.assertEqual(ct, "image/png")
             self.assertTrue((np.array(Image.open(io.BytesIO(png))) > 0).any())
             j = json.loads(call(f"/api/designs/{self.did}/image-jobs",
-                                {"view": VIEW, "targetLayer": "loai:mat-da", "backend": "goi-job", "vatLieu": "Đá đen"})[0])
+                                {"view": VIEW, "targetLayer": "type:countertop", "backend": "job-package", "material": "Đá đen"})[0])
             ref = Image.open(Path(j["result"]["dir"]) / "reference.png")
             buf = io.BytesIO(); Image.new("RGB", ref.size, (20, 20, 20)).save(buf, "PNG")
             r = json.loads(call(f"/api/image-jobs/{j['id']}/result", {"imageBase64": base64.b64encode(buf.getvalue()).decode()})[0])
-            self.assertEqual(r["status"], "can-duyet")
+            self.assertEqual(r["status"], "needs-review")
             ck = json.loads(call("/api/check-request", {"text": '{"schema": "kitchen-ai-edit-request/2.0", "chiDan": "x", "anhDinhKem": [{"thuTu": 1, "da'})[0])
             self.assertFalse(ck["ok"])
-            a = json.loads(call(f"/api/image-jobs/{j['id']}/accept", {"apVaoThietKe": True})[0])
-            self.assertEqual(a["result"]["thietKe"]["phamVi"], "toàn bộ mặt đá")
-            self.assertEqual(self.svc.store.get(self.did)[0].chung.vatLieu["matDa"], "Đá đen")
+            a = json.loads(call(f"/api/image-jobs/{j['id']}/accept", {"applyToDesign": True})[0])
+            self.assertEqual(a["result"]["design"]["scope"], "toàn bộ mặt đá")
+            self.assertEqual(self.svc.store.get(self.did)[0].common.material["countertop"], "Đá đen")
             lst = json.loads(call(f"/api/image-jobs?design={self.did}")[0])
             self.assertTrue(any(x["id"] == j["id"] for x in lst))
         finally:

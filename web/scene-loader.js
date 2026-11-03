@@ -12,7 +12,7 @@ export function buildKitchen(doc, THREE, opts = {}) {
   const mats = new Map();
   for (const m of doc.materials || []) mats.set(m.id, makeMaterial(m, THREE));
   const fallback = new THREE.MeshStandardMaterial({ color: 0xcccccc });
-  const mat = (id) => mats.get(id) || fallback;
+  const material_text = (id) => mats.get(id) || fallback;
   const edgeMat = new THREE.LineBasicMaterial({ color: 0x3a3630 });
   const root = new THREE.Group(); root.name = doc.metadata?.projectName || 'Kitchen';
   const byModule = new Map(); const pickables = [];
@@ -46,22 +46,22 @@ export function buildKitchen(doc, THREE, opts = {}) {
     const a = w.start, b = w.end;
     const len = Math.hypot(b.x - a.x, b.z - a.z);
     const n = w.interiorNormal || { x: 0, y: 0, z: 1 };
-    const wallMat = mat(w.materialId).clone();
+    const wallMat = material_text(w.materialId).clone();
     if (!opts.opaqueWalls) { wallMat.transparent = true; wallMat.opacity = 0.35; }
     const geo = new THREE.BoxGeometry(len * s, w.height * s, w.thickness * s);
     const mesh = new THREE.Mesh(geo, wallMat);
     const ang = Math.atan2(-(b.z - a.z), b.x - a.x);
     mesh.rotation.y = ang;
     mesh.position.set(((a.x + b.x) / 2 - n.x * w.thickness / 2) * s, w.height * s / 2, ((a.z + b.z) / 2 - n.z * w.thickness / 2) * s);
-    mesh.userData = { loai: 'tuong', wallId: w.id }; mesh.receiveShadow = true;
+    mesh.userData = { type: 'wall', wallId: w.id }; mesh.receiveShadow = true;
     room.add(mesh);
   }
   if (doc.room?.dimensions) {
     const d = doc.room.dimensions;
-    const floor = new THREE.Mesh(new THREE.PlaneGeometry(d.width * s + 2, d.depth * s + 2), mat(doc.room.floor?.materialId));
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(d.width * s + 2, d.depth * s + 2), material_text(doc.room.floor?.materialId));
     floor.rotation.x = -Math.PI / 2;
     floor.position.set(-d.width * s / 2, 0, d.depth * s / 2);
-    floor.receiveShadow = true; floor.userData = { loai: 'san' };
+    floor.receiveShadow = true; floor.userData = { type: 'floor' };
     room.add(floor);
   }
 
@@ -72,16 +72,16 @@ export function buildKitchen(doc, THREE, opts = {}) {
     g.name = m.id; g.userData = { module: m.sourceRef || m.id, moduleId: m.id };
     const info = { module: m.sourceRef || m.id };
     for (const p of m.parts || []) {
-      const { group, mesh } = box(p.dimensions, mat(p.materialId), p.transform, { ...info, role: p.role, semanticClass: p.semanticClass });
+      const { group, mesh } = box(p.dimensions, material_text(p.materialId), p.transform, { ...info, role: p.role, semanticClass: p.semanticClass });
       g.add(group); pickables.push(mesh);
     }
     for (const d of [...(m.doors || []), ...(m.drawers || [])]) {
-      const { group, mesh } = box(d.dimensions, mat(d.materialId), d.transform, { ...info, role: d.hingeSide ? 'door' : 'drawer' });
+      const { group, mesh } = box(d.dimensions, material_text(d.materialId), d.transform, { ...info, role: d.hingeSide ? 'door' : 'drawer' });
       if (d.openingAngle && d.hingeSide) openDoor(group, d, s);
       const h = d.hardware;
       if (h && h.transform) {
         const hd = h.dimensions || { width: 12, height: 160, depth: 30 };
-        group.add(box(hd, mat(h.materialId), h.transform, { ...info, role: 'handle' }, false).group);
+        group.add(box(hd, material_text(h.materialId), h.transform, { ...info, role: 'handle' }, false).group);
       }
       g.add(group); pickables.push(mesh);
     }
@@ -92,7 +92,7 @@ export function buildKitchen(doc, THREE, opts = {}) {
   for (const dec of doc.decorations || []) {
     const profile = assetById.get(dec.assetId)?.parameters?.profile;
     if (!dec.path?.points || !profile) continue;
-    const mesh = sweepMesh(profile, dec.path.points, THREE, s, mat(dec.materialId));
+    const mesh = sweepMesh(profile, dec.path.points, THREE, s, material_text(dec.materialId));
     mesh.userData = { module: dec.sourceRef || dec.id, role: dec.type, semanticClass: 'molding' };
     const g = place(new THREE.Group(), dec.transform);
     g.name = dec.id; g.add(mesh); root.add(g); pickables.push(mesh);
@@ -100,7 +100,7 @@ export function buildKitchen(doc, THREE, opts = {}) {
   // thiết bị, phụ kiện, trang trí dạng hộp
   for (const a of [...(doc.appliances || []), ...(doc.accessories || []), ...(doc.decorations || []).filter((d) => !d.path)]) {
     if (!a.dimensions) continue;
-    const { group, mesh } = box(a.dimensions, mat(a.materialId), a.transform, { module: a.sourceRef || a.id, role: a.type });
+    const { group, mesh } = box(a.dimensions, material_text(a.materialId), a.transform, { module: a.sourceRef || a.id, role: a.type });
     group.name = a.id; root.add(group); pickables.push(mesh);
   }
 
@@ -195,17 +195,17 @@ function makeMaterial(m, THREE) {
   if (m.side) p.side = THREE[m.side];
   if (m.emissive) Object.assign(p, { emissive: new THREE.Color(m.emissive), emissiveIntensity: m.emissiveIntensity ?? 1 });
   if (Type === THREE.MeshPhongMaterial) { delete p.roughness; delete p.metalness; }
-  const mat = new Type(p);
+  const material_text = new Type(p);
   if (m.map) {
     const tex = new THREE.TextureLoader().load(m.map);
     tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
     const r = m.textureRepeat || (m.repeat ? { u: m.repeat.x, v: m.repeat.y } : null);
     if (r) tex.repeat.set(r.u, r.v);
     if (m.textureRotation) tex.rotation = (m.textureRotation * Math.PI) / 180;
-    mat.map = tex;
+    material_text.map = tex;
   }
-  mat.name = m.id;
-  return mat;
+  material_text.name = m.id;
+  return material_text;
 }
 
 // mở cánh quanh cạnh bản lề (dùng cho minh họa)
