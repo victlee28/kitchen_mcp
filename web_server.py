@@ -153,14 +153,22 @@ class Handler(BaseHTTPRequestHandler):
             if not prompt:
                 raise ApiError(400, "customer_prompt không được rỗng")
             return self._json(200, s.create_from_prompt(prompt))
+        if p == "/api/floorplans/import" and method == "POST":
+            b = self._body()
+            floorplan = b.get("floorplan")
+            if not isinstance(floorplan, dict):
+                raise ApiError(400, "floorplan must be a JSON object")
+            return self._json(201, s.import_floorplan(floorplan, b.get("name"), b.get("roomId")))
+        if p == "/api/floorplans/rooms" and method == "POST":
+            b = self._body(MAX_BODY)
+            floorplan = b.get("floorplan")
+            if not isinstance(floorplan, dict):
+                raise ApiError(400, "floorplan must be a JSON object")
+            return self._json(200, {"rooms": s.list_floorplan_rooms(floorplan)})
         if p == "/api/check-request" and method == "POST":
-            from kitchen import request_check
-            return self._json(200, request_check.check_text(str(self._body(MAX_IMAGE_BODY).get("text", ""))))
+            return self._json(200, s.check_request(str(self._body(MAX_IMAGE_BODY).get("text", ""))))
         if p == "/api/image-backends" and method == "GET":
-            from kitchen import backends, geometry_edit
-            return self._json(200, {"backends": backends.BACKENDS, "workflows": backends.workflow_names(), "operation": geometry_edit.OPERATIONS, "lighting": __import__("kitchen.realism", fromlist=["x"]).LIGHTING_VI,
-                                    "default": os.getenv("KITCHEN_IMAGE_BACKEND") or "recolor",
-                                    "comfyuiUrl": os.getenv("COMFYUI_URL", "http://127.0.0.1:8188")})
+            return self._json(200, s.image_backends())
         if p == "/api/image-jobs" and method == "GET":
             return self._json(200, [self._job_out(j) for j in s.images.list(q.get("design"), q.get("view"), q.get("status"))])
         m = re.fullmatch(r"/api/image-jobs/(job-[a-f0-9]+)(?:/(result|accept|reject|regenerate|request|send))?", p)
@@ -201,7 +209,7 @@ class Handler(BaseHTTPRequestHandler):
                 b = self._body()
                 return self._json(201, self._job_out(s.images.regenerate(jid, b.get("seed"))))
             raise ApiError(405, "Phương thức không hỗ trợ")
-        m = re.fullmatch(r"/api/designs/([a-z0-9-]+)(?:/(scene|threejs|validate|history|ops|revert|render|layers|mask|pick|image-jobs|beauty|base-image|ai-export))?", p)
+        m = re.fullmatch(r"/api/designs/([a-z0-9-]+)(?:/(scene|threejs|validate|history|ops|revert|render|layers|mask|pick|image-jobs|beauty|base-image|ai-export|floorplan-bind|view-status|regenerate-stale))?", p)
         if not m:
             raise ApiError(404, "Không có endpoint")
         did, sub = m.groups()
@@ -229,6 +237,8 @@ class Handler(BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(body)
                 return
+            if sub == "view-status":
+                return self._json(200, {"views": s.images.view_status(did, rev)})
             if sub == "layers":
                 res = s.images.layers(did, self._need(q, "view"), rev, q.get("all") == "1")
                 res["url"] = self._url(res.pop("dir"))
@@ -240,6 +250,12 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(200, s.images.pick(did, self._need(q, "view"), int(self._need(q, "x")), int(self._need(q, "y")), rev, int(q.get("radius") or 0)))
         if method == "POST":
             b = self._body(MAX_IMAGE_BODY if sub in ("beauty", "base-image") else MAX_BODY)
+            if sub == "regenerate-stale":
+                return self._json(201, s.images.regenerate_stale(did, b.get("views") if isinstance(b.get("views"), list) else None,
+                                                                 b.get("backend") or "recolor", b.get("baseRev")))
+            if sub == "floorplan-bind":
+                be = b.get("backEdge")
+                return self._json(200, s.bind_floorplan(did, int(be) if be is not None else None, float(b.get("offset") or 0), b.get("rev")))
             if sub == "beauty":
                 try:
                     raw = base64.b64decode(str(b.get("imageBase64", "")).split(",")[-1], validate=True)

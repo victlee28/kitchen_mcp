@@ -190,7 +190,7 @@ class TestReachesTheOutputs(unittest.TestCase):
         self.assertEqual(d["styleTags"], ["Japandi"])
         self.assertTrue(d["promptInterpretation"])
         doc = threejs_export.export(spec, "d", 1)
-        self.assertEqual(doc["schemaVersion"], "1.2.0")
+        self.assertEqual(doc["schemaVersion"], "1.3.0")
         self.assertEqual(doc["metadata"]["styleTags"], ["Japandi"])
         self.assertEqual(threejs_export.integrity(doc), [])
         mats = {m["id"]: m for m in doc["materials"]}

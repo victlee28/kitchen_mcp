@@ -1,0 +1,324 @@
+{
+  "contractVersion": "2.1",
+  "kind": "floorplan-audited",
+  "planId": "mau-du-lieu",
+  "version": 1,
+  "publishedBy": "mau",
+  "timestamp": 1793664000,
+  "n_edits": 0,
+  "source": {
+    "file": "mau-du-lieu.pdf",
+    "page": 1,
+    "sha256": "9c6bbd8cf5f44b218cf7e2dc3e4e5467e5865c5aa0892277796fd056dd3dacbe"
+  },
+  "unit": "cm",
+  "frame": {
+    "unit": "cm",
+    "x": "toi",
+    "y": "phai",
+    "z": "len",
+    "handed": "trai",
+    "origin": "goc-ngoai-duoi-trai-cong-trinh",
+    "origin_note": null,
+    "page_origin_mm": [5140, 8060],
+    "page_scale": 0.1,
+    "swap_xy": true,
+    "rev": 1
+  },
+  "catalog": {
+    "id": "floorplan",
+    "version": "2.0.0"
+  },
+  "elements": [
+    {
+      "id": "column_001",
+      "kind": "column",
+      "fields": {
+        "geometry": {"value": {"outline": [[2, 6], [52, 6], [52, 46], [2, 46]], "bbox": [2, 6, 52, 46], "center": [27, 26]}, "source": "human", "confidence": 1, "status": "edited"},
+        "tag": {"value": "column", "source": "ai", "confidence": 0.85, "status": "unreviewed"},
+        "label": {"value": null, "source": "ai", "confidence": 0.85, "status": "unreviewed"}
+      }
+    },
+    {
+      "id": "opening_002",
+      "kind": "opening",
+      "fields": {
+        "geometry": {"value": {"outline": [[337, 1403.14], [351, 1403.14], [351, 1477.9], [337, 1477.9]], "bbox": [337, 1403.14, 351, 1477.9], "center": [344, 1440.52], "width": 74.76, "hinge": [337.41, 1403.14], "swing": [[337.17, 1477.92], [347.16, 1477.28], [356.81, 1475.34], [365.82, 1472.13], [374.84, 1467.94], [382.88, 1462.47], [390.28, 1456.04], [396.71, 1448.63], [402.2, 1440.58], [406.38, 1431.9], [409.6, 1422.56], [411.53, 1412.91], [412.17, 1402.92]]}, "source": "human", "confidence": 1, "status": "edited"},
+        "tag": {"value": "door", "source": "ai", "confidence": 0.92, "status": "confirmed"},
+        "label": {"value": null, "source": "ai", "confidence": 0.92, "status": "unreviewed"},
+        "elev": {"value": {"base": 0, "height": 220}, "source": "human", "confidence": 1, "status": "edited"}
+      }
+    },
+    {
+      "id": "furniture_001",
+      "kind": "furniture",
+      "fields": {
+        "geometry": {"value": {"outline": [[13, 1068], [25, 1068], [25, 1035], [43.72, 1035.07], [44, 1370], [26, 1370], [26, 1361], [15, 1361]], "bbox": [13, 1035, 44, 1370], "center": [28.5, 1202.5]}, "source": "human", "confidence": 1, "status": "edited"},
+        "tag": {"value": "cabinet", "source": "ai", "confidence": 0.9, "status": "confirmed"},
+        "label": {"value": "TỦ RƯỢU", "source": "ai", "confidence": 0.9, "status": "confirmed"},
+        "elev": {"value": {"base": 0, "height": null}, "source": "human", "confidence": 1, "status": "edited"}
+      }
+    },
+    {
+      "id": "shaft_001",
+      "kind": "shaft",
+      "fields": {
+        "geometry": {"value": {"outline": [[24.81, 878.4], [234.16, 878.4], [234.16, 1028.05], [159.06, 1028.05], [25, 1028]], "bbox": [24.81, 878.4, 234.16, 1028.05], "center": [129.48, 953.22]}, "source": "human", "confidence": 1, "status": "edited"},
+        "tag": {"value": "elevator_shaft", "source": "ai", "confidence": 0.92, "status": "confirmed"},
+        "label": {"value": "THANG KÍNH", "source": "ai", "confidence": 0.92, "status": "unreviewed"}
+      }
+    },
+    {
+      "id": "furniture_003",
+      "kind": "furniture",
+      "fields": {
+        "geometry": {"value": {"outline": [[147.45, 1497.8], [338.43, 1497.8], [338.43, 1557.76], [147.45, 1557.76]], "bbox": [147.45, 1497.8, 338.43, 1557.76], "center": [242.94, 1527.78]}, "source": "human", "confidence": 1, "status": "edited"},
+        "tag": {"value": "cabinet_kitchen_set", "source": "human", "confidence": 1, "status": "edited"},
+        "label": {"value": "Tủ bếp", "source": "human", "confidence": 1, "status": "edited"}
+      }
+    },
+    {
+      "id": "furniture_017",
+      "kind": "furniture",
+      "fields": {
+        "geometry": {"value": {"outline": [[427.57, 1068.03], [487, 1068], [487, 1361], [475, 1361], [475, 1370], [427.57, 1370.3]], "bbox": [427.57, 1068, 487, 1370.3], "center": [457.28, 1219.15]}, "source": "human", "confidence": 1, "status": "edited"},
+        "tag": {"value": "cabinet_kitchen_set", "source": "human", "confidence": 1, "status": "edited"},
+        "label": {"value": "Tủ bếp 2", "source": "human", "confidence": 1, "status": "edited"}
+      }
+    },
+    {
+      "id": "furniture_019",
+      "kind": "furniture",
+      "fields": {
+        "geometry": {"value": {"outline": [[434.05, 1392.18], [489, 1393], [488.89, 1471.86], [434.05, 1471.86]], "bbox": [434.05, 1392.18, 489, 1471.86], "center": [461.52, 1432.02]}, "source": "human", "confidence": 1, "status": "edited"},
+        "tag": {"value": "cabinet", "source": "ai", "confidence": 0.6, "status": "confirmed"},
+        "label": {"value": null, "source": "ai", "confidence": 0.6, "status": "unreviewed"}
+      }
+    },
+    {
+      "id": "furniture_021",
+      "kind": "furniture",
+      "fields": {
+        "geometry": {"value": {"outline": [[441, 143], [476, 143], [476, 541], [441, 541]], "bbox": [441, 143, 476, 541], "center": [458.5, 342]}, "source": "human", "confidence": 1, "status": "edited"},
+        "tag": {"value": "cabinet", "source": "human", "confidence": 1, "status": "edited"},
+        "label": {"value": "Vách TV", "source": "human", "confidence": 1, "status": "edited"}
+      }
+    },
+    {
+      "id": "room_003",
+      "kind": "area",
+      "fields": {
+        "geometry": {"value": {"outline": [[15, 439], [16, 47], [52, 46], [52, 6], [448, 6], [448, 48], [487.09, 45.97], [487, 440], [474, 440], [475, 609], [26, 609], [25, 439]], "bbox": [15, 6, 487.09, 609], "center": [251.04, 307.5]}, "source": "human", "confidence": 1, "status": "edited"},
+        "tag": {"value": "room", "source": "ai", "confidence": 0.85, "status": "unreviewed"},
+        "label": {"value": "PHÒNG KHÁCH", "source": "ai", "confidence": 0.85, "status": "unreviewed"}
+      }
+    },
+    {
+      "id": "stair_001",
+      "kind": "stair",
+      "fields": {
+        "geometry": {"value": {"outline": [[24.81, 609.09], [234.16, 609.09], [234.16, 878.4], [24.81, 878.4]], "bbox": [24.81, 609.09, 234.16, 878.4], "center": [129.48, 743.75], "arrow": [[129.48, 649.49], [129.48, 838]]}, "source": "script", "confidence": 0.95, "status": "confirmed"},
+        "tag": {"value": "stair", "source": "ai", "confidence": 0.9, "status": "confirmed"},
+        "label": {"value": null, "source": "ai", "confidence": 0.9, "status": "unreviewed"}
+      }
+    },
+    {
+      "id": "wall_006",
+      "kind": "wall",
+      "fields": {
+        "geometry": {"value": {"outline": [[1, 46], [15, 46], [15, 438], [1, 438]], "bbox": [1, 46, 15, 438], "center": [8, 242], "p1": [8, 46], "p2": [8, 438], "thickness": 14}, "source": "human", "confidence": 1, "status": "edited"},
+        "tag": {"value": "wall", "source": "ai", "confidence": 0.9, "status": "unreviewed"},
+        "label": {"value": null, "source": "ai", "confidence": 0.9, "status": "unreviewed"}
+      }
+    },
+    {
+      "id": "wall_003",
+      "kind": "wall",
+      "fields": {
+        "geometry": {"value": {"outline": [[1, 480], [25, 480], [25, 1027], [1, 1027]], "bbox": [1, 480, 25, 1027], "center": [13, 753.5], "p1": [13, 480], "p2": [13, 1027], "thickness": 24}, "source": "human", "confidence": 1, "status": "edited"},
+        "tag": {"value": "wall", "source": "ai", "confidence": 0.9, "status": "unreviewed"},
+        "label": {"value": null, "source": "ai", "confidence": 0.9, "status": "unreviewed"}
+      }
+    },
+    {
+      "id": "wall_009",
+      "kind": "wall",
+      "fields": {
+        "geometry": {"value": {"outline": [[302, 1369], [476, 1369], [476, 1393], [302, 1393]], "bbox": [302, 1369, 476, 1393], "center": [389, 1381], "p1": [302, 1381], "p2": [476, 1381], "thickness": 24}, "source": "human", "confidence": 1, "status": "edited"},
+        "tag": {"value": "wall", "source": "ai", "confidence": 0.9, "status": "unreviewed"},
+        "label": {"value": null, "source": "ai", "confidence": 0.9, "status": "unreviewed"}
+      }
+    },
+    {
+      "id": "wall_010",
+      "kind": "wall",
+      "fields": {
+        "geometry": {"value": {"outline": [[337, 1478], [351, 1478], [351, 1558], [337, 1558]], "bbox": [337, 1478, 351, 1558], "center": [344, 1518], "p1": [344, 1478], "p2": [344, 1558], "thickness": 14}, "source": "human", "confidence": 1, "status": "edited"},
+        "tag": {"value": "wall", "source": "ai", "confidence": 0.95, "status": "confirmed"},
+        "label": {"value": null, "source": "ai", "confidence": 0.95, "status": "unreviewed"}
+      }
+    },
+    {
+      "id": "wall_002",
+      "kind": "wall",
+      "fields": {
+        "geometry": {"value": {"outline": [[336, 1559], [500, 1559], [500, 1573], [336, 1573]], "bbox": [336, 1559, 500, 1573], "center": [418, 1566], "p1": [336, 1566], "p2": [500, 1566], "thickness": 14}, "source": "script", "confidence": 0.95, "status": "confirmed"},
+        "tag": {"value": "wall", "source": "ai", "confidence": 0.95, "status": "confirmed"},
+        "label": {"value": null, "source": "ai", "confidence": 0.95, "status": "unreviewed"}
+      }
+    },
+    {
+      "id": "wall_011",
+      "kind": "wall",
+      "fields": {
+        "geometry": {"value": {"outline": [[475, 478], [499, 478], [499, 1030], [475, 1030]], "bbox": [475, 478, 499, 1030], "center": [487, 754], "p1": [487, 478], "p2": [487, 1030], "thickness": 24}, "source": "script", "confidence": 0.95, "status": "confirmed"},
+        "tag": {"value": "wall", "source": "ai", "confidence": 0.9, "status": "confirmed"},
+        "label": {"value": null, "source": "ai", "confidence": 0.9, "status": "unreviewed"}
+      }
+    },
+    {
+      "id": "wall_015",
+      "kind": "wall",
+      "fields": {
+        "geometry": {"value": {"outline": [[487, 46], [499, 46], [499, 440], [487, 440]], "bbox": [487, 46, 499, 440], "center": [493, 243], "p1": [493, 46], "p2": [493, 440], "thickness": 12}, "source": "human", "confidence": 1, "status": "edited"},
+        "tag": {"value": "wall", "source": "ai", "confidence": 0.92, "status": "confirmed"},
+        "label": {"value": null, "source": "ai", "confidence": 0.92, "status": "unreviewed"}
+      }
+    },
+    {
+      "id": "wall_012",
+      "kind": "wall",
+      "fields": {
+        "geometry": {"value": {"outline": [[486, 1394], [500, 1394], [500, 1408], [486, 1408]], "bbox": [486, 1394, 500, 1408], "center": [493, 1401], "p1": [493, 1394], "p2": [493, 1408], "thickness": 14}, "source": "human", "confidence": 1, "status": "edited"},
+        "tag": {"value": "wall", "source": "ai", "confidence": 0.95, "status": "confirmed"},
+        "label": {"value": null, "source": "ai", "confidence": 0.95, "status": "unreviewed"}
+      }
+    },
+    {
+      "id": "wall_013",
+      "kind": "wall",
+      "fields": {
+        "geometry": {"value": {"outline": [[487, 1068], [499, 1068], [499, 1364], [487, 1364]], "bbox": [487, 1068, 499, 1364], "center": [493, 1216], "p1": [493, 1068], "p2": [493, 1364], "thickness": 12}, "source": "script", "confidence": 0.95, "status": "confirmed"},
+        "tag": {"value": "wall", "source": "ai", "confidence": 0.9, "status": "confirmed"},
+        "label": {"value": null, "source": "ai", "confidence": 0.9, "status": "unreviewed"}
+      }
+    },
+    {
+      "id": "wall_h02",
+      "kind": "wall",
+      "fields": {
+        "geometry": {"value": {"outline": [[1, 1070], [15, 1070], [15, 1361], [1, 1361]], "bbox": [1, 1070, 15, 1361], "center": [8, 1215.5], "p1": [8, 1070], "p2": [8, 1361], "thickness": 14}, "source": "human", "confidence": 1, "status": "edited"},
+        "tag": {"value": "wall", "source": "human", "confidence": 1, "status": "edited"},
+        "label": {"value": null, "source": "human", "confidence": 1, "status": "edited"}
+      }
+    },
+    {
+      "id": "wall_h03",
+      "kind": "wall",
+      "fields": {
+        "geometry": {"value": {"outline": [[2, 1394], [16, 1394], [16, 1409], [2, 1409]], "bbox": [2, 1394, 16, 1409], "center": [9, 1401.5], "p1": [9, 1394], "p2": [9, 1409], "thickness": 14}, "source": "human", "confidence": 1, "status": "edited"},
+        "tag": {"value": "wall", "source": "human", "confidence": 1, "status": "edited"},
+        "label": {"value": null, "source": "human", "confidence": 1, "status": "edited"}
+      }
+    },
+    {
+      "id": "wall_h04",
+      "kind": "wall",
+      "fields": {
+        "geometry": {"value": {"outline": [[26, 1369], [55, 1369], [55, 1393], [26, 1393]], "bbox": [26, 1369, 55, 1393], "center": [40.5, 1381], "p1": [26, 1381], "p2": [55, 1381], "thickness": 24}, "source": "human", "confidence": 1, "status": "edited"},
+        "tag": {"value": "wall", "source": "human", "confidence": 1, "status": "edited"},
+        "label": {"value": null, "source": "human", "confidence": 1, "status": "edited"}
+      }
+    },
+    {
+      "id": "wall_h05",
+      "kind": "wall",
+      "fields": {
+        "geometry": {"value": {"outline": [[147, 1370], [184, 1370], [184, 1394], [147, 1394]], "bbox": [147, 1370, 184, 1394], "center": [165.5, 1382], "p1": [147, 1382], "p2": [184, 1382], "thickness": 24}, "source": "human", "confidence": 1, "status": "edited"},
+        "tag": {"value": "wall", "source": "human", "confidence": 1, "status": "edited"},
+        "label": {"value": null, "source": "human", "confidence": 1, "status": "edited"}
+      }
+    },
+    {
+      "id": "wall_h06",
+      "kind": "wall",
+      "fields": {
+        "geometry": {"value": {"outline": [[486, 1408], [500, 1408], [500, 1560], [486, 1560]], "bbox": [486, 1408, 500, 1560], "center": [493, 1484], "p1": [493, 1408], "p2": [493, 1560], "thickness": 14}, "source": "human", "confidence": 1, "status": "edited"},
+        "tag": {"value": "wall", "source": "human", "confidence": 1, "status": "edited"},
+        "label": {"value": null, "source": "human", "confidence": 1, "status": "edited"}
+      }
+    },
+    {
+      "id": "wall_h07",
+      "kind": "wall",
+      "fields": {
+        "geometry": {"value": {"outline": [[337, 1393], [351, 1393], [351, 1403], [337, 1403]], "bbox": [337, 1393, 351, 1403], "center": [344, 1398], "p1": [344, 1393], "p2": [344, 1403], "thickness": 14}, "source": "human", "confidence": 1, "status": "edited"},
+        "tag": {"value": "wall", "source": "human", "confidence": 1, "status": "edited"},
+        "label": {"value": null, "source": "human", "confidence": 1, "status": "edited"}
+      }
+    },
+    {
+      "id": "wall_h08",
+      "kind": "wall",
+      "fields": {
+        "geometry": {"value": {"outline": [[1, 1559], [336, 1559], [336, 1573], [1, 1573]], "bbox": [1, 1559, 336, 1573], "center": [168.5, 1566], "p1": [1, 1566], "p2": [336, 1566], "thickness": 14}, "source": "human", "confidence": 1, "status": "edited"},
+        "tag": {"value": "wall", "source": "human", "confidence": 1, "status": "edited"},
+        "label": {"value": null, "source": "human", "confidence": 1, "status": "edited"}
+      }
+    },
+    {
+      "id": "wall_h09",
+      "kind": "wall",
+      "fields": {
+        "geometry": {"value": {"outline": [[2, 1409], [16, 1409], [16, 1558], [2, 1558]], "bbox": [2, 1409, 16, 1558], "center": [9, 1483.5], "p1": [9, 1409], "p2": [9, 1558], "thickness": 14}, "source": "human", "confidence": 1, "status": "edited"},
+        "tag": {"value": "wall", "source": "human", "confidence": 1, "status": "edited"},
+        "label": {"value": null, "source": "human", "confidence": 1, "status": "edited"}
+      }
+    },
+    {
+      "id": "wall_h10",
+      "kind": "wall",
+      "fields": {
+        "geometry": {"value": {"outline": [[54, 5.5], [451, 5.5], [451, 46.5], [54, 46.5]], "bbox": [54, 5.5, 451, 46.5], "center": [252.5, 26], "p1": [54, 26], "p2": [451, 26], "thickness": 41}, "source": "human", "confidence": 1, "status": "edited"},
+        "tag": {"value": "wall", "source": "human", "confidence": 1, "status": "edited"},
+        "label": {"value": null, "source": "human", "confidence": 1, "status": "edited"}
+      }
+    }
+  ],
+  "relations": {
+    "computed": true,
+    "opening.on_wall": {
+      "opening_002": ["wall_h07"]
+    },
+    "furniture.in_area": {
+      "column_001": [],
+      "furniture_001": [],
+      "shaft_001": [],
+      "furniture_003": [],
+      "furniture_017": [],
+      "furniture_019": [],
+      "furniture_021": ["room_003"],
+      "stair_001": []
+    },
+    "furniture.against_wall": {
+      "furniture_001": {"wall": "wall_h04", "gap_cm": -1, "orientation": [0, -1], "angle_deg": -90},
+      "furniture_003": {"wall": "wall_h08", "gap_cm": 1.24, "orientation": [0, -1], "angle_deg": -90},
+      "furniture_017": {"wall": "wall_013", "gap_cm": 0, "orientation": [-1, 0], "angle_deg": 180},
+      "furniture_019": {"wall": "wall_009", "gap_cm": -0.82, "orientation": [0, 1], "angle_deg": 90},
+      "furniture_021": {"wall": "wall_015", "gap_cm": 11, "orientation": [-1, 0], "angle_deg": 180}
+    },
+    "wall.bounds_area": {
+      "wall_006": ["room_003"],
+      "wall_003": ["room_003"],
+      "wall_011": ["room_003"],
+      "wall_015": ["room_003"],
+      "wall_h10": ["room_003"]
+    },
+    "area.adjacent": [],
+    "wall.openings": {
+      "wall_h07": [
+        {"opening": "opening_002", "s0": 10.14, "s1": 84.9}
+      ]
+    }
+  }
+}

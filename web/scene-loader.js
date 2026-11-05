@@ -43,6 +43,7 @@ export function buildKitchen(doc, THREE, opts = {}) {
   // phòng
   const room = new THREE.Group(); room.name = 'room'; root.add(room);
   for (const w of doc.room?.walls || []) {
+    if (w.visible === false) continue;
     const a = w.start, b = w.end;
     const len = Math.hypot(b.x - a.x, b.z - a.z);
     const n = w.interiorNormal || { x: 0, y: 0, z: 1 };
@@ -56,13 +57,62 @@ export function buildKitchen(doc, THREE, opts = {}) {
     mesh.userData = { type: 'wall', wallId: w.id }; mesh.receiveShadow = true;
     room.add(mesh);
   }
-  if (doc.room?.dimensions) {
+  if (doc.room?.floor?.outline?.length >= 3) {
+    const shape = new THREE.Shape();
+    doc.room.floor.outline.forEach((p, i) => i ? shape.lineTo(p.x * s, p.z * s) : shape.moveTo(p.x * s, p.z * s));
+    shape.closePath();
+    const floorMaterial = material_text(doc.room.floor.materialId).clone(); floorMaterial.side = THREE.DoubleSide;
+    const floor = new THREE.Mesh(new THREE.ShapeGeometry(shape), floorMaterial);
+    floor.rotation.x = Math.PI / 2;
+    floor.receiveShadow = true; floor.userData = { type: 'floor' };
+    room.add(floor);
+  } else if (doc.room?.dimensions) {
     const d = doc.room.dimensions;
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(d.width * s + 2, d.depth * s + 2), material_text(doc.room.floor?.materialId));
     floor.rotation.x = -Math.PI / 2;
     floor.position.set(-d.width * s / 2, 0, d.depth * s / 2);
     floor.receiveShadow = true; floor.userData = { type: 'floor' };
     room.add(floor);
+  }
+
+  // phần tử mặt bằng nhập vào: khối đùn từ đường viền XZ
+  for (const st of doc.room?.structures || []) {
+    const color = new THREE.Color(st.color || '#9BA8B5');
+    const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.75, side: THREE.DoubleSide, transparent: st.kind === 'area', opacity: st.kind === 'area' ? 0.45 : 1 });
+    const info = { type: 'structure', kind: st.kind, structureId: st.id, source: st.sourceElement, label: st.label };
+    const add = (mesh) => { mesh.userData = info; mesh.receiveShadow = mesh.castShadow = true; room.add(mesh); return mesh; };
+    if (st.kind === 'stair' && st.steps && st.height > 0) {
+      const xs = st.outline.map((p) => p.x), zs = st.outline.map((p) => p.z);
+      let d = st.arrow?.length >= 2 ? { x: st.arrow[1].x - st.arrow[0].x, z: st.arrow[1].z - st.arrow[0].z } : { x: 0, z: Math.max(...zs) - Math.min(...zs) >= Math.max(...xs) - Math.min(...xs) ? 1 : 0 };
+      if (!st.arrow && d.z === 0) d = { x: 1, z: 0 };
+      const dl = Math.hypot(d.x, d.z) || 1; d = { x: d.x / dl, z: d.z / dl };
+      const q = { x: -d.z, z: d.x };
+      const al = st.outline.map((p) => p.x * d.x + p.z * d.z), cr = st.outline.map((p) => p.x * q.x + p.z * q.z);
+      const a0 = Math.min(...al), a1 = Math.max(...al), c0 = Math.min(...cr), c1 = Math.max(...cr);
+      const run = (a1 - a0) / st.steps;
+      for (let i = 0; i < st.steps; i++) {
+        const h = st.height * (i + 1) / st.steps, ac = a0 + run * (i + 0.5), cc = (c0 + c1) / 2;
+        const step = add(new THREE.Mesh(new THREE.BoxGeometry(run * s + 0.001, h * s, (c1 - c0) * s), mat));
+        step.rotation.y = Math.atan2(-d.z, d.x);
+        step.position.set((d.x * ac + q.x * cc) * s, (st.base + h / 2) * s, (d.z * ac + q.z * cc) * s);
+      }
+      continue;
+    }
+    const shape = new THREE.Shape();
+    st.outline.forEach((p, i) => i ? shape.lineTo(p.x * s, -p.z * s) : shape.moveTo(p.x * s, -p.z * s));
+    shape.closePath();
+    if (st.height > 0) {
+      const mesh = add(new THREE.Mesh(new THREE.ExtrudeGeometry(shape, { depth: st.height * s, bevelEnabled: false }), mat));
+      mesh.rotation.x = -Math.PI / 2; mesh.position.y = (st.base || 0) * s;
+      mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry, 30), edgeMat));
+    } else {
+      const mesh = add(new THREE.Mesh(new THREE.ShapeGeometry(shape), mat));
+      mesh.rotation.x = -Math.PI / 2; mesh.position.y = ((st.base || 0) + 1) * s;
+    }
+    if (st.swing?.length >= 2) {
+      const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(st.swing.map((p) => new THREE.Vector3(p.x * s, 0.02, p.z * s))), new THREE.LineBasicMaterial({ color }));
+      line.userData = info; room.add(line);
+    }
   }
 
   // module

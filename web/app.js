@@ -118,9 +118,29 @@ async function openDesign(id, keepView = false) {
   if (state.selected && !d.spec.module.some((m) => m.id === state.selected)) state.selected = null;
   if (state.selected) selectModule(state.selected); else $('moduleForm').hidden = true;
   $('openRender').href = `render.html?design=${encodeURIComponent(id)}`;
+  refreshViewSync().catch((e) => console.warn('view-status', e));
   syncAiExport().catch((e) => setStatus('Xuất JSON cho AI lỗi: ' + e.message, 'warn'));
   window.dispatchEvent(new CustomEvent('design-opened', { detail: { id, rev: d.rev } }));
 }
+const SYNC_TEXT = { current: 'approved image up to date', 'stale-appearance': 'approved image out of date (material changed)', 'stale-geometry': 'approved image belongs to older geometry', unknown: 'approved image: cannot tell (no snapshot)' };
+async function refreshViewSync() {
+  const id = state.id; const ul = $('viewSync'); ul.replaceChildren(); $('regenStale').hidden = true;
+  const { views } = await api(`/api/designs/${id}/view-status`);
+  if (id !== state.id) return;
+  let stale = 0;
+  for (const [k, v] of Object.entries(views)) {
+    if (v.status === 'none') continue;
+    if (v.status === 'stale-appearance') stale++;
+    const changed = (v.changed || []).slice(0, 3).map((c) => `${c.layer}: ${c.was ?? '?'} → ${c.now ?? '?'}`).join('; ');
+    ul.appendChild(el('li', {}, `${state.views[k]?.name || k}: ${SYNC_TEXT[v.status] || v.status}${changed ? ' — ' + changed : ''}`));
+  }
+  $('regenStale').hidden = !stale;
+}
+$('regenStale').addEventListener('click', () => state.id && run('prepare images for stale views', async () => {
+  const r = await api(`/api/designs/${state.id}/regenerate-stale`, 'POST', {});
+  setStatus(`${r.jobs.length} review job(s) prepared (not sent)${r.skipped.length ? `, ${r.skipped.length} skipped` : ''}`);
+  await refreshViewSync();
+}));
 async function afterChange(res) {
   await loadDesigns(res.id);
   await openDesign(res.id, true);
@@ -233,6 +253,47 @@ $('fromTemplate').addEventListener('click', () => {
 $('importFile').addEventListener('change', (e) => {
   const file = e.target.files[0]; if (!file) return;
   run('nhập spec', async () => { const spec = JSON.parse(await file.text()); const r = await api('/api/designs', 'POST', { spec }); await loadDesigns(r.id); });
+});
+let pendingFloorplan = null;
+function showFloorplanInfo(r) {
+  const ul = $('fpInfo'); ul.replaceChildren();
+  const add = (t) => ul.appendChild(el('li', {}, t));
+  if (r.floorplan) {
+    const f = r.floorplan;
+    add(`${f.roomLabel || f.roomId}: ${f.width} x ${f.depth} mm, ${f.areaM2} m2, ${f.wallCount} walls`);
+    if (f.outsideElements?.length) add(`Outside the room (ignored): ${f.outsideElements.join(', ')}`);
+    if (f.unattachedOpenings?.length) add(`Doors/windows not attached to a wall: ${f.unattachedOpenings.join(', ')}`);
+    for (const w of f.warnings || []) add(typeof w === 'string' ? w : `${w.code}: ${w.message}`);
+  }
+  if (r.binding) {
+    add(`Kitchen back wall = room edge ${r.binding.back} (${r.binding.source}, score ${r.binding.score})`);
+    for (const w of r.binding.warnings || []) add(w);
+  }
+}
+async function importFloorplan(roomId) {
+  const result = await api('/api/floorplans/import', 'POST', { floorplan: pendingFloorplan, roomId: roomId || undefined });
+  showFloorplanInfo(result);
+  await loadDesigns(result.id);
+}
+$('floorplanFile').addEventListener('change', (e) => {
+  const file = e.target.files[0]; if (!file) return;
+  run('import floorplan', async () => {
+    pendingFloorplan = JSON.parse(await file.text());
+    const { rooms } = await api('/api/floorplans/rooms', 'POST', { floorplan: pendingFloorplan });
+    if (rooms.length > 1) {
+      const sel = $('fpRoom'); sel.replaceChildren(...rooms.map((r) => el('option', { value: r.id }, `${r.label || r.id} (${r.id})`)));
+      $('fpRoomRow').hidden = false; $('fpImport').hidden = false;
+      setStatus(`The plan has ${rooms.length} rooms: choose one and import`);
+      return;
+    }
+    $('fpRoomRow').hidden = true; $('fpImport').hidden = true;
+    await importFloorplan(rooms[0]?.id);
+  });
+});
+$('fpImport').addEventListener('click', () => run('import floorplan', () => importFloorplan($('fpRoom').value)));
+$('fpBind').addEventListener('click', () => {
+  if (!state.id) return;
+  run('place kitchen', async () => { const r = await api(`/api/designs/${state.id}/floorplan-bind`, 'POST', { rev: state.rev }); showFloorplanInfo(r); await openDesign(state.id, true); });
 });
 $('exportSpec').addEventListener('click', () => {
   if (!state.spec) return;

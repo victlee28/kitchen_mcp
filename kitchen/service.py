@@ -1,11 +1,12 @@
 """Shared application service used by the MCP server and HTTP API."""
 from __future__ import annotations
+import json
 import os
 from pathlib import Path
 from typing import Any
 from . import edit, geometry, intent, regions, render, rules, threejs_export
 from .intent import KitchenTemplate as KitchenTemplate
-from .spec import KitchenSpec, dump_spec, load_spec
+from .spec import Common, KitchenSpec, Room, Wall, dump_spec, load_spec
 from .store import Store
 from . import legacy as legacy_schema
 ROOT = Path(__file__).resolve().parent.parent
@@ -44,6 +45,43 @@ class KitchenService:
         spec = spec_data if isinstance(spec_data, KitchenSpec) else load_spec(spec_data)
         record = self.store.create_design(spec, source)
         return self._summary(record['id'], 1, spec)
+
+    def list_floorplan_rooms(self, data: dict[str, Any]) -> list[dict]:
+        """List the rooms of an audited floorplan without importing anything."""
+        from .floorplan import list_rooms
+        return list_rooms(data)
+
+    def import_floorplan(self, data: dict[str, Any], name: str | None=None, room_id: str | None=None) -> dict:
+        """Validate an audited floorplan, keep its source once (by hash), and create a room-only design for one room."""
+        from .floorplan import normalize
+        fp = normalize(data, room_id)
+        self.store.put_floorplan(fp['ref'], data)
+        base_name = name or str(data.get('planId') or 'Floorplan design')
+        spec = KitchenSpec(name=base_name, source='Imported audited floorplan', common=Common(ceiling=fp['height']), room=None, floorplan=fp)
+        record = self.store.create_design(spec, 'floorplan-import')
+        outside = [e['id'] for e in fp['elements'] if e.get('membership') == 'outside']
+        unattached = [e['id'] for e in fp['elements'] if e.get('tag') in ('door', 'window') and not e.get('attached')]
+        return self._summary(record['id'], record['rev'], spec, floorplan={
+            'ref': fp['ref'], 'roomId': fp['roomId'], 'roomLabel': fp.get('roomLabel'), 'width': fp['width'], 'depth': fp['depth'],
+            'areaM2': fp['areaM2'], 'rooms': fp['rooms'], 'counts': fp['counts'], 'wallCount': len(fp['walls']),
+            'outsideElements': outside, 'unattachedOpenings': unattached, 'warnings': fp['warnings']})
+
+    def bind_floorplan(self, design_id: str, back_edge: int | None=None, offset: float=0.0, base_revision: int | None=None) -> dict:
+        """Place the kitchen against a wall of the imported room (auto-picked unless ``back_edge`` is given)."""
+        from .floorplan import bind_kitchen
+        spec, _rev = self.store.get(design_id)
+        fp = spec.floorplan
+        if not isinstance(fp, dict):
+            raise ValueError('The design has no imported floorplan')
+        if not spec.module:
+            raise ValueError('The design has no cabinets to place')
+        scene = geometry.compile_spec(spec)
+        need = {'back': scene.lsau, 'right': scene.lphai if any(m.wall == 'right' for m in spec.module) else 0,
+                'left': scene.lphai if any(m.wall == 'left' for m in spec.module) else 0}
+        binding = bind_kitchen(fp, need, back_edge, offset)
+        spec.floorplan = {**fp, 'binding': binding}
+        revision = self.store.add_revision(design_id, base_revision, spec, {'op': 'bind-floorplan', 'back': binding['back'], 'source': binding['source']}, 'bind-floorplan')
+        return {'id': design_id, 'rev': revision, 'binding': binding}
 
     def create_from_template(self, template: dict | KitchenTemplate, name: str='Kitchen design', **legacy: Any) -> dict:
         """Generate and persist a design from a structured template."""
@@ -92,6 +130,30 @@ class KitchenService:
         old_spec, _ = self.store.get(design_id, target_revision)
         operation = {'op': 'replace', 'spec': dump_spec(old_spec), 'fromRev': target_revision}
         return self.apply(design_id, operation, base_revision, 'revert')
+
+    def set_moldings(self, design_id: str, base_revision: int | None, crown: bool=True, base: bool=True, crown_profile: str='classic-crown-layered',
+                     base_profile: str='classic-base', style: str | None='Classic', open_end: str='return-to-wall', source: str='') -> dict:
+        """Enable or disable the crown and base moldings with the chosen profiles."""
+        from .moldings import default_moldings
+        moldings = [m.model_dump() | {'openEnd': open_end} for m in default_moldings(crown, base, crown_profile, base_profile)]
+        return self.apply(design_id, {'op': 'set-moldings', 'moldings': moldings, 'style': style}, base_revision, source)
+
+    def export_threejs_file(self, design_id: str, revision: int | None=None, country: str | None=None, include_document: bool=False) -> dict:
+        """Build the Three.js document, validate it against the schema, write it beside the renders and describe it."""
+        import jsonschema
+        doc = self.threejs(design_id, revision, country)
+        schema = json.loads((Path(__file__).resolve().parents[1] / 'schemas' / 'kitchen-threejs.schema.json').read_text(encoding='utf-8'))
+        errors = [error.message for error in jsonschema.Draft202012Validator(schema).iter_errors(doc)][:5]
+        out_dir = self.render_dir / design_id / f"rev{doc['metadata']['revision']}"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        path = out_dir / 'scene.threejs.json'
+        path.write_text(json.dumps(doc, ensure_ascii=False, indent=1), encoding='utf-8')
+        res = {'file': str(path), 'schemaValid': not errors, 'schemaErrors': errors,
+               'dem': {kind: len(doc[kind]) for kind in ('modules', 'appliances', 'accessories', 'materials', 'lighting', 'cameras')},
+               'partCount': sum(len(m['parts']) + len(m['doors']) + len(m['drawers']) for m in doc['modules'])}
+        if include_document:
+            res['doc'] = doc
+        return res
 
     def history(self, design_id: str) -> list[dict]:
         """Return the revision history for a design."""
@@ -148,6 +210,18 @@ class KitchenService:
             raise TypeError(f"Unexpected options: {', '.join(legacy)}")
         from . import ai_export
         return ai_export.build(self, design_id, revision, views, country, with_images, embed, lighting)
+
+    def image_backends(self) -> dict:
+        """Image backends, ComfyUI workflows, geometry-edit operations and lighting presets the UI can offer."""
+        from . import backends, geometry_edit, realism
+        return {'backends': backends.BACKENDS, 'workflows': backends.workflow_names(), 'operation': geometry_edit.OPERATIONS,
+                'lighting': realism.LIGHTING_VI, 'default': os.getenv('KITCHEN_IMAGE_BACKEND') or 'recolor',
+                'comfyuiUrl': os.getenv('COMFYUI_URL', 'http://127.0.0.1:8188')}
+
+    def check_request(self, text: str) -> dict:
+        """Check a pasted customer request for contradictions and gaps before designing."""
+        from . import request_check
+        return request_check.check_text(text)
 
     def search_knowledge(self, query: str='', kinds: list[str] | None=None, country: str | None=None, region: str | None=None, region_only: bool=False, **legacy: Any) -> list[dict]:
         """Search knowledge entries with optional country and region prioritization."""

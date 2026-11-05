@@ -45,6 +45,14 @@
         <button id="exportSpec">Tải spec JSON</button>
         <button id="exportThree" title="JSON theo Complete Kitchen Three.js Scene Schema">Tải JSON three.js</button>
       </section>
+      <section>
+        <h2>Floorplan import</h2>
+        <label class="file">Import floorplan JSON<input id="floorplanFile" type="file" accept=".json,application/json"></label>
+        <label id="fpRoomRow" hidden>Room<select id="fpRoom"></select></label>
+        <button id="fpImport" hidden>Import selected room</button>
+        <button id="fpBind" title="Place the kitchen against a wall of the imported room">Place kitchen on a wall</button>
+        <ul id="fpInfo" class="muted small"></ul>
+      </section>
       <section id="aiExport">
         <h2>Xuất cho AI tạo ảnh</h2>
         <p id="aiInfo" class="muted small">Chưa có thiết kế</p>
@@ -83,6 +91,8 @@
       </div>
       <div class="viewbar">
         <label>Góc nhìn <select id="viewSelect"></select></label>
+        <ul id="viewSync" class="muted small"></ul>
+        <button id="regenStale" hidden title="Prepare review jobs that re-apply the changed materials onto the approved images">Prepare images for out-of-date views</button>
         <span id="bar3d">
           <button id="renderOne">Render góc này</button>
           <button id="renderAll">Render tất cả góc</button>

@@ -15,7 +15,7 @@ import math
 import re
 from collections import defaultdict
 
-from . import hardware, regions, vocab
+from . import floorplan as fpmod, hardware, regions, vocab
 from .geometry import Part, backsplash_height, compile_spec, views_of
 from .render import SEGMENT_COLORS, _module_color
 from .spec import Handle, KitchenSpec, Module, effective_handle
@@ -377,6 +377,15 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
                                              "offset": openings.fromCorner, "width": openings.width, "height": openings.height, "sillHeight": openings.sillHeight})
     room = {"dimensions": _dims(lsau, c.ceiling, lphai), "walls": walls, "floor": {"materialId": mats["floor"], "thickness": 0},
             "ceiling": {"height": c.ceiling, "materialId": mats["wall"], "render": False}}
+    floorplan = getattr(spec, "floorplan", None)
+    binding = None
+    if isinstance(floorplan, dict):  # imported floorplan: its room, real walls and elements replace the default room (see kitchen.floorplan)
+        need = {"back": lsau, "right": lphai if any(m.wall == "right" for m in spec.module) else 0,
+                "left": lphai if any(m.wall == "left" for m in spec.module) else 0} if spec.module else None
+        binding = fpmod.resolve_binding(floorplan, need)
+        sec = fpmod.room_section(floorplan, binding, mats["wall"])
+        room.update(walls=sec["walls"], structures=sec["structures"], dimensions=_dims(sec["width"], c.ceiling, sec["depth"]))
+        room["floor"]["outline"] = sec["floorOutline"]
 
     # module
     modules = []
@@ -511,7 +520,7 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
     palette.update({f"module:{m.id}": _hex(_module_color(m.id)) for m in spec.module})
 
     doc = {
-        "schemaVersion": "1.2.0",
+        "schemaVersion": "1.3.0",
         "metadata": {"designId": re.sub(r"[^A-Za-z0-9_.:-]", "-", design_id) or "design", "projectName": spec.name,
                      "description": spec.source or "", "style": spec.style, "revision": max(1, rev), "author": "kitchen-design-mcp",
                      "createdAt": _dt.datetime.now(_dt.timezone.utc).replace(microsecond=0).isoformat(),
@@ -535,6 +544,8 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
                            "outputWidth": 1920, "outputHeight": 1080, "pixelRatio": 1, "environment": "room",
                            "controlPasses": ["lines", "depth", "normal", "seg", "seg_module", "instance", "albedo"], "segmentationPalette": palette},
     }
+    if isinstance(floorplan, dict):
+        fpmod.finish_document(doc, floorplan, binding)
     return doc
 
 

@@ -42,6 +42,20 @@ def create_design(template: KitchenTemplate | None=None, spec: dict[str, Any] | 
         raise ToolError('Provide exactly one of template or spec.')
     return _call(svc().create_from_spec, spec) if spec is not None else _call(svc().create_from_template, template, name)
 
+def list_floorplan_rooms(floorplan: dict[str, Any]) -> dict[str, Any]:
+    """List the rooms (tag == "room") of an audited floorplan so one can be chosen for import."""
+    return _call(lambda d: {"rooms": svc().list_floorplan_rooms(d)}, floorplan)
+
+
+def import_floorplan(floorplan: dict[str, Any], name: str | None=None, room_id: str | None=None) -> dict[str, Any]:
+    """Import one room of an audited floorplan JSON (room_id is required when the plan has several rooms); the source is kept once by hash."""
+    return _call(svc().import_floorplan, floorplan, name, room_id)
+
+
+def bind_floorplan(design_id: str, back_edge: int | None=None, offset: float=0.0, base_rev: int | None=None) -> dict[str, Any]:
+    """Place the kitchen's back run against a wall of the imported room (auto-detected unless back_edge is given)."""
+    return _call(svc().bind_floorplan, design_id, back_edge, offset, base_rev)
+
 def design_kitchen(customer_prompt: str) -> dict[str, Any]:
     """Create a design by parsing a free-form customer request."""
     if not customer_prompt.strip():
@@ -78,9 +92,7 @@ def update_global(design_id: str, base_rev: int, changes: dict[str, Any]) -> dic
 
 def set_moldings(design_id: str, base_rev: int, crown_molding: bool=True, base_molding: bool=True, crown_profile: str='classic-crown-layered', base_profile: str='classic-base', style: Literal['Modern', 'Classic', 'Neoclassical', 'Transitional', 'Industrial', 'Minimalist'] | None='Classic', open_end: Literal['return-to-wall', 'flat-cut']='return-to-wall') -> dict[str, Any]:
     """Enable or disable crown and base moldings using selected profiles."""
-    from kitchen.moldings import default_moldings
-    moldings = [m.model_dump() | {'openEnd': open_end} for m in default_moldings(crown_molding, base_molding, crown_profile, base_profile)]
-    return _call(svc().apply, design_id, {'op': 'set-moldings', 'moldings': moldings, 'style': style}, base_rev, 'mcp')
+    return _call(svc().set_moldings, design_id, base_rev, crown_molding, base_molding, crown_profile, base_profile, style, open_end, 'mcp')
 
 def list_molding_profiles(design_id: str | None=None) -> dict[str, Any]:
     """List built-in and design-specific molding profiles."""
@@ -106,19 +118,7 @@ def get_scene(design_id: str, rev: int | None=None) -> dict[str, Any]:
 
 def export_threejs(design_id: str, rev: int | None=None, country: str | None=None, include_document: bool=False) -> dict[str, Any]:
     """Export and validate a Three.js scene document."""
-    import jsonschema
-    from pathlib import Path
-    doc = _call(svc().threejs, design_id, rev, country)
-    schema = json.loads((Path(__file__).resolve().parent / 'schemas' / 'kitchen-threejs.schema.json').read_text(encoding='utf-8'))
-    errs = [error.message for error in jsonschema.Draft202012Validator(schema).iter_errors(doc)][:5]
-    out_dir = svc().render_dir / design_id / f"rev{doc['metadata']['revision']}"
-    out_dir.mkdir(parents=True, exist_ok=True)
-    path = out_dir / 'scene.threejs.json'
-    path.write_text(json.dumps(doc, ensure_ascii=False, indent=1), encoding='utf-8')
-    res = {'file': str(path), 'schemaValid': not errs, 'schemaErrors': errs, 'dem': {image_kind: len(doc[image_kind]) for image_kind in ('modules', 'appliances', 'accessories', 'materials', 'lighting', 'cameras')}, 'partCount': sum((len(m['parts']) + len(m['doors']) + len(m['drawers']) for m in doc['modules']))}
-    if include_document:
-        res['doc'] = doc
-    return res
+    return _call(svc().export_threejs_file, design_id, rev, country, include_document)
 
 def render_views(design_id: str, rev: int | None=None, views: list[str] | None=None, width: int=1280, height: int=960, include_images: Literal['none', 'lines', 'lines+depth']='lines') -> list[Any]:
     """Render control images for the selected design views."""
@@ -159,6 +159,14 @@ def list_layers(design_id: str, view: str, rev: int | None=None, include_all: bo
     result = _call(svc().images.layers, design_id, view, rev, include_all)
     result['layers'] = [{image_kind: view_result for image_kind, view_result in validation_error.items() if image_kind not in ('allowGeometryChange', 'allowPositionChange', 'selectable')} for validation_error in result['layers']]
     return result
+
+def get_view_status(design_id: str, rev: int | None=None) -> dict[str, Any]:
+    """Per view: does the approved image still match the design (current / stale-appearance / stale-geometry / unknown / none)?"""
+    return _call(lambda: {'views': svc().images.view_status(design_id, rev)})
+
+def regenerate_stale_views(design_id: str, views: list[str] | None=None, backend: Literal['recolor', 'job-package', 'comfyui', 'gemini']='recolor', base_rev: int | None=None) -> dict[str, Any]:
+    """Prepare review jobs (not sent) that re-apply changed materials onto the approved images of the stale views."""
+    return _call(svc().images.regenerate_stale, design_id, views, backend, base_rev)
 
 def create_image_job(design_id: str, view: str, target_layer: str | None=None, instruction: str='', mode: Literal['quick', 'design']='quick', material: str | None=None, backend: Literal['recolor', 'job-package', 'comfyui', 'gemini']='recolor', kind: Literal['edit', 'gen0', 'geometry_edit']='edit', reference: str | None=None, base_rev: int | None=None, workflow: str | None=None, seed: int | None=None, tasks: list[dict[str, Any]] | None=None, preview_only: bool=False, image_changes: list[dict[str, Any]] | None=None, operation: Literal['change-material', 'replace-item', 'remove-item', 'add-item', 'change-style'] | None=None, lighting: Literal['daylight', 'late-afternoon', 'dim-evening'] | None=None) -> dict[str, Any]:
     """Create an image-generation or image-editing job."""
@@ -207,7 +215,7 @@ def reject_image_job(job_id: str) -> dict[str, Any]:
 def regenerate_image_job(job_id: str, seed: int | None=None) -> dict[str, Any]:
     """Create a replacement job with the same request and a new seed."""
     return _slim_job(_call(svc().images.regenerate, job_id, seed))
-TOOLS = [create_design, design_kitchen, list_designs, get_design, design_history, add_module, update_module, remove_module, update_global, set_moldings, list_molding_profiles, apply_action, revert_design, validate_design, get_scene, export_threejs, render_views, search_knowledge, list_regions, add_knowledge, export_ai_package, list_layers, create_image_job, get_image_job, list_image_jobs, submit_image_result, import_base_image, accept_image_job, reject_image_job, regenerate_image_job, send_image_job]
+TOOLS = [create_design, list_floorplan_rooms, import_floorplan, bind_floorplan, design_kitchen, list_designs, get_design, design_history, add_module, update_module, remove_module, update_global, set_moldings, list_molding_profiles, apply_action, revert_design, validate_design, get_scene, export_threejs, render_views, search_knowledge, list_regions, add_knowledge, export_ai_package, list_layers, get_view_status, regenerate_stale_views, create_image_job, get_image_job, list_image_jobs, submit_image_result, import_base_image, accept_image_job, reject_image_job, regenerate_image_job, send_image_job]
 for tool_function in TOOLS:
     mcp.add_tool(tool_function, name=tool_function.__name__, description=(tool_function.__doc__ or '').strip(), structured_output=False if tool_function is render_views else None)
 

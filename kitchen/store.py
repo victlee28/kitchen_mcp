@@ -11,7 +11,7 @@ from pathlib import Path
 from . import knowledge_seed, regions
 from . import legacy as legacy_schema
 from .spec import KitchenSpec, dump_spec
-SCHEMA = "\nCREATE TABLE IF NOT EXISTS knowledge (\n id INTEGER PRIMARY KEY AUTOINCREMENT,\n kind TEXT NOT NULL CHECK(kind IN ('standard','rule','material')),\n code TEXT NOT NULL, title TEXT NOT NULL, content TEXT NOT NULL,\n source_url TEXT, metadata_json TEXT NOT NULL DEFAULT '{}', active INTEGER NOT NULL DEFAULT 1,\n created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP\n);\nCREATE INDEX IF NOT EXISTS idx_knowledge_kind ON knowledge(kind, active);\nCREATE TABLE IF NOT EXISTS designs (\n id TEXT PRIMARY KEY, name TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP\n);\nCREATE TABLE IF NOT EXISTS revisions (\n design_id TEXT NOT NULL REFERENCES designs(id), rev INTEGER NOT NULL, spec_json TEXT NOT NULL,\n operation TEXT NOT NULL, source TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,\n PRIMARY KEY (design_id, rev)\n);\nCREATE TABLE IF NOT EXISTS image_jobs (\n id TEXT PRIMARY KEY, design_id TEXT NOT NULL REFERENCES designs(id), rev INTEGER NOT NULL, view TEXT NOT NULL,\n render_key TEXT NOT NULL, kind TEXT NOT NULL, mode TEXT NOT NULL, target TEXT, backend TEXT NOT NULL,\n status TEXT NOT NULL, request_json TEXT NOT NULL, result_json TEXT NOT NULL DEFAULT '{}', error TEXT,\n created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP\n);\nCREATE INDEX IF NOT EXISTS idx_image_jobs_design ON image_jobs(design_id, view, render_key, status);\n"
+SCHEMA = "\nCREATE TABLE IF NOT EXISTS knowledge (\n id INTEGER PRIMARY KEY AUTOINCREMENT,\n kind TEXT NOT NULL CHECK(kind IN ('standard','rule','material')),\n code TEXT NOT NULL, title TEXT NOT NULL, content TEXT NOT NULL,\n source_url TEXT, metadata_json TEXT NOT NULL DEFAULT '{}', active INTEGER NOT NULL DEFAULT 1,\n created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP\n);\nCREATE INDEX IF NOT EXISTS idx_knowledge_kind ON knowledge(kind, active);\nCREATE TABLE IF NOT EXISTS designs (\n id TEXT PRIMARY KEY, name TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP\n);\nCREATE TABLE IF NOT EXISTS revisions (\n design_id TEXT NOT NULL REFERENCES designs(id), rev INTEGER NOT NULL, spec_json TEXT NOT NULL,\n operation TEXT NOT NULL, source TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,\n PRIMARY KEY (design_id, rev)\n);\nCREATE TABLE IF NOT EXISTS image_jobs (\n id TEXT PRIMARY KEY, design_id TEXT NOT NULL REFERENCES designs(id), rev INTEGER NOT NULL, view TEXT NOT NULL,\n render_key TEXT NOT NULL, kind TEXT NOT NULL, mode TEXT NOT NULL, target TEXT, backend TEXT NOT NULL,\n status TEXT NOT NULL, request_json TEXT NOT NULL, result_json TEXT NOT NULL DEFAULT '{}', error TEXT,\n created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP\n);\nCREATE INDEX IF NOT EXISTS idx_image_jobs_design ON image_jobs(design_id, view, render_key, status);\nCREATE TABLE IF NOT EXISTS floorplans (\n ref TEXT PRIMARY KEY, source_json TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP\n);\n"
 
 class ConflictError(Exception):
     """The supplied base revision is no longer the latest revision."""
@@ -125,6 +125,18 @@ class Store:
             connection.execute('INSERT INTO designs(id, name) VALUES(?,?)', (design_id, spec.name))
             connection.execute('INSERT INTO revisions(design_id, rev, spec_json, operation, source) VALUES(?,?,?,?,?)', (design_id, 1, json.dumps(dump_spec(spec), ensure_ascii=False), json.dumps({'op': 'create'}), source))
         return {'id': design_id, 'rev': 1}
+
+    def put_floorplan(self, ref: str, data: dict) -> None:
+        """Keep the original floorplan document once, under its content hash; revisions only carry the ref."""
+        with self._conn() as connection:
+            connection.execute('INSERT OR IGNORE INTO floorplans(ref, source_json) VALUES(?,?)', (ref, json.dumps(data, ensure_ascii=False)))
+
+    def get_floorplan(self, ref: str) -> dict:
+        with self._conn() as connection:
+            row = connection.execute('SELECT source_json FROM floorplans WHERE ref=?', (ref,)).fetchone()
+        if not row:
+            raise KeyError(f"Floorplan '{ref}' was not found")
+        return json.loads(row['source_json'])
 
     def get(self, design_id: str, rev: int | None=None) -> tuple[KitchenSpec, int]:
         with self._conn() as connection:

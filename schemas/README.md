@@ -3,7 +3,7 @@
 | File | Nội dung |
 |---|---|
 | `kitchen-threejs.v1.0.0.schema.json` | Schema gốc của bạn, giữ nguyên |
-| `kitchen-threejs.schema.json` | Bản mở rộng v1.2.0 (gồm v1.1), sinh bằng `python schemas/build_schema.py`. Khác bản gốc: `modules[].construction.toeKickHeight` đổi tên thành `plinthHeight` |
+| `kitchen-threejs.schema.json` | Bản mở rộng v1.3.0 (gồm v1.1, v1.2), sinh bằng `python schemas/build_schema.py`. Khác bản gốc: `modules[].construction.toeKickHeight` đổi tên thành `plinthHeight` |
 | `../fixtures/l-shaped-kitchen.threejs.json` | Ví dụ xuất từ bếp chữ L, hợp lệ cả hai bản |
 
 Xuất: MCP `export_threejs(design_id)`, web `GET /api/designs/<id>/threejs?country=VN` (nút **Tải JSON three.js**).

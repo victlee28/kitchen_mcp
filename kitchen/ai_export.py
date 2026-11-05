@@ -78,6 +78,11 @@ def build(svc, did: str, rev: int | None = None, views: list[str] | None = None,
     lighting = lighting if lighting in realism.LIGHTING else "daylight"
     photo_image = realism.full(spec, lighting)
 
+    from . import view_sync
+    try:  # approved image per view: current or out of date (see view_sync)
+        sync = view_sync.view_status(svc.images, did, r)
+    except Exception:  # noqa: BLE001 — the package must still build
+        sync = {}
     v_out = []
     for v in chosen:
         g = all_views[v]
@@ -104,6 +109,7 @@ def build(svc, did: str, rev: int | None = None, views: list[str] | None = None,
             "suggestedInputImages": "beauty" if "beauty" in files else ("albedo" if "albedo" in files else "lines"),
             "prompt": backends.gemini_text("gen0", "", part, common, realism=photo_image),
             "image": files,
+            **({"approvedImage": {k: x for k, x in sync[v].items() if k in ("status", "changed", "approvedJob")}} if v in sync else {}),
         })
         if embed:
             src = rd / ("beauty.png" if (rd / "beauty.png").exists() else "albedo.png")

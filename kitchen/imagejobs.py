@@ -24,7 +24,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
-from . import request_check, backends, edit, geometry, geometry_edit, imaging, layers, realism, render, vocab
+from . import request_check, backends, edit, geometry, geometry_edit, imaging, layers, realism, render, view_sync, vocab
 from .backends import BACKENDS, BackendError
 from .store import ConflictError
 
@@ -904,7 +904,18 @@ class ImageJobs:
             res = self.svc.apply(job["design_id"], op, base_rev if base_rev is not None else job["rev"], f"image-job:{jid}")
             design = {"rev": res["rev"], "op": op, "scope": "; ".join(scope), **({"skip": skip} if skip else {})}
         now = _dt.datetime.now(_dt.timezone.utc).isoformat()
-        return self.store.update_job(jid, "accepted", {"acceptNow": now, **({"design": design} if design else {})})
+        try:  # what the approved image shows, for the multi-view consistency check (see view_sync)
+            appearance = view_sync.snapshot(self, job["design_id"], job["view"], design["rev"] if design else job["rev"], req.get("size"))
+        except Exception:  # noqa: BLE001 — acceptance must not fail because the snapshot could not be taken
+            appearance = None
+        return self.store.update_job(jid, "accepted", {"acceptNow": now, **({"design": design} if design else {}),
+                                                      **({"appearance": appearance} if appearance else {})})
+
+    def view_status(self, did: str, rev: int | None = None) -> dict:
+        return view_sync.view_status(self, did, rev)
+
+    def regenerate_stale(self, did: str, views: list[str] | None = None, backend: str = "recolor", base_rev: int | None = None) -> dict:
+        return view_sync.regenerate_stale(self, did, views, backend, base_rev)
 
     def reject(self, jid: str) -> dict:
         job = self.store.get_job(jid)

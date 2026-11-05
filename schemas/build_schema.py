@@ -1,4 +1,4 @@
-"""Sinh schema mở rộng v1.2.0 (gồm các bổ sung v1.1) từ schema gốc v1.0.0 của người dùng.
+"""Sinh schema mở rộng v1.3.0 (gồm các bổ sung v1.1) từ schema gốc v1.0.0 của người dùng.
 
 Nguyên tắc: KHÔNG đổi/bớt gì của bản gốc; chỉ thêm thuộc tính TÙY CHỌN vào $defs và các object con
 (những chỗ bản gốc không khóa additionalProperties). Nhờ vậy mọi file xuất ra hợp lệ với CẢ HAI bản.
@@ -22,11 +22,11 @@ def opt(schema: dict, desc: str) -> dict:
 def main():
     base = json.loads((HERE / "kitchen-threejs.v1.0.0.schema.json").read_text(encoding="utf-8"))
     s = copy.deepcopy(base)
-    s["$id"] = "https://example.com/schemas/kitchen-threejs-full.v1.2.0.schema.json"
-    s["title"] = base["title"] + " (v1.2)"
-    s["description"] = base["description"] + " v1.1 thêm trường tùy chọn cho tủ tham số, vùng tiêu chuẩn và ảnh điều khiển AI; v1.2 thêm phong cách phụ, gợi ý ảnh AI và bảng diễn giải mô tả; tương thích ngược v1.0.0."
+    s["$id"] = "https://example.com/schemas/kitchen-threejs-full.v1.3.0.schema.json"
+    s["title"] = base["title"] + " (v1.3)"
+    s["description"] = base["description"] + " v1.1 thêm trường tùy chọn cho tủ tham số, vùng tiêu chuẩn và ảnh điều khiển AI; v1.2 thêm phong cách phụ, gợi ý ảnh AI và bảng diễn giải mô tả; v1.3 thêm nguồn độ dày tường và thông tin mặt bằng nhập vào; tương thích ngược v1.0.0."
     P, D = s["properties"], s["$defs"]
-    P["schemaVersion"]["default"] = "1.2.0"
+    P["schemaVersion"]["default"] = "1.3.0"
 
     D["vec2"] = {"type": "object", "required": ["u", "v"], "properties": {"u": {"type": "number"}, "v": {"type": "number"}},
                  "description": f"[{ADD}] Véc-tơ 2D cho lặp texture"}
@@ -74,6 +74,35 @@ def main():
                                                                     "width": {"type": "number"}, "height": {"type": "number"},
                                                                     "sillHeight": {"type": "number", "default": 0}}}},
                         "Cửa sổ / cửa đi trên tường (cần cho quy tắc không đặt bếp dưới cửa sổ, và cho ảnh)")
+    w["visible"] = {"type": "boolean", "default": True, "description": "[Bổ sung v1.3 (VicKitchenCabinet)] false = chỉ là dữ liệu (neo tủ, lỗ cửa), không dựng khối; tường thật của mặt bằng nằm trong room.structures"}
+    w["thicknessSource"] = {"type": "string", "enum": ["measured", "assumed"],
+                            "description": "[Bổ sung v1.3 (VicKitchenCabinet)] Độ dày đo từ mặt bằng (measured) hay giả định (assumed)"}
+    m["floorplan"] = {"type": "object", "description": "[Bổ sung v1.3 (VicKitchenCabinet)] Mặt bằng đã nhập: mã băm nguồn, phòng, cảnh báo và việc gắn bếp vào tường",
+                      "properties": {"ref": {"type": "string"}, "roomId": {"type": "string"}, "roomLabel": {"type": ["string", "null"]},
+                                     "warnings": {"type": "array", "items": {"type": ["string", "object"]}},
+                                     "binding": {"type": "object", "properties": {"back": {"type": "integer"}, "right": {"type": ["integer", "null"]},
+                                                                                  "left": {"type": ["integer", "null"]}, "offset": {"type": "number"},
+                                                                                  "source": {"type": "string", "enum": ["auto", "manual"]},
+                                                                                  "score": {"type": "number"}, "warnings": {"type": "array", "items": {"type": "string"}}}}}}
+    xz = {"type": "object", "required": ["x", "z"], "properties": {"x": {"type": "number"}, "z": {"type": "number"}}}
+    P["room"]["properties"]["structures"] = {
+        "type": "array", "description": "[Bổ sung v1.3 (VicKitchenCabinet)] Mọi phần tử của mặt bằng nhập vào (cột, thang, tủ, cửa, tường không thuộc biên phòng...) dưới dạng khối đùn từ đường viền XZ, toạ độ phòng (mm)",
+        "items": {"type": "object", "required": ["id", "kind", "outline", "height"],
+                  "properties": {"id": {"$ref": "#/$defs/id"}, "sourceElement": {"type": "string"},
+                                 "kind": {"type": "string", "enum": ["wall", "column", "opening", "furniture", "shaft", "stair", "area"]},
+                                 "tag": {"type": "string"}, "label": {"type": "string"}, "outline": {"type": "array", "minItems": 3, "items": xz},
+                                 "base": {"type": "number"}, "height": {"type": "number", "description": "0 = mảng phẳng"},
+                                 "heightSource": {"type": "string", "enum": ["measured", "assumed"]},
+                                 "color": {"type": "string", "pattern": "^#[0-9A-Fa-f]{6}$"},
+                                 "membership": {"type": "string", "enum": ["inside", "overlapping", "adjacent", "outside", "unknown"]},
+                                 "swing": {"type": "array", "items": {"$ref": "#/$defs/vec3"}, "description": "Cung mở cửa"},
+                                 "hinge": {"$ref": "#/$defs/vec3"},
+                                 "arrow": {"type": "array", "items": {"$ref": "#/$defs/vec3"}, "description": "Cầu thang: từ chân lên đỉnh"},
+                                 "steps": {"type": "integer", "description": "Số bậc cầu thang (độ cao đo tổng = height)"}}}}
+    P["room"]["properties"]["floor"]["properties"]["outline"] = opt(
+        {"type": "array", "minItems": 3, "items": {"type": "object", "required": ["x", "z"],
+                                                       "properties": {"x": {"type": "number"}, "z": {"type": "number"}}}},
+        "Floor polygon outline in XZ coordinates (mm)")
     P["room"]["properties"]["ceiling"]["properties"]["render"] = opt({"type": "boolean", "default": False},
                                                                       "Có dựng trần không (tắt để camera nhìn từ trên)")
 

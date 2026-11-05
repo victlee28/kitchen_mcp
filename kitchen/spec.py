@@ -259,6 +259,7 @@ class KitchenSpec(_Base):
     styleTags: list[str] | None = Field(None, description="Style names with no geometry of their own (Scandinavian, Japandi, Farmhouse, Country, Mid-Century Modern, Luxury)")
     renderPreferences: list[str] = Field(default_factory=list, description="Photography / lighting / quality phrases from the creation prompt; read by kitchen.realism")
     aiHints: list[str] | None = Field(None, description="English phrases for the image prompt only (e.g. fluted glass, herringbone tile)")
+    floorplan: dict[str, Any] | None = Field(None, description="Derived room geometry imported from an audited floorplan (mm); the source document is stored once, referenced by floorplan.ref")
     promptInterpretation: list[dict[str, Any]] | None = Field(None, description="How each term of the creation prompt was understood: term, canonical, scope, target, status, message")
     common: Common = Field(default_factory=Common)
     room: Room | None = None

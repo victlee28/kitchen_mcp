@@ -43,6 +43,8 @@ class Scene:
 
     def bounds(self, cabinets_only: bool = True) -> tuple[list[float], list[float]]:
         ps = [p for p in self.parts if p.type != "handle" and (not cabinets_only or p.type not in ("wall", "floor"))]
+        if not ps:  # room-only design (imported floorplan, no cabinets yet)
+            return [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]
         openings = [min(p.min[i] for p in ps) for i in range(3)]
         hi = [max(p.max[i] for p in ps) for i in range(3)]
         return openings, hi
