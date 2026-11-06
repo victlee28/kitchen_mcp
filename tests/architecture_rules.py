@@ -10,9 +10,9 @@ KITCHEN = ROOT / "kitchen"
 # R1: modules that must stay free of I/O, clocks, randomness and Pydantic behaviour.
 CORE_MODULES = (
     "placement", "roomctx", "rules", "rules_kb", "rules_nkba", "edit", "proposal", "geometry", "moldings", "handles", "hardware",
-    "structure_mesh", "layers", "floorplan", "threejs_export", "lexicon", "vocab", "regions", "errors", "palette", "numeric",
+    "structure_mesh", "layers", "threejs_export", "lexicon", "vocab", "regions", "errors", "palette", "numeric",
 )
-CORE_PACKAGES = ("prompts",)                      # packages whose every file is core (the files are found on disk)
+CORE_PACKAGES = ("prompts", "floorplan")                      # packages whose every file is core (the files are found on disk)
 
 def _package_modules(pkg: str) -> tuple[str, ...]:
     """The package itself plus ``pkg.<file>`` for every module in it."""
