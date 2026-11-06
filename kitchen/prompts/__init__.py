@@ -8,7 +8,7 @@ Pure functions of a design and plain values (rule R1); no I/O. Change wording he
 """
 from __future__ import annotations
 
-from .instruction import gemini_text, gemini_text_edit, gemini_text_geometry, gemini_text_multi
+from .instruction import gemini_text, gemini_text_edit, gemini_text_geometry, gemini_text_multi, style_note
 from .layer import NEGATIVE_LAYER, edit_task_prompt, global_prompt, layer_prompt
 from .photo import LIGHTING, LIGHTING_VI, NEGATIVE_PHOTO, full, local, tags
 

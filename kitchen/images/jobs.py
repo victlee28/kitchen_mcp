@@ -54,7 +54,7 @@ class ImageJobs:
         render_dir = Path(render_dir)
         self.env = JobEnv(store, render_dir, apply, config or Config(db_path=Path(":memory:"), render_dir=render_dir), runtime or Runtime())
         self.base = BaseImages(self.env)
-        self.builder = RequestBuilder(self.env, self.base)
+        self.builder = RequestBuilder(self.env, self.base, self)
         self.packages = Packages(self.env)
         self.results = Results(self.env, self.base, self)
         self.runners = Runners(self.env, self.packages, self.results)
@@ -93,12 +93,12 @@ class ImageJobs:
                material: str | None = None, backend: str = "recolor", reference: str | None = None, base_rev: int | None = None,
                kind: str = "edit", workflow: str | None = None, seed: int | None = None, params: dict[str, Any] | None = None,
                tasks: list[dict[str, Any]] | None = None, preview: bool = False, geometry_items: list[dict[str, Any]] | None = None,
-               operation: str | None = None, lighting: str | None = None) -> dict[str, Any]:
+               operation: str | None = None, lighting: str | None = None, style_from: str | None = None) -> dict[str, Any]:
         """Keyword form of ``submit(NewJob(...))``. tasks: [{"targetLayer": "TD1-door-1", "material": "...", "instruction": "..."}, ...];
         without tasks, target/material/instruction are one task. preview=True prepares only (mask, request.json) and stops at
         'awaiting-send' so the person can look first; send() sends it, reject() drops it."""
         return self.submit(NewJob(did, view, target, instruction, mode, material, backend, reference, base_rev, kind, workflow, seed,
-                                  params, tasks, preview, geometry_items, operation, lighting))
+                                  params, tasks, preview, geometry_items, operation, lighting, style_from))
 
     def submit(self, new: NewJob) -> dict[str, Any]:
         did, view, target, instruction, mode, material, backend = new.did, new.view, new.target, new.instruction, new.mode, new.material, new.backend

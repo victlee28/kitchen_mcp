@@ -68,7 +68,17 @@ class Packages(Component):
         return self.store.update_job(jid, "awaiting-result", {"package": sorted(p.name for p in jdir.iterdir())})
 
     def ai_input(self, job: dict, jdir: Path, req: JobRequest) -> tuple[str, list[tuple[str, Path]]]:
-        """Chỉ dẫn dạng câu + ảnh gửi model nhận chỉ dẫn (Gemini, gói request). Một nguồn cho cả gọi API lẫn file xuất."""
+        """Chỉ dẫn dạng câu + ảnh gửi model nhận chỉ dẫn (Gemini, gói request). Một nguồn cho cả gọi API lẫn file xuất.
+        Có ``styleReference`` thì ảnh đã duyệt của góc khác được đính kèm cuối cùng kèm một câu nói rõ chỉ lấy phong cách."""
+        text, images = self._ai_input_core(job, jdir, req)
+        style = jdir / "style_reference.png"
+        ref = req.get("styleReference")
+        if ref and style.exists():
+            images = [*images, ("style-reference", style)]
+            text = f"{text}\n{prompts.style_note(len(images), ref['view'])}"
+        return text, images
+
+    def _ai_input_core(self, job: dict, jdir: Path, req: JobRequest) -> tuple[str, list[tuple[str, Path]]]:
         if req["kind"] == "gen0":
             d = self.view_dir(job["design_id"], job["rev"], job["view"])
             src = d / "beauty.png" if (d / "beauty.png").exists() else d / "albedo.png"
@@ -128,7 +138,8 @@ class Packages(Component):
         text, imgs = self.ai_input(job, jdir, req)
         size = size_of(req)
         image_name = {"base-image": "anh goc can sua", "marked-base-image": "anh goc can sua, vung sua co vien mau + so",
-                   "mask": "mask (trang = vung sua)", "new-geometry": "hinh mau thiet ke moi (mau phang + net, chi de lay hinh)", "color-mask": "mask mau (moi mau mot viec)", "input-image": "anh dau vao"}
+                   "mask": "mask (trang = vung sua)", "new-geometry": "hinh mau thiet ke moi (mau phang + net, chi de lay hinh)", "color-mask": "mask mau (moi mau mot viec)", "input-image": "anh dau vao",
+                   "style-reference": "anh da duyet cua goc khac (chi lay vat lieu, mau, anh sang; khong chep bo cuc)"}
         for old in jdir.glob("image-*.png"):  # bỏ bản đánh số của lần xuất trước (tên vai trò có thể đã đổi)
             old.unlink()
         attached = []

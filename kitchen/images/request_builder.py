@@ -2,23 +2,26 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 import json
 import shutil
 
 from PIL import Image
 import numpy as np
 
-from .. import backends, edit, geometry, geometry_edit, imaging, layers, prompts, render, vocab
+from .. import view_sync, backends, edit, geometry, geometry_edit, imaging, layers, prompts, render, vocab
 from ..errors import InvalidInput
+if TYPE_CHECKING:
+    from .jobs import ImageJobs
 from .request import JobRequest, NewJob, Task, TaskInput
 from .base_images import BaseImages
 from .common import Component, JobEnv, GROW_PX, MAX_TASKS, ZONE_COLORS, MOLDING_EN, describe_position
 
 class RequestBuilder(Component):
-    def __init__(self, env: JobEnv, base: BaseImages) -> None:
+    def __init__(self, env: JobEnv, base: BaseImages, owner: "ImageJobs") -> None:
         super().__init__(env)
         self.base = base
+        self.owner = owner      # the assembled ImageJobs (view_sync looks at the other views through it)
 
     @staticmethod
     def norm_tasks(tasks: list[dict[str, Any]] | None, target: str | None, material: str | None, instruction: str) -> list[TaskInput]:
@@ -149,8 +152,25 @@ class RequestBuilder(Component):
             req["prompt"] = ", ".join(x for x in (prompts.global_prompt(spec), prompts.tags(spec, lighting), instruction.strip()) if x)
         if backend in ("job-package", "comfyui"):
             backends.load_workflow(req["workflow"])  # tên workflow sai -> báo ngay
+        self._attach_style(jdir, req, new, (W, H))
         (jdir / "job.json").write_text(json.dumps({"id": jid, **req}, ensure_ascii=False, indent=2), encoding="utf-8")
         return req
+
+    def _attach_style(self, jdir: Path, req: JobRequest, new: NewJob, size: tuple[int, int]) -> None:
+        """Copy the approved image of another view next to the job (``style_reference.png``) as a guide for materials and light.
+
+        ``style_from``: "none" never; a view name; "auto" the newest approved image of another view that is still true to the design.
+        Left out (None) it is automatic for a first image (gen0), where the views would otherwise be made independently, and off otherwise."""
+        wanted = new.style_from
+        if wanted == "none" or (wanted is None and new.kind != "gen0"):
+            return
+        src = view_sync.style_source(self.owner, new.did, new.view, wanted or "auto")
+        if src is None:
+            return
+        job = self.store.get_job(src["jobId"])
+        img, _ = imaging.load_rgb(Path(job["result"]["dir"]) / "composite.png", size)
+        Image.fromarray(img).save(jdir / "style_reference.png")
+        req["styleReference"] = src
 
     @staticmethod
     def _others(cat: list[dict], visible: set[str], ids: list[str], type: str) -> int:

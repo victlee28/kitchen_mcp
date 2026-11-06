@@ -43,6 +43,13 @@ class Task(TaskInput, total=False):
     operation: str
 
 
+class StyleReference(TypedDict):
+    """Where the look-alike image came from: the approved image of another view of the same design."""
+    view: str
+    jobId: str
+    auto: bool                      # True when chosen by the system (``styleFrom`` = "auto"), False when the caller named the view
+
+
 class _Core(TypedDict):
     """Keys every request has."""
     designId: str
@@ -81,6 +88,7 @@ class JobRequest(_Core, total=False):
     description: list[dict[str, Any]]
     different: dict[str, Any]
     pinCamera: bool
+    styleReference: StyleReference  # present when an approved image of another view is attached as a style guide
 
 
 @dataclass(frozen=True)
@@ -104,6 +112,7 @@ class NewJob:
     geometry_items: list[dict[str, Any]] | None = None
     operation: str | None = None
     lighting: str | None = None
+    style_from: str | None = None   # None: automatic for a first image (gen0), none otherwise; "auto"; a view name; "none"
 
 
 def size_of(req: JobRequest) -> tuple[int, int]:

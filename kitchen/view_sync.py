@@ -22,6 +22,7 @@ from . import geometry
 
 if TYPE_CHECKING:  # pragma: no cover
     from .images import ImageJobs
+    from .images.request import StyleReference
 
 
 def snapshot(images: "ImageJobs", did: str, view: str, rev: int | None = None, size: list | tuple | None = None) -> dict[str, Any]:
@@ -86,6 +87,35 @@ def view_status(images: "ImageJobs", did: str, rev: int | None = None) -> dict[s
     return out
 
 
+def style_source(images: "ImageJobs", did: str, view: str, wanted: str = "auto") -> "StyleReference | None":
+    """The approved image of ANOTHER view to take the look from: {"view", "jobId", "auto"}, or None when "auto" finds none.
+
+    ``wanted`` is a view name (that view's newest approved image; an error if it has none) or "auto": the newest approved image among
+    the views whose status is ``current``, so a stale image never becomes the guide."""
+    from .errors import InvalidInput
+    if wanted not in ("auto", "", None):
+        spec, _ = images.store.get(did)
+        if wanted == view:
+            raise InvalidInput("styleFrom must be a different view than the one being made")
+        if wanted not in geometry.views_of(spec):
+            raise InvalidInput(f"styleFrom: no view '{wanted}'")
+        accepted = images.store.list_jobs(did, wanted, "accepted", 200)
+        if not accepted:
+            raise InvalidInput(f"styleFrom: view '{wanted}' has no approved image yet")
+        newest = max(accepted, key=lambda j: (j["result"].get("acceptNow", ""), j["updated_at"]))
+        return {"view": wanted, "jobId": newest["id"], "auto": False}
+    status = view_status(images, did)
+    best: tuple[str, str, str] | None = None
+    for v, s in status.items():
+        if v == view or s["status"] != "current":
+            continue
+        job = images.store.get_job(s["approvedJob"])
+        stamp = (job["result"] or {}).get("acceptNow", "")
+        if best is None or stamp > best[0]:
+            best = (stamp, v, job["id"])
+    return None if best is None else {"view": best[1], "jobId": best[2], "auto": True}
+
+
 def regenerate_stale(images: "ImageJobs", did: str, views: list[str] | None = None, backend: str = "recolor", base_rev: int | None = None) -> dict:
     """Prepare (not send) one review job per view whose approved image shows a changed material.
 
@@ -94,6 +124,7 @@ def regenerate_stale(images: "ImageJobs", did: str, views: list[str] | None = No
     from .images import MAX_TASKS
     status = view_status(images, did)
     chosen = views or [v for v, s in status.items() if s["status"] == "stale-appearance"]
+    guide = next((v for v, s in status.items() if s["status"] == "current"), None)   # a view whose image is still true: the look to match
     jobs, skipped = [], []
     for v in chosen:
         s = status.get(v)
@@ -105,7 +136,8 @@ def regenerate_stale(images: "ImageJobs", did: str, views: list[str] | None = No
             skipped.append({"view": v, "reason": "only tile layout changed: no per-layer material to apply"})
             continue
         tasks = [{"targetLayer": c["layer"], "material": c["now"], "instruction": ""} for c in todo[:MAX_TASKS]]
-        job = images.create(did, v, tasks=tasks, mode="quick", backend=backend, base_rev=base_rev, preview=True)
+        job = images.create(did, v, tasks=tasks, mode="quick", backend=backend, base_rev=base_rev, preview=True,
+                             style_from=guide if guide and guide != v else None)
         jobs.append({"view": v, "jobId": job["id"], "status": job["status"], "layers": [t["targetLayer"] for t in tasks],
                      **({"notApplied": [c["layer"] for c in todo[MAX_TASKS:]]} if len(todo) > MAX_TASKS else {})})
     return {"jobs": jobs, "skipped": skipped}

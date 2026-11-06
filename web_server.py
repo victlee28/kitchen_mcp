@@ -306,7 +306,8 @@ class Handler(BaseHTTPRequestHandler):
                                       seed=b.get("seed"), params=b.get("params") if isinstance(b.get("params"), dict) else None,
                                       tasks=b.get("tasks") if isinstance(b.get("tasks"), list) and b.get("tasks") else None,
                                       preview=bool(b.get("preview")), geometry_items=b.get("geometry_edit") if isinstance(b.get("geometry_edit"), list) else None,
-                                      operation=b.get("operation") or None, lighting=b.get("lighting") or None)
+                                      operation=b.get("operation") or None, lighting=b.get("lighting") or None,
+                                      style_from=b.get("styleFrom") or None)
                 return self._json(201, self._job_out(job))
             if sub == "render":
                 res = s.render(did, b.get("rev"), b.get("views"), int(b.get("width", 1280)), int(b.get("height", 960)))

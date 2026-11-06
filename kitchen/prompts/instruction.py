@@ -84,3 +84,10 @@ def gemini_text_multi(regions: list[tuple[str, str, str, str]], instruction: str
             + "Keep the exact shape, edges, panel gaps, perspective and lighting; leave all black (unmasked) areas of the first "
               "image unchanged; return the full image at the same framing.")
 
+
+
+def style_note(image_number: int, view: str) -> str:
+    """Sentence naming the extra image that carries the look of the kitchen, taken from another camera angle."""
+    return (f"IMAGE {image_number} is a STYLE REFERENCE only: an approved photograph of this same kitchen from another camera angle ('{view}'). "
+            "Match its materials, colors, wood grain, stone veining, surface finish and the mood and color temperature of its light. "
+            "Do NOT copy its composition, camera, framing or objects, and do not let it change the shapes in the other image(s).")
