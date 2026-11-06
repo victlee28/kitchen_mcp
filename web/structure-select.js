@@ -77,14 +77,17 @@ export function createStructureSelector({ THREE, els, onSelect }) {
     if (selected) onSelect?.(selected);
   }
 
-  els.hide.addEventListener('click', () => { if (!selected) return; hiddenIds.has(selected) ? hiddenIds.delete(selected) : hiddenIds.add(selected); if (!isShown(selected)) selected = null; refresh(); });
-  els.isolate.addEventListener('click', () => {
+  const hideSelected = () => { if (!selected) return; hiddenIds.has(selected) ? hiddenIds.delete(selected) : hiddenIds.add(selected); if (!isShown(selected)) selected = null; refresh(); };
+  const isolateSelected = () => {
     if (!selected) return;
     hiddenIds.clear(); hiddenKinds.clear();
     for (const id of entries.keys()) if (id !== selected) hiddenIds.add(id);
     refresh();
-  });
-  els.showAll.addEventListener('click', () => { hiddenIds.clear(); hiddenKinds.clear(); refresh(); });
+  };
+  const showAll = () => { hiddenIds.clear(); hiddenKinds.clear(); refresh(); };
+  els.hide.addEventListener('click', hideSelected);
+  els.isolate.addEventListener('click', isolateSelected);
+  els.showAll.addEventListener('click', showAll);
 
   return {
     /** New scene: keep the selection and hidden items that still exist. */
@@ -97,6 +100,7 @@ export function createStructureSelector({ THREE, els, onSelect }) {
     /** Visible structure meshes the pointer can hit. */
     pickables: () => pickables.filter((m) => m.visible),
     idOf: meshOf,
+    hideSelected, isolateSelected, showAll,
     select, clear() { if (selected) { selected = null; refresh(); } },
     get selected() { return selected; },
   };

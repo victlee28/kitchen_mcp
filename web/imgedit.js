@@ -30,11 +30,11 @@ async function run(label, fn) {
 const bust = (u) => u && `${u}${u.includes('?') ? '&' : '?'}t=${Date.now()}`;
 
 // ---------------- tab
-function showTab(img) {
+function showTab(img, skipLoad = false) {
   $('tab3d').classList.toggle('on', !img); $('tabImg').classList.toggle('on', img);
   $('tab3d').setAttribute('aria-selected', String(!img)); $('tabImg').setAttribute('aria-selected', String(img));
   $('pane3d').hidden = img; $('paneImg').hidden = !img; $('bar3d').hidden = img; $('barImg').hidden = !img;
-  if (img) run('mở ảnh', load);
+  if (img && !skipLoad) run('mở ảnh', load);
 }
 $('tab3d').addEventListener('click', () => showTab(false));
 $('tabImg').addEventListener('click', () => showTab(true));
@@ -400,6 +400,33 @@ function showCheck(box, kt, title, file = false) {
   if (ul.childElementCount) box.append(ul);
 }
 
+// "Sửa ảnh của module này" from the 3D context menu: open this tab on the layer, in the view where it shows most pixels.
+const MIN_VISIBLE_PX = 400;   // below this the model tends to skip the region (kitchen/request_check.py MIN_PIXELS)
+async function bestView(id, layer) {
+  const views = [...$('viewSelect').options].map((o) => o.value);
+  const cur = $('viewSelect').value; const order = [cur, ...views.filter((v) => v !== cur)];
+  let best = { view: cur, px: -1 };
+  for (const v of order) {
+    const d = await api(`/api/designs/${id}/layers?view=${encodeURIComponent(v)}`);
+    const px = d.layers.find((x) => x.id === layer)?.pixels ?? 0;
+    if (px > best.px) best = { view: v, px };
+    if (px >= MIN_VISIBLE_PX && v === cur) break;      // the view already on screen is good enough: keep it
+    if (px >= MIN_VISIBLE_PX * 4) break;
+  }
+  return best;
+}
+window.addEventListener('image-edit-request', async (ev) => { try {
+  const { layer, module } = ev.detail || {}; const id = $('designSelect').value;
+  if (!id || !layer) return;
+  status('Tìm góc nhìn thấy rõ module…');
+  const best = await bestView(id, layer);
+  $('viewSelect').value = best.view;
+  showTab(true, true);
+  await load();
+  if (S.data?.layers.some((x) => x.id === layer)) await selectLayer(layer, []);
+  if (best.px < MIN_VISIBLE_PX) status(`${module || layer} gần như không thấy ở góc nhìn nào (${Math.max(best.px, 0)} px): job có thể bị từ chối vì vùng quá nhỏ`, 'warn');
+  else status(`${module || layer}: góc nhìn ${best.view} (${best.px} px). Chọn chế độ, backend rồi tạo job ở khung bên phải`, 'ok');
+} catch (e) { console.error(e); status(e.message, 'warn'); } });
 window.addEventListener('design-opened', () => { if (active()) run('mở ảnh', load); });
 window.addEventListener('view-changed', () => { if (active()) run('mở ảnh', load); });
 $('designSelect').addEventListener('change', () => { S.layer = null; S.sel = []; S.job = null; S.tasks = []; renderTasks(); });

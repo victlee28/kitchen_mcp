@@ -5,6 +5,8 @@ import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUnifo
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { buildKitchen } from './scene-loader.js';
 import { createStructureSelector } from './structure-select.js';
+import { createModuleMenu } from './module-menu.js';
+import { isClick, pickTarget } from './menu-logic.js';
 
 const $ = (id) => document.getElementById(id);
 const state = { id: null, rev: null, spec: null, scene: null, selected: null, views: {}, qg: '' };
@@ -104,7 +106,32 @@ renderer.domElement.addEventListener('click', (ev) => {
   else if (hit) { structSel.clear(); selectModule(hit.object.userData.module); }
   else structSel.clear();
 });
-window.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && !/INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName || '')) structSel.clear(); });
+window.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && !moduleMenu.isOpen && !/INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName || '')) structSel.clear(); });
+
+// context menu: opens on the release of a right click (or Ctrl+click) that did not move. Windows fires `contextmenu` on release but
+// Linux/macOS on press, so the event itself cannot tell a click from the start of a camera drag (right-drag pans).
+let lastDown = null;
+renderer.domElement.addEventListener('pointerdown', (ev) => { lastDown = { x: ev.clientX, y: ev.clientY, t: performance.now(), button: ev.button, ctrl: ev.ctrlKey }; });
+renderer.domElement.addEventListener('contextmenu', (ev) => ev.preventDefault());
+renderer.domElement.addEventListener('pointerup', (ev) => {
+  const d = lastDown; lastDown = null;
+  if (!d || !(d.button === 2 || (d.button === 0 && d.ctrl)) || !isClick(d, { x: ev.clientX, y: ev.clientY, t: performance.now() }) || !state.spec) return;
+  const r = renderer.domElement.getBoundingClientRect();
+  pointer.set(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1);
+  raycaster.setFromCamera(pointer, camera);
+  const target = pickTarget(raycaster.intersectObjects([...meshes, ...structSel.pickables()], false), state.spec.module.map((m) => m.id));
+  if (!target) { moduleMenu.close(); return; }
+  if (target.kind === 'module') { structSel.clear(); selectModule(target.id); } else structSel.select(target.id);
+  moduleMenu.open(target, ev.clientX, ev.clientY);
+});
+const moduleMenu = createModuleMenu({
+  box: $('ctxMenu'), setStatus,
+  getState: () => ({ id: state.id, rev: state.rev, spec: state.spec }),
+  afterChange: (res) => afterChange(res), reload: () => openDesign(state.id, true),
+  structure: { hide: () => structSel.hideSelected(), isolate: () => structSel.isolateSelected(), showAll: () => structSel.showAll() },
+  imageEdit: (detail) => window.dispatchEvent(new CustomEvent('image-edit-request', { detail })),
+});
+$('moduleActions').addEventListener('click', (ev) => { const r = ev.currentTarget.getBoundingClientRect(); if (state.selected) moduleMenu.open({ kind: 'module', id: state.selected }, r.left - 260, r.bottom + 4); });
 
 // ---------------- dữ liệu thiết kế
 async function loadDesigns(selectId) {

@@ -85,3 +85,14 @@ ul.pick{list-style:none;padding:0;margin:6px 0;max-height:180px;overflow:auto;bo
 ul.pick li{padding:3px 8px;cursor:pointer}ul.pick li:hover{background:#f1eee8}ul.pick li.sel{background:#ffe3c2;font-weight:600}ul.pick li.off{opacity:.45;text-decoration:line-through}
 label.kind{display:inline-flex;align-items:center;gap:4px;margin-right:10px;color:#6d665c}
 #fpDetail{padding-left:16px;margin:6px 0}
+
+.ctx{position:fixed;z-index:50;width:300px;max-width:calc(100vw - 16px);background:#fff;border:1px solid #cfc7ba;border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.22);padding:10px;font-size:13px}
+.ctx[hidden]{display:none}
+.ctx-head{display:flex;justify-content:space-between;align-items:center;font-weight:600;margin-bottom:8px}
+.ctx-x{margin:0;padding:0 8px;background:none;border:none;color:#6d665c;font-size:18px;line-height:1}
+.ctx-list{list-style:none;margin:0;padding:0}.ctx-list button{display:block;width:100%;text-align:left;margin:2px 0;background:#faf9f7;color:#25231f;border:1px solid #e4ded3}
+.ctx-list button:hover,.ctx-list button:focus{background:#ffe3c2}
+.ctx label{display:flex;flex-direction:column;gap:2px;margin:6px 0;font-size:12px;color:#6d665c}.ctx label.inline{flex-direction:row;align-items:center;gap:6px}
+.ctx button.primary{background:#3b665c}.ctx button.ghost,button.ghost{background:#fff;color:#3b665c}
+.ctx-msg{margin:6px 0;font-size:12px}.ctx-msg.bad,.ctx-preview li.bad{color:#a33b2b}.ctx-msg.warn,.ctx-preview li.warn{color:#9a6a12}.ctx-preview li.ok{color:#2c7a4b}
+.ctx-preview{margin:6px 0;padding-left:16px;max-height:220px;overflow:auto;font-size:12px}
