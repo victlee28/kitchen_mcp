@@ -32,7 +32,7 @@ class KitchenError(Exception):
     def __str__(self) -> str:                  # KeyError would otherwise show repr(message) with quotes
         return self.message
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, str]:
         return {"kind": self.kind, "code": self.code, "message": self.message}
 
 

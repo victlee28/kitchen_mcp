@@ -19,6 +19,7 @@ import unicodedata
 from dataclasses import dataclass, field
 from typing import Any
 
+from .numeric import round_int
 from . import vocab
 from .errors import require
 
@@ -499,11 +500,11 @@ def interpret(text: str) -> Result:
                 span = (c[0] + hm.start(), c[0] + hm.end())
                 res.blank.append(span)
                 if 50 <= mm <= 3000:
-                    res.updates["backsplashHeightMm"] = round(mm)
-                    items.append({"term": raw[span[0]:span[1]], "id": "bs.mm", "kind": "bsheight", "canonical": f"{round(mm)} mm",
+                    res.updates["backsplashHeightMm"] = round_int(mm)
+                    items.append({"term": raw[span[0]:span[1]], "id": "bs.mm", "kind": "bsheight", "canonical": f"{round_int(mm)} mm",
                                   "scope": ["wallTile"], "target": "common.backsplashHeightMm", "status": "built", "message": ""})
                 else:
-                    items.append({"term": raw[span[0]:span[1]], "id": "bs.mm", "kind": "bsheight", "canonical": f"{round(mm)} mm", "scope": ["wallTile"],
+                    items.append({"term": raw[span[0]:span[1]], "id": "bs.mm", "kind": "bsheight", "canonical": f"{round_int(mm)} mm", "scope": ["wallTile"],
                                   "target": "common.backsplashHeightMm", "status": "ambiguous", "message": "Chiều cao ốp ngoài khoảng 50–3000 mm nên bỏ qua."})
     # che đoạn chiều cao ốp dạng từ (đã khớp bsheight) khỏi regex số
     # 10. vật liệu theo mệnh đề / đoạn

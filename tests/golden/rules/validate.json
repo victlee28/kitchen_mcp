@@ -1,0 +1,827 @@
+{
+ "function": "rules.validate",
+ "cases": [
+  {
+   "name": "fixture, no country",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    }
+   },
+   "expected": {
+    "valid": true,
+    "counts": {
+     "error": 0,
+     "warning": 1,
+     "info": 6
+    },
+    "country": null,
+    "region": null,
+    "appliedRules": {
+     "walkway": "CLEARANCE-001 (GLOBAL, toàn cầu)",
+     "sink-cooktop": "SAFETY-001 (GLOBAL, toàn cầu)",
+     "countertop-height": "KITCHEN-DEFAULT-001 (GLOBAL, toàn cầu)",
+     "base-depth": "KITCHEN-DEFAULT-001 (GLOBAL, toàn cầu)",
+     "clear-height": "GB-55038-2025 (EA/CN, tham khảo (chưa chọn quốc gia))",
+     "hood": "AS-NZS-5601-1 (OC/AU,NZ, tham khảo (chưa chọn quốc gia))",
+     "above-cooktop": "AS-NZS-5601-1 (OC/AU,NZ, tham khảo (chưa chọn quốc gia))",
+     "countertop-depth": "EN-1116 (EU, tham khảo (chưa chọn quốc gia))",
+     "upper-depth": "EN-1116 (EU, tham khảo (chưa chọn quốc gia))",
+     "upper-gap": "EN-1116 (EU, tham khảo (chưa chọn quốc gia))",
+     "cabinet-plinth": "EN-1116 (EU, tham khảo (chưa chọn quốc gia))",
+     "triangle": "T-CHEAA-TAM-GIAC (EA/CN, tham khảo (chưa chọn quốc gia))",
+     "microwave": "NKBA-19 (NA/US,CA, tham khảo (chưa chọn quốc gia))",
+     "cooktop-table": "NKBA-15 (NA/US,CA, tham khảo (chưa chọn quốc gia))",
+     "fridge-table": "NKBA-14 (NA/US,CA, tham khảo (chưa chọn quốc gia))",
+     "sink-table": "NKBA-10 (NA/US,CA, tham khảo (chưa chọn quốc gia))"
+    },
+    "issues": [
+     [
+      "KITCHEN-DEFAULT-001",
+      "warning",
+      [
+       "TD1",
+       "TD2",
+       "TD3",
+       "TD4",
+       "TD5"
+      ],
+      "Sâu tủ dưới ngoài 580–650 mm"
+     ],
+     [
+      "EN-1116",
+      "info",
+      [],
+      "Mặt bàn sâu 570 mm < 600"
+     ],
+     [
+      "NKBA-10",
+      "info",
+      [
+       "TB2"
+      ],
+      "Mặt bàn trống hai bên chậu TB2: 610 / 375 mm (cần ≥610 một bên, ≥457 bên kia)"
+     ],
+     [
+      "NKBA-15",
+      "info",
+      [
+       "TB4"
+      ],
+      "Mặt bàn trống hai bên bếp TB4: 375 / 335 mm (cần ≥381 một bên, ≥305 bên kia)"
+     ],
+     [
+      "AS-NZS-5601-1",
+      "info",
+      [
+       "TT5",
+       "TB4",
+       "TB5"
+      ],
+      "Đáy máy hút mùi cách mặt bếp 635 mm < 650"
+     ],
+     [
+      "CLEARANCE-001",
+      "info",
+      [],
+      "Không kiểm được lối đi (cần ≥900 mm): spec chưa có phong.loiDi"
+     ],
+     [
+      "VUNG",
+      "info",
+      [],
+      "Chưa chọn quốc gia/khu vực (spec.quocGia): chỉ tiêu chuẩn toàn cầu được áp, tiêu chuẩn của các nước chỉ để tham khảo"
+     ]
+    ]
+   }
+  },
+  {
+   "name": "fixture, Vietnam",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "country": "VN"
+   },
+   "expected": {
+    "valid": true,
+    "counts": {
+     "error": 0,
+     "warning": 0,
+     "info": 8
+    },
+    "country": "VN",
+    "region": "SEA",
+    "appliedRules": {
+     "countertop-height": "VN-KITCHEN-COMMON-PRACTICE (SEA/VN, quốc gia)",
+     "base-depth": "VN-KITCHEN-COMMON-PRACTICE (SEA/VN, quốc gia)",
+     "upper-depth": "VN-KITCHEN-COMMON-PRACTICE (SEA/VN, quốc gia)",
+     "upper-gap": "VN-KITCHEN-COMMON-PRACTICE (SEA/VN, quốc gia)",
+     "cabinet-plinth": "VN-KITCHEN-COMMON-PRACTICE (SEA/VN, quốc gia)",
+     "hood": "VN-KITCHEN-COMMON-PRACTICE (SEA/VN, quốc gia)",
+     "walkway": "CLEARANCE-001 (GLOBAL, toàn cầu)",
+     "sink-cooktop": "SAFETY-001 (GLOBAL, toàn cầu)",
+     "clear-height": "GB-55038-2025 (EA/CN, tham khảo nước ngoài)",
+     "above-cooktop": "AS-NZS-5601-1 (OC/AU,NZ, tham khảo nước ngoài)",
+     "countertop-depth": "EN-1116 (EU, tham khảo nước ngoài)",
+     "triangle": "T-CHEAA-TAM-GIAC (EA/CN, tham khảo nước ngoài)",
+     "microwave": "NKBA-19 (NA/US,CA, tham khảo nước ngoài)",
+     "cooktop-table": "NKBA-15 (NA/US,CA, tham khảo nước ngoài)",
+     "fridge-table": "NKBA-14 (NA/US,CA, tham khảo nước ngoài)",
+     "sink-table": "NKBA-10 (NA/US,CA, tham khảo nước ngoài)"
+    },
+    "issues": [
+     [
+      "VN-KITCHEN-COMMON-PRACTICE",
+      "info",
+      [],
+      "Cao mặt bàn 900 mm ngoài 800–850 mm"
+     ],
+     [
+      "VN-KITCHEN-COMMON-PRACTICE",
+      "info",
+      [
+       "TD1",
+       "TD2",
+       "TD3",
+       "TD4",
+       "TD5"
+      ],
+      "Sâu tủ dưới ngoài 560–600 mm"
+     ],
+     [
+      "EN-1116",
+      "info",
+      [],
+      "Mặt bàn sâu 570 mm < 600"
+     ],
+     [
+      "VN-KITCHEN-COMMON-PRACTICE",
+      "info",
+      [],
+      "Chân tủ cao 110 mm ngoài 90–100 mm"
+     ],
+     [
+      "NKBA-10",
+      "info",
+      [
+       "TB2"
+      ],
+      "Mặt bàn trống hai bên chậu TB2: 610 / 375 mm (cần ≥610 một bên, ≥457 bên kia)"
+     ],
+     [
+      "NKBA-15",
+      "info",
+      [
+       "TB4"
+      ],
+      "Mặt bàn trống hai bên bếp TB4: 375 / 335 mm (cần ≥381 một bên, ≥305 bên kia)"
+     ],
+     [
+      "VN-KITCHEN-COMMON-PRACTICE",
+      "info",
+      [
+       "TT5",
+       "TB4",
+       "TB5"
+      ],
+      "Đáy máy hút mùi cách mặt bếp 635 mm < 650"
+     ],
+     [
+      "CLEARANCE-001",
+      "info",
+      [],
+      "Không kiểm được lối đi (cần ≥900 mm): spec chưa có phong.loiDi"
+     ]
+    ]
+   }
+  },
+  {
+   "name": "fixture, United States",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "country": "US"
+   },
+   "expected": {
+    "valid": true,
+    "counts": {
+     "error": 0,
+     "warning": 4,
+     "info": 3
+    },
+    "country": "US",
+    "region": "NA",
+    "appliedRules": {
+     "upper-gap": "NKBA-22 (NA/US,CA, quốc gia)",
+     "microwave": "NKBA-19 (NA/US,CA, quốc gia)",
+     "above-cooktop": "NKBA-16 (NA/US,CA, quốc gia)",
+     "cooktop-table": "NKBA-15 (NA/US,CA, quốc gia)",
+     "fridge-table": "NKBA-14 (NA/US,CA, quốc gia)",
+     "sink-table": "NKBA-10 (NA/US,CA, quốc gia)",
+     "walkway": "NKBA-06 (NA/US,CA, quốc gia)",
+     "triangle": "NKBA-03 (NA/US,CA, quốc gia)",
+     "sink-cooktop": "SAFETY-001 (GLOBAL, toàn cầu)",
+     "countertop-height": "KITCHEN-DEFAULT-001 (GLOBAL, toàn cầu)",
+     "base-depth": "KITCHEN-DEFAULT-001 (GLOBAL, toàn cầu)",
+     "clear-height": "GB-55038-2025 (EA/CN, tham khảo nước ngoài)",
+     "hood": "AS-NZS-5601-1 (OC/AU,NZ, tham khảo nước ngoài)",
+     "countertop-depth": "EN-1116 (EU, tham khảo nước ngoài)",
+     "upper-depth": "EN-1116 (EU, tham khảo nước ngoài)",
+     "cabinet-plinth": "EN-1116 (EU, tham khảo nước ngoài)"
+    },
+    "issues": [
+     [
+      "KITCHEN-DEFAULT-001",
+      "warning",
+      [
+       "TD1",
+       "TD2",
+       "TD3",
+       "TD4",
+       "TD5"
+      ],
+      "Sâu tủ dưới ngoài 580–650 mm"
+     ],
+     [
+      "NKBA-10",
+      "warning",
+      [
+       "TB2"
+      ],
+      "Mặt bàn trống hai bên chậu TB2: 610 / 375 mm (cần ≥610 một bên, ≥457 bên kia)"
+     ],
+     [
+      "NKBA-15",
+      "warning",
+      [
+       "TB4"
+      ],
+      "Mặt bàn trống hai bên bếp TB4: 375 / 335 mm (cần ≥381 một bên, ≥305 bên kia)"
+     ],
+     [
+      "NKBA-03",
+      "warning",
+      [
+       "TB2",
+       "TB4",
+       "TB1"
+      ],
+      "Tam giác làm việc: chậu–bếp 1130, chậu–tủ lạnh 1359, bếp–tủ lạnh 1984 mm, tổng 4473 (cạnh 1219–2743, tổng ≤7925)"
+     ],
+     [
+      "EN-1116",
+      "info",
+      [],
+      "Mặt bàn sâu 570 mm < 600"
+     ],
+     [
+      "AS-NZS-5601-1",
+      "info",
+      [
+       "TT5",
+       "TB4",
+       "TB5"
+      ],
+      "Đáy máy hút mùi cách mặt bếp 635 mm < 650"
+     ],
+     [
+      "NKBA-06",
+      "info",
+      [],
+      "Không kiểm được lối đi (cần ≥1067 mm): spec chưa có phong.loiDi"
+     ]
+    ]
+   }
+  },
+  {
+   "name": "fixture, region EU",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "region": "EU"
+   },
+   "expected": {
+    "valid": true,
+    "counts": {
+     "error": 0,
+     "warning": 3,
+     "info": 3
+    },
+    "country": null,
+    "region": "EU",
+    "appliedRules": {
+     "countertop-height": "EN-1116 (EU, khu vực)",
+     "countertop-depth": "EN-1116 (EU, khu vực)",
+     "upper-depth": "EN-1116 (EU, khu vực)",
+     "upper-gap": "EN-1116 (EU, khu vực)",
+     "cabinet-plinth": "EN-1116 (EU, khu vực)",
+     "hood": "HOOD-001 (EU/GB, cùng khu vực (nước khác))",
+     "walkway": "CLEARANCE-001 (GLOBAL, toàn cầu)",
+     "sink-cooktop": "SAFETY-001 (GLOBAL, toàn cầu)",
+     "base-depth": "KITCHEN-DEFAULT-001 (GLOBAL, toàn cầu)",
+     "clear-height": "GB-55038-2025 (EA/CN, tham khảo nước ngoài)",
+     "above-cooktop": "AS-NZS-5601-1 (OC/AU,NZ, tham khảo nước ngoài)",
+     "triangle": "T-CHEAA-TAM-GIAC (EA/CN, tham khảo nước ngoài)",
+     "microwave": "NKBA-19 (NA/US,CA, tham khảo nước ngoài)",
+     "cooktop-table": "NKBA-15 (NA/US,CA, tham khảo nước ngoài)",
+     "fridge-table": "NKBA-14 (NA/US,CA, tham khảo nước ngoài)",
+     "sink-table": "NKBA-10 (NA/US,CA, tham khảo nước ngoài)"
+    },
+    "issues": [
+     [
+      "KITCHEN-DEFAULT-001",
+      "warning",
+      [
+       "TD1",
+       "TD2",
+       "TD3",
+       "TD4",
+       "TD5"
+      ],
+      "Sâu tủ dưới ngoài 580–650 mm"
+     ],
+     [
+      "EN-1116",
+      "warning",
+      [],
+      "Mặt bàn sâu 570 mm < 600"
+     ],
+     [
+      "HOOD-001",
+      "warning",
+      [
+       "TT5",
+       "TB4",
+       "TB5"
+      ],
+      "Đáy máy hút mùi cách mặt bếp 635 mm < 650"
+     ],
+     [
+      "NKBA-10",
+      "info",
+      [
+       "TB2"
+      ],
+      "Mặt bàn trống hai bên chậu TB2: 610 / 375 mm (cần ≥610 một bên, ≥457 bên kia)"
+     ],
+     [
+      "NKBA-15",
+      "info",
+      [
+       "TB4"
+      ],
+      "Mặt bàn trống hai bên bếp TB4: 375 / 335 mm (cần ≥381 một bên, ≥305 bên kia)"
+     ],
+     [
+      "CLEARANCE-001",
+      "info",
+      [],
+      "Không kiểm được lối đi (cần ≥900 mm): spec chưa có phong.loiDi"
+     ]
+    ]
+   }
+  },
+  {
+   "name": "low ceiling",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "ops": [
+     {
+      "op": "common",
+      "changes": {
+       "ceiling": 2000
+      }
+     }
+    ]
+   },
+   "expected": {
+    "valid": false,
+    "counts": {
+     "error": 1,
+     "warning": 1,
+     "info": 7
+    },
+    "country": null,
+    "region": null,
+    "appliedRules": {
+     "walkway": "CLEARANCE-001 (GLOBAL, toàn cầu)",
+     "sink-cooktop": "SAFETY-001 (GLOBAL, toàn cầu)",
+     "countertop-height": "KITCHEN-DEFAULT-001 (GLOBAL, toàn cầu)",
+     "base-depth": "KITCHEN-DEFAULT-001 (GLOBAL, toàn cầu)",
+     "clear-height": "GB-55038-2025 (EA/CN, tham khảo (chưa chọn quốc gia))",
+     "hood": "AS-NZS-5601-1 (OC/AU,NZ, tham khảo (chưa chọn quốc gia))",
+     "above-cooktop": "AS-NZS-5601-1 (OC/AU,NZ, tham khảo (chưa chọn quốc gia))",
+     "countertop-depth": "EN-1116 (EU, tham khảo (chưa chọn quốc gia))",
+     "upper-depth": "EN-1116 (EU, tham khảo (chưa chọn quốc gia))",
+     "upper-gap": "EN-1116 (EU, tham khảo (chưa chọn quốc gia))",
+     "cabinet-plinth": "EN-1116 (EU, tham khảo (chưa chọn quốc gia))",
+     "triangle": "T-CHEAA-TAM-GIAC (EA/CN, tham khảo (chưa chọn quốc gia))",
+     "microwave": "NKBA-19 (NA/US,CA, tham khảo (chưa chọn quốc gia))",
+     "cooktop-table": "NKBA-15 (NA/US,CA, tham khảo (chưa chọn quốc gia))",
+     "fridge-table": "NKBA-14 (NA/US,CA, tham khảo (chưa chọn quốc gia))",
+     "sink-table": "NKBA-10 (NA/US,CA, tham khảo (chưa chọn quốc gia))"
+    },
+    "issues": [
+     [
+      "GEO-CEILING",
+      "error",
+      [],
+      "Đỉnh tủ 2610 cao hơn trần 2000"
+     ],
+     [
+      "KITCHEN-DEFAULT-001",
+      "warning",
+      [
+       "TD1",
+       "TD2",
+       "TD3",
+       "TD4",
+       "TD5"
+      ],
+      "Sâu tủ dưới ngoài 580–650 mm"
+     ],
+     [
+      "EN-1116",
+      "info",
+      [],
+      "Mặt bàn sâu 570 mm < 600"
+     ],
+     [
+      "GB-55038-2025",
+      "info",
+      [],
+      "Chiều cao thông thủy (trần) 2000 mm ngoài 2200–… mm"
+     ],
+     [
+      "NKBA-10",
+      "info",
+      [
+       "TB2"
+      ],
+      "Mặt bàn trống hai bên chậu TB2: 610 / 375 mm (cần ≥610 một bên, ≥457 bên kia)"
+     ],
+     [
+      "NKBA-15",
+      "info",
+      [
+       "TB4"
+      ],
+      "Mặt bàn trống hai bên bếp TB4: 375 / 335 mm (cần ≥381 một bên, ≥305 bên kia)"
+     ],
+     [
+      "AS-NZS-5601-1",
+      "info",
+      [
+       "TT5",
+       "TB4",
+       "TB5"
+      ],
+      "Đáy máy hút mùi cách mặt bếp 635 mm < 650"
+     ],
+     [
+      "CLEARANCE-001",
+      "info",
+      [],
+      "Không kiểm được lối đi (cần ≥900 mm): spec chưa có phong.loiDi"
+     ],
+     [
+      "VUNG",
+      "info",
+      [],
+      "Chưa chọn quốc gia/khu vực (spec.quocGia): chỉ tiêu chuẩn toàn cầu được áp, tiêu chuẩn của các nước chỉ để tham khảo"
+     ]
+    ]
+   }
+  },
+  {
+   "name": "very tall plinth",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "ops": [
+     {
+      "op": "common",
+      "changes": {
+       "plinthHeight": 300
+      }
+     }
+    ]
+   },
+   "expected": {
+    "valid": true,
+    "counts": {
+     "error": 0,
+     "warning": 1,
+     "info": 6
+    },
+    "country": null,
+    "region": null,
+    "appliedRules": {
+     "walkway": "CLEARANCE-001 (GLOBAL, toàn cầu)",
+     "sink-cooktop": "SAFETY-001 (GLOBAL, toàn cầu)",
+     "countertop-height": "KITCHEN-DEFAULT-001 (GLOBAL, toàn cầu)",
+     "base-depth": "KITCHEN-DEFAULT-001 (GLOBAL, toàn cầu)",
+     "clear-height": "GB-55038-2025 (EA/CN, tham khảo (chưa chọn quốc gia))",
+     "hood": "AS-NZS-5601-1 (OC/AU,NZ, tham khảo (chưa chọn quốc gia))",
+     "above-cooktop": "AS-NZS-5601-1 (OC/AU,NZ, tham khảo (chưa chọn quốc gia))",
+     "countertop-depth": "EN-1116 (EU, tham khảo (chưa chọn quốc gia))",
+     "upper-depth": "EN-1116 (EU, tham khảo (chưa chọn quốc gia))",
+     "upper-gap": "EN-1116 (EU, tham khảo (chưa chọn quốc gia))",
+     "cabinet-plinth": "EN-1116 (EU, tham khảo (chưa chọn quốc gia))",
+     "triangle": "T-CHEAA-TAM-GIAC (EA/CN, tham khảo (chưa chọn quốc gia))",
+     "microwave": "NKBA-19 (NA/US,CA, tham khảo (chưa chọn quốc gia))",
+     "cooktop-table": "NKBA-15 (NA/US,CA, tham khảo (chưa chọn quốc gia))",
+     "fridge-table": "NKBA-14 (NA/US,CA, tham khảo (chưa chọn quốc gia))",
+     "sink-table": "NKBA-10 (NA/US,CA, tham khảo (chưa chọn quốc gia))"
+    },
+    "issues": [
+     [
+      "KITCHEN-DEFAULT-001",
+      "warning",
+      [
+       "TD1",
+       "TD2",
+       "TD3",
+       "TD4",
+       "TD5"
+      ],
+      "Sâu tủ dưới ngoài 580–650 mm"
+     ],
+     [
+      "EN-1116",
+      "info",
+      [],
+      "Mặt bàn sâu 570 mm < 600"
+     ],
+     [
+      "NKBA-10",
+      "info",
+      [
+       "TB2"
+      ],
+      "Mặt bàn trống hai bên chậu TB2: 610 / 375 mm (cần ≥610 một bên, ≥457 bên kia)"
+     ],
+     [
+      "NKBA-15",
+      "info",
+      [
+       "TB4"
+      ],
+      "Mặt bàn trống hai bên bếp TB4: 375 / 335 mm (cần ≥381 một bên, ≥305 bên kia)"
+     ],
+     [
+      "AS-NZS-5601-1",
+      "info",
+      [
+       "TT5",
+       "TB4",
+       "TB5"
+      ],
+      "Đáy máy hút mùi cách mặt bếp 635 mm < 650"
+     ],
+     [
+      "CLEARANCE-001",
+      "info",
+      [],
+      "Không kiểm được lối đi (cần ≥900 mm): spec chưa có phong.loiDi"
+     ],
+     [
+      "VUNG",
+      "info",
+      [],
+      "Chưa chọn quốc gia/khu vực (spec.quocGia): chỉ tiêu chuẩn toàn cầu được áp, tiêu chuẩn của các nước chỉ để tham khảo"
+     ]
+    ]
+   }
+  },
+  {
+   "name": "base cabinet pushed past the wall",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "ops": [
+     {
+      "op": "update",
+      "id": "TD1",
+      "changes": {
+       "width": 3000
+      },
+      "closeGap": false
+     }
+    ]
+   },
+   "expected": {
+    "valid": false,
+    "counts": {
+     "error": 1,
+     "warning": 1,
+     "info": 7
+    },
+    "country": null,
+    "region": null,
+    "appliedRules": {
+     "walkway": "CLEARANCE-001 (GLOBAL, toàn cầu)",
+     "sink-cooktop": "SAFETY-001 (GLOBAL, toàn cầu)",
+     "countertop-height": "KITCHEN-DEFAULT-001 (GLOBAL, toàn cầu)",
+     "base-depth": "KITCHEN-DEFAULT-001 (GLOBAL, toàn cầu)",
+     "clear-height": "GB-55038-2025 (EA/CN, tham khảo (chưa chọn quốc gia))",
+     "hood": "AS-NZS-5601-1 (OC/AU,NZ, tham khảo (chưa chọn quốc gia))",
+     "above-cooktop": "AS-NZS-5601-1 (OC/AU,NZ, tham khảo (chưa chọn quốc gia))",
+     "countertop-depth": "EN-1116 (EU, tham khảo (chưa chọn quốc gia))",
+     "upper-depth": "EN-1116 (EU, tham khảo (chưa chọn quốc gia))",
+     "upper-gap": "EN-1116 (EU, tham khảo (chưa chọn quốc gia))",
+     "cabinet-plinth": "EN-1116 (EU, tham khảo (chưa chọn quốc gia))",
+     "triangle": "T-CHEAA-TAM-GIAC (EA/CN, tham khảo (chưa chọn quốc gia))",
+     "microwave": "NKBA-19 (NA/US,CA, tham khảo (chưa chọn quốc gia))",
+     "cooktop-table": "NKBA-15 (NA/US,CA, tham khảo (chưa chọn quốc gia))",
+     "fridge-table": "NKBA-14 (NA/US,CA, tham khảo (chưa chọn quốc gia))",
+     "sink-table": "NKBA-10 (NA/US,CA, tham khảo (chưa chọn quốc gia))"
+    },
+    "issues": [
+     [
+      "GEO-COLLISION",
+      "error",
+      [
+       "TC1",
+       "TD1"
+      ],
+      "TC1 và TD1 chồng lên nhau"
+     ],
+     [
+      "KITCHEN-DEFAULT-001",
+      "warning",
+      [
+       "TD1",
+       "TD2",
+       "TD3",
+       "TD4",
+       "TD5"
+      ],
+      "Sâu tủ dưới ngoài 580–650 mm"
+     ],
+     [
+      "EN-1116",
+      "info",
+      [],
+      "Mặt bàn sâu 570 mm < 600"
+     ],
+     [
+      "NKBA-10",
+      "info",
+      [
+       "TB2"
+      ],
+      "Mặt bàn trống hai bên chậu TB2: 610 / 375 mm (cần ≥610 một bên, ≥457 bên kia)"
+     ],
+     [
+      "NKBA-15",
+      "info",
+      [
+       "TB4"
+      ],
+      "Mặt bàn trống hai bên bếp TB4: 375 / 335 mm (cần ≥381 một bên, ≥305 bên kia)"
+     ],
+     [
+      "NKBA-14",
+      "info",
+      [
+       "TC1",
+       "TB1"
+      ],
+      "Mặt bàn cạnh tủ lạnh TB1 chỉ 0 mm (cần ≥381)"
+     ],
+     [
+      "AS-NZS-5601-1",
+      "info",
+      [
+       "TT5",
+       "TB4",
+       "TB5"
+      ],
+      "Đáy máy hút mùi cách mặt bếp 635 mm < 650"
+     ],
+     [
+      "CLEARANCE-001",
+      "info",
+      [],
+      "Không kiểm được lối đi (cần ≥900 mm): spec chưa có phong.loiDi"
+     ],
+     [
+      "VUNG",
+      "info",
+      [],
+      "Chưa chọn quốc gia/khu vực (spec.quocGia): chỉ tiêu chuẩn toàn cầu được áp, tiêu chuẩn của các nước chỉ để tham khảo"
+     ]
+    ]
+   }
+  },
+  {
+   "name": "module removed without closing the gap",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "ops": [
+     {
+      "op": "remove",
+      "id": "TD3",
+      "closeGap": false
+     }
+    ]
+   },
+   "expected": {
+    "valid": true,
+    "counts": {
+     "error": 0,
+     "warning": 1,
+     "info": 6
+    },
+    "country": null,
+    "region": null,
+    "appliedRules": {
+     "walkway": "CLEARANCE-001 (GLOBAL, toàn cầu)",
+     "sink-cooktop": "SAFETY-001 (GLOBAL, toàn cầu)",
+     "countertop-height": "KITCHEN-DEFAULT-001 (GLOBAL, toàn cầu)",
+     "base-depth": "KITCHEN-DEFAULT-001 (GLOBAL, toàn cầu)",
+     "clear-height": "GB-55038-2025 (EA/CN, tham khảo (chưa chọn quốc gia))",
+     "hood": "AS-NZS-5601-1 (OC/AU,NZ, tham khảo (chưa chọn quốc gia))",
+     "above-cooktop": "AS-NZS-5601-1 (OC/AU,NZ, tham khảo (chưa chọn quốc gia))",
+     "countertop-depth": "EN-1116 (EU, tham khảo (chưa chọn quốc gia))",
+     "upper-depth": "EN-1116 (EU, tham khảo (chưa chọn quốc gia))",
+     "upper-gap": "EN-1116 (EU, tham khảo (chưa chọn quốc gia))",
+     "cabinet-plinth": "EN-1116 (EU, tham khảo (chưa chọn quốc gia))",
+     "triangle": "T-CHEAA-TAM-GIAC (EA/CN, tham khảo (chưa chọn quốc gia))",
+     "microwave": "NKBA-19 (NA/US,CA, tham khảo (chưa chọn quốc gia))",
+     "cooktop-table": "NKBA-15 (NA/US,CA, tham khảo (chưa chọn quốc gia))",
+     "fridge-table": "NKBA-14 (NA/US,CA, tham khảo (chưa chọn quốc gia))",
+     "sink-table": "NKBA-10 (NA/US,CA, tham khảo (chưa chọn quốc gia))"
+    },
+    "issues": [
+     [
+      "KITCHEN-DEFAULT-001",
+      "warning",
+      [
+       "TD1",
+       "TD2",
+       "TD4",
+       "TD5"
+      ],
+      "Sâu tủ dưới ngoài 580–650 mm"
+     ],
+     [
+      "GEO-GAPS",
+      "info",
+      [
+       "TD2",
+       "TD4"
+      ],
+      "Khe hở 370 mm giữa TD2 và TD4 (tường right)"
+     ],
+     [
+      "EN-1116",
+      "info",
+      [],
+      "Mặt bàn sâu 570 mm < 600"
+     ],
+     [
+      "NKBA-10",
+      "info",
+      [
+       "TB2"
+      ],
+      "Mặt bàn trống hai bên chậu TB2: 610 / 50 mm (cần ≥610 một bên, ≥457 bên kia)"
+     ],
+     [
+      "AS-NZS-5601-1",
+      "info",
+      [
+       "TT5",
+       "TB4",
+       "TB5"
+      ],
+      "Đáy máy hút mùi cách mặt bếp 635 mm < 650"
+     ],
+     [
+      "CLEARANCE-001",
+      "info",
+      [],
+      "Không kiểm được lối đi (cần ≥900 mm): spec chưa có phong.loiDi"
+     ],
+     [
+      "VUNG",
+      "info",
+      [],
+      "Chưa chọn quốc gia/khu vực (spec.quocGia): chỉ tiêu chuẩn toàn cầu được áp, tiêu chuẩn của các nước chỉ để tham khảo"
+     ]
+    ]
+   }
+  }
+ ]
+}

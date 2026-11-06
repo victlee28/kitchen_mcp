@@ -7,11 +7,13 @@ Rules that hold everywhere in this module:
 """
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 import math
 from typing import Any
 
+from .numeric import round_half_away, round_int
 from .placement import Placement
 from .errors import InvalidInput, require
 
@@ -404,11 +406,11 @@ def trim_room(poly: list[tuple[float, float]], rects: list[tuple[str, list[float
     base = _snap_orthogonal(list(poly))
     if base is None:
         return list(poly), []
-    px, py = sorted({round(p[0], 6) for p in base}), sorted({round(p[1], 6) for p in base})
+    px, py = sorted({round_half_away(p[0], 6) for p in base}), sorted({round_half_away(p[1], 6) for p in base})
 
     def near(v, grid):
         best = min(grid, key=lambda g: abs(g - v))
-        return best if abs(best - v) <= snap else round(v, 6)
+        return best if abs(best - v) <= snap else round_half_away(v, 6)
     snapped = [(i, [near(bb[0], px), near(bb[1], py), near(bb[2], px), near(bb[3], py)]) for i, bb in rects]
     snapped = [(i, r) for i, r in snapped if r[2] > r[0] and r[3] > r[1]]
     xs = sorted({*px, *(c for _, r in snapped for c in (r[0], r[2]))})
@@ -508,7 +510,7 @@ def normalize(data: dict[str, Any], room_id: str | None = None) -> dict[str, Any
 
     def to_scene(p):
         r, f = to_rf(p)
-        return (round(r - r0, 3), round(f0 - f, 3))
+        return (round_half_away(r - r0, 3), round_half_away(f0 - f, 3))
 
     poly = [to_scene(p) for p in raw_room]
     dedup = [p for i, p in enumerate(poly) if p != poly[i - 1]]
@@ -570,7 +572,7 @@ def normalize(data: dict[str, Any], room_id: str | None = None) -> dict[str, Any
         if best:
             el = _fv(e, "elev") if isinstance(_fv(e, "elev"), dict) else {}
             height = float(el["height"]) * k if isinstance(el.get("height"), (int, float)) else None
-            wall_for_edge.setdefault(best[1], {"element": e.get("id"), "thickness": round(best[2], 3), "height": height})
+            wall_for_edge.setdefault(best[1], {"element": e.get("id"), "thickness": round_half_away(best[2], 3), "height": height})
             max_t = max(max_t, best[2])
 
     near = max_t + TOL
@@ -597,7 +599,7 @@ def normalize(data: dict[str, Any], room_id: str | None = None) -> dict[str, Any
         else:
             rec["membership"], rec["distance"] = _membership(pts, poly, near)
             if rec["membership"] == "outside":
-                warnings.append({"code": "outside-room", "element": rec["id"], "kind": kind, "distance": round(rec["distance"]),
+                warnings.append({"code": "outside-room", "element": rec["id"], "kind": kind, "distance": round_int(rec["distance"]),
                                  "message": f"{rec['id']} ({kind}) lies {rec['distance'] / 10:.0f} cm outside room {room_id}; it probably belongs to another room or area. Kept as data; not placed and not moved."})
         retained.append(rec)
 
@@ -619,8 +621,8 @@ def normalize(data: dict[str, Any], room_id: str | None = None) -> dict[str, Any
     ext_end = _corner_extensions(edges, walls, ccw)
     for w, ed, ext in zip(walls, edges, ext_end):
         a, b = ed["a"], (ed["b"][0] + ed["dir"][0] * ext, ed["b"][1] + ed["dir"][1] * ext)
-        w.update(start={"x": round(a[0], 3), "y": 0, "z": round(a[1], 3)}, end={"x": round(b[0], 3), "y": 0, "z": round(b[1], 3)},
-                 interiorNormal={"x": round(ed["n"][0], 6), "y": 0, "z": round(ed["n"][1], 6)}, length=round(ed["length"], 3), endExtension=round(ext, 3))
+        w.update(start={"x": round_half_away(a[0], 3), "y": 0, "z": round_half_away(a[1], 3)}, end={"x": round_half_away(b[0], 3), "y": 0, "z": round_half_away(b[1], 3)},
+                 interiorNormal={"x": round_half_away(ed["n"][0], 6), "y": 0, "z": round_half_away(ed["n"][1], 6)}, length=round_half_away(ed["length"], 3), endExtension=round_half_away(ext, 3))
 
     # ---- openings: attach only when the geometry decides it
     for rec, (e, pts) in zip(retained, prepared):
@@ -648,8 +650,8 @@ def normalize(data: dict[str, Any], room_id: str | None = None) -> dict[str, Any
             "sourceSha256": (data.get("source") or {}).get("sha256"), "sourceUnit": unit,
             "roomId": room_id, "roomLabel": room_label, "rooms": rooms, "region": region,
             "origin": {"unit": unit, "right": r0 / k, "forward": f0 / k, "note": "scene.x = right - origin.right, scene.z = origin.forward - forward (file units)"},
-            "outline": [{"x": p[0], "z": p[1]} for p in poly], "width": round(max(p[0] for p in poly), 3), "depth": round(max(p[1] for p in poly), 3),
-            "height": height, "heightSource": height_source, "areaM2": round(abs(_area2(poly)) / 2e6, 3),
+            "outline": [{"x": p[0], "z": p[1]} for p in poly], "width": round_half_away(max(p[0] for p in poly), 3), "depth": round_half_away(max(p[1] for p in poly), 3),
+            "height": height, "heightSource": height_source, "areaM2": round_half_away(abs(_area2(poly)) / 2e6, 3),
             "walls": walls, "elements": retained, "counts": counts, "binding": None, "warnings": warnings}
 
 
@@ -662,8 +664,8 @@ def _membership(pts, poly, near):
         return "overlapping", 0.0
     dist = _poly_dist(pts, poly)
     if dist <= near:
-        return "adjacent", round(dist, 3)
-    return "outside", round(dist, 3)
+        return "adjacent", round_half_away(dist, 3)
+    return "outside", round_half_away(dist, 3)
 
 
 def _corner_extensions(edges, walls, ccw):
@@ -716,7 +718,7 @@ def _attach_opening(e, pts, rec, edges, walls, k, note):
         return None
     _, i, along = cands[0]
     el = rec.get("elev") or {}
-    entry = {"id": f"{walls[i]['id']}-FP-{rec['id']}", "type": tag, "offset": round(max(0.0, along - width / 2), 3), "width": round(width, 3),
+    entry = {"id": f"{walls[i]['id']}-FP-{rec['id']}", "type": tag, "offset": round_half_away(max(0.0, along - width / 2), 3), "width": round_half_away(width, 3),
              "height": el.get("height") or (2200.0 if tag == "door" else 1200.0), "sillHeight": el.get("base") or 0.0, "sourceElement": rec["id"]}
     walls[i]["openings"].append(entry)
     return {"wall": walls[i]["id"], "edge": i, "offset": entry["offset"], "width": entry["width"]}
@@ -767,9 +769,9 @@ def detect_back(outline, fp: dict, gap_tol: float = 100.0, min_len: float = 200.
             if ov < 0.4 * ln:
                 continue
             gap = max(0.0, sum(ins) / 2)
-            found.append({"elementEdge": j, "roomEdge": ed["i"], "gap": round(gap, 1), "overlap": round(ov, 1), "run": round(ln, 1),
-                          "score": ov * (1 - min(gap, gap_tol) / (gap_tol * 1.5)), "facing": {"x": round(ed["n"][0], 6), "z": round(ed["n"][1], 6)},
-                          "depth": round(max(_dot(_sub(v, ed["a"]), ed["n"]) for v in pts) - gap, 1)})
+            found.append({"elementEdge": j, "roomEdge": ed["i"], "gap": round_half_away(gap, 1), "overlap": round_half_away(ov, 1), "run": round_half_away(ln, 1),
+                          "score": ov * (1 - min(gap, gap_tol) / (gap_tol * 1.5)), "facing": {"x": round_half_away(ed["n"][0], 6), "z": round_half_away(ed["n"][1], 6)},
+                          "depth": round_half_away(max(_dot(_sub(v, ed["a"]), ed["n"]) for v in pts) - gap, 1)})
     if not found:
         return None
     found.sort(key=lambda r: -r["score"])
@@ -779,7 +781,7 @@ def detect_back(outline, fp: dict, gap_tol: float = 100.0, min_len: float = 200.
     if best["overlap"] < 0.9 * best["run"]:
         conf -= 0.1
     best = {k2: v for k2, v in best.items() if k2 != "score"}
-    best.update(confidence=round(conf, 2), status="corner" if other else "wall-backed")
+    best.update(confidence=round_half_away(conf, 2), status="corner" if other else "wall-backed")
     if other:
         best["alsoAgainst"] = other["roomEdge"]
     return best
@@ -806,8 +808,8 @@ def kitchen_transform(fp: dict, binding: dict) -> dict:
     r_end = max((ed["a"], ed["b"]), key=lambda p: _dot(p, right))
     off = float(binding.get("offset", 0.0))
     origin = (r_end[0] - right[0] * off, r_end[1] - right[1] * off)
-    return {"origin": {"x": round(origin[0], 3), "z": round(origin[1], 3)}, "yaw": round(math.degrees(math.atan2(n[0], n[1])), 6),
-            "right": {"x": round(right[0], 6), "z": round(right[1], 6)}, "into": {"x": round(n[0], 6), "z": round(n[1], 6)}}
+    return {"origin": {"x": round_half_away(origin[0], 3), "z": round_half_away(origin[1], 3)}, "yaw": round_half_away(math.degrees(math.atan2(n[0], n[1])), 6),
+            "right": {"x": round_half_away(right[0], 6), "z": round_half_away(right[1], 6)}, "into": {"x": round_half_away(n[0], 6), "z": round_half_away(n[1], 6)}}
 
 
 def _perp(e1, e2):
@@ -858,7 +860,7 @@ def bind_kitchen(fp: dict, need: dict, back_edge: int | None = None, offset: flo
             if att["offset"] + att["width"] > lo and att["offset"] < hi:
                 score -= 1.0 if e.get("tag") == "door" else 0.2
                 warns.append(f"{e['id']} ({e.get('tag')}) falls inside the back run")
-        verdicts.append({"edge": ed["i"], "ok": not why, "why": why, "warnings": warns, "score": round(score, 3),
+        verdicts.append({"edge": ed["i"], "ok": not why, "why": why, "warnings": warns, "score": round_half_away(score, 3),
                          "right": nb["i"] if need_right else None, "left": left_edge})
     if back_edge is not None:
         chosen = next((x for x in verdicts if x["edge"] == back_edge), None)
@@ -880,21 +882,22 @@ def bind_kitchen(fp: dict, need: dict, back_edge: int | None = None, offset: flo
     return b
 
 
-def apply_binding(doc: dict, fp: dict, binding: dict) -> None:
-    """Move the kitchen content of a three.js document from the kitchen frame into the floorplan room (in place)."""
+def apply_binding(doc: dict, fp: dict, binding: dict) -> dict:
+    """A copy of a three.js document with the kitchen content moved from the kitchen frame into the floorplan room (``doc`` is not changed)."""
+    doc = copy.deepcopy(doc)
     t = binding.get("transform") or kitchen_transform(fp, binding)
     pl = Placement.from_transform(t)
 
     def vec(v):  # direction (rotation about +Y, same convention as three.js)
         x, z = pl.dir_to_room(v["x"], v["z"])
-        return {**v, "x": round(x, 6), "z": round(z, 6)}
+        return {**v, "x": round_half_away(x, 6), "z": round_half_away(z, 6)}
 
     def pos(v):
         w = vec(v)
-        return {**v, "x": round(w["x"] + pl.ox, 3), "z": round(w["z"] + pl.oz, 3)}
+        return {**v, "x": round_half_away(w["x"] + pl.ox, 3), "z": round_half_away(w["z"] + pl.oz, 3)}
 
     def wrap(a):
-        a = round(a % 360, 6)
+        a = round_half_away(a % 360, 6)
         return a - 360 if a > 180 else a
 
     for sect in ("modules", "appliances", "accessories", "decorations"):
@@ -915,6 +918,7 @@ def apply_binding(doc: dict, fp: dict, binding: dict) -> None:
     if cs:
         cs["origin"] = "room_corner"
         cs["notes"] = (cs.get("notes", "") + f" Đã đặt vào phòng của mặt bằng: gốc là góc phải của tường sau bếp, xoay {t['yaw']:.1f} độ.").strip()
+    return doc
 
 
 # ---------------------------------------------------------------- every drawn element -> 3D structures
@@ -1010,8 +1014,9 @@ def room_section(fp: dict, binding: dict | None, wall_material: str, structs: li
             "walls": walls, "structures": out_structs}
 
 
-def finish_document(doc: dict, fp: dict, binding: dict | None) -> None:
-    """After the document is built: drop references to walls that do not exist, record the floorplan, move the kitchen into the room."""
+def finish_document(doc: dict, fp: dict, binding: dict | None) -> dict:
+    """A copy of the finished document: references to walls that do not exist dropped, the floorplan recorded, the kitchen moved into the room."""
+    doc = copy.deepcopy(doc)
     ids = {w["id"] for w in doc["room"]["walls"]}
     for md in doc["modules"]:
         placement = md.get("placement", {})
@@ -1021,4 +1026,5 @@ def finish_document(doc: dict, fp: dict, binding: dict | None) -> None:
     doc["metadata"]["floorplan"] = {"ref": fp["ref"], "roomId": fp["roomId"], "roomLabel": fp.get("roomLabel"), "warnings": fp["warnings"][:50],
                                     **({"binding": {k: binding[k] for k in ("back", "right", "left", "offset", "source", "score", "warnings")}} if binding else {})}
     if binding:
-        apply_binding(doc, fp, binding)
+        doc = apply_binding(doc, fp, binding)
+    return doc

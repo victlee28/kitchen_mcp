@@ -8,6 +8,6 @@ ALLOWED: dict[tuple[str, str, str], str] = {
 
 # R10: builtin round() calls still in each core module (written-out values should use numeric.round_half_away). Lower these numbers
 # when you convert calls; the test fails if a count goes UP or a module not listed here gains its first call.
-ROUND_BASELINE: dict[str, int] = {"rules_kb": 4, "edit": 1, "geometry": 2, "hardware": 1, "floorplan": 42, "threejs_export": 19, "lexicon": 3}
+ROUND_BASELINE: dict[str, int] = {}
 
 # R2: modules allowed to read os.environ / os.getenv. Core modules never do.

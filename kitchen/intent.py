@@ -7,12 +7,9 @@ kết quả luôn được Pydantic kiểm và có đường lùi về regex.
 from __future__ import annotations
 
 import json
-import logging
 import math
-import os
 import re
 import unicodedata
-import urllib.request
 from typing import Literal
 
 from pydantic import BaseModel, Field, ValidationError
@@ -20,7 +17,6 @@ from pydantic import BaseModel, Field, ValidationError
 from . import lexicon, regions
 from .spec import Appliance, Common, Handle, KitchenSpec, Module, Room, Wall
 
-logger = logging.getLogger("kitchen.intent")
 
 _NUM = r"(\d+(?:[.,]\d+)?)\s*(mm|cm|mét|met|m)?(?![a-zà-ỹ])"
 _KW = r"(?<![a-zà-ỹ])"
@@ -139,28 +135,6 @@ def merge_lexicon(template: KitchenTemplate, prompt: str) -> tuple[KitchenTempla
     upd["material"] = {**lex.updates.get("material", {}), **cur.get("material", {})}
     upd["promptInterpretation"] = lex.items
     return KitchenTemplate.model_validate({**cur, **upd}), lexicon.notes(lex.items)
-
-
-def parse_prompt_llm(prompt: str) -> tuple[KitchenTemplate | None, dict]:
-    """DeepSeek đề xuất tham số (JSON mode). Lỗi -> trả None kèm trạng thái, không ném."""
-    key = os.getenv("DEEPSEEK_API_KEY")
-    if not key:
-        return None, {"status": "skipped", "reason": "DEEPSEEK_API_KEY chưa được cấu hình"}
-    schema = json.dumps(KitchenTemplate.model_json_schema(), ensure_ascii=False)
-    payload = {"model": os.getenv("DEEPSEEK_MODEL", "deepseek-chat"), "temperature": 0,
-               "response_format": {"type": "json_object"},
-               "messages": [{"role": "system", "content": "Trích tham số thiết kế tủ bếp từ mô tả. Chỉ trả JSON đúng schema sau, đơn vị mm, trường không rõ thì bỏ qua:\n" + schema},
-                            {"role": "user", "content": prompt}]}
-    req = urllib.request.Request(os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com") + "/chat/completions",
-                                 data=json.dumps(payload).encode(), headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"})
-    try:
-        with urllib.request.urlopen(req, timeout=45) as r:
-            content = json.loads(r.read())["choices"][0]["message"]["content"]
-        m = re.search(r"\{.*\}", content, re.S)
-        return KitchenTemplate.model_validate_json(m.group(0) if m else content), {"status": "ok"}
-    except Exception as e:  # mạng, JSON hỏng, sai schema -> lùi về regex
-        logger.warning("[DEEPSEEK] lỗi, dùng regex: %s", e)
-        return None, {"status": "error", "reason": f"{type(e).__name__}: {e}"[:300]}
 
 
 def _split(length: float, priority: list[float]) -> list[float]:

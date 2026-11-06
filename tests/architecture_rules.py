@@ -15,9 +15,9 @@ CORE_MODULES = (
 # Data-model modules a core module may import (the boundary types); everything else it imports from kitchen must be core.
 DATA_MODULES = ("spec", "knowledge_seed")   # boundary types; constant data tables (their SQL helpers take a connection argument)
 
-SHELL_MODULES = ("store", "migrations", "service", "backends", "ai_export", "legacy", "config", "intent")      # touch disk, network, env, clock
+SHELL_MODULES = ("store", "migrations", "service", "backends", "ai_export", "legacy", "config", "intent", "llm")      # touch disk, network, env, clock
 PIXEL_MODULES = ("render", "imaging", "geometry_edit", "request_check", "imagejobs", "view_sync")        # numpy / PIL / job orchestration
-ENV_READERS = ("config", "service", "backends", "intent")                                                # may read os.environ / getenv
+ENV_READERS = ("config", "service", "backends")                                                # may read os.environ / getenv
 ALL_ZONES = CORE_MODULES + DATA_MODULES + SHELL_MODULES + PIXEL_MODULES
 
 FORBIDDEN_IMPORTS = {

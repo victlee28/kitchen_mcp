@@ -18,9 +18,14 @@ class Config:
     render_dir: Path
     default_backend: str = "recolor"
     comfyui_url: str = "http://127.0.0.1:8188"
+    deepseek_api_key: str | None = None
+    deepseek_model: str = "deepseek-chat"
+    deepseek_base_url: str = "https://api.deepseek.com"
 
     @classmethod
     def from_env(cls, environ: Mapping[str, str] | None = None, root: Path = ROOT) -> "Config":
         env = os.environ if environ is None else environ
         return cls(db_path=Path(env.get("KITCHEN_DB") or root / "kitchen.db"), render_dir=Path(env.get("KITCHEN_RENDERS") or root / "renders"),
-                   default_backend=env.get("KITCHEN_IMAGE_BACKEND") or "recolor", comfyui_url=env.get("COMFYUI_URL") or "http://127.0.0.1:8188")
+                   default_backend=env.get("KITCHEN_IMAGE_BACKEND") or "recolor", comfyui_url=env.get("COMFYUI_URL") or "http://127.0.0.1:8188",
+                   deepseek_api_key=env.get("DEEPSEEK_API_KEY") or None, deepseek_model=env.get("DEEPSEEK_MODEL") or "deepseek-chat",
+                   deepseek_base_url=env.get("DEEPSEEK_BASE_URL") or "https://api.deepseek.com")

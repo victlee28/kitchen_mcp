@@ -15,6 +15,9 @@ dependencies = [
   "jsonschema>=4.20",
 ]
 
+[project.optional-dependencies]
+dev = ["pyright>=1.1.400"]   # tests/test_typecheck.py is skipped without it
+
 [project.scripts]
 kitchen-design-mcp = "server:main"
 
@@ -29,3 +32,5 @@ packages = ["kitchen"]
 pythonVersion = "3.11"
 typeCheckingMode = "basic"
 include = ["kitchen"]
+# Modules checked in strict mode (grow this list as modules become clean).
+strict = ["kitchen/placement.py", "kitchen/numeric.py", "kitchen/errors.py", "kitchen/proposal.py"]

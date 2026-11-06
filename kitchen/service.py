@@ -5,7 +5,7 @@ import json
 import os
 from pathlib import Path
 from typing import Any, Callable
-from . import edit, geometry, intent, regions, render, rules, threejs_export
+from . import edit, geometry, intent, llm, regions, render, rules, threejs_export
 from .intent import KitchenTemplate as KitchenTemplate
 from .spec import Common, KitchenSpec, Room, Wall, dump_spec, load_spec
 from .store import ConflictError, Store
@@ -108,7 +108,7 @@ class KitchenService:
         name = legacy.pop('name', name)
         if legacy:
             raise TypeError(f"Unexpected options: {', '.join(legacy)}")
-        template, llm_result = intent.parse_prompt_llm(prompt)
+        template, llm_result = llm.parse_prompt_llm(prompt, self.config)
         notes: list[str] = []
         parser_source = 'deepseek'
         if template is None:

@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from .numeric import round_half_away
 from .spec import KitchenSpec, Module, from_data, to_data
 from .errors import InvalidInput, NotFound
 
@@ -84,7 +85,7 @@ def update_module(spec: KitchenSpec, id: str, changes: dict[str, Any], close_gap
     if "width" in changes and "door" not in changes and old.doors:  # giữ tỉ lệ cánh khi đổi rộng
         free_old = old.width - old.blindCorner - old.endPanel
         free_new = merged["width"] - merged.get("blindCorner", 0) - merged.get("endPanel", 0)
-        merged["doors"] = [round(w * free_new / free_old, 1) for w in old.doors]
+        merged["doors"] = [round_half_away(w * free_new / free_old, 1) for w in old.doors]
     new = from_data(Module, merged)
     if close_gap and new.wall == old.wall and new.wall != "corner":
         if new.endAt != old.endAt:

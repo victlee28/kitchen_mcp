@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 
+from .numeric import round_int
 from .spec import Module, Handle
 
 TIER = {"base": "base", "upper": "wall", "loft": "top", "tall": "tall", "corner": "corner"}
@@ -21,7 +22,7 @@ def hinges(m: Module, doors: list[tuple[float, float, float, float]]) -> list[st
     storey = m.storey
     rows: dict[int, list[int]] = defaultdict(list)
     for i in sorted(range(len(doors)), key=lambda i: (doors[i][2], doors[i][0])):
-        rows[round(doors[i][2])].append(i)
+        rows[round_int(doors[i][2])].append(i)
     out: dict[int, str] = {}
     k = 0
     for _, idx in sorted(rows.items()):

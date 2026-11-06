@@ -6,6 +6,7 @@ convention (x' = x cos + z sin, z' = -x sin + z cos), yaw in degrees.
 from __future__ import annotations
 
 import math
+from typing import Any
 from dataclasses import dataclass
 
 
@@ -16,7 +17,7 @@ class Placement:
     oz: float = 0.0
 
     @classmethod
-    def from_transform(cls, t: dict) -> "Placement":
+    def from_transform(cls, t: dict[str, Any]) -> "Placement":
         """From floorplan.kitchen_transform(): {"yaw": deg, "origin": {"x", "z"}, ...}."""
         return cls(float(t["yaw"]), float(t["origin"]["x"]), float(t["origin"]["z"]))
 

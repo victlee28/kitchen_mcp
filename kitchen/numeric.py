@@ -26,5 +26,10 @@ def round_half_away(x: float, ndigits: int = 0) -> float:
     return math.copysign(r / p, x)
 
 
+def round_int(x: float) -> int:
+    """Nearest integer, halves away from zero (Rust: ``x.round() as i64``)."""
+    return int(round_half_away(x, 0))
+
+
 def near(a: float, b: float, eps: float = EPS_MM) -> bool:
     return abs(a - b) <= eps

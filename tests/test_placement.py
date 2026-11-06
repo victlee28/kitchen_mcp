@@ -3,6 +3,7 @@ import ast
 import json
 import math
 import sys
+import copy
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -38,7 +39,9 @@ class TestPlacement(unittest.TestCase):
         spec = _spec()
         ctx = roomctx.for_spec(spec, 3000, 2400)
         doc = {"modules": [{"transform": {"position": {"x": -500.0, "y": 0, "z": 300.0}, "rotation": {"x": 0, "y": 0, "z": 0}}}]}
-        fpm.apply_binding(doc, spec.floorplan, ctx.binding)
+        original = copy.deepcopy(doc)
+        doc = fpm.apply_binding(doc, spec.floorplan, ctx.binding)
+        self.assertEqual(original["modules"][0]["transform"]["position"]["x"], -500.0)  # the input is not changed
         pos = doc["modules"][0]["transform"]["position"]
         ex, ez = ctx.placement.to_room(-500.0, 300.0)
         self.assertAlmostEqual(pos["x"], ex, delta=0.001)

@@ -25,7 +25,7 @@ The backend may be rewritten in Rust later. Python stays the reference implement
 Zones (every module in `kitchen/` is in exactly one; the list lives in `tests/architecture_rules.py`):
 - **Core** (pure): `placement roomctx rules rules_kb rules_nkba edit proposal geometry moldings handles hardware structure_mesh layers floorplan threejs_export lexicon vocab regions realism errors palette numeric`.
 - **Data** (boundary types, constant tables): `spec knowledge_seed`.
-- **Shell** (may touch disk, network, environment, clock): `store migrations service backends ai_export legacy config intent`.
+- **Shell** (may touch disk, network, environment, clock): `store migrations service backends ai_export legacy config intent llm` (only `config`, `service`, `backends` read the environment; `llm` is given a `Config`).
 - **Pixel** (numpy/PIL and job orchestration; compared by tolerance, not bit for bit): `render imaging geometry_edit request_check imagejobs view_sync`.
 
 | ID | Rule | Checked by |
@@ -34,12 +34,12 @@ Zones (every module in `kitchen/` is in exactly one; the list lives in `tests/ar
 | R2 | I/O only in the shell. The environment is read once into `config.Config` and passed down; core never reads `os.environ`. | architecture test (ENV_READERS) |
 | R3 | Only three ports cross the boundary: a design store, an artifact store (renders), an image backend; plus injected `clock` and seed. No other injection without two real users. | review |
 | R4 | A core function's public arguments and results are JSON data (`dict list str int float bool None`) or frozen dataclasses of them. No Pydantic instances, numpy arrays, `Path`, `datetime`, callables across the boundary. | review + golden |
-| R5 | Explicit types: no `Any`, no bare `dict` in new core signatures; use frozen dataclasses, `TypedDict`, `NamedTuple`, `Enum`/`Literal`. | review |
+| R5 | Explicit types: no bare `dict`/`list` in new core signatures (write `dict[str, Any]` at the least); use frozen dataclasses, `TypedDict`, `NamedTuple`, `Enum`/`Literal`. Core modules pass pyright (`tests/test_typecheck.py`, baseline all zero); `[tool.pyright] strict` in `pyproject.toml` lists the modules checked strictly (`placement numeric errors proposal`); add a module there once it is clean. Narrow an optional field with `errors.require(value, what)`. | pyright ratchet |
 | R6 | Pydantic only at the boundary: core calls `spec.to_data` / `spec.from_data`, never `model_dump`, `model_validate`, `model_copy`. Do not mutate arguments; return new values. | architecture test (pydantic part) + review |
 | R7 | `extra="allow"` stays on the spec models for stored-data compatibility; core reads only declared fields. New stored fields are additive with a default; a stored-shape change ships a migration (`kitchen/migrations.py`) and a compatibility test. | migration tests |
 | R8 | Enum values and codes are closed ASCII kebab-case strings declared in one place. An unknown value is a validation error, never silently replaced by a default. | review |
 | R9 | Units and frames are named: `*_mm`, `yaw_deg`, `room`/`kitchen`/`scene`. Geometry docstrings say which frame they take and return. | review |
-| R10 | Reals are `f64`. Compare with named tolerances (`numeric.EPS_MM`), never `==`. Values written out are rounded with `numeric.round_half_away` (Python's `round` rounds halves to even, Rust's `f64::round` away from zero). New code does not call the builtin `round`; the count per module may only go down. | architecture test (round baseline) |
+| R10 | Reals are `f64`. Compare with named tolerances (`numeric.EPS_MM`), never `==`. Values written out are rounded with `numeric.round_half_away` (Python's `round` rounds halves to even, Rust's `f64::round` away from zero). `round_int` for integers. The core no longer calls the builtin `round` (baseline is empty; a new call fails the architecture test). | architecture test (round baseline) |
 | R11 | Deterministic: no wall clock, randomness or `uuid4` in core; time, seed and ids are injected. Sort explicitly wherever order matters (a Rust `HashMap` is unordered). | architecture test |
 | R12 | Text is UTF-8, NFC from users; keys and codes are ASCII; never slice by bytes. Normalisation functions have test vectors. | golden |
 | R13 | Defaults, evaluation order and edge cases (empty, zero, negative, overlapping) are documented and covered by a case. | golden |

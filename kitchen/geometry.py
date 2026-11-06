@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from .numeric import round_half_away
 from . import roomctx, structure_mesh
 from .spec import ViewAngle, KitchenSpec, Module, effective_handle, to_data
 from .errors import InvalidInput, require
@@ -34,8 +35,8 @@ class Part:
     def to_json(self) -> dict:
         c = [(a + b) / 2 for a, b in zip(self.min, self.max)]
         s = [b - a for a, b in zip(self.min, self.max)]
-        return {"id": self.id, "module": self.module, "type": self.type, "center": [round(v, 2) for v in c],
-                "size": [round(v, 2) for v in s], "color": COLORS.get(self.type, "#cccccc")}
+        return {"id": self.id, "module": self.module, "type": self.type, "center": [round_half_away(v, 2) for v in c],
+                "size": [round_half_away(v, 2) for v in s], "color": COLORS.get(self.type, "#cccccc")}
 
 
 @dataclass

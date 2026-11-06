@@ -1,0 +1,657 @@
+{
+ "function": "floorplan.apply_binding",
+ "cases": [
+  {
+   "name": "no rotation, shifted",
+   "input": {
+    "doc": {
+     "modules": [
+      {
+       "transform": {
+        "position": {
+         "x": -500.0,
+         "y": 0,
+         "z": 300.0
+        },
+        "rotation": {
+         "x": 0,
+         "y": 0,
+         "z": 0,
+         "unit": "deg"
+        }
+       }
+      }
+     ],
+     "appliances": [
+      {
+       "transform": {
+        "position": {
+         "x": -100.0,
+         "y": 850,
+         "z": 50.0
+        }
+       }
+      }
+     ],
+     "cameras": [
+      {
+       "position": {
+        "x": -1500.0,
+        "y": 1500,
+        "z": 2500.0
+       },
+       "target": {
+        "x": -1500.0,
+        "y": 900,
+        "z": 0.0
+       }
+      }
+     ],
+     "coordinateSystem": {
+      "origin": "kitchen_corner",
+      "notes": "n",
+      "wallFrames": [
+       {
+        "wallId": "W1",
+        "origin": {
+         "x": 0,
+         "y": 0,
+         "z": 0
+        },
+        "alongAxis": {
+         "x": -1,
+         "y": 0,
+         "z": 0
+        },
+        "frontAxis": {
+         "x": 0,
+         "y": 0,
+         "z": 1
+        },
+        "rotationY": 0
+       }
+      ]
+     }
+    },
+    "binding": {
+     "transform": {
+      "yaw": 0,
+      "origin": {
+       "x": 1000,
+       "z": 2000
+      }
+     }
+    }
+   },
+   "expected": {
+    "modules": [
+     {
+      "transform": {
+       "position": {
+        "x": 500.0,
+        "y": 0,
+        "z": 2300.0
+       },
+       "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "unit": "deg"
+       }
+      }
+     }
+    ],
+    "appliances": [
+     {
+      "transform": {
+       "position": {
+        "x": 900.0,
+        "y": 850,
+        "z": 2050.0
+       },
+       "rotation": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "unit": "deg"
+       }
+      }
+     }
+    ],
+    "cameras": [
+     {
+      "position": {
+       "x": -500.0,
+       "y": 1500,
+       "z": 4500.0
+      },
+      "target": {
+       "x": -500.0,
+       "y": 900,
+       "z": 2000.0
+      }
+     }
+    ],
+    "coordinateSystem": {
+     "origin": "room_corner",
+     "notes": "n Đã đặt vào phòng của mặt bằng: gốc là góc phải của tường sau bếp, xoay 0.0 độ.",
+     "wallFrames": [
+      {
+       "wallId": "W1",
+       "origin": {
+        "x": 1000.0,
+        "y": 0,
+        "z": 2000.0
+       },
+       "alongAxis": {
+        "x": -1.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "frontAxis": {
+        "x": 0.0,
+        "y": 0,
+        "z": 1.0
+       },
+       "rotationY": 0
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "quarter turn",
+   "input": {
+    "doc": {
+     "modules": [
+      {
+       "transform": {
+        "position": {
+         "x": -500.0,
+         "y": 0,
+         "z": 300.0
+        },
+        "rotation": {
+         "x": 0,
+         "y": 0,
+         "z": 0,
+         "unit": "deg"
+        }
+       }
+      }
+     ],
+     "appliances": [
+      {
+       "transform": {
+        "position": {
+         "x": -100.0,
+         "y": 850,
+         "z": 50.0
+        }
+       }
+      }
+     ],
+     "cameras": [
+      {
+       "position": {
+        "x": -1500.0,
+        "y": 1500,
+        "z": 2500.0
+       },
+       "target": {
+        "x": -1500.0,
+        "y": 900,
+        "z": 0.0
+       }
+      }
+     ],
+     "coordinateSystem": {
+      "origin": "kitchen_corner",
+      "notes": "n",
+      "wallFrames": [
+       {
+        "wallId": "W1",
+        "origin": {
+         "x": 0,
+         "y": 0,
+         "z": 0
+        },
+        "alongAxis": {
+         "x": -1,
+         "y": 0,
+         "z": 0
+        },
+        "frontAxis": {
+         "x": 0,
+         "y": 0,
+         "z": 1
+        },
+        "rotationY": 0
+       }
+      ]
+     }
+    },
+    "binding": {
+     "transform": {
+      "yaw": 90,
+      "origin": {
+       "x": 1000,
+       "z": 2000
+      }
+     }
+    }
+   },
+   "expected": {
+    "modules": [
+     {
+      "transform": {
+       "position": {
+        "x": 1300.0,
+        "y": 0,
+        "z": 2500.0
+       },
+       "rotation": {
+        "x": 0,
+        "y": 90,
+        "z": 0,
+        "unit": "deg"
+       }
+      }
+     }
+    ],
+    "appliances": [
+     {
+      "transform": {
+       "position": {
+        "x": 1050.0,
+        "y": 850,
+        "z": 2100.0
+       },
+       "rotation": {
+        "x": 0,
+        "y": 90,
+        "z": 0,
+        "unit": "deg"
+       }
+      }
+     }
+    ],
+    "cameras": [
+     {
+      "position": {
+       "x": 3500.0,
+       "y": 1500,
+       "z": 3500.0
+      },
+      "target": {
+       "x": 1000.0,
+       "y": 900,
+       "z": 3500.0
+      }
+     }
+    ],
+    "coordinateSystem": {
+     "origin": "room_corner",
+     "notes": "n Đã đặt vào phòng của mặt bằng: gốc là góc phải của tường sau bếp, xoay 90.0 độ.",
+     "wallFrames": [
+      {
+       "wallId": "W1",
+       "origin": {
+        "x": 1000.0,
+        "y": 0,
+        "z": 2000.0
+       },
+       "alongAxis": {
+        "x": -0.0,
+        "y": 0,
+        "z": 1.0
+       },
+       "frontAxis": {
+        "x": 1.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "rotationY": 90
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "half turn wraps rotation",
+   "input": {
+    "doc": {
+     "modules": [
+      {
+       "transform": {
+        "position": {
+         "x": -500.0,
+         "y": 0,
+         "z": 300.0
+        },
+        "rotation": {
+         "x": 0,
+         "y": 0,
+         "z": 0,
+         "unit": "deg"
+        }
+       }
+      }
+     ],
+     "appliances": [
+      {
+       "transform": {
+        "position": {
+         "x": -100.0,
+         "y": 850,
+         "z": 50.0
+        }
+       }
+      }
+     ],
+     "cameras": [
+      {
+       "position": {
+        "x": -1500.0,
+        "y": 1500,
+        "z": 2500.0
+       },
+       "target": {
+        "x": -1500.0,
+        "y": 900,
+        "z": 0.0
+       }
+      }
+     ],
+     "coordinateSystem": {
+      "origin": "kitchen_corner",
+      "notes": "n",
+      "wallFrames": [
+       {
+        "wallId": "W1",
+        "origin": {
+         "x": 0,
+         "y": 0,
+         "z": 0
+        },
+        "alongAxis": {
+         "x": -1,
+         "y": 0,
+         "z": 0
+        },
+        "frontAxis": {
+         "x": 0,
+         "y": 0,
+         "z": 1
+        },
+        "rotationY": 0
+       }
+      ]
+     }
+    },
+    "binding": {
+     "transform": {
+      "yaw": 180,
+      "origin": {
+       "x": 0,
+       "z": 0
+      }
+     }
+    }
+   },
+   "expected": {
+    "modules": [
+     {
+      "transform": {
+       "position": {
+        "x": 500.0,
+        "y": 0,
+        "z": -300.0
+       },
+       "rotation": {
+        "x": 0,
+        "y": 180,
+        "z": 0,
+        "unit": "deg"
+       }
+      }
+     }
+    ],
+    "appliances": [
+     {
+      "transform": {
+       "position": {
+        "x": 100.0,
+        "y": 850,
+        "z": -50.0
+       },
+       "rotation": {
+        "x": 0,
+        "y": 180,
+        "z": 0,
+        "unit": "deg"
+       }
+      }
+     }
+    ],
+    "cameras": [
+     {
+      "position": {
+       "x": 1500.0,
+       "y": 1500,
+       "z": -2500.0
+      },
+      "target": {
+       "x": 1500.0,
+       "y": 900,
+       "z": 0.0
+      }
+     }
+    ],
+    "coordinateSystem": {
+     "origin": "room_corner",
+     "notes": "n Đã đặt vào phòng của mặt bằng: gốc là góc phải của tường sau bếp, xoay 180.0 độ.",
+     "wallFrames": [
+      {
+       "wallId": "W1",
+       "origin": {
+        "x": 0.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "alongAxis": {
+        "x": 1.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "frontAxis": {
+        "x": 0.0,
+        "y": 0,
+        "z": -1.0
+       },
+       "rotationY": 180
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "three quarter turn",
+   "input": {
+    "doc": {
+     "modules": [
+      {
+       "transform": {
+        "position": {
+         "x": -500.0,
+         "y": 0,
+         "z": 300.0
+        },
+        "rotation": {
+         "x": 0,
+         "y": 0,
+         "z": 0,
+         "unit": "deg"
+        }
+       }
+      }
+     ],
+     "appliances": [
+      {
+       "transform": {
+        "position": {
+         "x": -100.0,
+         "y": 850,
+         "z": 50.0
+        }
+       }
+      }
+     ],
+     "cameras": [
+      {
+       "position": {
+        "x": -1500.0,
+        "y": 1500,
+        "z": 2500.0
+       },
+       "target": {
+        "x": -1500.0,
+        "y": 900,
+        "z": 0.0
+       }
+      }
+     ],
+     "coordinateSystem": {
+      "origin": "kitchen_corner",
+      "notes": "n",
+      "wallFrames": [
+       {
+        "wallId": "W1",
+        "origin": {
+         "x": 0,
+         "y": 0,
+         "z": 0
+        },
+        "alongAxis": {
+         "x": -1,
+         "y": 0,
+         "z": 0
+        },
+        "frontAxis": {
+         "x": 0,
+         "y": 0,
+         "z": 1
+        },
+        "rotationY": 0
+       }
+      ]
+     }
+    },
+    "binding": {
+     "transform": {
+      "yaw": -90,
+      "origin": {
+       "x": 300,
+       "z": -400
+      }
+     }
+    }
+   },
+   "expected": {
+    "modules": [
+     {
+      "transform": {
+       "position": {
+        "x": 0.0,
+        "y": 0,
+        "z": -900.0
+       },
+       "rotation": {
+        "x": 0,
+        "y": -90,
+        "z": 0,
+        "unit": "deg"
+       }
+      }
+     }
+    ],
+    "appliances": [
+     {
+      "transform": {
+       "position": {
+        "x": 250.0,
+        "y": 850,
+        "z": -500.0
+       },
+       "rotation": {
+        "x": 0,
+        "y": -90,
+        "z": 0,
+        "unit": "deg"
+       }
+      }
+     }
+    ],
+    "cameras": [
+     {
+      "position": {
+       "x": -2200.0,
+       "y": 1500,
+       "z": -1900.0
+      },
+      "target": {
+       "x": 300.0,
+       "y": 900,
+       "z": -1900.0
+      }
+     }
+    ],
+    "coordinateSystem": {
+     "origin": "room_corner",
+     "notes": "n Đã đặt vào phòng của mặt bằng: gốc là góc phải của tường sau bếp, xoay -90.0 độ.",
+     "wallFrames": [
+      {
+       "wallId": "W1",
+       "origin": {
+        "x": 300.0,
+        "y": 0,
+        "z": -400.0
+       },
+       "alongAxis": {
+        "x": -0.0,
+        "y": 0,
+        "z": -1.0
+       },
+       "frontAxis": {
+        "x": -1.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "rotationY": -90
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "document without optional sections",
+   "input": {
+    "doc": {
+     "modules": []
+    },
+    "binding": {
+     "transform": {
+      "yaw": 30,
+      "origin": {
+       "x": 10,
+       "z": 10
+      }
+     }
+    }
+   },
+   "expected": {
+    "modules": []
+   }
+  }
+ ]
+}

@@ -314,7 +314,7 @@ def dump_spec(spec: KitchenSpec) -> dict:
     return spec.model_dump(mode="json", exclude_none=True)
 
 
-def to_data(model: BaseModel, exclude_none: bool = False) -> dict:
+def to_data(model: BaseModel, exclude_none: bool = False) -> dict[str, Any]:
     """Spec-side value -> plain JSON data (the one place the core turns a model into data; in Rust this is serde)."""
     return model.model_dump(mode="json", exclude_none=exclude_none)
 

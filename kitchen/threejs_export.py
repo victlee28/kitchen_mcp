@@ -14,6 +14,7 @@ import math
 import re
 from collections import defaultdict
 
+from .numeric import round_half_away, round_int
 from . import floorplan as fpmod, roomctx, hardware, regions, vocab
 from .geometry import Part, backsplash_height, compile_spec, views_of
 from .errors import require
@@ -34,15 +35,15 @@ def _hex(rgb) -> str:
 
 
 def _v(x, y, z) -> dict:
-    return {"x": round(float(x), 2), "y": round(float(y), 2), "z": round(float(z), 2)}
+    return {"x": round_half_away(float(x), 2), "y": round_half_away(float(y), 2), "z": round_half_away(float(z), 2)}
 
 
 def _tf(pos, rot_y=0.0) -> dict:
-    return {"position": _v(*pos), "rotation": {"x": 0, "y": round(rot_y, 4), "z": 0, "unit": "deg"}}
+    return {"position": _v(*pos), "rotation": {"x": 0, "y": round_half_away(rot_y, 4), "z": 0, "unit": "deg"}}
 
 
 def _dims(w, h, d) -> dict:
-    return {"width": round(max(w, 0.01), 2), "height": round(max(h, 0.01), 2), "depth": round(max(d, 0.01), 2)}
+    return {"width": round_half_away(max(w, 0.01), 2), "height": round_half_away(max(h, 0.01), 2), "depth": round_half_away(max(d, 0.01), 2)}
 
 
 def _rot(v, deg):
@@ -173,12 +174,12 @@ def _materials(spec: KitchenSpec) -> tuple[list[dict], dict[str, str]]:
         material_text = {"id": mid, "name": name, **g, "semanticClass": sem}
         if key == "wallTile" and spec.common.model_extra and spec.common.model_extra.get("wallTile"):
             a, b = spec.common.model_extra["wallTile"][:2]
-            material_text["textureRepeat"] = {"u": round(1000 / a, 3), "v": round(1000 / b, 3)}  # số viên trên mỗi mét
+            material_text["textureRepeat"] = {"u": round_half_away(1000 / a, 3), "v": round_half_away(1000 / b, 3)}  # số viên trên mỗi mét
         if key == "wallTile" and spec.common.wallTilePattern:
             material_text["pattern"] = spec.common.wallTilePattern  # kiểu xếp gạch (chưa vẽ từng viên)
         if key == "floor" and spec.common.model_extra and spec.common.model_extra.get("floorTile"):
             a, b = spec.common.model_extra["floorTile"][:2]
-            material_text["textureRepeat"] = {"u": round(1000 / a, 3), "v": round(1000 / b, 3)}
+            material_text["textureRepeat"] = {"u": round_half_away(1000 / a, 3), "v": round_half_away(1000 / b, 3)}
         out.append(material_text)
         ids[key] = mid
     for m in spec.module:  # vật liệu mặt trước riêng từng module
@@ -289,7 +290,7 @@ def _module_entry(spec: KitchenSpec, m: Module, parts: list[Part], frame: Frame,
             door_parts.append((openings, hi, p.type == "glass-door", p.id))
         elif p.type == "drawer":
             w, h, d = (hi[i] - openings[i] for i in range(3))
-            entry["drawers"].append({"id": pid("drawer"), "assetId": "ASSET-DRAWER-FRONT", "height": round(h, 2), "materialId": mats[front],
+            entry["drawers"].append({"id": pid("drawer"), "assetId": "ASSET-DRAWER-FRONT", "height": round_half_away(h, 2), "materialId": mats[front],
                                      "dimensions": _dims(w, h, d), "transform": _tf(openings), "sourceRef": p.id,
                                      "hardware": _handle(hn, hmat, w, h, d, tier, None, horizontal=True, source=handle_of.get(p.id))})
             if entry["drawers"][-1]["hardware"] is None:
@@ -319,13 +320,13 @@ def _module_entry(spec: KitchenSpec, m: Module, parts: list[Part], frame: Frame,
                 e["customRole"] = crole
             entry["parts"].append(e)
             if role == "shelf":
-                entry["shelves"].append({"id": e["id"], "heightOffset": round(openings[1], 2), "materialId": material_text})
+                entry["shelves"].append({"id": e["id"], "heightOffset": round_half_away(openings[1], 2), "materialId": material_text})
 
     # cánh: bản lề theo moCanh hoặc tự suy (kitchen.hardware, dùng chung với bộ biên dịch hình học)
     door_parts.sort(key=lambda x: (x[0][1], x[0][0]))
     rows = defaultdict(list)
     for d in door_parts:
-        rows[round(d[0][1])].append(d)
+        rows[round_int(d[0][1])].append(d)
     flat = [d for _, ds in sorted(rows.items()) for d in sorted(ds, key=lambda x: x[0][0])]
     hinge_of = hardware.hinges(m, [(openings[0], hi[0], openings[1], hi[1]) for openings, hi, _, _ in flat])
     for k, (openings, hi, glass, src) in enumerate(flat):
@@ -334,7 +335,7 @@ def _module_entry(spec: KitchenSpec, m: Module, parts: list[Part], frame: Frame,
         door = {"id": pid("door"), "assetId": "ASSET-DOOR-GLASS" if glass else "ASSET-DOOR-SLAB", "hingeSide": hinge,
                 "materialId": mats["glass"] if glass else mats[front], "dimensions": _dims(w, h, d), "transform": _tf(openings),
                 "glass": glass, "frontStyle": "glass" if glass else entry["frontStyle"], "openingAngle": 0, "sourceRef": src,
-                "hinges": [{"offset": 100}, {"offset": round(h - 100, 1)}] + ([{"offset": round(h / 2, 1)}] if h > 1200 else [])}
+                "hinges": [{"offset": 100}, {"offset": round_half_away(h - 100, 1)}] + ([{"offset": round_half_away(h / 2, 1)}] if h > 1200 else [])}
         hw = _handle(hn, hmat, w, h, d, tier, hinge, horizontal=hinge in ("Top", "Bottom"), source=handle_of.get(src))
         if hw:
             door["hardware"] = hw
@@ -463,7 +464,7 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
             seen_prof.add(prof.id)
             assets.append({"id": aid, "category": "cornice" if mol.variant == "crown" else "molding", "geometryType": "extrusion",
                            "defaultDimensions": _dims(1000, prof.height, max(us) - min(us)),
-                           "parameters": {"profileId": prof.id, "name": prof.name, "profile": [[round(u, 2), round(v, 2)] for u, v in prof.points],
+                           "parameters": {"profileId": prof.id, "name": prof.name, "profile": [[round_half_away(u, 2), round_half_away(v, 2)] for u, v in prof.points],
                                           "convention": "u: nhô ra phía phòng từ mặt trước tủ (âm = lùi vào); v: lên từ đường chạy; đa giác kín, ngược chiều kim đồng hồ"}})
         if mol.material:
             mid = f"MAT-MOLDING-{mol.id}"
@@ -507,7 +508,7 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
         n = math.sqrt(sum(x * x for x in d)) or 1
         up = _v(0, 0, -1) if abs(d[1] / n) > 0.999 else _v(0, 1, 0)
         cameras.append({"id": f"CAM-{key}", "name": v.name or key, "position": _v(*pos), "target": _v(*tgt), "projection": "perspective",
-                        "fov": v.verticalFov, "fovAxis": "vertical", "near": 50, "far": 50000, "up": up, "aspect": round(4 / 3, 4)})
+                        "fov": v.verticalFov, "fovAxis": "vertical", "near": 50, "far": 50000, "up": up, "aspect": round_half_away(4 / 3, 4)})
 
     p_cb = (sel.get("sink-cooktop") or {}).get("params", {})
     p_ld = (sel.get("walkway") or {}).get("params", {})
@@ -548,7 +549,7 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
                            "controlPasses": ["lines", "depth", "normal", "seg", "seg_module", "instance", "albedo"], "segmentationPalette": palette},
     }
     if isinstance(floorplan, dict):
-        fpmod.finish_document(doc, floorplan, binding)
+        doc = fpmod.finish_document(doc, floorplan, binding)
     return doc
 
 

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import math
 
+from .numeric import round_half_away, round_int
 from . import regions
 from .errors import require
 from .spec import KitchenSpec, Appliance
@@ -56,7 +57,7 @@ class _Ctx:
         if s["reference"]:
             d["reference"] = True
         if measured is not None:
-            d["measured"] = round(measured, 1) if isinstance(measured, float) else measured
+            d["measured"] = round_half_away(measured, 1) if isinstance(measured, float) else measured
         if limit is not None:
             d["limit"] = limit
         self.out.append(d)
@@ -168,7 +169,7 @@ def check(spec: KitchenSpec, sel: dict[str, dict]) -> list[dict]:
                 a, b = sorted(sides, reverse=True)
                 if a < p["larger_side"] - 1 or b < p["smaller_side"] - 1:
                     ctx.add(topic, [t.id], f"Mặt bàn trống hai bên {name} {t.id}: {sides[0]:.0f} / {sides[1]:.0f} mm "
-                            f"(cần ≥{p['larger_side']} một bên, ≥{p['smaller_side']} bên kia)", [round(sides[0]), round(sides[1])],
+                            f"(cần ≥{p['larger_side']} một bên, ≥{p['smaller_side']} bên kia)", [round_int(sides[0]), round_int(sides[1])],
                             [p["larger_side"], p["smaller_side"]])
     if (p := ctx.p("fridge-table")):
         for t in fridge:
@@ -241,7 +242,7 @@ def check(spec: KitchenSpec, sel: dict[str, dict]) -> list[dict]:
                 ctx.add("triangle", [sink[0].id, cooktop[0].id, fridge[0].id],
                         f"Tam giác làm việc: {', '.join(f'{k} {v:.0f}' for k, v in legs.items())} mm, tổng {total:.0f} "
                         f"(cạnh {p.get('door_min', 0)}–{p.get('door_max', '…')}, tổng ≤{p.get('total_max', '…')})",
-                        {k: round(v) for k, v in legs.items()}, {k: p.get(k) for k in ("door_min", "door_max", "total_max")})
+                        {k: round_int(v) for k, v in legs.items()}, {k: p.get(k) for k in ("door_min", "door_max", "total_max")})
         except KeyError:
             pass
     # lối đi

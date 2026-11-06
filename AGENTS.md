@@ -17,6 +17,7 @@ Both interfaces should delegate application behavior to `kitchen.service.Kitchen
 - `kitchen/service.py`: shared application-service facade used by MCP and HTTP.
 - `kitchen/store.py`: SQLite persistence for designs, append-only revisions, and knowledge entries.
 - `kitchen/intent.py`: converts structured templates or free-text requests into specifications.
+- `kitchen/llm.py`: asks the language model (DeepSeek) for design parameters; takes a `Config`, never raises, the caller falls back to `intent.parse_prompt`.
 - `kitchen/edit.py`: applies design operations to specifications.
 - `kitchen/rules.py`, `kitchen/rules_kb.py`, `kitchen/rules_nkba.py`: validates designs using geometry and stored knowledge.
 - `kitchen/regions.py`: country and region mappings used to select applicable knowledge.
@@ -35,7 +36,7 @@ Both interfaces should delegate application behavior to `kitchen.service.Kitchen
 
 The code is organised so the backend can later move to Rust without re-deciding behaviour. The rules are R1-R23 in `CODING_STANDARDS.md`; the reasoning is in `docs/adr/0003-portable-core.md`.
 
-- Each module is in one zone: **core** (pure functions on JSON-like data), **data** (`spec`, `knowledge_seed`), **shell** (store, service, backends, config, intent: may do I/O), **pixel** (numpy/PIL, image jobs). The list is `tests/architecture_rules.py`; a new module must be added to a zone or `tests/test_architecture.py` fails.
+- Each module is in one zone: **core** (pure functions on JSON-like data), **data** (`spec`, `knowledge_seed`), **shell** (store, service, backends, config, llm, intent: may do I/O; `intent` is the text parser and is shell only because it uses Pydantic; the network call to the language model is in `kitchen/llm.py`), **pixel** (numpy/PIL, image jobs). The list is `tests/architecture_rules.py`; a new module must be added to a zone or `tests/test_architecture.py` fails.
 - Core code does not read files, the environment, the clock, random numbers or the network, and does not call Pydantic behaviour. Take a value as an argument instead; use `spec.to_data` / `spec.from_data` at the boundary, `numeric.round_half_away` for written-out numbers, `errors.*` for failures.
 - Raise `kitchen.errors` types with a stable `code`; do not raise bare `ValueError`/`KeyError` in core and do not `except Exception` to hide a failure.
 - A new public core function gets golden cases (`tests/golden/<area>/<name>.json`, a wrapper in `tests/golden_functions.py`). Fill expected values with `python tests/golden_regen.py`, then read the diff before committing.

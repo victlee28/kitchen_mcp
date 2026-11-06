@@ -1,0 +1,170 @@
+{
+ "function": "layers.design_op",
+ "cases": [
+  {
+   "name": "single door part",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "layerId": "TD1-door-1",
+    "material": "Walnut"
+   },
+   "expected": {
+    "op": {
+     "op": "update",
+     "id": "TD1",
+     "changes": {
+      "material": "Walnut"
+     }
+    },
+    "scope": "cả mặt trước module TD1"
+   }
+  },
+  {
+   "name": "front sections of a module",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "layerId": "frontSections:TD1",
+    "material": "Walnut"
+   },
+   "expected": {
+    "op": {
+     "op": "update",
+     "id": "TD1",
+     "changes": {
+      "material": "Walnut"
+     }
+    },
+    "scope": "cả mặt trước module TD1"
+   }
+  },
+  {
+   "name": "a single handle cannot be recoloured alone (stored per module)",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "layerId": "TD1-handle-1",
+    "material": "Đồng thau"
+   },
+   "error": {
+    "kind": "validation",
+    "code": "invalid-input"
+   }
+  },
+  {
+   "name": "all handles of a module",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "layerId": "handle:TD1",
+    "material": "Đồng thau"
+   },
+   "expected": {
+    "op": {
+     "op": "update",
+     "id": "TD1",
+     "changes": {
+      "handle": {
+       "material": "Đồng thau"
+      }
+     }
+    },
+    "scope": "tay nắm module TD1"
+   }
+  },
+  {
+   "name": "module group",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "layerId": "module:TD1",
+    "material": "Oak"
+   },
+   "expected": null
+  },
+  {
+   "name": "common countertop",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "layerId": "type:countertop",
+    "material": "Marble"
+   },
+   "expected": {
+    "op": {
+     "op": "common",
+     "changes": {
+      "material": {
+       "base": "Laminate vân gỗ sồi sáng",
+       "tall": "Laminate vân gỗ sồi sáng",
+       "upper": "Trắng mờ",
+       "cornerShelf": "Vân gỗ sồi",
+       "countertop": "Marble",
+       "wallTile": "Gạch thẻ trắng 75×300 xếp dọc"
+      }
+     }
+    },
+    "scope": "toàn bộ mặt đá"
+   }
+  },
+  {
+   "name": "common wall",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "layerId": "type:wall",
+    "material": "Cream paint"
+   },
+   "expected": {
+    "op": {
+     "op": "common",
+     "changes": {
+      "material": {
+       "base": "Laminate vân gỗ sồi sáng",
+       "tall": "Laminate vân gỗ sồi sáng",
+       "upper": "Trắng mờ",
+       "cornerShelf": "Vân gỗ sồi",
+       "countertop": "Đá nhân tạo trắng",
+       "wallTile": "Gạch thẻ trắng 75×300 xếp dọc",
+       "wall": "Cream paint"
+      }
+     }
+    },
+    "scope": "toàn bộ tường"
+   }
+  },
+  {
+   "name": "plinth is not editable",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "layerId": "type:plinth",
+    "material": "Oak"
+   },
+   "expected": null
+  },
+  {
+   "name": "unknown layer",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "layerId": "nope",
+    "material": "Oak"
+   },
+   "error": {
+    "kind": "not-found",
+    "code": "not-found"
+   }
+  }
+ ]
+}

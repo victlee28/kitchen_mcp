@@ -28,7 +28,8 @@ copy .env.example .env      # tùy chọn: DEEPSEEK_API_KEY... (.env được n�
   "args": ["C:\\Users\\XPC\\Desktop\\image\\mcp-imagev2\\server.py"]}}}
 ```
 
-- Test: `python -m unittest discover -s tests -v`
+- Test (Windows): `run_tests.bat setup` the first time, then `run_tests.bat`. It installs the project with the `dev` extra (pydantic, numpy, pillow, jsonschema, mcp, pyright), runs `python -m unittest discover -s tests`, then `node --test tests\js\menu-logic.test.mjs`. Without `pyright` the type ratchet (`tests/test_typecheck.py`) is skipped. Python 3.11+ is required.
+- Test (any OS): `pip install -e ".[dev]"` then `python -m unittest discover -s tests -v`
 
 ## Thành phần
 

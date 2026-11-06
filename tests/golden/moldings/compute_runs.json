@@ -1,0 +1,572 @@
+{
+ "function": "moldings.compute_runs",
+ "cases": [
+  {
+   "name": "no moldings in the fixture",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    }
+   },
+   "expected": []
+  },
+  {
+   "name": "crown and base moldings",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "ops": [
+     {
+      "op": "set-moldings",
+      "moldings": [
+       {
+        "id": "crown-molding",
+        "variant": "crown",
+        "profile": "classic-crown-layered"
+       },
+       {
+        "id": "base-molding",
+        "variant": "base",
+        "profile": "classic-base"
+       }
+      ]
+     }
+    ]
+   },
+   "expected": [
+    [
+     "crown-molding",
+     "classic-crown-layered",
+     2610.0,
+     [
+      "right",
+      "back"
+     ],
+     [
+      "KG1",
+      "TT7",
+      "TT8",
+      "TT9",
+      "KG1",
+      "TT2"
+     ],
+     [
+      [
+       -0.0,
+       2830.0
+      ],
+      [
+       -320.0,
+       2830.0
+      ],
+      [
+       -320.0,
+       320.0
+      ],
+      [
+       -1250.0,
+       320.0
+      ]
+     ]
+    ],
+    [
+     "crown-molding",
+     "classic-crown-layered",
+     2610.0,
+     [
+      "back"
+     ],
+     [
+      "TC1"
+     ],
+     [
+      [
+       -1250.0,
+       320.0
+      ],
+      [
+       -1250.0,
+       640.0
+      ],
+      [
+       -1920.0,
+       640.0
+      ],
+      [
+       -1920.0,
+       0.0
+      ]
+     ]
+    ],
+    [
+     "base-molding",
+     "classic-base",
+     0.0,
+     [
+      "right",
+      "back"
+     ],
+     [
+      "TD2",
+      "TD3",
+      "TD4",
+      "TD5",
+      "TD1"
+     ],
+     [
+      [
+       -0.0,
+       2830.0
+      ],
+      [
+       -550.0,
+       2830.0
+      ],
+      [
+       -550.0,
+       550.0
+      ],
+      [
+       -1250.0,
+       550.0
+      ],
+      [
+       -1250.0,
+       0.0
+      ]
+     ]
+    ]
+   ]
+  },
+  {
+   "name": "base cabinet removed, gap left",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "ops": [
+     {
+      "op": "set-moldings",
+      "moldings": [
+       {
+        "id": "crown-molding",
+        "variant": "crown",
+        "profile": "classic-crown-layered"
+       },
+       {
+        "id": "base-molding",
+        "variant": "base",
+        "profile": "classic-base"
+       }
+      ]
+     },
+     {
+      "op": "remove",
+      "id": "TD3",
+      "closeGap": false
+     }
+    ]
+   },
+   "expected": [
+    [
+     "crown-molding",
+     "classic-crown-layered",
+     2610.0,
+     [
+      "right",
+      "back"
+     ],
+     [
+      "KG1",
+      "TT7",
+      "TT8",
+      "TT9",
+      "KG1",
+      "TT2"
+     ],
+     [
+      [
+       -0.0,
+       2830.0
+      ],
+      [
+       -320.0,
+       2830.0
+      ],
+      [
+       -320.0,
+       320.0
+      ],
+      [
+       -1250.0,
+       320.0
+      ]
+     ]
+    ],
+    [
+     "crown-molding",
+     "classic-crown-layered",
+     2610.0,
+     [
+      "back"
+     ],
+     [
+      "TC1"
+     ],
+     [
+      [
+       -1250.0,
+       320.0
+      ],
+      [
+       -1250.0,
+       640.0
+      ],
+      [
+       -1920.0,
+       640.0
+      ],
+      [
+       -1920.0,
+       0.0
+      ]
+     ]
+    ],
+    [
+     "base-molding",
+     "classic-base",
+     0.0,
+     [
+      "right",
+      "back"
+     ],
+     [
+      "TD2",
+      "TD1"
+     ],
+     [
+      [
+       -0.0,
+       1440.0
+      ],
+      [
+       -550.0,
+       1440.0
+      ],
+      [
+       -550.0,
+       550.0
+      ],
+      [
+       -1250.0,
+       550.0
+      ],
+      [
+       -1250.0,
+       0.0
+      ]
+     ]
+    ],
+    [
+     "base-molding",
+     "classic-base",
+     0.0,
+     [
+      "right"
+     ],
+     [
+      "TD4",
+      "TD5"
+     ],
+     [
+      [
+       -0.0,
+       2830.0
+      ],
+      [
+       -550.0,
+       2830.0
+      ],
+      [
+       -550.0,
+       1810.0
+      ],
+      [
+       -0.0,
+       1810.0
+      ]
+     ]
+    ]
+   ]
+  },
+  {
+   "name": "upper cabinet removed",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "ops": [
+     {
+      "op": "set-moldings",
+      "moldings": [
+       {
+        "id": "crown-molding",
+        "variant": "crown",
+        "profile": "classic-crown-layered"
+       },
+       {
+        "id": "base-molding",
+        "variant": "base",
+        "profile": "classic-base"
+       }
+      ]
+     },
+     {
+      "op": "remove",
+      "id": "TT4"
+     }
+    ]
+   },
+   "expected": [
+    [
+     "crown-molding",
+     "classic-crown-layered",
+     2610.0,
+     [
+      "right",
+      "back"
+     ],
+     [
+      "KG1",
+      "TT7",
+      "TT8",
+      "TT9",
+      "KG1",
+      "TT2"
+     ],
+     [
+      [
+       -0.0,
+       2830.0
+      ],
+      [
+       -320.0,
+       2830.0
+      ],
+      [
+       -320.0,
+       320.0
+      ],
+      [
+       -1250.0,
+       320.0
+      ]
+     ]
+    ],
+    [
+     "crown-molding",
+     "classic-crown-layered",
+     2610.0,
+     [
+      "back"
+     ],
+     [
+      "TC1"
+     ],
+     [
+      [
+       -1250.0,
+       320.0
+      ],
+      [
+       -1250.0,
+       640.0
+      ],
+      [
+       -1920.0,
+       640.0
+      ],
+      [
+       -1920.0,
+       0.0
+      ]
+     ]
+    ],
+    [
+     "base-molding",
+     "classic-base",
+     0.0,
+     [
+      "right",
+      "back"
+     ],
+     [
+      "TD2",
+      "TD3",
+      "TD4",
+      "TD5",
+      "TD1"
+     ],
+     [
+      [
+       -0.0,
+       2830.0
+      ],
+      [
+       -550.0,
+       2830.0
+      ],
+      [
+       -550.0,
+       550.0
+      ],
+      [
+       -1250.0,
+       550.0
+      ],
+      [
+       -1250.0,
+       0.0
+      ]
+     ]
+    ]
+   ]
+  },
+  {
+   "name": "a wide joinGap on the base molding keeps one run across the gap",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "ops": [
+     {
+      "op": "set-moldings",
+      "moldings": [
+       {
+        "id": "crown-molding",
+        "variant": "crown",
+        "profile": "classic-crown-layered",
+        "joinGap": 50
+       },
+       {
+        "id": "base-molding",
+        "variant": "base",
+        "profile": "classic-base",
+        "joinGap": 2000
+       }
+      ]
+     },
+     {
+      "op": "remove",
+      "id": "TD3",
+      "closeGap": false
+     }
+    ]
+   },
+   "expected": [
+    [
+     "crown-molding",
+     "classic-crown-layered",
+     2610.0,
+     [
+      "right",
+      "back"
+     ],
+     [
+      "KG1",
+      "TT7",
+      "TT8",
+      "TT9",
+      "KG1",
+      "TT2"
+     ],
+     [
+      [
+       -0.0,
+       2830.0
+      ],
+      [
+       -320.0,
+       2830.0
+      ],
+      [
+       -320.0,
+       320.0
+      ],
+      [
+       -1250.0,
+       320.0
+      ]
+     ]
+    ],
+    [
+     "crown-molding",
+     "classic-crown-layered",
+     2610.0,
+     [
+      "back"
+     ],
+     [
+      "TC1"
+     ],
+     [
+      [
+       -1250.0,
+       320.0
+      ],
+      [
+       -1250.0,
+       640.0
+      ],
+      [
+       -1920.0,
+       640.0
+      ],
+      [
+       -1920.0,
+       0.0
+      ]
+     ]
+    ],
+    [
+     "base-molding",
+     "classic-base",
+     0.0,
+     [
+      "right",
+      "back"
+     ],
+     [
+      "TD2",
+      "TD4",
+      "TD5",
+      "TD1"
+     ],
+     [
+      [
+       -0.0,
+       2830.0
+      ],
+      [
+       -550.0,
+       2830.0
+      ],
+      [
+       -550.0,
+       550.0
+      ],
+      [
+       -1250.0,
+       550.0
+      ],
+      [
+       -1250.0,
+       0.0
+      ]
+     ]
+    ]
+   ]
+  }
+ ]
+}
