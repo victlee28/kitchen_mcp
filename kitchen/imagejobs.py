@@ -946,7 +946,9 @@ class ImageJobs:
                            None, None, r.get("lighting"))
 
     def get(self, jid: str) -> dict:
+        self.store.mark_stale_jobs()
         return self.store.get_job(jid)
 
     def list(self, did: str | None = None, view: str | None = None, status: str | None = None, limit: int = 50) -> list[dict]:
+        self.store.mark_stale_jobs()
         return self.store.list_jobs(did, view, status, limit)

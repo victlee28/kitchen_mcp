@@ -69,7 +69,7 @@ class TestMigrations(unittest.TestCase):
         _old_db(self.db, 1)
         st = Store(self.db)
         self.assertEqual(st.migration["from"], 1)
-        self.assertEqual(st.migration["applied"], ["baseline-tables", "knowledge-jurisdiction"])
+        self.assertEqual(st.migration["applied"], ["baseline-tables", "knowledge-jurisdiction", "job-ownership"])
         self.assertEqual(_version(self.db), migrations.LATEST)
         c = sqlite3.connect(self.db)
         self.assertIn("region", {r[1] for r in c.execute("PRAGMA table_info(knowledge)")})
@@ -123,6 +123,20 @@ class TestMigrations(unittest.TestCase):
             Store(self.db)
         self.assertEqual(_version(self.db), 99)
         self.assertEqual(self.backups(), [])
+
+    def test_job_ownership_columns_arrive_with_step_4_on_an_existing_database(self):
+        _old_db(self.db, 3)
+        c = sqlite3.connect(self.db)
+        c.execute("INSERT INTO image_jobs(id, design_id, rev, view, render_key, kind, mode, backend, status, request_json) VALUES('j','d1',1,'perspective','k','material','quick','recolor','running','{}')")
+        c.commit()
+        c.close()
+        st = Store(self.db)
+        self.assertEqual(st.migration["applied"], ["job-ownership"])
+        c = sqlite3.connect(self.db)
+        self.assertTrue({"owner", "heartbeat_at"} <= {r[1] for r in c.execute("PRAGMA table_info(image_jobs)")})
+        self.assertEqual(c.execute("SELECT owner, heartbeat_at FROM image_jobs").fetchone(), (None, None), "old rows are untouched")
+        c.close()
+        self.assertEqual(st.mark_stale_jobs(), 1, "a running job from before the upgrade has no heartbeat, so it counts as dead")
 
     def test_steps_are_numbered_without_gaps(self):
         self.assertEqual([s.version for s in migrations.STEPS], list(range(1, migrations.LATEST + 1)))

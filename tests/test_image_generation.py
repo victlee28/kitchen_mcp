@@ -592,7 +592,7 @@ class TestImportedBase(_Base):
         # a job left in 'running' by a stopped process is marked interrupted
         j = im.create(self.did, VIEW, "TD1-door-1", material="kem")
         with self.svc.store._conn() as c:
-            c.execute("UPDATE image_jobs SET status='running' WHERE id=?", (j["id"],))
+            c.execute("UPDATE image_jobs SET status='running', heartbeat_at=0 WHERE id=?", (j["id"],))   # its owner stopped beating long ago
         self.assertEqual(self.svc.store.mark_stale_jobs(), 1)
         self.assertEqual(self.svc.store.get_job(j["id"])["status"], "error:interrupted")
 

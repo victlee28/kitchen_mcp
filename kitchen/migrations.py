@@ -42,10 +42,20 @@ def _knowledge_jurisdiction(conn: sqlite3.Connection) -> None:
     knowledge_seed.migrate(conn)            # region / country columns and their index
 
 
+def _job_ownership(conn: sqlite3.Connection) -> None:
+    """Who is running a job and when it last proved it is alive, so a second process does not mistake a live job for a dead one."""
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(image_jobs)")}
+    if "owner" not in cols:
+        conn.execute("ALTER TABLE image_jobs ADD COLUMN owner TEXT")
+    if "heartbeat_at" not in cols:
+        conn.execute("ALTER TABLE image_jobs ADD COLUMN heartbeat_at REAL")
+
+
 STEPS: list[Step] = [
     Step(1, "english-schema", legacy_schema.migrate_database),
     Step(2, "baseline-tables", _create_baseline, atomic=False),
     Step(3, "knowledge-jurisdiction", _knowledge_jurisdiction),
+    Step(4, "job-ownership", _job_ownership),
 ]
 LATEST = STEPS[-1].version
 

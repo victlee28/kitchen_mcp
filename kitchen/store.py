@@ -1,9 +1,11 @@
 """SQLite persistence for designs, revisions, image jobs, and knowledge."""
 from __future__ import annotations
 import json
+import os
 import re
 import sqlite3
 import threading
+import time
 import unicodedata
 import uuid
 from contextlib import contextmanager
@@ -22,9 +24,15 @@ def _slug(text: str) -> str:
 
 class Store:
 
+    HEARTBEAT_S = 10.0       # a process that runs jobs says "still alive" this often
+    STALE_AFTER_S = 45.0     # a running job whose owner has been silent this long is declared interrupted
+
     def __init__(self, path: str | Path):
         self.path = str(path)
         self._lock = threading.Lock()
+        self.owner = f"{os.getpid()}:{uuid.uuid4().hex[:8]}"      # one id per Store instance, never reused by another process
+        self._beat: threading.Thread | None = None
+        self._beat_lock = threading.Lock()
         with self._conn() as connection:
             self.migration = migrations.run(connection, self.path)
             self.seed_result = knowledge_seed.apply(connection)
@@ -182,6 +190,10 @@ class Store:
     def create_job(self, job: dict) -> dict:
         with self._conn() as connection:
             connection.execute('INSERT INTO image_jobs(id, design_id, rev, view, render_key, kind, mode, target, backend, status, request_json) VALUES(?,?,?,?,?,?,?,?,?,?,?)', (job['id'], job['design_id'], job['rev'], job['view'], job['render_key'], job['kind'], job['mode'], job.get('target'), job['backend'], job['status'], json.dumps(job['request'], ensure_ascii=False)))
+            if job['status'] == 'running':
+                self._claim(connection, job['id'])
+        if job['status'] == 'running':
+            self._ensure_beat()
         return self.get_job(job['id'])
 
     def update_job(self, job_id: str, status: str | None=None, result: dict | None=None, error: str | None=None) -> dict:
@@ -191,7 +203,38 @@ class Store:
                 raise KeyError(f"Image job '{job_id}' was not found")
             result_data = {**json.loads(row['result_json'] or '{}'), **(result or {})}
             connection.execute('UPDATE image_jobs SET status=COALESCE(?, status), result_json=?, error=?, updated_at=CURRENT_TIMESTAMP WHERE id=?', (status, json.dumps(result_data, ensure_ascii=False), error, job_id))
+            if status == 'running':
+                self._claim(connection, job_id)
+        if status == 'running':
+            self._ensure_beat()
         return self.get_job(job_id)
+
+    def _claim(self, connection, job_id: str) -> None:
+        connection.execute('UPDATE image_jobs SET owner=?, heartbeat_at=? WHERE id=?', (self.owner, time.time(), job_id))
+
+    def touch_jobs(self) -> int:
+        """Refresh the heartbeat of the running jobs this process owns; returns how many there are."""
+        with self._conn() as connection:
+            return connection.execute("UPDATE image_jobs SET heartbeat_at=? WHERE status='running' AND owner=?", (time.time(), self.owner)).rowcount
+
+    def _ensure_beat(self) -> None:
+        """Keep a daemon thread alive while this process owns running jobs; it ends by itself when there are none."""
+        with self._beat_lock:
+            if self._beat is not None and self._beat.is_alive():
+                return
+            self._beat = threading.Thread(target=self._beat_loop, daemon=True, name='job-heartbeat')
+            self._beat.start()
+
+    def _beat_loop(self) -> None:
+        while True:
+            time.sleep(self.HEARTBEAT_S)
+            with self._beat_lock:
+                try:
+                    if self.touch_jobs() == 0:
+                        self._beat = None
+                        return
+                except sqlite3.Error:
+                    pass
 
     def get_job(self, job_id: str) -> dict:
         with self._conn() as connection:
@@ -212,6 +255,7 @@ class Store:
         return [self._job(row) for row in rows]
 
     def mark_stale_jobs(self) -> int:
-        """Mark jobs left running by a stopped process as interrupted."""
+        """Mark running jobs whose owner stopped sending heartbeats as interrupted. A job another live process is running is left alone."""
+        limit = time.time() - self.STALE_AFTER_S
         with self._conn() as connection:
-            return connection.execute("UPDATE image_jobs SET status='error:interrupted', error='Process stopped while the job was running', updated_at=CURRENT_TIMESTAMP WHERE status='running'").rowcount
+            return connection.execute("UPDATE image_jobs SET status='error:interrupted', error='Process stopped while the job was running', updated_at=CURRENT_TIMESTAMP WHERE status='running' AND (heartbeat_at IS NULL OR heartbeat_at<?)", (limit,)).rowcount
