@@ -74,21 +74,21 @@ def design_history(design_id: str) -> list[dict[str, Any]]:
     """Return the revision history for a design."""
     return _call(svc().history, design_id)
 
-def add_module(design_id: str, base_rev: int, module: dict[str, Any], after_module: str | None=None, close_gap: bool=True) -> dict[str, Any]:
-    """Add a cabinet module to a design."""
-    return _call(svc().apply, design_id, {'op': 'add', 'module': module, 'afterModule': after_module, 'closeGap': close_gap}, base_rev, 'mcp')
+def add_module(design_id: str, base_rev: int, module: dict[str, Any], after_module: str | None=None, close_gap: bool=True, expect: str | None=None) -> dict[str, Any]:
+    """Add a cabinet module to a design. expect: the opHash from propose_change, to refuse anything but the previewed operation."""
+    return _call(svc().apply, design_id, {'op': 'add', 'module': module, 'afterModule': after_module, 'closeGap': close_gap}, base_rev, 'mcp', expect)
 
-def update_module(design_id: str, base_rev: int, module_id: str, changes: dict[str, Any], close_gap: bool=True) -> dict[str, Any]:
-    """Update one cabinet module."""
-    return _call(svc().apply, design_id, {'op': 'update', 'id': module_id, 'changes': changes, 'closeGap': close_gap}, base_rev, 'mcp')
+def update_module(design_id: str, base_rev: int, module_id: str, changes: dict[str, Any], close_gap: bool=True, expect: str | None=None) -> dict[str, Any]:
+    """Update one cabinet module. expect: the opHash from propose_change."""
+    return _call(svc().apply, design_id, {'op': 'update', 'id': module_id, 'changes': changes, 'closeGap': close_gap}, base_rev, 'mcp', expect)
 
-def remove_module(design_id: str, base_rev: int, module_id: str, close_gap: bool=True) -> dict[str, Any]:
-    """Remove one cabinet module."""
-    return _call(svc().apply, design_id, {'op': 'remove', 'id': module_id, 'closeGap': close_gap}, base_rev, 'mcp')
+def remove_module(design_id: str, base_rev: int, module_id: str, close_gap: bool=True, expect: str | None=None) -> dict[str, Any]:
+    """Remove one cabinet module. expect: the opHash from propose_change."""
+    return _call(svc().apply, design_id, {'op': 'remove', 'id': module_id, 'closeGap': close_gap}, base_rev, 'mcp', expect)
 
-def update_global(design_id: str, base_rev: int, changes: dict[str, Any]) -> dict[str, Any]:
-    """Update shared design parameters."""
-    return _call(svc().apply, design_id, {'op': 'common', 'changes': changes}, base_rev, 'mcp')
+def update_global(design_id: str, base_rev: int, changes: dict[str, Any], expect: str | None=None) -> dict[str, Any]:
+    """Update shared design parameters. expect: the opHash from propose_change."""
+    return _call(svc().apply, design_id, {'op': 'common', 'changes': changes}, base_rev, 'mcp', expect)
 
 def set_moldings(design_id: str, base_rev: int, crown_molding: bool=True, base_molding: bool=True, crown_profile: str='classic-crown-layered', base_profile: str='classic-base', style: Literal['Modern', 'Classic', 'Neoclassical', 'Transitional', 'Industrial', 'Minimalist'] | None='Classic', open_end: Literal['return-to-wall', 'flat-cut']='return-to-wall') -> dict[str, Any]:
     """Enable or disable crown and base moldings using selected profiles."""
@@ -98,16 +98,16 @@ def list_molding_profiles(design_id: str | None=None) -> dict[str, Any]:
     """List built-in and design-specific molding profiles."""
     return _call(svc().molding_profiles, design_id)
 
-def apply_action(design_id: str, base_rev: int, op: dict[str, Any]) -> dict[str, Any]:
-    """Apply a supported corrective action returned by design validation."""
+def apply_action(design_id: str, base_rev: int, op: dict[str, Any], expect: str | None=None) -> dict[str, Any]:
+    """Apply a supported corrective action returned by design validation. expect: the opHash from propose_change."""
     if op.get('op') not in ('lower-top', 'molding', 'set-moldings'):
         raise ToolError('Unsupported corrective action. Use a design-editing tool for other operations.')
-    return _call(svc().apply, design_id, op, base_rev, 'mcp-action')
+    return _call(svc().apply, design_id, op, base_rev, 'mcp-action', expect)
 
 def propose_change(design_id: str, op: dict[str, Any], base_rev: int | None=None, scope_modules: list[str] | None=None) -> dict[str, Any]:
     """Preview a design operation without saving: changes, validation issues it introduces or resolves, and the modules it touches.
 
-    Confirm by sending the same op to the matching editing tool with the returned baseRev. scope_modules: ids the user pointed at.
+    Confirm by sending the same op to the matching editing tool (add_module, update_module, remove_module, update_global, apply_action) with the returned baseRev and expect=opHash; anything else is refused. scope_modules: ids the user pointed at.
     """
     return _call(svc().propose, design_id, op, base_rev, scope_modules)
 

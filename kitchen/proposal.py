@@ -75,5 +75,7 @@ def validation_delta(before: dict, after: dict) -> dict:
 
 def op_hash(operation: dict, base_revision: int | None) -> str:
     """Identifies exactly this operation on exactly this base revision; ``apply(..., expect=hash)`` refuses anything else."""
-    text = json.dumps({"op": operation, "baseRev": base_revision}, sort_keys=True, ensure_ascii=False, separators=(",", ":"), default=str)
+    # Defaults spelled out or left out are the same operation: the MCP editing tools always send closeGap and afterModule.
+    canon = {k: v for k, v in operation.items() if v is not None and not (k == "closeGap" and v is True)}
+    text = json.dumps({"op": canon, "baseRev": base_revision}, sort_keys=True, ensure_ascii=False, separators=(",", ":"), default=str)
     return hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]

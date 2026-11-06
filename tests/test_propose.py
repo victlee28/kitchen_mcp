@@ -125,6 +125,44 @@ class TestExpect(Base):
         self.assertNotEqual(a, proposal.op_hash({"op": "remove", "id": "B"}, 1))
 
 
+class TestMcpConfirm(Base):
+    """The MCP editing tools confirm a previewed operation with expect=opHash, whatever defaults they spell out."""
+    def setUp(self):
+        super().setUp()
+        import server
+        self.server = server
+        server._svc = self.svc
+
+    def tearDown(self):
+        self.server._svc = None
+        super().tearDown()
+
+    def test_each_editing_tool_accepts_its_own_preview_and_refuses_another(self):
+        mid = self.first.id
+        cases = [({"op": "update", "id": mid, "changes": {"material": NEW}}, lambda e, r: self.server.update_module(self.did, r, mid, {"material": NEW}, expect=e)),
+                 ({"op": "common", "changes": {"ceiling": 2600}}, lambda e, r: self.server.update_global(self.did, r, {"ceiling": 2600}, expect=e)),
+                 ({"op": "add", "module": {"width": 450}, "afterModule": mid}, lambda e, r: self.server.add_module(self.did, r, {"width": 450}, mid, expect=e)),
+                 ({"op": "remove", "id": mid}, lambda e, r: self.server.remove_module(self.did, r, mid, expect=e))]
+        for op, confirm in cases:
+            rev = self.svc.store.get(self.did)[1]
+            p = self.svc.propose(self.did, op, rev)
+            wrong = "0" * 16
+            with self.assertRaises(Exception):
+                confirm(wrong, rev)
+            self.assertEqual(self.svc.store.get(self.did)[1], rev, "a refused confirmation saves nothing")
+            self.assertEqual(confirm(p["opHash"], rev)["rev"], rev + 1, op["op"])
+
+    def test_apply_action_takes_expect_and_without_it_nothing_changes(self):
+        op = {"op": "set-moldings", "moldings": []}
+        h = proposal.op_hash(op, self.rev)
+        with self.assertRaises(Exception):
+            self.server.apply_action(self.did, self.rev, op, expect="0" * 16)
+        self.assertEqual(self.revisions(), 1)
+        self.assertEqual(h, proposal.op_hash({**op, "closeGap": True, "x": None}, self.rev), "defaults spelled out do not change the hash")
+        self.assertNotEqual(h, proposal.op_hash({**op, "closeGap": False}, self.rev))
+        self.assertIn("expect", self.server.apply_action.__code__.co_varnames)
+
+
 class TestAddNextToIt(Base):
     """The operations the context menu builds for "Thêm tủ bên cạnh"."""
     def test_after_and_before(self):
