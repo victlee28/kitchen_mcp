@@ -128,6 +128,14 @@ def recognize_design(design_id: str, source: dict[str, Any], recognizer: str | N
     """
     return _call(svc().recognize, design_id, source, recognizer, base_rev)
 
+def propose_template(design_id: str, template: dict[str, Any], base_rev: int | None=None) -> dict[str, Any]:
+    """Preview a cabinet template against an object of the imported floorplan; nothing is saved.
+
+    template: {"kind": "run-i", "structureId": "STRUCT-...", "point": {"x": mm, "z": mm}} - a straight run of base cabinets along the edge of the object
+    nearest to point (room frame), doors facing away from the object. Confirm with the editing tool and expect=proposal.opHash.
+    """
+    return _call(svc().template, design_id, template, base_rev)
+
 def revert_design(design_id: str, base_rev: int, target_revision: int) -> dict[str, Any]:
     """Create a new revision matching an earlier revision."""
     return _call(svc().revert, design_id, target_revision, base_rev)
@@ -239,7 +247,7 @@ def reject_image_job(job_id: str) -> dict[str, Any]:
 def regenerate_image_job(job_id: str, seed: int | None=None) -> dict[str, Any]:
     """Create a replacement job with the same request and a new seed."""
     return _slim_job(_call(svc().images.regenerate, job_id, seed))
-TOOLS = [create_design, list_floorplan_rooms, import_floorplan, bind_floorplan, design_kitchen, list_designs, get_design, design_history, add_module, update_module, remove_module, update_global, set_moldings, list_molding_profiles, apply_action, propose_change, interpret_edit, recognize_design, revert_design, validate_design, get_scene, export_threejs, render_views, search_knowledge, list_regions, add_knowledge, export_ai_package, list_layers, get_view_status, regenerate_stale_views, create_image_job, get_image_job, list_image_jobs, submit_image_result, import_base_image, accept_image_job, reject_image_job, regenerate_image_job, send_image_job]
+TOOLS = [create_design, list_floorplan_rooms, import_floorplan, bind_floorplan, design_kitchen, list_designs, get_design, design_history, add_module, update_module, remove_module, update_global, set_moldings, list_molding_profiles, apply_action, propose_change, interpret_edit, recognize_design, propose_template, revert_design, validate_design, get_scene, export_threejs, render_views, search_knowledge, list_regions, add_knowledge, export_ai_package, list_layers, get_view_status, regenerate_stale_views, create_image_job, get_image_job, list_image_jobs, submit_image_result, import_base_image, accept_image_job, reject_image_job, regenerate_image_job, send_image_job]
 for tool_function in TOOLS:
     mcp.add_tool(tool_function, name=tool_function.__name__, description=(tool_function.__doc__ or '').strip(), structured_output=False if tool_function is render_views else None)
 

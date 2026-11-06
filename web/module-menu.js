@@ -43,6 +43,7 @@ export function createModuleMenu(ctx) {
   }
 
   function choose(action) {
+    if (action === 'run-i') return runI();
     if (action === 'struct-hide') { ctx.structure.hide(); return close(); }
     if (action === 'struct-isolate') { ctx.structure.isolate(); return close(); }
     if (action === 'struct-all') { ctx.structure.showAll(); return close(); }
@@ -113,12 +114,29 @@ export function createModuleMenu(ctx) {
     } catch (e) { busy = false; form(action, e.message); }
   }
 
-  function showPreview(action, p, read) {
-    const lines = describeProposal(p);
+  // A cabinet run against the clicked edge of a floorplan object: the server picks the edge and the facing, the preview shows the result.
+  async function runI() {
+    if (busy) return; const { id, rev } = ctx.getState();
+    busy = true; ctx.setStatus('Tính dãy tủ dọc cạnh vật thể…');
+    try {
+      const { status, data } = await call(`/api/designs/${id}/template`, { template: { kind: 'run-i', structureId: target.id, point: target.point }, baseRev: rev });
+      busy = false;
+      if (status === 409) return stale('run-i');
+      if (!data || data.error || !data.proposal) {
+        box.replaceChildren(header(`Dãy tủ · ${target.id.replace(/^STRUCT-/, '')}`), err(data?.error || `Lỗi ${status}`),
+          el('div', { class: 'row' }, el('button', { type: 'button', class: 'ghost', onclick: list }, 'Quay lại')));
+        return;
+      }
+      showPreview('run-i', data.proposal, null, data.summary || []);
+    } catch (e) { busy = false; ctx.setStatus(e.message, 'warn'); }
+  }
+
+  function showPreview(action, p, read, extra = []) {
+    const lines = [...extra.map((text) => ({ kind: 'info', text })), ...describeProposal(p)];
     const confirm = el('button', { type: 'button', class: p.validation?.introducesErrors ? 'danger' : 'primary', disabled: !p.applicable || p.unchanged,
       onclick: () => apply(action, p) }, p.validation?.introducesErrors ? 'Vẫn áp dụng' : 'Áp dụng');
     box.replaceChildren(header(`Xem trước · ${target.id}`), el('ul', { class: 'ctx-preview' }, ...lines.map((l) => el('li', { class: l.kind }, l.text))),
-      el('div', { class: 'row' }, confirm, el('button', { type: 'button', class: 'ghost', onclick: () => form(action) }, 'Sửa lại'), el('button', { type: 'button', class: 'ghost', onclick: close }, 'Hủy')));
+      el('div', { class: 'row' }, confirm, el('button', { type: 'button', class: 'ghost', onclick: () => (action === 'run-i' ? list() : form(action)) }, action === 'run-i' ? 'Quay lại' : 'Sửa lại'), el('button', { type: 'button', class: 'ghost', onclick: close }, 'Hủy')));
     confirm.focus();
   }
 

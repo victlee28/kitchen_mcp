@@ -121,6 +121,7 @@ renderer.domElement.addEventListener('pointerup', (ev) => {
   raycaster.setFromCamera(pointer, camera);
   const target = pickTarget(raycaster.intersectObjects([...meshes, ...structSel.pickables()], false), state.spec.module.map((m) => m.id));
   if (!target) { moduleMenu.close(); return; }
+  if (target.point) { const k = { mm: 0.001, cm: 0.01, m: 1 }[state.doc?.units || 'mm']; target.point = { x: target.point.x / k, z: target.point.z / k }; }   // scene units -> mm
   if (target.kind === 'module' || (target.kind === 'part' && target.part !== 'countertop')) { structSel.clear(); selectModule(target.id); }
   else if (target.kind === 'part') structSel.clear();
   else structSel.select(target.id);

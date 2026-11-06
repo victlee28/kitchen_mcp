@@ -7,13 +7,13 @@ import json
 import os
 from pathlib import Path
 from typing import Any, Callable
-from . import edit, edit_intent, geometry, intent, llm, recognition, regions, render, rules, threejs_export
+from . import cabinet_run, edit, edit_intent, geometry, intent, llm, recognition, regions, roomctx, render, rules, threejs_export
 from .intent import KitchenTemplate as KitchenTemplate
 from .spec import Common, KitchenSpec, Room, Wall, dump_spec, load_spec
 from .store import ConflictError, Store
 from . import legacy as legacy_schema
 from .config import Config
-from .errors import InvalidInput
+from .errors import InvalidInput, NotFound
 ROOT = Path(__file__).resolve().parent.parent
 
 def load_dotenv(path: Path=ROOT / '.env') -> None:
@@ -165,6 +165,36 @@ class KitchenService:
             return {'id': design_id, 'baseRev': current, **result}
         preview = self.propose(design_id, result['operation'], current, scope or result.get('targets') or None, country)
         return {'id': design_id, 'baseRev': current, **result, 'proposal': preview}
+
+    def template(self, design_id: str, template: dict[str, Any], base_revision: int | None=None, country: str | None=None) -> dict:
+        """A cabinet template standing against an object of the imported floorplan, previewed and never saved.
+
+        ``template``: ``{"kind": "run-i", "structureId": "STRUCT-...", "point": {"x": mm, "z": mm}}`` where ``point`` (room frame, e.g. where the
+        user clicked) picks the edge. The doors face away from the object. The result carries ``operation``, ``facing``, ``summary`` and the
+        :meth:`propose` result under ``proposal``; confirm with :meth:`apply` and its opHash.
+        """
+        from .placement import IDENTITY
+        spec, current = self.store.get(design_id)
+        if base_revision is not None and base_revision != current:
+            raise ConflictError(f'base_rev={base_revision}, but the latest revision is {current}; reload before editing')
+        if template.get('kind') != 'run-i':
+            raise InvalidInput("template.kind must be 'run-i'", code='bad-template-kind')
+        point = template.get('point')
+        if not isinstance(point, dict) or not all(isinstance(point.get(k), (int, float)) for k in ('x', 'z')):
+            raise InvalidInput('template.point needs numeric x and z (mm, room frame)', code='bad-template-point')
+        scene = geometry.compile_spec(spec)
+        ctx = roomctx.for_spec(spec, scene.lsau, scene.lphai)
+        if ctx is None:
+            raise InvalidInput('This design has no imported floorplan, so there is no object to stand against', code='no-floorplan')
+        struct = next((s for s in ctx.structures if s['id'] == template.get('structureId')), None)
+        if struct is None:
+            raise NotFound(f"No such object: {template.get('structureId')}", code='structure-not-found')
+        place = ctx.placement if ctx.placement is not None else IDENTITY
+        outline = [place.to_kitchen(float(p['x']), float(p['z'])) for p in struct['outline']]
+        plan = cabinet_run.plan_i_run(spec, outline, place.to_kitchen(float(point['x']), float(point['z'])))
+        preview = self.propose(design_id, plan['operation'], current, None, country)
+        return {'id': design_id, 'baseRev': current, 'status': 'ok', 'structureId': struct['id'], 'facing': plan['facing'], 'length': plan['length'],
+                'summary': plan['summary'], 'operation': plan['operation'], 'proposal': preview}
 
     def register_recognizer(self, name: str, recognizer: recognition.Recognizer) -> None:
         """Plug in a photo/drawing recognizer (anything with ``recognize(RecognitionInput) -> dict``)."""

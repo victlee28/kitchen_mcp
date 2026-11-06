@@ -25,6 +25,7 @@ test('actions: modules get design and image actions, structures only view action
   assert.deepEqual(ids({ kind: 'module', id: 'TD1' }), ['material', 'doorStyle', 'add', 'remove', 'image']);
   assert.ok(!ids({ kind: 'module', id: 'KG1' }).includes('add'));
   assert.deepEqual(ids({ kind: 'structure', id: 'S' }), ['struct-hide', 'struct-isolate', 'struct-all']);
+  assert.deepEqual(ids({ kind: 'structure', id: 'S', point: { x: 1, z: 2 } }), ['run-i', 'struct-hide', 'struct-isolate', 'struct-all']);   // a clicked point is needed to pick the edge
   assert.deepEqual(ids(null), []);
 });
 
@@ -89,4 +90,9 @@ test('part actions and their operations', () => {
   assert.deepEqual(buildOp('handleVariant', 'TD1', { variant: 'knob' }, sp).changes, { handle: { variant: 'knob', material: 'Nhôm' } });   // keeps the other override
   assert.deepEqual(buildOp('handleMaterial', 'TD1', { material: 'Đồng thau' }, sp).changes, { handle: { variant: 'bar', material: 'Đồng thau' } });
   assert.throws(() => buildOp('handleVariant', 'TD1', { variant: 'ring' }, sp));
+});
+
+test('a structure hit carries the ray point so the server can pick the edge', () => {
+  const t = pickTarget([{ object: { userData: { structureId: 'STRUCT-c1' }, visible: true }, point: { x: 1.5, y: 1, z: 2.5 } }], []);
+  assert.deepEqual(t, { kind: 'structure', id: 'STRUCT-c1', point: { x: 1.5, z: 2.5 } });
 });

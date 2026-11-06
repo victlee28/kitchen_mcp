@@ -17,7 +17,7 @@ export function isClick(down, up) {
 export function pickTarget(hits, moduleIds) {
   for (const h of hits) {
     const u = h.object?.userData || {};
-    if (u.structureId && h.object.visible !== false) return { kind: 'structure', id: u.structureId };
+    if (u.structureId && h.object.visible !== false) return { kind: 'structure', id: u.structureId, ...(h.point ? { point: { x: h.point.x, z: h.point.z } } : {}) };   // point: where the ray hit, scene units
     const part = u.part;   // schema 1.4 partRef: a door, drawer front, handle or countertop run
     if (part?.kind === 'countertop') return { kind: 'part', part: 'countertop', id: part.wall || 'back' };
     if (part && ['door', 'drawer', 'handle'].includes(part.kind) && moduleIds.includes(part.module)) return { kind: 'part', part: part.kind, id: part.module };
@@ -35,7 +35,7 @@ export function actionsFor(target, spec) {
     return [...(target.part === 'door' ? [{ id: 'doorStyle', label: 'Đổi kiểu cánh' }] : []), { id: 'material', label: 'Đổi vật liệu mặt trước' },
       { id: 'handleVariant', label: 'Đổi kiểu tay nắm' }, { id: 'image', label: 'Sửa ảnh của module này' }];
   }
-  if (target.kind === 'structure') return [{ id: 'struct-hide', label: 'Ẩn thành phần này' }, { id: 'struct-isolate', label: 'Chỉ giữ thành phần này' }, { id: 'struct-all', label: 'Hiện tất cả' }];
+  if (target.kind === 'structure') return [...(target.point ? [{ id: 'run-i', label: 'Tạo dãy tủ chữ I dọc cạnh này' }] : []), { id: 'struct-hide', label: 'Ẩn thành phần này' }, { id: 'struct-isolate', label: 'Chỉ giữ thành phần này' }, { id: 'struct-all', label: 'Hiện tất cả' }];
   const m = spec?.module?.find((x) => x.id === target.id);
   const out = [{ id: 'material', label: 'Đổi vật liệu mặt trước' }, { id: 'doorStyle', label: 'Đổi kiểu cánh' }];
   if (m && m.wall !== 'corner') out.push({ id: 'add', label: 'Thêm tủ bên cạnh' });
