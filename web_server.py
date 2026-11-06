@@ -14,6 +14,7 @@ API:
   GET  /api/regions                       khu vực, quốc gia, số mục
   GET  /api/designs/<id>/history         lịch sử
   POST /api/designs/<id>/ops             {"baseRev": N, "op": {...}}
+  POST /api/designs/<id>/propose         {"baseRev": N, "op": {...}, "scope"?: ["TD1"]} xem trước, không lưu: diff, validation mới/đã hết, module bị ảnh hưởng
   POST /api/designs/<id>/revert          {"baseRev": N, "rev": M}
   POST /api/designs/<id>/render          {"rev"?, "views"?, "width"?, "height"?}
   POST /api/design                       (tương thích cũ) {"customer_prompt": "..."}
@@ -209,7 +210,7 @@ class Handler(BaseHTTPRequestHandler):
                 b = self._body()
                 return self._json(201, self._job_out(s.images.regenerate(jid, b.get("seed"))))
             raise ApiError(405, "Phương thức không hỗ trợ")
-        m = re.fullmatch(r"/api/designs/([a-z0-9-]+)(?:/(scene|threejs|validate|history|ops|revert|render|layers|mask|pick|image-jobs|beauty|base-image|ai-export|floorplan-bind|view-status|regenerate-stale))?", p)
+        m = re.fullmatch(r"/api/designs/([a-z0-9-]+)(?:/(scene|threejs|validate|history|ops|revert|render|layers|mask|pick|image-jobs|beauty|base-image|ai-export|floorplan-bind|view-status|regenerate-stale|propose))?", p)
         if not m:
             raise ApiError(404, "Không có endpoint")
         did, sub = m.groups()
@@ -287,6 +288,13 @@ class Handler(BaseHTTPRequestHandler):
                 if "op" not in b:
                     raise ApiError(400, "thiếu op")
                 return self._json(200, s.apply(did, b["op"], b.get("baseRev"), "web"))
+            if sub == "propose":
+                if not isinstance(b.get("op"), dict):
+                    raise ApiError(400, "thiếu op")
+                scope = b.get("scope")
+                if scope is not None and not (isinstance(scope, list) and all(isinstance(x, str) for x in scope)):
+                    raise ApiError(400, "scope phải là danh sách id module")
+                return self._json(200, s.propose(did, b["op"], b.get("baseRev"), scope, b.get("country")))
             if sub == "revert":
                 return self._json(200, s.revert(did, int(b["rev"]), b.get("baseRev")))
             if sub == "image-jobs":

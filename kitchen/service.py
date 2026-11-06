@@ -7,7 +7,7 @@ from typing import Any
 from . import edit, geometry, intent, regions, render, rules, threejs_export
 from .intent import KitchenTemplate as KitchenTemplate
 from .spec import Common, KitchenSpec, Room, Wall, dump_spec, load_spec
-from .store import Store
+from .store import ConflictError, Store
 from . import legacy as legacy_schema
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -124,6 +124,37 @@ class KitchenService:
         updated_spec = edit.apply_op(spec, operation)
         new_revision = self.store.add_revision(design_id, base_revision, updated_spec, operation, source)
         return self._summary(design_id, new_revision, updated_spec)
+
+    def propose(self, design_id: str, operation: dict[str, Any], base_revision: int | None=None, scope: list[str] | None=None,
+                country: str | None=None) -> dict:
+        """Preview an operation without saving: the change list, the validation issues it introduces or resolves, and the modules it touches.
+
+        Confirm by sending the same ``operation`` to :meth:`apply` with the returned ``baseRev``. A stale ``base_revision`` raises
+        ConflictError; an operation that cannot be applied (unknown module, bad value) is reported as ``applicable: False``.
+        ``scope`` (module ids the user pointed at): modules changed beyond it are listed in ``outsideScope``.
+        """
+        from pydantic import ValidationError
+        from . import proposal
+        spec, current = self.store.get(design_id)
+        if base_revision is not None and base_revision != current:
+            raise ConflictError(f'base_rev={base_revision}, but the latest revision is {current}; reload before editing')
+        base = {'id': design_id, 'baseRev': current, 'operation': operation}
+        try:
+            updated = edit.apply_op(spec.model_copy(deep=True), operation)
+        except ValidationError as error:
+            msg = '; '.join(f"{'.'.join(map(str, e['loc']))}: {e['msg']}" for e in error.errors()[:5])
+            return {**base, 'applicable': False, 'error': {'type': 'invalid-data', 'message': msg}}
+        except (KeyError, ValueError, TypeError) as error:
+            return {**base, 'applicable': False, 'error': {'type': 'rejected', 'message': str(error).strip('\'"')}}
+        diff = proposal.spec_diff(spec, updated)
+        touched = proposal.affected_modules(diff)
+        before, after = self.validate_spec(spec, country), self.validate_spec(updated, country)
+        out = {**base, 'applicable': True, 'name': updated.name, 'moduleCount': {'before': len(spec.module), 'after': len(updated.module)},
+               'diff': diff, 'affectedModules': touched, 'validation': proposal.validation_delta(before, after),
+               'unchanged': not touched and not diff['other']}
+        if scope is not None:
+            out['outsideScope'] = [m for m in touched if m not in set(scope)]
+        return out
 
     def revert(self, design_id: str, target_revision: int, base_revision: int | None) -> dict:
         """Restore an earlier specification by appending a new revision."""
