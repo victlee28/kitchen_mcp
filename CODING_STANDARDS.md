@@ -20,7 +20,7 @@ Rules the `code-review` skill checks the diff against. Where this file and `AGEN
 
 ## Portable core (rules R1-R23)
 
-The backend may be rewritten in Rust later. Python stays the reference implementation, JSON stays the contract. The rules below keep the logic portable; `tests/test_architecture.py`, `tests/test_golden.py` and `tests/test_errors.py` enforce what a machine can check. Rationale and the full discussion: `docs/adr/0003-portable-core.md`.
+The backend may be rewritten in Rust later. Python stays the reference implementation, JSON stays the contract. The rules below keep the logic portable; `tests/test_architecture.py`, `tests/test_golden.py`, `tests/test_errors.py` and `tests/test_typecheck.py` (pyright, per-file error count in `tests/typecheck_baseline.json`, may only shrink; `pip install pyright`) enforce what a machine can check. Rationale and the full discussion: `docs/adr/0003-portable-core.md`.
 
 Zones (every module in `kitchen/` is in exactly one; the list lives in `tests/architecture_rules.py`):
 - **Core** (pure): `placement roomctx rules rules_kb rules_nkba edit proposal geometry moldings handles hardware structure_mesh layers floorplan threejs_export lexicon vocab regions realism errors palette numeric`.

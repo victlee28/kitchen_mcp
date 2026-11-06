@@ -21,3 +21,11 @@ kitchen-design-mcp = "server:main"
 [tool.setuptools]
 py-modules = ["server", "web_server"]
 packages = ["kitchen"]
+
+[tool.pyright]
+# Static typing of the portable core (rule R5). The module list lives in tests/architecture_rules.py (CORE_MODULES);
+# tests/test_typecheck.py runs pyright on exactly those files and compares the error count per file with
+# tests/typecheck_baseline.json, which may only shrink.
+pythonVersion = "3.11"
+typeCheckingMode = "basic"
+include = ["kitchen"]
