@@ -110,6 +110,27 @@ class TestInstanceAndLayers(_Base):
         self.assertIn("instance", doc["renderSettings"]["controlPasses"])
 
 
+class TestImageJobsIsIndependent(unittest.TestCase):
+    def test_it_does_not_import_or_hold_the_service(self):
+        import ast
+        src = (ROOT / "kitchen" / "imagejobs.py").read_text(encoding="utf-8")
+        mods = set()
+        for n in ast.walk(ast.parse(src)):
+            if isinstance(n, ast.ImportFrom):
+                mods |= {n.module or ""} | {a.name for a in n.names}
+        self.assertNotIn("service", mods)
+        self.assertNotIn("self.svc", src)
+
+    def test_it_runs_with_only_a_store_a_render_dir_and_an_apply_callback(self):
+        from kitchen.imagejobs import ImageJobs
+        svc = KitchenService(Path(tempfile.mkdtemp()) / "k.db", Path(tempfile.mkdtemp()))
+        calls = []
+        jobs = ImageJobs(svc.store, svc.render_dir, lambda *a: calls.append(a) or {"rev": 2})
+        self.assertEqual(jobs.list(), [])
+        self.assertEqual(jobs.render_dir, svc.render_dir)
+        self.assertIsNot(jobs, svc.images)
+
+
 class TestImageJobs(_Base):
     def test_quick_edit_strict_composite(self):
         rev0 = self.svc.store.get(self.did)[1]

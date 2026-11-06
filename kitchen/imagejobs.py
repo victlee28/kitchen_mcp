@@ -62,15 +62,21 @@ _MOLDING_EN = {"crown": "crown molding along the top of the cabinets", "base": "
 
 
 class ImageJobs:
-    def __init__(self, svc):
-        self.svc = svc
-        self.store = svc.store
+    """Image-edit jobs. Depends on a store, a render directory and one callback to write a design edit; not on KitchenService.
+
+    ``apply(design_id, operation, base_revision, source)`` is how an accepted job changes the design (one revision).
+    """
+
+    def __init__(self, store, render_dir, apply):
+        self.store = store
+        self.render_dir = Path(render_dir)
+        self._apply = apply
         self._threads: dict[str, threading.Thread] = {}
         self.store.mark_stale_jobs()
 
     # ------------------------------------------------------------------ render & layer
     def _render_dir(self, did: str, rev: int, view: str) -> Path:
-        return self.svc.render_dir / did / f"rev{rev}" / view
+        return self.render_dir / did / f"rev{rev}" / view
 
     def ensure_render(self, did: str, rev: int | None, view: str, width: int | None = None, height: int | None = None):
         spec, r = self.store.get(did, rev)
@@ -871,7 +877,7 @@ class ImageJobs:
         req = job["request"]
         design = None
         if job["kind"] == "geometry_edit":  # sửa hình: ảnh chỉ đúng khi thiết kế đổi theo -> luôn ghi rev
-            res = self.svc.apply(job["design_id"], req["designOp"], base_rev if base_rev is not None else job["rev"], f"image-job:{jid}")
+            res = self._apply(job["design_id"], req["designOp"], base_rev if base_rev is not None else job["rev"], f"image-job:{jid}")
             W, H = req["size"]
             _, _, _, _, man = self.ensure_render(job["design_id"], res["rev"], job["view"], W, H)
             if man["renderKey"] != req["newRenderKey"]:
@@ -901,7 +907,7 @@ class ImageJobs:
             if not ops:
                 raise ValueError("Không có việc nào áp được vào thiết kế (" + "; ".join(skip) + ")")
             op = edit.combine_ops(ops)
-            res = self.svc.apply(job["design_id"], op, base_rev if base_rev is not None else job["rev"], f"image-job:{jid}")
+            res = self._apply(job["design_id"], op, base_rev if base_rev is not None else job["rev"], f"image-job:{jid}")
             design = {"rev": res["rev"], "op": op, "scope": "; ".join(scope), **({"skip": skip} if skip else {})}
         now = _dt.datetime.now(_dt.timezone.utc).isoformat()
         try:  # what the approved image shows, for the multi-view consistency check (see view_sync)

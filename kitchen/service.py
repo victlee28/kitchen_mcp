@@ -30,7 +30,7 @@ class KitchenService:
         self.render_dir = Path(render_dir or os.getenv('KITCHEN_RENDERS') or ROOT / 'renders')
         legacy_schema.migrate_renders(self.render_dir)
         from .imagejobs import ImageJobs
-        self.images = ImageJobs(self)
+        self.images = ImageJobs(self.store, self.render_dir, self.apply)
 
     def _summary(self, design_id: str, revision: int, spec: KitchenSpec, **extra) -> dict:
         """Build the established API summary for a design revision."""
