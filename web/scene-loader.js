@@ -16,6 +16,7 @@ export function buildKitchen(doc, THREE, opts = {}) {
   const edgeMat = new THREE.LineBasicMaterial({ color: 0x3a3630 });
   const root = new THREE.Group(); root.name = doc.metadata?.projectName || 'Kitchen';
   const byModule = new Map(); const pickables = [];
+  const structures = new Map(); // structure id -> { record, meshes (pickable solids), parts (every object, lines included) }
 
   const rad = (r) => (r?.unit === 'rad' ? 1 : Math.PI / 180);
   function place(obj, tf) {
@@ -80,7 +81,8 @@ export function buildKitchen(doc, THREE, opts = {}) {
     const color = new THREE.Color(st.color || '#9BA8B5');
     const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.75, side: THREE.DoubleSide, transparent: st.kind === 'area', opacity: st.kind === 'area' ? 0.45 : 1 });
     const info = { type: 'structure', kind: st.kind, structureId: st.id, source: st.sourceElement, label: st.label };
-    const add = (mesh) => { mesh.userData = info; mesh.receiveShadow = mesh.castShadow = true; room.add(mesh); return mesh; };
+    const entry = { record: st, meshes: [], parts: [] }; structures.set(st.id, entry);
+    const add = (mesh) => { mesh.userData = info; mesh.receiveShadow = mesh.castShadow = true; room.add(mesh); entry.meshes.push(mesh); entry.parts.push(mesh); return mesh; };
     if (st.kind === 'stair' && st.steps && st.height > 0) {
       const xs = st.outline.map((p) => p.x), zs = st.outline.map((p) => p.z);
       let d = st.arrow?.length >= 2 ? { x: st.arrow[1].x - st.arrow[0].x, z: st.arrow[1].z - st.arrow[0].z } : { x: 0, z: Math.max(...zs) - Math.min(...zs) >= Math.max(...xs) - Math.min(...xs) ? 1 : 0 };
@@ -111,7 +113,7 @@ export function buildKitchen(doc, THREE, opts = {}) {
     }
     if (st.swing?.length >= 2) {
       const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(st.swing.map((p) => new THREE.Vector3(p.x * s, 0.02, p.z * s))), new THREE.LineBasicMaterial({ color }));
-      line.userData = info; room.add(line);
+      line.userData = info; room.add(line); entry.parts.push(line);
     }
   }
 
@@ -187,7 +189,7 @@ export function buildKitchen(doc, THREE, opts = {}) {
       position: [c.position.x * s, c.position.y * s, c.position.z * s], target: [c.target.x * s, c.target.y * s, c.target.z * s],
       up: c.up ? [c.up.x, c.up.y, c.up.z] : [0, 1, 0] };
   }
-  return { root, lights, cameras, byModule, pickables };
+  return { root, lights, cameras, byModule, pickables, structures, structurePickables: [...structures.values()].flatMap((e) => e.meshes) };
 }
 
 // Vòng đỉnh tại mỗi đỉnh đường chạy — cùng thuật toán với kitchen/moldings.py sweep_rings (test so khớp).

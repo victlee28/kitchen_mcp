@@ -4,6 +4,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { buildKitchen } from './scene-loader.js';
+import { createStructureSelector } from './structure-select.js';
 
 const $ = (id) => document.getElementById(id);
 const state = { id: null, rev: null, spec: null, scene: null, selected: null, views: {}, qg: '' };
@@ -54,6 +55,9 @@ const root = new THREE.Group(); scene3.add(root);
 const edgeMat = new THREE.LineBasicMaterial({ color: 0x3a3630 });
 const raycaster = new THREE.Raycaster(); const pointer = new THREE.Vector2();
 let meshes = [];
+const structSel = createStructureSelector({ THREE, els: { section: $('fpElements'), kinds: $('fpKinds'), list: $('fpList'), detail: $('fpDetail'), actions: $('fpActions'),
+  hide: $('fpHide'), isolate: $('fpIsolate'), showAll: $('fpShowAll') },
+  onSelect: () => { if (state.selected) { state.selected = null; highlight(); renderModuleList(); } $('moduleForm').hidden = true; } });
 
 function resize() {
   const w = viewport.clientWidth, h = viewport.clientHeight;
@@ -68,6 +72,7 @@ function buildScene(doc) {
   const k = buildKitchen(doc, THREE, { RectAreaLightUniformsLib });
   root.add(k.root);
   meshes = k.pickables;
+  structSel.setScene(k.structures, k.structurePickables);
   highlight();
 }
 const selMats = new WeakMap();
@@ -92,9 +97,14 @@ renderer.domElement.addEventListener('click', (ev) => {
   const r = renderer.domElement.getBoundingClientRect();
   pointer.set(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1);
   raycaster.setFromCamera(pointer, camera);
-  const hit = raycaster.intersectObjects(meshes, false).find((h) => h.object.userData.module && state.spec.module.some((m) => m.id === h.object.userData.module));
-  if (hit) selectModule(hit.object.userData.module);
+  // nearest thing under the pointer wins: a cabinet module or a visible floorplan element
+  const hit = raycaster.intersectObjects([...meshes, ...structSel.pickables()], false)
+    .find((h) => h.object.userData.structureId || (h.object.userData.module && state.spec.module.some((m) => m.id === h.object.userData.module)));
+  if (hit?.object.userData.structureId) structSel.select(hit.object.userData.structureId);
+  else if (hit) { structSel.clear(); selectModule(hit.object.userData.module); }
+  else structSel.clear();
 });
+window.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && !/INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName || '')) structSel.clear(); });
 
 // ---------------- dữ liệu thiết kế
 async function loadDesigns(selectId) {

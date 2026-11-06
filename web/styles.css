@@ -80,3 +80,8 @@ dialog.jv:not([open]){display:none}dialog.jv::backdrop{background:rgba(30,28,24,
 .interp{margin-top:6px;font-size:12px}.interp table{border-collapse:collapse;width:100%}.interp th,.interp td{border:1px solid #d9d4c7;padding:2px 6px;text-align:left;vertical-align:top}
 .interp th{background:#f0ede4}.interp tr.st-unsupported td:nth-child(4){color:#a33b2b;font-weight:600}.interp tr.st-ambiguous td:nth-child(4){color:#a06a00;font-weight:600}
 .interp tr.st-built td:nth-child(4){color:#2f7d4f}.interp tr.st-exported td:nth-child(4),.interp tr.st-ai-only td:nth-child(4){color:#3b665c}
+
+ul.pick{list-style:none;padding:0;margin:6px 0;max-height:180px;overflow:auto;border:1px solid #ddd6cb;border-radius:6px}
+ul.pick li{padding:3px 8px;cursor:pointer}ul.pick li:hover{background:#f1eee8}ul.pick li.sel{background:#ffe3c2;font-weight:600}ul.pick li.off{opacity:.45;text-decoration:line-through}
+label.kind{display:inline-flex;align-items:center;gap:4px;margin-right:10px;color:#6d665c}
+#fpDetail{padding-left:16px;margin:6px 0}
