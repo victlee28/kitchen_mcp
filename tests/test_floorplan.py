@@ -15,6 +15,7 @@ from kitchen import floorplan as fpm, intent, threejs_export  # noqa: E402
 from kitchen.service import KitchenService  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
+BUILDING = json.loads((ROOT / "tests" / "data" / "floorplan-building.json").read_text(encoding="utf-8-sig"))
 SAMPLE = json.loads((ROOT / "tests" / "data" / "floorplan-sample.json").read_text(encoding="utf-8-sig"))
 
 
@@ -266,6 +267,46 @@ class TestBindingAndExport(unittest.TestCase):
         res = self.svc.bind_floorplan(a["id"], base_revision=rev)
         self.assertEqual(res["rev"], rev + 1)
         self.assertEqual(res["binding"]["source"], "auto")
+
+    def test_region_for_the_kitchen_is_derived_from_walls(self):
+        d = BUILDING
+        cands = [r for r in fpm.list_rooms(d) if r["kind"] == "region"]
+        self.assertIn("region:around=furniture_003", [r["id"] for r in cands])
+        n = fpm.normalize(d, "region:around=furniture_003")
+        self.assertEqual(n["region"]["bbox"], [16.0, 1394.0, 337.0, 1559.0])
+        self.assertEqual((n["width"], n["depth"]), (1650.0, 3210.0))
+        self.assertTrue(all(not s["open"] for s in n["region"]["sides"].values()))
+        codes = [w["code"] for w in n["warnings"]]
+        self.assertIn("region-derived", codes)
+        door = next(e for e in n["elements"] if e["id"] == "opening_002")
+        self.assertIsNotNone(door.get("attached"))
+        back = fpm.detect_element_backs(n)
+        self.assertEqual(back[0]["element"], "furniture_003")
+        self.assertEqual(back[0]["back"]["status"], "wall-backed")
+
+    def test_region_kitchen_alias_and_box(self):
+        d = BUILDING
+        with self.assertRaises(ValueError):
+            fpm.normalize(d, "region:kitchen")        # two kitchen areas: ambiguous
+        n = fpm.normalize(d, "region:bbox=16,1394,337,1559")
+        self.assertEqual((n["width"], n["depth"]), (1650.0, 3210.0))
+        for bad in ("region:bbox=1,2,3", "region:bbox=5,5,1,1", "region:nope", "region:around=zzz"):
+            with self.assertRaises(ValueError):
+                fpm.normalize(d, bad)
+
+    def test_region_open_side_is_reported(self):
+        d = BUILDING
+        d = json.loads(json.dumps(d))
+        d["elements"] = [e for e in d["elements"] if e["id"] not in ("wall_h08", "wall_002")]
+        n = fpm.normalize(d, "region:around=furniture_003")
+        self.assertIn("region-open-side", [w["code"] for w in n["warnings"]])
+
+    def test_region_imports_through_the_service(self):
+        r = self.svc.import_floorplan(BUILDING, "Kitchen", "region:around=furniture_003")
+        self.assertEqual(r["floorplan"]["roomId"], "region:around=furniture_003")
+        spec, _ = self.svc.store.get(r["id"])
+        doc = threejs_export.export(spec)
+        self.assertTrue(doc["room"]["structures"])
 
     def test_list_rooms_on_the_service(self):
         self.assertEqual([r["id"] for r in self.svc.list_floorplan_rooms(plan(ROOM))], ["room_a"])

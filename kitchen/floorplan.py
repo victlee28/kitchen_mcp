@@ -163,16 +163,162 @@ def document_hash(data: dict[str, Any]) -> str:
     return hashlib.sha256(json.dumps(data, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")).hexdigest()
 
 
-def list_rooms(data: dict[str, Any]) -> list[dict]:
-    """Every element tagged as a room, with the facts needed to pick one."""
+KITCHEN_WORDS = ("kitchen", "bếp", "bep")
+REGION_COVER = 0.2          # a wall bounds a side of the region when it covers this share of the seed's width
+REGION_MARGIN_MM = 600.0    # how far an open side (no wall found) reaches beyond the seed
+
+
+def _bbox(e: dict) -> list[float] | None:
+    g = _fv(e, "geometry")
+    if not isinstance(g, dict):
+        return None
+    if isinstance(g.get("bbox"), list) and len(g["bbox"]) == 4:
+        return [float(v) for v in g["bbox"]]
+    try:
+        pts = _points(g, str(e.get("id")))
+    except ValueError:
+        return None
+    return [min(p[0] for p in pts), min(p[1] for p in pts), max(p[0] for p in pts), max(p[1] for p in pts)]
+
+
+def _is_kitchen_unit(e: dict) -> bool:
+    if e.get("kind") != "furniture":
+        return False
+    text = f"{_fv(e, 'tag') or ''} {_fv(e, 'label') or ''}".lower()
+    return any(w in text for w in KITCHEN_WORDS)
+
+
+def derive_region(data: dict[str, Any], seeds: list[str]) -> dict[str, Any]:
+    """The rectangle of file coordinates that the walls around the seed elements enclose (for a plan with no room for the kitchen).
+
+    Each side stops at the nearest wall whose face lies beyond the seed and that covers at least REGION_COVER of the seed's width.
+    A side with no such wall stays open and reaches REGION_MARGIN_MM beyond the seed; that is reported.
+    """
+    unit = data.get("unit")
+    if unit not in UNIT_MM:
+        raise ValueError("Floorplan unit must be cm, mm, or m")
+    k = UNIT_MM[unit]
+    tol = TOL / k
+    by_id = {e.get("id"): e for e in (data.get("elements") or [])}
+    boxes = []
+    for sid in seeds:
+        if sid not in by_id:
+            raise ValueError(f"Region seed '{sid}' not found")
+        bb = _bbox(by_id[sid])
+        if not bb:
+            raise ValueError(f"Region seed '{sid}' has no geometry")
+        boxes.append(bb)
+    if not boxes:
+        raise ValueError("A region needs at least one seed element")
+    seed = [min(b[0] for b in boxes), min(b[1] for b in boxes), max(b[2] for b in boxes), max(b[3] for b in boxes)]
+    walls = [(e.get("id"), bb) for e in by_id.values() if e.get("kind") == "wall" and (bb := _bbox(e))]
+    out = [0.0] * 4
+    sides: dict[str, Any] = {}
+    for axis, sign, name in ((0, -1, "forwardMin"), (0, 1, "forwardMax"), (1, -1, "rightMin"), (1, 1, "rightMax")):
+        other = 1 - axis
+        lo_o, hi_o = seed[other], seed[other + 2]
+        span = hi_o - lo_o
+        cands = []
+        for wid, bb in walls:
+            face = bb[axis] if sign > 0 else bb[axis + 2]
+            beyond = face - seed[axis + 2] if sign > 0 else seed[axis] - face
+            ov = min(hi_o, bb[other + 2]) - max(lo_o, bb[other])
+            if beyond >= -tol and ov > 0:
+                cands.append((abs(face - (seed[axis + 2] if sign > 0 else seed[axis])), face, wid, (max(lo_o, bb[other]), min(hi_o, bb[other + 2]))))
+        cands.sort()
+        chosen = None
+        i = 0
+        while i < len(cands):
+            group = [c for c in cands[i:] if abs(c[1] - cands[i][1]) <= tol]
+            intervals = sorted(c[3] for c in group)
+            covered, cur_end = 0.0, None
+            for lo, hi in intervals:
+                lo = lo if cur_end is None else max(lo, cur_end)
+                if hi > lo:
+                    covered += hi - lo
+                cur_end = hi if cur_end is None else max(cur_end, hi)
+            if covered >= REGION_COVER * span:
+                chosen = group
+                break
+            i += len(group)
+        idx = axis if sign < 0 else axis + 2
+        if chosen:
+            face = min(c[1] for c in chosen) if sign > 0 else max(c[1] for c in chosen)
+            out[idx] = face
+            sides[name] = {"face": face, "walls": sorted({c[2] for c in chosen}), "open": False}
+        else:
+            face = seed[idx] + sign * REGION_MARGIN_MM / k
+            out[idx] = face
+            sides[name] = {"face": face, "walls": [], "open": True}
+    return {"bbox": [out[0], out[1], out[2], out[3]], "seeds": list(seeds), "sides": sides, "unit": unit}
+
+
+def _kitchen_candidates(data: dict[str, Any]) -> list[dict]:
+    """Kitchen units that sit in no listed room, grouped by the region the walls give them."""
+    rooms = {r["id"]: r for r in list_rooms(data, regions=False)}
+    room_polys = {}
+    for e in data.get("elements") or []:
+        if e.get("id") in rooms:
+            try:
+                room_polys[e["id"]] = _points(_fv(e, "geometry"), str(e["id"]))
+            except ValueError:
+                pass
+    groups: list[dict] = []
+    for e in data.get("elements") or []:
+        if not _is_kitchen_unit(e) or not (bb := _bbox(e)):
+            continue
+        c = ((bb[0] + bb[2]) / 2, (bb[1] + bb[3]) / 2)
+        if any(_pip(c, poly) for poly in room_polys.values()):
+            continue
+        try:
+            reg = derive_region(data, [e["id"]])
+        except ValueError:
+            continue
+        for g in groups:
+            if all(abs(a - b) <= 1e-6 + 3 * TOL / UNIT_MM[data["unit"]] for a, b in zip(g["bbox"], reg["bbox"])):
+                g["seeds"].append(e["id"])
+                g["labels"].append(_fv(e, "label") or e["id"])
+                break
+        else:
+            groups.append({"bbox": reg["bbox"], "seeds": [e["id"]], "labels": [_fv(e, "label") or e["id"]], "open": any(s["open"] for s in reg["sides"].values())})
+    return groups
+
+
+def list_rooms(data: dict[str, Any], regions: bool = True) -> list[dict]:
+    """Every element tagged as a room, then (kind 'region') areas the walls enclose around kitchen units that no room covers."""
     out = []
     for e in (data.get("elements") or []):
         if e.get("kind") != "area" or _fv(e, "tag") != "room":
             continue
         g = _fv(e, "geometry") or {}
-        out.append({"id": e.get("id"), "label": _fv(e, "label"), "labelStatus": _field(e, "label").get("status"),
+        out.append({"id": e.get("id"), "kind": "room", "label": _fv(e, "label"), "labelStatus": _field(e, "label").get("status"),
                     "bbox": g.get("bbox"), "points": len(g.get("outline") or [])})
+    if regions and isinstance(data.get("elements"), list) and data.get("unit") in UNIT_MM:
+        for g in _kitchen_candidates(data):
+            out.append({"id": "region:around=" + ",".join(g["seeds"]), "kind": "region", "label": "Kitchen area around " + ", ".join(g["labels"]),
+                        "labelStatus": "derived", "bbox": g["bbox"], "points": 4, "seeds": g["seeds"], "openSides": g["open"]})
     return out
+
+
+def parse_region(data: dict[str, Any], spec: str) -> dict[str, Any]:
+    """'region:kitchen' | 'region:around=id,id' | 'region:bbox=x0,y0,x1,y1' (file units) -> {"bbox", "seeds"|None, "sides"|None}."""
+    body = spec[len("region:"):]
+    if body == "kitchen":
+        cands = _kitchen_candidates(data)
+        if len(cands) != 1:
+            raise ValueError("region:kitchen needs exactly one kitchen area; found " + (", ".join("region:around=" + ",".join(g["seeds"]) for g in cands) or "none"))
+        return derive_region(data, cands[0]["seeds"])
+    if body.startswith("around="):
+        return derive_region(data, [x for x in body[len("around="):].split(",") if x])
+    if body.startswith("bbox="):
+        try:
+            x0, y0, x1, y1 = (float(v) for v in body[len("bbox="):].split(","))
+        except ValueError as err:
+            raise ValueError("region:bbox needs four numbers x0,y0,x1,y1") from err
+        if x1 <= x0 or y1 <= y0:
+            raise ValueError("region:bbox must have x1 > x0 and y1 > y0")
+        return {"bbox": [x0, y0, x1, y1], "seeds": None, "sides": None, "unit": data.get("unit")}
+    raise ValueError(f"Unknown region '{spec}'. Use region:kitchen, region:around=<ids> or region:bbox=x0,y0,x1,y1")
 
 
 # ---------------------------------------------------------------- normalize
@@ -203,22 +349,38 @@ def normalize(data: dict[str, Any], room_id: str | None = None) -> dict[str, Any
     if dup:
         raise ValueError("Duplicate element ids: " + ", ".join(dup))
 
-    rooms = list_rooms(data)
-    if not rooms:
-        raise ValueError("No room outline (kind 'area' with tag 'room') in the floorplan")
-    if room_id is None:
-        if len(rooms) > 1:
-            raise ValueError("The floorplan has several rooms; pass room_id. Rooms: " + ", ".join(f"{r['id']} ({r['label']})" for r in rooms))
-        room_id = rooms[0]["id"]
-    if room_id not in {r["id"] for r in rooms}:
-        raise ValueError(f"Room '{room_id}' not found. Rooms: " + ", ".join(str(r["id"]) for r in rooms))
-    room_el = next(e for e in elements if e.get("id") == room_id)
+    rooms = [r for r in list_rooms(data) if r["kind"] == "room"]
+    region = None
+    room_el = None
+    if room_id is not None and str(room_id).startswith("region:"):
+        region = parse_region(data, str(room_id))
+        bb = region["bbox"]
+        raw_room = [(bb[0], bb[1]), (bb[2], bb[1]), (bb[2], bb[3]), (bb[0], bb[3])]
+        room_label = "Kitchen area (derived from walls)" if region["seeds"] else "Area (given as a box)"
+        room_id = "region:around=" + ",".join(region["seeds"]) if region["seeds"] else "region:bbox=" + ",".join(f"{v:g}" for v in bb)
+        open_sides = [n for n, sd in (region["sides"] or {}).items() if sd["open"]]
+        warnings.append({"code": "region-derived", "message": f"{room_id} is not a drawn room: its sides stop at the walls around {', '.join(region['seeds'])}. Review the outline before relying on it."
+                         if region["seeds"] else f"{room_id} is a box you gave, not a drawn room."})
+        if open_sides:
+            warnings.append({"code": "region-open-side", "message": f"no wall found on {', '.join(open_sides)}; those sides reach {REGION_MARGIN_MM:g} mm beyond the unit"})
+    else:
+        if not rooms:
+            cands = [r["id"] for r in list_rooms(data) if r["kind"] == "region"]
+            raise ValueError("No room outline (kind 'area' with tag 'room') in the floorplan" + (". To import the kitchen area pass one of: " + ", ".join(cands) if cands else ""))
+        if room_id is None:
+            if len(rooms) > 1:
+                raise ValueError("The floorplan has several rooms; pass room_id. Rooms: " + ", ".join(f"{r['id']} ({r['label']})" for r in rooms))
+            room_id = rooms[0]["id"]
+        if room_id not in {r["id"] for r in rooms}:
+            raise ValueError(f"Room '{room_id}' not found. Rooms: " + ", ".join(str(r["id"]) for r in rooms))
+        room_el = next(e for e in elements if e.get("id") == room_id)
+        room_label = _fv(room_el, "label")
+        raw_room = _points(_fv(room_el, "geometry"), room_id)
 
     # file coordinates -> (right, forward) in mm -> scene (x = right - r0, z = f0 - forward)
     def to_rf(p):
         return ((p[0] * vx[0] + p[1] * vy[0]) * k, (p[0] * vx[1] + p[1] * vy[1]) * k)
 
-    raw_room = _points(_fv(room_el, "geometry"), room_id)
     rf = [to_rf(p) for p in raw_room]
     r0, f0 = min(p[0] for p in rf), max(p[1] for p in rf)
 
@@ -350,7 +512,7 @@ def normalize(data: dict[str, Any], room_id: str | None = None) -> dict[str, Any
                 warnings.append({"code": "opening-unattached", "element": rec["id"], "message": rec["note"]})
 
     # ---- review state of what was read
-    for fld in ("label", "tag"):
+    for fld in ("label", "tag") if room_el is not None else ():
         st = _field(room_el, fld).get("status")
         if st and st not in ("confirmed", "edited"):
             warnings.append({"code": "unreviewed", "element": room_id, "message": f"room {fld} '{_fv(room_el, fld)}' is {st}"})
@@ -360,7 +522,7 @@ def normalize(data: dict[str, Any], room_id: str | None = None) -> dict[str, Any
         counts[r["membership"]] = counts.get(r["membership"], 0) + 1
     return {"ref": document_hash(data), "planId": data.get("planId"), "contractVersion": cv,
             "sourceSha256": (data.get("source") or {}).get("sha256"), "sourceUnit": unit,
-            "roomId": room_id, "roomLabel": _fv(room_el, "label"), "rooms": rooms,
+            "roomId": room_id, "roomLabel": room_label, "rooms": rooms, "region": region,
             "origin": {"unit": unit, "right": r0 / k, "forward": f0 / k, "note": "scene.x = right - origin.right, scene.z = origin.forward - forward (file units)"},
             "outline": [{"x": p[0], "z": p[1]} for p in poly], "width": round(max(p[0] for p in poly), 3), "depth": round(max(p[1] for p in poly), 3),
             "height": height, "heightSource": height_source, "areaM2": round(abs(_area2(poly)) / 2e6, 3),

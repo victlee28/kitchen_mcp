@@ -280,10 +280,10 @@ $('floorplanFile').addEventListener('change', (e) => {
   run('import floorplan', async () => {
     pendingFloorplan = JSON.parse(await file.text());
     const { rooms } = await api('/api/floorplans/rooms', 'POST', { floorplan: pendingFloorplan });
-    if (rooms.length > 1) {
-      const sel = $('fpRoom'); sel.replaceChildren(...rooms.map((r) => el('option', { value: r.id }, `${r.label || r.id} (${r.id})`)));
+    if (rooms.length > 1 || rooms.some((r) => r.kind === 'region')) {
+      const sel = $('fpRoom'); sel.replaceChildren(...rooms.map((r) => el('option', { value: r.id }, `${r.kind === 'region' ? '[area] ' : ''}${r.label || r.id} (${r.id})`)));
       $('fpRoomRow').hidden = false; $('fpImport').hidden = false;
-      setStatus(`The plan has ${rooms.length} rooms: choose one and import`);
+      setStatus(`The plan offers ${rooms.length} places to import (rooms and wall-bounded areas): choose one and import`);
       return;
     }
     $('fpRoomRow').hidden = true; $('fpImport').hidden = true;
