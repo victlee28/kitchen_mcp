@@ -8,7 +8,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from .numeric import round_half_away
-from . import roomctx, structure_mesh
+from . import roomctx, runs as runmod, structure_mesh
 from .spec import ORIENT_OF_FACING, ViewAngle, KitchenSpec, Module, effective_handle, to_data
 from .errors import InvalidInput, require
 
@@ -32,14 +32,37 @@ class Part:
     wall: str | None = None  # tường chứa chi tiết (để suy hướng mặt trước khi xuất three.js)
     parent: str | None = None  # chi tiết cha (tay nắm -> cánh/ngăn kéo)
     face: str | None = None  # hướng mặt trước (back/right/left/island) khi khác tường: dãy tự do quay ra một trong bốn hướng
+    frame: tuple[float, float, float] | None = None  # explicit run at any angle: (x, z, yaw) of the run origin; min / max are then the world AABB of the box
+    lmin: tuple[float, float, float] | None = None   # with frame: the box in run coordinates (s, y, d)
+    lmax: tuple[float, float, float] | None = None
+    run: str | None = None
+
+    @property
+    def run_frame(self) -> "runmod.RunFrame | None":
+        return runmod.RunFrame(self.run or "", *self.frame) if self.frame is not None else None
+
+    def corners(self) -> list[tuple[float, float, float]]:
+        """8 world corners, bit 0 = x (s), bit 1 = y, bit 2 = z (d); oriented parts follow their run frame."""
+        fr = self.run_frame
+        if fr is not None and self.lmin is not None and self.lmax is not None:
+            return fr.corners(self.lmin, self.lmax)
+        return [(self.max[0] if i & 1 else self.min[0], self.max[1] if i & 2 else self.min[1], self.max[2] if i & 4 else self.min[2]) for i in range(8)]
 
     @property
     def orient(self) -> str:
-        return self.face or self.wall or "back"
+        return "back" if self.frame is not None else (self.face or self.wall or "back")
 
     def to_json(self) -> dict:
         c = [(a + b) / 2 for a, b in zip(self.min, self.max)]
         s = [b - a for a, b in zip(self.min, self.max)]
+        if self.frame is not None and self.lmin is not None and self.lmax is not None:  # oriented: centre of the real box, size in run axes, yaw
+            fr = self.run_frame
+            assert fr is not None
+            cx, cz = fr.to_world((self.lmin[0] + self.lmax[0]) / 2, (self.lmin[2] + self.lmax[2]) / 2)
+            c = [cx, c[1], cz]
+            s = [self.lmax[0] - self.lmin[0], self.lmax[1] - self.lmin[1], self.lmax[2] - self.lmin[2]]
+            return {"id": self.id, "module": self.module, "type": self.type, "center": [round_half_away(v, 2) for v in c],
+                    "size": [round_half_away(v, 2) for v in s], "color": COLORS.get(self.type, "#cccccc"), "yaw": round_half_away(self.frame[2], 4)}
         return {"id": self.id, "module": self.module, "type": self.type, "center": [round_half_away(v, 2) for v in c],
                 "size": [round_half_away(v, 2) for v in s], "color": COLORS.get(self.type, "#cccccc")}
 
@@ -90,7 +113,7 @@ def _wall_length(spec: KitchenSpec) -> tuple[float, float]:
             vals += [m.rightLength or 0 for m in spec.module if m.type == "corner-shelf"]
         return max(vals, default=0)
     lsau = (spec.room.length("back") if spec.room else None) or endAt("back") + 600
-    lphai = (spec.room.length("right") if spec.room else None) or max(endAt("right"), endAt("left"), *[m.offset + m.depth for m in spec.module if m.wall == "island" and (m.facing or "-z") in ("-z", "+z")], 0) + 600
+    lphai = (spec.room.length("right") if spec.room else None) or max(endAt("right"), endAt("left"), *[m.offset + m.depth for m in spec.module if m.wall == "island" and not m.run and (m.facing or "-z") in ("-z", "+z")], 0) + 600
     return lsau, lphai
 
 
@@ -101,13 +124,23 @@ class _Builder:
         self.lsau, self.lphai = _wall_length(spec)
         self.parts: list[Part] = []
         self._n: dict[str, int] = {}
-        self._isl = {m.id: (m.offset, m.depth, m.facing or "-z") for m in spec.module if m.wall == "island"}  # free run: (door face position, depth, facing)
+        self._isl = {m.id: (m.offset, m.depth, m.facing or "-z") for m in spec.module if m.wall == "island" and not m.run}  # free run: (door face position, depth, facing)
+        self._run = {m.id: fr for m in spec.module if (fr := runmod.frame_of(spec, m)) is not None}   # explicit run frames by module (or appliance) id
 
     # ---- toạ độ tường -> thế giới
-    def box(self, module: str | None, type: str, wall: str, s0, s1, d0, d1, y0, y1, isl: tuple[float, float, str] | None = None):
+    def box(self, module: str | None, type: str, wall: str, s0, s1, d0, d1, y0, y1, isl: tuple[float, float, str] | None = None, fr: "runmod.RunFrame | None" = None):
         if s1 - s0 <= 0.01 or d1 - d0 <= 0.01 or y1 - y0 <= 0.01:
             return
         face = None
+        fr = fr or self._run.get(module or "")
+        if fr is not None:                     # explicit run at any angle: keep the local box, store its world AABB
+            lmn, lmx = (s0, y0, d0), (s1, y1, d1)
+            pts = fr.footprint(s0, s1, d0, d1)
+            (ax, az), (bx, bz) = runmod.aabb(pts)
+            key = f"{module or 'room'}-{type}"
+            self._n[key] = self._n.get(key, 0) + 1
+            self.parts.append(Part(f"{key}-{self._n[key]}", module, type, (ax, y0, az), (bx, y1, bz), wall, frame=(fr.x, fr.z, fr.yaw), lmin=lmn, lmax=lmx, run=fr.id))
+            return
         if wall == "back":
             mn, mx = (-s1, y0, d0), (-s0, y1, d1)
         elif wall == "right":
@@ -222,10 +255,14 @@ class _Builder:
 
     def countertop(self):
         c = self.c
-        groups = [(w, None) for w in ("back", "right", "left")] + \
-                 [("island", z) for z in sorted({(m.offset, m.facing or "-z") for m in self.spec.module if m.wall == "island" and m.storey == "base"})]
+        groups: list[tuple[str, object]] = [(w, None) for w in ("back", "right", "left")] + \
+                 [("island", z) for z in sorted({(m.offset, m.facing or "-z") for m in self.spec.module if m.wall == "island" and not m.run and m.storey == "base"})] + \
+                 [("island", r.id) for r in self.spec.runs if any(m.run == r.id and m.storey == "base" for m in self.spec.module)]
         for wall, z in groups:
-            ms = sorted((m for m in self.spec.module if m.wall == wall and m.storey == "base" and (z is None or (m.offset, m.facing or "-z") == z)), key=lambda m: m.fromCorner)
+            if isinstance(z, str):          # an explicit run: one countertop per continuous stretch, in the run frame
+                ms = sorted((m for m in self.spec.module if m.run == z and m.storey == "base"), key=lambda m: m.fromCorner)
+            else:
+                ms = sorted((m for m in self.spec.module if m.wall == wall and not m.run and m.storey == "base" and (z is None or (m.offset, m.facing or "-z") == z)), key=lambda m: m.fromCorner)
             run: list[list[float]] = []
             for m in ms:
                 if run and m.fromCorner <= run[-1][1] + 1:
@@ -234,6 +271,9 @@ class _Builder:
                 else:
                     run.append([m.fromCorner, m.endAt, m.depth])
             for s0, s1, depth in run:
+                if isinstance(z, str):
+                    self.box(None, "countertop", wall, s0, s1, 0, depth + c.countertopOverhang, c.baseTop, c.countertop, fr=self._run[ms[0].id])
+                    continue
                 self.box(None, "countertop", wall, s0, s1, 0, depth + c.countertopOverhang,
                          c.baseTop, c.countertop, isl=(z[0], depth, z[1]) if z is not None else None)
                 if c.material.get("wallTile") and wall != "island":  # an island has no wall behind it
@@ -249,6 +289,8 @@ class _Builder:
                     m = self.spec.find(tb.module)
                 except KeyError:
                     continue
+            if m is not None and m.run:
+                self._run[tb.id] = self._run[m.id]       # an appliance stands in the run of its module
             if tb.type == "fridge" and m and len(k) >= 3:
                 w, h, d = k[:3]
                 sc = m.fromCorner + m.width / 2
@@ -296,6 +338,8 @@ class _Builder:
     # ---- tay nắm (kitchen.hardware: cùng quy tắc với bộ xuất three.js)
     def _local(self, p: Part) -> tuple[float, float, float, float, float]:
         """(x0, x1, y0, y1, mặt trước) của cánh trong hệ 'nhìn từ phía trước'."""
+        if p.frame is not None and p.lmin is not None and p.lmax is not None:
+            return p.lmin[0], p.lmax[0], p.lmin[1], p.lmax[1], p.lmax[2]
         if p.orient == "right":
             return p.min[2], p.max[2], p.min[1], p.max[1], p.min[0]
         if p.orient == "left":
@@ -318,6 +362,16 @@ class _Builder:
             if hd is None:
                 continue
             (hw, hh, dd), u0, v0 = hd["size"], x0 + hd["x"], y0 + hd["y"]
+            if p.frame is not None:           # run coordinates: the handle is a box in the same frame
+                fr = p.run_frame
+                assert fr is not None
+                lmn, lmx = (u0, v0, f), (u0 + hw, v0 + hh, f + dd)
+                (ax, az), (bx, bz) = runmod.aabb(fr.footprint(lmn[0], lmx[0], lmn[2], lmx[2]))
+                key = f"{m.id}-handle"
+                self._n[key] = self._n.get(key, 0) + 1
+                self.parts.append(Part(f"{key}-{self._n[key]}", m.id, "handle", (ax, v0, az), (bx, v0 + hh, bz), p.wall, parent=p.id,
+                                       frame=p.frame, lmin=lmn, lmax=lmx, run=p.run))
+                continue
             if p.orient == "right":
                 mn, mx = (f - dd, v0, u0), (f, v0 + hh, u0 + hw)
             elif p.orient == "left":

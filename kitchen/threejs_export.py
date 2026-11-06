@@ -15,7 +15,7 @@ import re
 from collections import defaultdict
 
 from .numeric import round_half_away, round_int
-from . import floorplan as fpmod, roomctx, hardware, regions, vocab
+from . import runs, floorplan as fpmod, roomctx, hardware, regions, vocab
 from .geometry import Part, backsplash_height, compile_spec, views_of
 from .errors import require
 from .palette import SEGMENT_COLORS, module_color as _module_color
@@ -56,8 +56,23 @@ def _rot(v, deg):
 class Frame:
     """Khung cục bộ (anchor bottom-back-left) của module hoặc vật đặt theo tường."""
 
-    def __init__(self, pos, rot_y):
+    def __init__(self, pos, rot_y, origin=(0.0, 0.0, 0.0)):
         self.pos, self.rot = tuple(pos), rot_y
+        self.origin = tuple(origin)      # run coordinates (s, y, d) of ``pos`` for a frame inside an angled run; unused otherwise
+
+    def part_box(self, p):
+        """Local box of a part: from its run coordinates when it stands in an angled run, else from its world AABB."""
+        if p.frame is not None and p.lmin is not None and p.lmax is not None:
+            return [p.lmin[i] - self.origin[i] for i in range(3)], [p.lmax[i] - self.origin[i] for i in range(3)]
+        return self.box_local(p.min, p.max)
+
+    @staticmethod
+    def for_part(p, wall):
+        """Frame at the anchor corner of a part: its run frame for an angled part, else the axis frame of its wall."""
+        if p.frame is not None and p.lmin is not None and p.run_frame is not None:
+            x, z = p.run_frame.to_world(p.lmin[0], p.lmin[2])
+            return Frame((x, p.lmin[1], z), p.frame[2], p.lmin)
+        return Frame.for_aabb(p.min, p.max, wall)
 
     def to_local(self, p):
         d = (p[0] - self.pos[0], p[1] - self.pos[1], p[2] - self.pos[2])
@@ -84,7 +99,10 @@ class Frame:
         return Frame(pos, r)
 
 
-def _module_frame(m: Module, lsau: float) -> tuple[Frame, tuple[float, float, float]]:
+def _module_frame(m: Module, lsau: float, fr: "runs.RunFrame | None" = None) -> tuple[Frame, tuple[float, float, float]]:
+    if fr is not None:               # explicit run at any angle: the module frame is the run frame moved to s = fromCorner
+        x, z = fr.to_world(m.fromCorner, 0.0)
+        return Frame((x, m.y, z), fr.yaw, (m.fromCorner, m.y, 0.0)), (m.width, m.height, m.depth)
     if m.type == "corner-shelf":
         bl, rl = require(m.backLength, f"{m.id}.backLength"), require(m.rightLength, f"{m.id}.rightLength")
         return Frame((-bl, m.y, 0), 0.0), (bl, m.height, rl)
@@ -286,7 +304,7 @@ def _module_entry(spec: KitchenSpec, m: Module, parts: list[Part], frame: Frame,
     for p in parts:
         if p.type == "handle":
             continue  # tay nắm xuất ở doors[].hardware / drawers[].hardware
-        openings, hi = frame.box_local(p.min, p.max)
+        openings, hi = frame.part_box(p)
         if p.type == "carcass":
             for role, crole, a, b in _split_carcass(openings, hi, t, c.backThickness):
                 e = {"id": pid(role), "role": role, "assetId": "ASSET-PANEL", "dimensions": _dims(b[0] - a[0], b[1] - a[1], b[2] - a[2]),
@@ -407,7 +425,7 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
     # module
     modules = []
     for m in spec.module:
-        frame, size = _module_frame(m, lsau)
+        frame, size = _module_frame(m, lsau, runs.frame_of(spec, m))
         modules.append(_module_entry(spec, m, by_mod.get(m.id, []), frame, size, mats, has_led))
 
     # thiết bị & phụ kiện
@@ -421,8 +439,8 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
         host = spec.find(tb.module) if tb.module else next((mm for mm in spec.module if mm.wall == tb.wall and mm.storey == "base"
                                                           and tb.center is not None and mm.fromCorner <= tb.center < mm.endAt), None)
         wall = host.orient if host and host.wall != "corner" else (tb.wall or "back")
-        fr = Frame.for_aabb(p.min, p.max, wall)
-        openings, hi = fr.box_local(p.min, p.max)
+        fr = Frame.for_part(p, wall)
+        openings, hi = fr.part_box(p)
         dims = _dims(*(hi[i] - openings[i] for i in range(3)))
         name = (tb.name or "").lower()
         if tb.type in app_type or tb.type == "cooktop":
@@ -445,20 +463,23 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
     # mặt đá (+ lỗ khoét ước lượng) và ốp tường
     cut_targets = [x for x in appliances if x["type"].startswith("Cooktop")] + [x for x in accessories if x["type"].startswith("Sink")]
     for i, p in enumerate([p for p in scene.parts if p.type == "countertop"]):
-        fr = Frame.for_aabb(p.min, p.max, p.orient)
-        openings, hi = fr.box_local(p.min, p.max)
+        fr = Frame.for_part(p, p.orient)
+        openings, hi = fr.part_box(p)
         w, h, d = (hi[k] - openings[k] for k in range(3))
         cutouts = []
         for tgt in cut_targets:
             src = next(pp for pp in scene.parts if pp.module == tgt["sourceRef"])
-            if src.wall == p.wall and all(p.min[k] - 1 <= src.min[k] and src.max[k] <= p.max[k] + 1 for k in (0, 2)):
-                llo, lhi = fr.box_local(src.min, src.max)
+            inside = (src.run == p.run and src.lmin is not None and src.lmax is not None and p.lmin is not None and p.lmax is not None and
+                      all(p.lmin[k] - 1 <= src.lmin[k] and src.lmax[k] <= p.lmax[k] + 1 for k in (0, 2))) if p.frame is not None else \
+                (src.wall == p.wall and src.frame is None and all(p.min[k] - 1 <= src.min[k] and src.max[k] <= p.max[k] + 1 for k in (0, 2)))
+            if inside:
+                llo, lhi = fr.part_box(src)
                 cw, cd = lhi[0] - llo[0] - 20, lhi[2] - llo[2] - 20
                 cutouts.append({"forId": tgt["id"], "type": "cooktop" if tgt["id"].startswith("APP") else "sink",
                                 "dimensions": _dims(cw, h, cd), "transform": _tf((llo[0] + 10, 0, llo[2] + 10)), "estimated": True})
         accessories.append({"id": f"ACC-COUNTERTOP-{i + 1}", "type": "Countertop", "assetId": "ASSET-COUNTERTOP", "dimensions": _dims(w, h, d),
                             "transform": _tf(fr.pos, fr.rot), "materialId": mats["countertop"], "edgeProfile": "eased", "overhang": c.countertopOverhang,
-                            "cutouts": cutouts, "sourceRef": f"countertop-{p.wall}",
+                            "cutouts": cutouts, "sourceRef": f"countertop-{p.run or p.wall}",
                             "partRef": {"kind": "countertop", "wall": p.wall}})
         height = backsplash_height(spec, require(p.wall, "countertop wall"))  # cùng một hàm với hình học 3D
         if c.material.get("wallTile") and height >= 50:  # ốp tường giữa mặt đá và tủ trên, sát tường

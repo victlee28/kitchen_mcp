@@ -59,13 +59,13 @@ class TestPlan(unittest.TestCase):
         with self.assertRaises(InvalidInput):
             cabinet_run.split_widths(200)
 
-    def test_diagonal_edge_and_degenerate_input_are_refused(self):
-        diamond = [(-2300.0, 2000.0), (-2100.0, 2200.0), (-2300.0, 2400.0), (-2500.0, 2200.0)]
-        with self.assertRaises(InvalidInput) as ctx:
-            cabinet_run.plan_i_run(_spec(), diamond, (-2200.0, 2100.0))
-        self.assertEqual(ctx.exception.code, "diagonal-edge")
+    def test_degenerate_input_is_refused(self):
         with self.assertRaises(InvalidInput):
             cabinet_run.plan_i_run(_spec(), BOX[:2], (0.0, 0.0))
+        diamond = [(-2300.0, 2000.0), (-2100.0, 2200.0), (-2300.0, 2400.0), (-2500.0, 2200.0)]     # sides of 283 mm: below the narrowest cabinet
+        with self.assertRaises(InvalidInput) as ctx:
+            cabinet_run.plan_i_run(_spec(), diamond, (-2200.0, 2100.0))
+        self.assertEqual(ctx.exception.code, "run-too-short")
 
     def test_outside_the_kitchen_area_is_refused(self):
         behind = [(-2500.0, -900.0), (-2100.0, -900.0), (-2100.0, -500.0), (-2500.0, -500.0)]

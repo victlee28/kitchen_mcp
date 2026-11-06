@@ -105,6 +105,16 @@ class Room(_Base):
         return next((t.length for t in self.wall if t.id == id), None)
 
 
+class Run(_Base):
+    """An explicit straight run of cabinets standing at any angle. Local axes: s along the run (fromCorner of its modules), d from the back of the
+    cabinets to their door face. World = (x, z) + s * (cos yaw, -sin yaw) + d * (sin yaw, cos yaw), yaw in degrees as in three.js rotation.y
+    (yaw 0: doors look at +z, s grows towards +x; yaw 180: doors look at -z, s grows towards -x)."""
+    id: str
+    x: float = Field(default=0, description="World x of the run origin (s = 0, d = 0), mm, kitchen frame")
+    z: float = Field(default=0, description="World z of the run origin, mm, kitchen frame")
+    yaw: float = Field(default=0, description="Degrees, three.js rotation.y; the doors look along (sin yaw, cos yaw)")
+
+
 class FrontSection(_Base):
     """Một tầng mặt trước của tủ dưới (xếp từ trên xuống): hộc trống, ngăn kéo hoặc cánh."""
     type: Literal["niche", "drawer", "door"]
@@ -118,6 +128,7 @@ class Module(_Base):
     wall: Literal["back", "right", "left", "corner", "island"] = "back"
     offset: float = Field(default=0, ge=0, description="wall='island' only (island / peninsula): door face position of the run in mm. For facing -z / +z (runs along x): distance from the back-wall plane (z); fromCorner is measured from the right-wall plane. For facing -x / +x (runs along z): distance from the right-wall plane towards -x (x = -offset); fromCorner is measured from the back-wall plane")
     facing: Literal["-z", "+z", "-x", "+x"] | None = Field(default=None, description="wall='island' only: direction the doors look in scene axes. Default (null) = -z, towards the back wall. Lets a run stand against any axis-parallel edge of an object and face outward")
+    run: str | None = Field(default=None, description="wall='island' only: id of an entry of spec.runs. The module then sits at s = fromCorner in that run's frame (any angle); offset and facing are not used")
     fromCorner: float = Field(default=0, ge=0)
     width: float = Field(default=0, ge=0)
     y: float = Field(default=0, ge=0)
@@ -141,10 +152,14 @@ class Module(_Base):
     @property
     def orient(self) -> str:
         """Which of back / right / left / island this module's front looks like (a free run takes the orientation of its facing)."""
+        if self.run:
+            return "back"                      # the run frame is back-wall like: s to the right, d towards the viewer
         return ORIENT_OF_FACING[self.facing or "-z"] if self.wall == "island" else self.wall
 
     @model_validator(mode="after")
     def _validate(self):
+        if self.run and (self.wall != "island" or self.facing):
+            raise ValueError(f"{self.id}: run only applies to wall='island' without facing")
         if self.facing and self.wall != "island":
             raise ValueError(f"{self.id}: facing only applies to wall='island'")
         if self.type not in MODULE_TYPES:
@@ -282,9 +297,17 @@ class KitchenSpec(_Base):
     cameraViews: dict[str, ViewAngle] = Field(default_factory=dict)
     moldingProfiles: list[MoldingProfile] = Field(default_factory=list, description="Mặt cắt riêng; preset có sẵn ở kitchen/moldings.py")
     moldings: list[Molding] = Field(default_factory=list)
+    idCounters: dict[str, int] = Field(default_factory=dict, description="Highest number handed out per id prefix (TD, TT, TC…); ids are never reused after a module is removed")
+    runs: list[Run] = Field(default_factory=list, description="Explicit runs (any angle) that modules with wall='island' and run=<id> stand in")
 
     @model_validator(mode="after")
     def _unique_ids(self):
+        run_ids = [r.id for r in self.runs]
+        if len(run_ids) != len(set(run_ids)):
+            raise ValueError("Trùng mã dãy (run)")
+        for m in self.module:
+            if m.run and m.run not in run_ids:
+                raise ValueError(f"{m.id}: dãy '{m.run}' không có trong runs")
         seen: set[str] = set()
         for m in self.module:
             if m.id in seen:

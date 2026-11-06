@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from itertools import combinations
 
-from . import knowledge_seed, moldings, regions, rules_kb
+from . import knowledge_seed, moldings, regions, rules_kb, runs
 from .errors import require
 from .spec import KitchenSpec, Module
 
@@ -30,7 +30,11 @@ def _envelopes(spec: KitchenSpec) -> list[tuple[str, tuple, tuple]]:
     lsau = (spec.room.length("back") if spec.room else None) or max([m.endAt for m in spec.module if m.wall == "back"] + [0]) + 600
     for m in spec.module:
         y0, y1 = m.y, m.y + m.height
-        if m.type == "corner-shelf":
+        fr = runs.frame_of(spec, m)
+        if fr is not None:             # angled run: the axis-aligned bounding box of its footprint (exact overlap is checked on polygons)
+            (ax, az), (bx, bz) = runs.aabb(runs.module_footprint(fr, m))
+            out.append((m.id, (ax, y0, az), (bx, y1, bz)))
+        elif m.type == "corner-shelf":
             out.append((m.id, (-require(m.backLength, f"{m.id}.backLength"), y0, 0), (0, y1, m.depth)))
             out.append((m.id, (-m.depth, y0, 0), (0, y1, require(m.rightLength, f"{m.id}.rightLength"))))
         elif m.wall == "back":
@@ -63,8 +67,18 @@ def check_geometry(spec: KitchenSpec) -> list[dict]:
     c = spec.common
     issues = []
     env = _envelopes(spec)
+    angled = {m.id: runs.module_footprint(fr, m) for m in spec.module if (fr := runs.frame_of(spec, m)) is not None}
     for (id, mn, mx), (mb, nn, nx) in combinations(env, 2):
-        if id != mb and _overlap((mn, mx), (nn, nx)) > 0:
+        if id == mb:
+            continue
+        if id in angled or mb in angled:       # a box of an angled run: exact polygon test (bounding boxes of rotated rows overlap far too often)
+            if min(mx[1], nx[1]) - max(mn[1], nn[1]) <= TOL:
+                continue
+            pa = angled.get(id) or [(mn[0], mn[2]), (mx[0], mn[2]), (mx[0], mx[2]), (mn[0], mx[2])]
+            pb = angled.get(mb) or [(nn[0], nn[2]), (nx[0], nn[2]), (nx[0], nx[2]), (nn[0], nx[2])]
+            if runs.penetration(pa, pb) > TOL:
+                issues.append(_issue("GEO-COLLISION", "error", [id, mb], f"{id} và {mb} chồng lên nhau"))
+        elif _overlap((mn, mx), (nn, nx)) > 0:
             issues.append(_issue("GEO-COLLISION", "error", [id, mb], f"{id} và {mb} chồng lên nhau"))
     tier_level = {"base": c.baseTop, "upper": c.upperTierSplit, "loft": c.cabinetTop, "tall": c.cabinetTop, "corner": None}
     for m in spec.module:
@@ -97,6 +111,13 @@ def check_geometry(spec: KitchenSpec) -> list[dict]:
                 gap = b.fromCorner - a.endAt
                 if gap > TOL:
                     issues.append(_issue("GEO-GAPS", "info", [a.id, b.id], f"Khe hở {gap:g} mm giữa {a.id} và {b.id} (tường {wall})", gap))
+    for r in spec.runs:                # gaps inside an explicit run, per storey
+        for storey in ("base", "upper", "loft"):
+            ms = sorted((m for m in spec.module if m.run == r.id and m.storey in (storey, "tall")), key=lambda m: m.fromCorner)
+            for a, b in zip(ms, ms[1:]):
+                gap = b.fromCorner - a.endAt
+                if gap > TOL and not (a.storey == b.storey == "tall"):
+                    issues.append(_issue("GEO-GAPS", "info", [a.id, b.id], f"Khe hở {gap:g} mm giữa {a.id} và {b.id} (dãy {r.id})", gap))
     # thiết bị lọt module
     for tb in spec.appliances:
         k = tb.numeric_dimensions()

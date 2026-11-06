@@ -9,7 +9,7 @@ from __future__ import annotations
 import math
 from typing import Any
 
-from .edit import combine_ops
+from .edit import combine_ops, next_run_id
 from .errors import InvalidInput
 from .floorplan.geom import point_in_poly
 from .numeric import round_half_away
@@ -35,6 +35,48 @@ def _nearest_edge(poly: list[Pt], p: Pt) -> tuple[Pt, Pt]:
         if d < best_d:
             best, best_d = (a, b), d
     return best
+
+
+def _is_diagonal(a: Pt, b: Pt) -> bool:
+    angle = math.degrees(math.atan2(abs(b[1] - a[1]), abs(b[0] - a[0])))
+    return AXIS_TOLERANCE_DEG < angle < 90 - AXIS_TOLERANCE_DEG
+
+
+def _outward(poly: list[Pt], a: Pt, b: Pt) -> Pt:
+    """Unit normal of the edge pointing out of the object (the way the doors must look)."""
+    ex, ez = b[0] - a[0], b[1] - a[1]
+    length = math.hypot(ex, ez)
+    if length < 1.0:
+        raise InvalidInput("The edge is too short", code="edge-too-short")
+    nx, nz = -ez / length, ex / length
+    mid = ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)
+    probe = 5.0
+    if not point_in_poly((mid[0] + nx * probe, mid[1] + nz * probe), poly):
+        return nx, nz
+    if not point_in_poly((mid[0] - nx * probe, mid[1] - nz * probe), poly):
+        return -nx, -nz
+    raise InvalidInput("Both sides of this edge are inside the object", code="edge-inside")
+
+
+def _plan_angled(spec: KitchenSpec, outline: list[Pt], a: Pt, b: Pt, module_type: str) -> dict[str, Any]:
+    """A run along an edge at any angle: one explicit run (origin on the edge, doors along the outward normal) and the cabinets in it."""
+    nx, nz = _outward(outline, a, b)
+    yaw = math.degrees(math.atan2(nx, nz))                       # doors look along (sin yaw, cos yaw)
+    ux, uz = nz, -nx                                              # s direction = (cos yaw, -sin yaw)
+    start, end = (a, b) if (b[0] - a[0]) * ux + (b[1] - a[1]) * uz >= 0 else (b, a)
+    length = math.hypot(end[0] - start[0], end[1] - start[1])
+    widths = split_widths(length)
+    c = spec.common
+    depth = float(c.baseDepth)
+    run = {"id": next_run_id(spec), "x": float(round_half_away(start[0], 1)), "z": float(round_half_away(start[1], 1)), "yaw": float(round_half_away(yaw, 2))}
+    ops: list[dict[str, Any]] = [{"op": "add-run", "run": run}]
+    at = 0.0
+    for w in widths:
+        ops.append({"op": "add", "closeGap": False, "module": {"type": module_type, "wall": "island", "run": run["id"], "fromCorner": at, "width": w,
+                                                                "y": 0, "height": float(c.baseTop), "depth": depth}})
+        at += w
+    return {"operation": combine_ops(ops), "facing": None, "run": run, "yaw": run["yaw"], "length": sum(widths), "widths": widths,
+            "summary": [f"{len(widths)} base cabinets, {sum(widths):g} mm, along an edge at {run['yaw']:g}° (run {run['id']})"]}
 
 
 def _facing(poly: list[Pt], a: Pt, b: Pt) -> str:
@@ -82,6 +124,8 @@ def plan_i_run(spec: KitchenSpec, outline: list[Pt], point: Pt, module_type: str
     if len(outline) < 3:
         raise InvalidInput("The object has no outline", code="no-outline")
     a, b = _nearest_edge(outline, point)
+    if _is_diagonal(a, b):
+        return _plan_angled(spec, outline, a, b, module_type)
     facing = _facing(outline, a, b)
     c = spec.common
     depth = float(c.baseDepth)

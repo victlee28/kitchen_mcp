@@ -231,6 +231,9 @@ class Store:
         while True:
             time.sleep(self.HEARTBEAT_S)
             with self._beat_lock:
+                if not os.path.exists(self.path):     # the database is gone (a test's temp dir, a moved data folder): connecting would create a stray empty file
+                    self._beat = None
+                    return
                 try:
                     if self.touch_jobs() == 0:
                         self._beat = None

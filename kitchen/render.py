@@ -22,6 +22,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
+from . import runs
 from .geometry import Scene, compile_spec, views_of
 from .palette import SEGMENT_COLORS, module_color as _module_color
 from .spec import ViewAngle, KitchenSpec
@@ -35,6 +36,18 @@ _FACES = [
     ((0, 4, 5, 1), (0, -1, 0)), ((2, 3, 7, 6), (0, 1, 0)),
     ((0, 1, 3, 2), (0, 0, -1)), ((4, 6, 7, 5), (0, 0, 1)),
 ]
+
+
+def _face_normals(part) -> np.ndarray:
+    """Outward normals of the 6 faces in world axes; the faces of a part in an angled run are turned with its run."""
+    base = np.array([n for _, n in _FACES], float)
+    if part.frame is None:
+        return base
+    c, sn = runs.trig(part.frame[2])
+    out = base.copy()
+    out[:, 0] = base[:, 0] * c + base[:, 2] * sn          # world x = s*cos + d*sin
+    out[:, 2] = -base[:, 0] * sn + base[:, 2] * c         # world z = -s*sin + d*cos
+    return out
 
 
 class Camera:
@@ -85,16 +98,15 @@ def rasterize(scene: Scene, camera: Camera):
     ys, xs = np.mgrid[0:H, 0:W]
     pxc, pyc = xs + 0.5, ys + 0.5
     for k, part in enumerate(scene.parts):
-        mn, mx = np.array(part.min) / 1000, np.array(part.max) / 1000
-        corners = np.array([[mn[0] if i & 1 == 0 else mx[0], mn[1] if i & 2 == 0 else mx[1], mn[2] if i & 4 == 0 else mx[2]]
-                            for i in range(8)])
+        corners = np.array(part.corners(), float) / 1000
+        fnormals = _face_normals(part)
         cc = camera.to_camera(corners)
         if (cc[:, 2] < NEAR).all():
             continue
         for fi, (idx, normal) in enumerate(_FACES):
             # bỏ mặt quay lưng
             center = corners[list(idx)].mean(0)
-            if np.dot(np.array(normal), camera.p - center) <= 0:
+            if np.dot(fnormals[fi], camera.p - center) <= 0:
                 continue
             poly = _clip_near([cc[i] for i in idx])
             if len(poly) < 3:
@@ -220,6 +232,8 @@ def scene_hash(scene: Scene) -> str:
     h = hashlib.sha256()
     for p in scene.parts:
         h.update(f"{p.id}|{p.type}|{p.module}|{[round(v, 2) for v in p.min]}|{[round(v, 2) for v in p.max]}\n".encode())
+        if p.frame is not None:                    # an angled part is not described by its AABB alone: add its run frame and local box
+            h.update(f"{[round(v, 2) for v in p.frame]}|{[round(v, 2) for v in p.lmin or ()]}|{[round(v, 2) for v in p.lmax or ()]}\n".encode())
     for m in scene.meshes:
         h.update(f"{m.id}|{m.type}|{m.module}|{len(m.faces)}|".encode())
         h.update(np.round(np.asarray(m.vertices, float), 2).tobytes())
@@ -264,11 +278,11 @@ def render_view(scene: Scene, view: ViewAngle, out_dir: Path, width: int = 1280,
     Image.fromarray(dep16).save(out_dir / "depth16.png")
 
     # normal (hệ camera)
-    normals_world = np.array([n for _, n in _FACES], float)
+    normals_world = np.array([_face_normals(p) for p in scene.parts], float).reshape(-1, 6, 3) if nparts else np.zeros((0, 6, 3))
     ncam = np.stack([normals_world @ camera.r, normals_world @ camera.u, -(normals_world @ camera.f)], axis=-1)
     nimg = np.zeros((height, width, 3), np.uint8)
     box_hit = hit & (pid < nparts)
-    nimg[box_hit] = ((ncam[nid[box_hit]] * 0.5 + 0.5) * 255).astype(np.uint8)
+    nimg[box_hit] = ((ncam[pid[box_hit], nid[box_hit]] * 0.5 + 0.5) * 255).astype(np.uint8)
     mesh_hit = hit & (pid >= nparts)
     if mesh_hit.any():
         nw = mesh_n[mesh_hit].astype(float)
@@ -315,7 +329,7 @@ def render_view(scene: Scene, view: ViewAngle, out_dir: Path, width: int = 1280,
     # albedo: màu vật liệu × đổ bóng Lambert đơn giản, nét làm tối nhẹ
     col = np.array(colors if colors is not None else [_hex_rgb_part(p) for p in all_parts], float).reshape(-1, 3)
     nw = np.zeros((height, width, 3))
-    nw[box_hit] = normals_world[nid[box_hit]]
+    nw[box_hit] = normals_world[pid[box_hit], nid[box_hit]]
     if mesh_hit.any():
         nw[mesh_hit] = mesh_n[mesh_hit]
     shade = 0.74 + 0.26 * np.clip(nw @ _DARK, 0, 1)
