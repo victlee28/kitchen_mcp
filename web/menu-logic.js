@@ -57,6 +57,7 @@ export function buildOp(action, id, form, spec) {
     if (mm === spec?.common?.countertopOverhang) throw new Error('Mặt bàn đã nhô đúng mức này');
     return { op: 'common', changes: { countertopOverhang: mm } };
   }
+  if (!['material', 'doorStyle', 'remove', 'add', 'handleVariant', 'handleMaterial'].includes(action)) throw new Error(`Hành động không hỗ trợ: ${action}`);   // checked first: a wrong action must not look like a missing module
   const m = spec?.module?.find((x) => x.id === id);
   if (!m) throw new Error(`Không còn module ${id} trong thiết kế`);
   if (action === 'material') {
