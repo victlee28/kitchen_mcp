@@ -36,7 +36,7 @@ SEGMENT_COLORS = {  # màu mask ngữ nghĩa (cố định giữa các lần ren
     "molding": (168, 117, 66), "handle": (255, 0, 140),
     "structure-wall": (231, 226, 213), "structure-column": (242, 182, 93), "structure-opening": (85, 198, 169),
     "structure-furniture": (211, 134, 98), "structure-shaft": (140, 131, 214), "structure-stair": (207, 174, 82),
-    "structure-area": (125, 158, 170),
+    "structure-area": (125, 158, 170), "structure-swing": (154, 217, 198),
 }
 
 # 6 mặt của hộp: (chỉ số đỉnh, normal)

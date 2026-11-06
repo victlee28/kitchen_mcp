@@ -115,11 +115,19 @@ class KitchenService:
         spec, stored_revision = self.store.get(design_id, revision)
         return {'id': design_id, 'rev': stored_revision, 'spec': dump_spec(spec)}
 
-    def apply(self, design_id: str, operation: dict[str, Any], base_revision: int | None, source: str='', **legacy: Any) -> dict:
-        """Apply one operation and append a revision, rejecting stale base revisions."""
+    def apply(self, design_id: str, operation: dict[str, Any], base_revision: int | None, source: str='', expect: str | None=None, **legacy: Any) -> dict:
+        """Apply one operation and append a revision, rejecting stale base revisions.
+
+        ``expect``: the ``opHash`` that :meth:`propose` returned. When given, the operation and base revision must be exactly the
+        previewed ones, so what is saved is what the user saw.
+        """
         source = legacy.pop('source', source)
         if legacy:
             raise TypeError(f"Unexpected options: {', '.join(legacy)}")
+        if expect is not None:
+            from . import proposal
+            if base_revision is None or proposal.op_hash(operation, base_revision) != expect:
+                raise ValueError('The operation differs from the one that was previewed; preview it again before confirming')
         spec, _current_revision = self.store.get(design_id)
         updated_spec = edit.apply_op(spec, operation)
         new_revision = self.store.add_revision(design_id, base_revision, updated_spec, operation, source)
@@ -138,7 +146,7 @@ class KitchenService:
         spec, current = self.store.get(design_id)
         if base_revision is not None and base_revision != current:
             raise ConflictError(f'base_rev={base_revision}, but the latest revision is {current}; reload before editing')
-        base = {'id': design_id, 'baseRev': current, 'operation': operation}
+        base = {'id': design_id, 'baseRev': current, 'operation': operation, 'opHash': proposal.op_hash(operation, current)}
         try:
             updated = edit.apply_op(spec.model_copy(deep=True), operation)
         except ValidationError as error:

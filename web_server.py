@@ -13,7 +13,7 @@ API:
   GET  /api/knowledge?q=&kinds=&quocGia=&khuVuc=&chiVung=1   tra cứu tri thức có ưu tiên vùng
   GET  /api/regions                       khu vực, quốc gia, số mục
   GET  /api/designs/<id>/history         lịch sử
-  POST /api/designs/<id>/ops             {"baseRev": N, "op": {...}}
+  POST /api/designs/<id>/ops             {"baseRev": N, "op": {...}, "expect"?: opHash của /propose: chỉ lưu đúng thao tác đã xem trước}
   POST /api/designs/<id>/propose         {"baseRev": N, "op": {...}, "scope"?: ["TD1"]} xem trước, không lưu: diff, validation mới/đã hết, module bị ảnh hưởng
   POST /api/designs/<id>/revert          {"baseRev": N, "rev": M}
   POST /api/designs/<id>/render          {"rev"?, "views"?, "width"?, "height"?}
@@ -287,7 +287,9 @@ class Handler(BaseHTTPRequestHandler):
             if sub == "ops":
                 if "op" not in b:
                     raise ApiError(400, "thiếu op")
-                return self._json(200, s.apply(did, b["op"], b.get("baseRev"), "web"))
+                if b.get("expect") is not None and not isinstance(b["expect"], str):
+                    raise ApiError(400, "expect phải là opHash của bản xem trước")
+                return self._json(200, s.apply(did, b["op"], b.get("baseRev"), "web", b.get("expect")))
             if sub == "propose":
                 if not isinstance(b.get("op"), dict):
                     raise ApiError(400, "thiếu op")

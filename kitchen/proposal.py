@@ -5,6 +5,8 @@
 """
 from __future__ import annotations
 
+import hashlib
+import json
 from typing import Any
 
 from .spec import KitchenSpec
@@ -69,3 +71,9 @@ def validation_delta(before: dict, after: dict) -> dict:
     return {"valid": {"before": before["valid"], "after": after["valid"]}, "introduced": introduced,
             "resolved": [b[k] for k in b if k not in a], "remaining": [a[k] for k in a if k in b],
             "introducesErrors": any(i.get("severity") == "error" for i in introduced)}
+
+
+def op_hash(operation: dict, base_revision: int | None) -> str:
+    """Identifies exactly this operation on exactly this base revision; ``apply(..., expect=hash)`` refuses anything else."""
+    text = json.dumps({"op": operation, "baseRev": base_revision}, sort_keys=True, ensure_ascii=False, separators=(",", ":"), default=str)
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]

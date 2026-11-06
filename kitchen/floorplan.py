@@ -12,6 +12,8 @@ import json
 import math
 from typing import Any
 
+from .placement import Placement
+
 DEFAULT_WALL_THICKNESS = 140.0   # mm, used only for edges without a measured wall element
 DEFAULT_WALL_HEIGHT = 3000.0     # mm
 TOL = 30.0                       # mm, drawing/pick tolerance for "touching"
@@ -321,6 +323,120 @@ def parse_region(data: dict[str, Any], spec: str) -> dict[str, Any]:
     raise ValueError(f"Unknown region '{spec}'. Use region:kitchen, region:around=<ids> or region:bbox=x0,y0,x1,y1")
 
 
+# ---------------------------------------------------------------- trim a room outline where wall elements sit inside it
+def _snap_orthogonal(poly: list[tuple[float, float]], slope: float = 0.1) -> list[tuple[float, float]] | None:
+    """Make a nearly rectilinear outline exactly axis-parallel (edges share their coordinate); None when an edge is clearly diagonal."""
+    n = len(poly)
+    gx, gy = list(range(n)), list(range(n))
+
+    def find(g, i):
+        while g[i] != i:
+            g[i] = g[g[i]]
+            i = g[i]
+        return i
+    for i in range(n):
+        a, b = poly[i], poly[(i + 1) % n]
+        dx, dy = abs(b[0] - a[0]), abs(b[1] - a[1])
+        if dx == 0 and dy == 0:
+            continue
+        if dy <= slope * dx:
+            gy[find(gy, i)] = find(gy, (i + 1) % n)
+        elif dx <= slope * dy:
+            gx[find(gx, i)] = find(gx, (i + 1) % n)
+        else:
+            return None
+    sx: dict[int, list[float]] = {}
+    sy: dict[int, list[float]] = {}
+    for i, p in enumerate(poly):
+        sx.setdefault(find(gx, i), []).append(p[0])
+        sy.setdefault(find(gy, i), []).append(p[1])
+    return [(sum(sx[find(gx, i)]) / len(sx[find(gx, i)]), sum(sy[find(gy, i)]) / len(sy[find(gy, i)])) for i in range(n)]
+
+
+def _inside(pt, poly) -> bool:
+    x, y = pt
+    c = False
+    for a, b in zip(poly, poly[1:] + poly[:1]):
+        if (a[1] > y) != (b[1] > y) and x < (b[0] - a[0]) * (y - a[1]) / (b[1] - a[1]) + a[0]:
+            c = not c
+    return c
+
+
+def _trace(cells: set[tuple[int, int]], xs: list[float], ys: list[float]) -> list[tuple[float, float]] | None:
+    """Outer boundary (counter-clockwise) of a union of grid cells; None when it has holes, several parts, or touches itself at a corner."""
+    nxt: dict[tuple[int, int], list[tuple[int, int]]] = {}
+    for (i, j) in cells:
+        for a, b, nb in (((i, j), (i + 1, j), (i, j - 1)), ((i + 1, j), (i + 1, j + 1), (i + 1, j)),
+                         ((i + 1, j + 1), (i, j + 1), (i, j + 1)), ((i, j + 1), (i, j), (i - 1, j))):
+            if nb not in cells:
+                nxt.setdefault(a, []).append(b)
+    if not nxt or any(len(v) != 1 for v in nxt.values()):
+        return None
+    start = next(iter(nxt))
+    loop, cur = [], start
+    while True:
+        loop.append(cur)
+        cur = nxt[cur][0]
+        if cur == start:
+            break
+        if len(loop) > len(nxt):
+            return None
+    if len(loop) != len(nxt):
+        return None
+    pts = [(xs[i], ys[j]) for i, j in loop]
+    out = []
+    for k, p in enumerate(pts):
+        a, b = pts[k - 1], pts[(k + 1) % len(pts)]
+        if abs((p[0] - a[0]) * (b[1] - p[1]) - (p[1] - a[1]) * (b[0] - p[0])) > 1e-9:
+            out.append(p)
+    return out
+
+
+def trim_room(poly: list[tuple[float, float]], rects: list[tuple[str, list[float]]], snap: float, min_overlap: float = 0.6,
+              max_loss: float = 0.15) -> tuple[list[tuple[float, float]], list[str]]:
+    """Cut out of a rectilinear room outline the wall elements that mostly lie inside it and touch its boundary.
+
+    ``rects``: (id, [x0, y0, x1, y1]) of wall elements, file coordinates; their sides within ``snap`` of an outline coordinate are
+    taken to coincide with it. A wall is cut only when the result stays one simple region and the room loses at most ``max_loss``
+    of its area overall. Returns (outline, ids cut); the original outline and [] when nothing applies.
+    """
+    base = _snap_orthogonal(list(poly))
+    if base is None:
+        return list(poly), []
+    px, py = sorted({round(p[0], 6) for p in base}), sorted({round(p[1], 6) for p in base})
+
+    def near(v, grid):
+        best = min(grid, key=lambda g: abs(g - v))
+        return best if abs(best - v) <= snap else round(v, 6)
+    snapped = [(i, [near(bb[0], px), near(bb[1], py), near(bb[2], px), near(bb[3], py)]) for i, bb in rects]
+    snapped = [(i, r) for i, r in snapped if r[2] > r[0] and r[3] > r[1]]
+    xs = sorted({*px, *(c for _, r in snapped for c in (r[0], r[2]))})
+    ys = sorted({*py, *(c for _, r in snapped for c in (r[1], r[3]))})
+    cell = {(i, j) for i in range(len(xs) - 1) for j in range(len(ys) - 1) if _inside(((xs[i] + xs[i + 1]) / 2, (ys[j] + ys[j + 1]) / 2), base)}
+    area = lambda cs: sum((xs[i + 1] - xs[i]) * (ys[j + 1] - ys[j]) for i, j in cs)   # noqa: E731
+    room_area, kept, cut = area(cell), set(cell), []
+    for wid, r in snapped:
+        wc = {(i, j) for i in range(len(xs) - 1) for j in range(len(ys) - 1) if xs[i] >= r[0] and xs[i + 1] <= r[2] and ys[j] >= r[1] and ys[j + 1] <= r[3]}
+        inside = wc & kept
+        if not inside or area(inside) < min_overlap * (r[2] - r[0]) * (r[3] - r[1]):
+            continue
+        if not any(nb not in cell for (i, j) in inside for nb in ((i + 1, j), (i - 1, j), (i, j + 1), (i, j - 1))):
+            continue                                   # an island inside the room, not a notch of its outline
+        trial = kept - wc
+        if area(cell) - area(trial) > max_loss * room_area or _trace(trial, xs, ys) is None:
+            continue
+        kept, cut = trial, cut + [wid]
+    if not cut:
+        return list(poly), []
+    out = _trace(kept, xs, ys)
+    if out is None:
+        return list(poly), []
+    sign = lambda pts: sum(a[0] * b[1] - b[0] * a[1] for a, b in zip(pts, pts[1:] + pts[:1]))   # noqa: E731
+    if sign(out) * sign(list(poly)) < 0:
+        out.reverse()
+    return out, cut
+
+
 # ---------------------------------------------------------------- normalize
 def normalize(data: dict[str, Any], room_id: str | None = None) -> dict[str, Any]:
     """Validate a floorplan-audited document and return derived scene geometry (mm).
@@ -376,6 +492,10 @@ def normalize(data: dict[str, Any], room_id: str | None = None) -> dict[str, Any
         room_el = next(e for e in elements if e.get("id") == room_id)
         room_label = _fv(room_el, "label")
         raw_room = _points(_fv(room_el, "geometry"), room_id)
+        rects = [(e["id"], bb) for e in elements if e.get("kind") == "wall" and e.get("id") and (bb := _bbox(e))]
+        raw_room, trimmed = trim_room(raw_room, rects, 60.0 / UNIT_MM[data["unit"]])
+        if trimmed:
+            warnings.append({"code": "room-trimmed", "message": f"the room outline overlapped wall elements {', '.join(trimmed)}; those parts were cut out of the room"})
 
     # file coordinates -> (right, forward) in mm -> scene (x = right - r0, z = f0 - forward)
     def to_rf(p):
@@ -759,16 +879,15 @@ def bind_kitchen(fp: dict, need: dict, back_edge: int | None = None, offset: flo
 def apply_binding(doc: dict, fp: dict, binding: dict) -> None:
     """Move the kitchen content of a three.js document from the kitchen frame into the floorplan room (in place)."""
     t = binding.get("transform") or kitchen_transform(fp, binding)
-    yaw = math.radians(t["yaw"])
-    c, s = math.cos(yaw), math.sin(yaw)
-    ox, oz = t["origin"]["x"], t["origin"]["z"]
+    pl = Placement.from_transform(t)
 
     def vec(v):  # direction (rotation about +Y, same convention as three.js)
-        return {**v, "x": round(v["x"] * c + v["z"] * s, 6), "z": round(-v["x"] * s + v["z"] * c, 6)}
+        x, z = pl.dir_to_room(v["x"], v["z"])
+        return {**v, "x": round(x, 6), "z": round(z, 6)}
 
     def pos(v):
         w = vec(v)
-        return {**v, "x": round(w["x"] + ox, 3), "z": round(w["z"] + oz, 3)}
+        return {**v, "x": round(w["x"] + pl.ox, 3), "z": round(w["z"] + pl.oz, 3)}
 
     def wrap(a):
         a = round(a % 360, 6)
@@ -858,7 +977,7 @@ def resolve_binding(fp: dict, need: dict | None) -> dict | None:
     return bind_kitchen(fp, need) if need else None
 
 
-def room_section(fp: dict, binding: dict | None, wall_material: str) -> dict:
+def room_section(fp: dict, binding: dict | None, wall_material: str, structs: list | None = None) -> dict:
     """Pieces of the three.js ``room``: size, floor outline, wall data (``visible`` False: anchors and openings only) and structures."""
     names = {}
     if binding:
@@ -874,17 +993,17 @@ def room_section(fp: dict, binding: dict | None, wall_material: str) -> dict:
                       "thicknessSource": w["thicknessSource"], "visible": False, "materialId": wall_material, "interiorNormal": _v3(w["interiorNormal"]),
                       "openings": [{"id": f"{wid}-O{i + 1}", "type": "window" if o.get("type") == "window" else "door", "offset": o["offset"],
                                     "width": o["width"], "height": o["height"], "sillHeight": o.get("sillHeight", 0)} for i, o in enumerate(w["openings"])]})
-    structs = []
-    for st in structures(fp):
+    out_structs = []
+    for st in (structs if structs is not None else structures(fp)):
         d = dict(st)
         for key in ("swing", "arrow"):
             if key in d:
                 d[key] = [_v3(q) for q in d[key]]
         if "hinge" in d:
             d["hinge"] = _v3(d["hinge"])
-        structs.append(d)
+        out_structs.append(d)
     return {"width": fp["width"], "depth": fp["depth"], "floorOutline": [{"x": q["x"], "z": q["z"]} for q in fp["outline"]],
-            "walls": walls, "structures": structs}
+            "walls": walls, "structures": out_structs}
 
 
 def finish_document(doc: dict, fp: dict, binding: dict | None) -> None:

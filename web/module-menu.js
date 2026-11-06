@@ -75,8 +75,13 @@ export function createModuleMenu(ctx) {
     if (message) out.append(err(message));
     const read = () => Object.fromEntries(Object.entries(f).map(([k, n]) => [k, n.type === 'checkbox' ? n.checked : n.value]));
     const go = el('button', { type: 'button', class: 'primary', onclick: () => preview(action, read) }, 'Xem trước');
+    const extra = [];
+    if (action === 'material') {   // same material, but as a picture first: opens the image tab with the job form filled (quick mode, preview on)
+      extra.push(el('button', { type: 'button', class: 'ghost', title: 'Mở tab sửa ảnh với vật liệu này; chưa đổi thiết kế',
+        onclick: () => { const material = read().material.trim(); if (!material) return form(action, 'Nhập tên vật liệu'); const id = target.id; close(); ctx.imageEdit({ layer: layerFor('material', id), module: id, material, mode: 'quick', preview: true }); } }, 'Tạo ảnh với vật liệu này'));
+    }
     box.replaceChildren(header(`${target.id}: ${actionsFor(target, spec).find((a) => a.id === action)?.label}`), ...fields, out,
-      el('div', { class: 'row' }, go, el('button', { type: 'button', class: 'ghost', onclick: list }, 'Quay lại')));
+      el('div', { class: 'row' }, go, ...extra, el('button', { type: 'button', class: 'ghost', onclick: list }, 'Quay lại')));
     (f.material || f.style || f.width || go).focus?.();
     box.onkeydown = (e) => { if (e.key === 'Enter' && e.target.tagName !== 'BUTTON') { e.preventDefault(); go.click(); } };
   }
@@ -107,7 +112,7 @@ export function createModuleMenu(ctx) {
   async function apply(action, p) {
     if (busy) return; busy = true; ctx.setStatus('Áp dụng…');
     try {
-      const { status, data } = await call(`/api/designs/${p.id}/ops`, { op: p.operation, baseRev: p.baseRev });
+      const { status, data } = await call(`/api/designs/${p.id}/ops`, { op: p.operation, baseRev: p.baseRev, expect: p.opHash });
       busy = false;
       if (status === 409) return stale(action);
       if (!data || data.error) { ctx.setStatus(data?.error || `Lỗi ${status}`, 'warn'); return form(action, data?.error || `Lỗi ${status}`); }

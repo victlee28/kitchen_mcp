@@ -268,6 +268,33 @@ class TestBindingAndExport(unittest.TestCase):
         self.assertEqual(res["rev"], rev + 1)
         self.assertEqual(res["binding"]["source"], "auto")
 
+    def test_wall_elements_inside_the_outline_are_cut_out_of_the_room(self):
+        n = fpm.normalize(BUILDING, "room_003")
+        self.assertIn("room-trimmed", [w["code"] for w in n["warnings"]])
+        raw = next(e for e in BUILDING["elements"] if e["id"] == "room_003")["fields"]["geometry"]["value"]["outline"]
+        shoelace = lambda pts: abs(sum(a[0] * b[1] - b[0] * a[1] for a, b in zip(pts, pts[1:] + pts[:1]))) / 2  # noqa: E731
+        got = shoelace([(p["x"], p["z"]) for p in n["outline"]])
+        want = shoelace([(p[0] * 10, p[1] * 10) for p in raw])
+        self.assertLess(got, want * 0.97)
+        self.assertGreater(got, want * 0.85)
+
+    def test_trim_room_cuts_notches_and_leaves_everything_else(self):
+        room = [(0, 0), (1000, 0), (1000, 800), (0, 800)]
+        notch = ("w1", [400, 0, 600, 100])                               # a wall sitting in the room's boundary
+        out, cut = fpm.trim_room(room, [notch], 5.0)
+        self.assertEqual(cut, ["w1"])
+        self.assertEqual(len(out), 8)
+        island = ("w2", [400, 300, 600, 400])                            # free standing inside: not a notch
+        self.assertEqual(fpm.trim_room(room, [island], 5.0), (room, []))
+        outside = ("w3", [1200, 0, 1300, 100])
+        self.assertEqual(fpm.trim_room(room, [outside], 5.0), (room, []))
+        diagonal = [(0, 0), (1000, 0), (1000, 800), (500, 900), (0, 800)]
+        self.assertEqual(fpm.trim_room(diagonal, [notch], 5.0), (diagonal, []))
+        huge = ("w4", [0, 0, 1000, 500])                                 # would take most of the room
+        self.assertEqual(fpm.trim_room(room, [huge], 5.0), (room, []))
+        near = ("w5", [398, 2, 603, 100])                                # sides a few units off the outline still count
+        self.assertEqual(fpm.trim_room(room, [near], 5.0)[1], ["w5"])
+
     def test_region_for_the_kitchen_is_derived_from_walls(self):
         d = BUILDING
         cands = [r for r in fpm.list_rooms(d) if r["kind"] == "region"]

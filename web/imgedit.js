@@ -416,7 +416,8 @@ async function bestView(id, layer) {
   return best;
 }
 window.addEventListener('image-edit-request', async (ev) => { try {
-  const { layer, module } = ev.detail || {}; const id = $('designSelect').value;
+  // detail: { layer, module?, material?, instruction?, mode? ('quick'|'design'), preview? (bool) } — prefilled, never submitted from here
+  const { layer, module, material, instruction, mode, preview } = ev.detail || {}; const id = $('designSelect').value;
   if (!id || !layer) return;
   status('Tìm góc nhìn thấy rõ module…');
   const best = await bestView(id, layer);
@@ -424,6 +425,10 @@ window.addEventListener('image-edit-request', async (ev) => { try {
   showTab(true, true);
   await load();
   if (S.data?.layers.some((x) => x.id === layer)) await selectLayer(layer, []);
+  if (typeof material === 'string') $('jItem').value = material;
+  if (typeof instruction === 'string') $('jInstr').value = instruction;
+  if (mode === 'quick' || mode === 'design') $('jMode').value = mode;
+  if (typeof preview === 'boolean') $('jPreview').checked = preview;
   if (best.px < MIN_VISIBLE_PX) status(`${module || layer} gần như không thấy ở góc nhìn nào (${Math.max(best.px, 0)} px): job có thể bị từ chối vì vùng quá nhỏ`, 'warn');
   else status(`${module || layer}: góc nhìn ${best.view} (${best.px} px). Chọn chế độ, backend rồi tạo job ở khung bên phải`, 'ok');
 } catch (e) { console.error(e); status(e.message, 'warn'); } });

@@ -101,6 +101,46 @@ class TestPropose(Base):
         self.assertEqual(self.svc.propose(self.did, op, done["rev"])["unchanged"], True)
 
 
+class TestExpect(Base):
+    def test_confirming_with_the_previewed_hash_saves_and_anything_else_is_refused(self):
+        op = {"op": "update", "id": self.first.id, "changes": {"material": NEW}}
+        p = self.svc.propose(self.did, op, self.rev)
+        self.assertEqual(len(p["opHash"]), 16)
+        other = {"op": "update", "id": self.first.id, "changes": {"material": "Khác"}}
+        with self.assertRaises(ValueError):
+            self.svc.apply(self.did, other, self.rev, "web", p["opHash"])
+        with self.assertRaises(ValueError):
+            self.svc.apply(self.did, op, None, "web", p["opHash"])
+        self.assertEqual(self.revisions(), 1, "refused confirmations save nothing")
+        done = self.svc.apply(self.did, p["operation"], p["baseRev"], "web", p["opHash"])
+        self.assertEqual(done["rev"], self.rev + 1)
+
+    def test_without_expect_apply_behaves_as_before(self):
+        self.assertEqual(self.svc.apply(self.did, {"op": "update", "id": self.first.id, "changes": {"material": NEW}}, self.rev, "t")["rev"], self.rev + 1)
+
+    def test_hash_depends_on_the_operation_and_the_revision(self):
+        a = proposal.op_hash({"op": "remove", "id": "A"}, 1)
+        self.assertEqual(a, proposal.op_hash({"id": "A", "op": "remove"}, 1))
+        self.assertNotEqual(a, proposal.op_hash({"op": "remove", "id": "A"}, 2))
+        self.assertNotEqual(a, proposal.op_hash({"op": "remove", "id": "B"}, 1))
+
+
+class TestAddNextToIt(Base):
+    """The operations the context menu builds for "Thêm tủ bên cạnh"."""
+    def test_after_and_before(self):
+        m = self.first
+        after = self.svc.propose(self.did, {"op": "add", "module": {"width": 450}, "afterModule": m.id, "closeGap": True}, self.rev, scope=[m.id])
+        self.assertTrue(after["applicable"], after)
+        self.assertEqual(len(after["diff"]["modules"]["added"]), 1)
+        self.assertEqual(after["moduleCount"]["after"], after["moduleCount"]["before"] + 1)
+        before = self.svc.propose(self.did, {"op": "add", "module": {"width": 450, "type": m.type, "wall": m.wall, "y": m.y, "height": m.height,
+                                                                     "depth": m.depth, "fromCorner": m.fromCorner}, "closeGap": True}, self.rev, scope=[m.id])
+        self.assertTrue(before["applicable"], before)
+        self.assertEqual(len(before["diff"]["modules"]["added"]), 1)
+        self.assertTrue(before["outsideScope"], "the neighbours shift to make room")
+        self.assertEqual(self.revisions(), 1)
+
+
 class TestDiffUnits(unittest.TestCase):
     def test_validation_delta_matches_issues_by_rule_module_and_text(self):
         e = {"rule": "R", "severity": "error", "module": ["A"], "content": "x"}
@@ -129,6 +169,22 @@ class TestProposeHttp(Base):
         data = json.loads(r.read() or b"{}")
         c.close()
         return r.status, data
+
+    def test_ops_route_checks_the_previewed_hash(self):
+        op = {"op": "update", "id": self.first.id, "changes": {"material": NEW}}
+        st, p = self.post({"op": op, "baseRev": self.rev})
+        c = http.client.HTTPConnection("127.0.0.1", self.port, timeout=30)
+
+        def ops(body):
+            c.request("POST", f"/api/designs/{self.did}/ops", body=json.dumps(body), headers={"Host": f"localhost:{self.port}", "Content-Type": "application/json"})
+            r = c.getresponse()
+            return r.status, json.loads(r.read() or b"{}")
+        self.assertEqual(ops({"op": {**op, "changes": {"material": "Khác"}}, "baseRev": self.rev, "expect": p["opHash"]})[0], 400)
+        self.assertEqual(ops({"op": op, "baseRev": self.rev, "expect": 5})[0], 400)
+        self.assertEqual(self.revisions(), 1)
+        st, done = ops({"op": p["operation"], "baseRev": p["baseRev"], "expect": p["opHash"]})
+        c.close()
+        self.assertEqual((st, done["rev"]), (200, self.rev + 1))
 
     def test_route(self):
         op = {"op": "update", "id": self.first.id, "changes": {"material": NEW}}

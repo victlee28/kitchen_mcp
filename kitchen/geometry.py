@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from . import roomctx, structure_mesh
 from .spec import ViewAngle, KitchenSpec, Module, effective_handle
 
 COLORS = {  # màu hiển thị theo loại chi tiết (viewer 3D, mask ngữ nghĩa)
@@ -15,7 +16,7 @@ COLORS = {  # màu hiển thị theo loại chi tiết (viewer 3D, mask ngữ ng
     "faucet": "#8a8f96", "cooktop": "#121212", "hood": "#6f747a", "oven": "#3a3d42", "wall": "#ece7de", "floor": "#bdb4a6",
     "molding": "#a87542", "handle": "#2b2b2b", "wall-tile": "#dedbd4",
     "structure-wall": "#E7E2D5", "structure-column": "#F2B65D", "structure-opening": "#55C6A9", "structure-furniture": "#D38662",
-    "structure-shaft": "#8C83D6", "structure-stair": "#CFAE52", "structure-area": "#7D9EAA",  # = floorplan.STRUCTURE_COLORS
+    "structure-shaft": "#8C83D6", "structure-stair": "#CFAE52", "structure-area": "#7D9EAA", "structure-swing": "#9AD9C6",  # = floorplan.STRUCTURE_COLORS
 }
 
 
@@ -261,29 +262,11 @@ class _Builder:
 
     def structures(self) -> list:
         """Meshes of the imported floorplan's elements in the kitchen frame (none without a floorplan or when the kitchen fits no wall)."""
-        fp = getattr(self.spec, "floorplan", None)
-        if not isinstance(fp, dict):
-            return []
-        import math
-        from . import floorplan as fpmod, structure_mesh
-        mods = self.spec.module
-        need = {"back": self.lsau, "right": self.lphai if any(m.wall == "right" for m in mods) else 0,
-                "left": self.lphai if any(m.wall == "left" for m in mods) else 0} if mods else None
         try:
-            binding = fpmod.resolve_binding(fp, need)
+            ctx = roomctx.for_spec(self.spec, self.lsau, self.lphai)
         except ValueError:
             return []
-        if binding:
-            t = binding.get("transform") or fpmod.kitchen_transform(fp, binding)
-            yaw, ox, oz = math.radians(t["yaw"]), t["origin"]["x"], t["origin"]["z"]
-        else:
-            yaw, ox, oz = 0.0, 0.0, 0.0
-        c, s = math.cos(yaw), math.sin(yaw)
-
-        def to_kitchen(x, z):  # inverse of floorplan.apply_binding
-            ux, uz = x - ox, z - oz
-            return ux * c - uz * s, ux * s + uz * c
-        return structure_mesh.meshes(fpmod.structures(fp), to_kitchen)
+        return structure_mesh.meshes(ctx.structures, ctx.placement.to_kitchen) if ctx else []
 
     def room(self):
         ceiling = self.c.ceiling

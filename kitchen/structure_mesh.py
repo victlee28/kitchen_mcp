@@ -11,6 +11,7 @@ import math
 from .moldings import MeshPart, _ear_clip
 
 KINDS = ("wall", "column", "opening", "furniture", "shaft", "stair", "area")
+SWING = "swing"          # type structure-swing: the floor area a door sweeps, drawn as a flat sheet next to the door
 TYPE_PREFIX = "structure-"
 
 
@@ -73,6 +74,17 @@ def _stair_steps(st: dict, poly: list[tuple[float, float]]) -> list[tuple[list[t
     return out
 
 
+def swing_sheet(st: dict, to_kitchen) -> tuple[list[tuple[float, float, float]], list[tuple[int, int, int]]] | None:
+    """Flat fan from the hinge across the arc a door sweeps (``swing`` points, ``hinge``), 2 mm above the floor; None without both."""
+    arc = st.get("swing") or []
+    hinge = st.get("hinge")
+    if len(arc) < 2 or not hinge:
+        return None
+    pts = [to_kitchen(hinge["x"], hinge["z"])] + [to_kitchen(p["x"], p["z"]) for p in arc]
+    y = float(st.get("base") or 0.0) + 2.0
+    return [(x, y, z) for x, z in pts], [(0, i, i + 1) for i in range(1, len(pts) - 1)]
+
+
 def meshes(structures: list[dict], to_kitchen) -> list[MeshPart]:
     """``structures``: floorplan.structures() records (scene outline in mm). ``to_kitchen(x, z) -> (x, z)`` maps room-scene to kitchen frame."""
     out = []
@@ -91,6 +103,9 @@ def meshes(structures: list[dict], to_kitchen) -> list[MeshPart]:
         for k, (pp, y0, y1) in enumerate(solids):
             v, f = prism(pp, y0, y1)
             out.append(MeshPart(st["id"] if len(solids) == 1 else f"{st['id']}-{k + 1}", st["id"], TYPE_PREFIX + kind, v, f))
+        sheet = swing_sheet(st, to_kitchen) if st["kind"] == "opening" else None
+        if sheet:
+            out.append(MeshPart(f"{st['id']}-swing", st["id"], TYPE_PREFIX + SWING, sheet[0], sheet[1]))
     return out
 
 

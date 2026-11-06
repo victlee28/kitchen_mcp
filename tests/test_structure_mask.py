@@ -74,6 +74,26 @@ class TestStructureMask(unittest.TestCase):
         self.assertFalse(any(x["allowAppearanceChange"] for x in st))
         self.assertTrue(all(x["materialLocked"].startswith("structure:") or x["variant"] == "group" for x in st))
 
+    def test_a_door_gets_its_swing_as_a_flat_sheet(self):
+        from kitchen import structure_mesh
+        st = {"id": "STRUCT-d", "kind": "opening", "outline": [{"x": 0, "z": 0}, {"x": 900, "z": 0}, {"x": 900, "z": 100}, {"x": 0, "z": 100}], "base": 0, "height": 2200,
+              "hinge": {"x": 0, "z": 0}, "swing": [{"x": 900, "z": 0}, {"x": 636, "z": 636}, {"x": 0, "z": 900}]}
+        ms = structure_mesh.meshes([st], lambda x, z: (x, z))
+        sheet = [m for m in ms if m.type == "structure-swing"]
+        self.assertEqual(len(sheet), 1)
+        self.assertEqual({v[1] for v in sheet[0].vertices}, {2.0})
+        self.assertEqual(len(sheet[0].faces), 2)           # a fan of two triangles over the three arc points
+        self.assertEqual(sheet[0].module, "STRUCT-d")
+        self.assertIsNone(structure_mesh.swing_sheet({**st, "hinge": None}, lambda x, z: (x, z)))
+        self.assertEqual([m.type for m in structure_mesh.meshes([{**st, "kind": "wall"}], lambda x, z: (x, z))], ["structure-wall"])
+
+    def test_the_sample_plan_door_swing_reaches_the_mask(self):
+        from test_floorplan import BUILDING
+        spec = _spec(False)
+        spec.floorplan = fpm.normalize(BUILDING, "room_003")
+        scene = geometry.compile_spec(spec)
+        self.assertTrue([m for m in scene.meshes if m.type == "structure-swing" and m.module == "STRUCT-opening_002"])
+
     def test_stair_is_stepped(self):
         fp = _spec().floorplan
         st = {"id": "S", "kind": "stair", "outline": [{"x": 0, "z": 0}, {"x": 1000, "z": 0}, {"x": 1000, "z": 3000}, {"x": 0, "z": 3000}],
