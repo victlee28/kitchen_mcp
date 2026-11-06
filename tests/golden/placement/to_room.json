@@ -1,0 +1,89 @@
+{
+ "function": "placement.to_room",
+ "cases": [
+  {
+   "name": "identity",
+   "input": {
+    "yaw": 0,
+    "ox": 0,
+    "oz": 0,
+    "x": 5,
+    "z": 7
+   },
+   "expected": {
+    "x": 5.0,
+    "z": 7.0
+   }
+  },
+  {
+   "name": "yaw 90: +x of the kitchen runs to -z of the room",
+   "input": {
+    "yaw": 90,
+    "ox": 100,
+    "oz": 200,
+    "x": 10,
+    "z": 0
+   },
+   "expected": {
+    "x": 100.0,
+    "z": 190.0
+   }
+  },
+  {
+   "name": "yaw 90: +z of the kitchen runs to +x of the room",
+   "input": {
+    "yaw": 90,
+    "ox": 100,
+    "oz": 200,
+    "x": 0,
+    "z": 10
+   },
+   "expected": {
+    "x": 110.0,
+    "z": 200.0
+   }
+  },
+  {
+   "name": "yaw 180 is a half turn",
+   "input": {
+    "yaw": 180,
+    "ox": 5000,
+    "oz": 0,
+    "x": 300,
+    "z": 55
+   },
+   "expected": {
+    "x": 4700.0,
+    "z": -55.000000000000036
+   }
+  },
+  {
+   "name": "yaw -90 with a large offset",
+   "input": {
+    "yaw": -90,
+    "ox": -1234.5,
+    "oz": 987.25,
+    "x": 310,
+    "z": 55
+   },
+   "expected": {
+    "x": -1289.5,
+    "z": 1297.25
+   }
+  },
+  {
+   "name": "yaw 37.5 (not a right angle)",
+   "input": {
+    "yaw": 37.5,
+    "ox": 12.5,
+    "oz": -7.25,
+    "x": 310,
+    "z": 55
+   },
+   "expected": {
+    "x": 291.92141408576254,
+    "z": -152.33160927668547
+   }
+  }
+ ]
+}

@@ -1,0 +1,858 @@
+{
+ "function": "edit.apply_op",
+ "cases": [
+  {
+   "name": "update a width",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "op": {
+     "op": "update",
+     "id": "TD1",
+     "changes": {
+      "width": 600
+     }
+    }
+   },
+   "expected": {
+    "modules": [
+     [
+      "TC1",
+      "tall-fridge",
+      "back",
+      1150.0,
+      670.0
+     ],
+     [
+      "TD1",
+      "base",
+      "back",
+      550.0,
+      600.0
+     ],
+     [
+      "TT1",
+      "upper",
+      "back",
+      610.0,
+      640.0
+     ],
+     [
+      "TT2",
+      "upper-loft",
+      "back",
+      610.0,
+      640.0
+     ],
+     [
+      "KG1",
+      "corner-shelf",
+      "corner",
+      0.0,
+      0.0
+     ],
+     [
+      "TD2",
+      "base-corner-sink",
+      "right",
+      0.0,
+      1440.0
+     ],
+     [
+      "TD3",
+      "base",
+      "right",
+      1440.0,
+      370.0
+     ],
+     [
+      "TD4",
+      "base-oven",
+      "right",
+      1810.0,
+      630.0
+     ],
+     [
+      "TD5",
+      "base-end",
+      "right",
+      2440.0,
+      390.0
+     ],
+     [
+      "TT3",
+      "upper-glass",
+      "right",
+      630.0,
+      780.0
+     ],
+     [
+      "TT4",
+      "upper",
+      "right",
+      1410.0,
+      350.0
+     ],
+     [
+      "TT5",
+      "upper-hood",
+      "right",
+      1760.0,
+      740.0
+     ],
+     [
+      "TT6",
+      "upper",
+      "right",
+      2500.0,
+      330.0
+     ],
+     [
+      "TT7",
+      "upper-loft",
+      "right",
+      630.0,
+      800.0
+     ],
+     [
+      "TT8",
+      "upper-loft",
+      "right",
+      1430.0,
+      690.0
+     ],
+     [
+      "TT9",
+      "upper-loft",
+      "right",
+      2120.0,
+      710.0
+     ]
+    ],
+    "common": {
+     "plinthHeight": 110.0,
+     "ceiling": 2640.0
+    }
+   }
+  },
+  {
+   "name": "remove closes the gap",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "op": {
+     "op": "remove",
+     "id": "TD1"
+    }
+   },
+   "expected": {
+    "modules": [
+     [
+      "TC1",
+      "tall-fridge",
+      "back",
+      550.0,
+      670.0
+     ],
+     [
+      "TT1",
+      "upper",
+      "back",
+      610.0,
+      640.0
+     ],
+     [
+      "TT2",
+      "upper-loft",
+      "back",
+      610.0,
+      640.0
+     ],
+     [
+      "KG1",
+      "corner-shelf",
+      "corner",
+      0.0,
+      0.0
+     ],
+     [
+      "TD2",
+      "base-corner-sink",
+      "right",
+      0.0,
+      1440.0
+     ],
+     [
+      "TD3",
+      "base",
+      "right",
+      1440.0,
+      370.0
+     ],
+     [
+      "TD4",
+      "base-oven",
+      "right",
+      1810.0,
+      630.0
+     ],
+     [
+      "TD5",
+      "base-end",
+      "right",
+      2440.0,
+      390.0
+     ],
+     [
+      "TT3",
+      "upper-glass",
+      "right",
+      630.0,
+      780.0
+     ],
+     [
+      "TT4",
+      "upper",
+      "right",
+      1410.0,
+      350.0
+     ],
+     [
+      "TT5",
+      "upper-hood",
+      "right",
+      1760.0,
+      740.0
+     ],
+     [
+      "TT6",
+      "upper",
+      "right",
+      2500.0,
+      330.0
+     ],
+     [
+      "TT7",
+      "upper-loft",
+      "right",
+      630.0,
+      800.0
+     ],
+     [
+      "TT8",
+      "upper-loft",
+      "right",
+      1430.0,
+      690.0
+     ],
+     [
+      "TT9",
+      "upper-loft",
+      "right",
+      2120.0,
+      710.0
+     ]
+    ],
+    "common": {
+     "plinthHeight": 110.0,
+     "ceiling": 2640.0
+    }
+   }
+  },
+  {
+   "name": "remove without closing the gap",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "op": {
+     "op": "remove",
+     "id": "TD1",
+     "closeGap": false
+    }
+   },
+   "expected": {
+    "modules": [
+     [
+      "TC1",
+      "tall-fridge",
+      "back",
+      1250.0,
+      670.0
+     ],
+     [
+      "TT1",
+      "upper",
+      "back",
+      610.0,
+      640.0
+     ],
+     [
+      "TT2",
+      "upper-loft",
+      "back",
+      610.0,
+      640.0
+     ],
+     [
+      "KG1",
+      "corner-shelf",
+      "corner",
+      0.0,
+      0.0
+     ],
+     [
+      "TD2",
+      "base-corner-sink",
+      "right",
+      0.0,
+      1440.0
+     ],
+     [
+      "TD3",
+      "base",
+      "right",
+      1440.0,
+      370.0
+     ],
+     [
+      "TD4",
+      "base-oven",
+      "right",
+      1810.0,
+      630.0
+     ],
+     [
+      "TD5",
+      "base-end",
+      "right",
+      2440.0,
+      390.0
+     ],
+     [
+      "TT3",
+      "upper-glass",
+      "right",
+      630.0,
+      780.0
+     ],
+     [
+      "TT4",
+      "upper",
+      "right",
+      1410.0,
+      350.0
+     ],
+     [
+      "TT5",
+      "upper-hood",
+      "right",
+      1760.0,
+      740.0
+     ],
+     [
+      "TT6",
+      "upper",
+      "right",
+      2500.0,
+      330.0
+     ],
+     [
+      "TT7",
+      "upper-loft",
+      "right",
+      630.0,
+      800.0
+     ],
+     [
+      "TT8",
+      "upper-loft",
+      "right",
+      1430.0,
+      690.0
+     ],
+     [
+      "TT9",
+      "upper-loft",
+      "right",
+      2120.0,
+      710.0
+     ]
+    ],
+    "common": {
+     "plinthHeight": 110.0,
+     "ceiling": 2640.0
+    }
+   }
+  },
+  {
+   "name": "add after a module",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "op": {
+     "op": "add",
+     "module": {
+      "width": 450
+     },
+     "afterModule": "TD1"
+    }
+   },
+   "expected": {
+    "modules": [
+     [
+      "TC1",
+      "tall-fridge",
+      "back",
+      1700.0,
+      670.0
+     ],
+     [
+      "TD1",
+      "base",
+      "back",
+      550.0,
+      700.0
+     ],
+     [
+      "TT1",
+      "upper",
+      "back",
+      610.0,
+      640.0
+     ],
+     [
+      "TT2",
+      "upper-loft",
+      "back",
+      610.0,
+      640.0
+     ],
+     [
+      "KG1",
+      "corner-shelf",
+      "corner",
+      0.0,
+      0.0
+     ],
+     [
+      "TD2",
+      "base-corner-sink",
+      "right",
+      0.0,
+      1440.0
+     ],
+     [
+      "TD3",
+      "base",
+      "right",
+      1440.0,
+      370.0
+     ],
+     [
+      "TD4",
+      "base-oven",
+      "right",
+      1810.0,
+      630.0
+     ],
+     [
+      "TD5",
+      "base-end",
+      "right",
+      2440.0,
+      390.0
+     ],
+     [
+      "TT3",
+      "upper-glass",
+      "right",
+      630.0,
+      780.0
+     ],
+     [
+      "TT4",
+      "upper",
+      "right",
+      1410.0,
+      350.0
+     ],
+     [
+      "TT5",
+      "upper-hood",
+      "right",
+      1760.0,
+      740.0
+     ],
+     [
+      "TT6",
+      "upper",
+      "right",
+      2500.0,
+      330.0
+     ],
+     [
+      "TT7",
+      "upper-loft",
+      "right",
+      630.0,
+      800.0
+     ],
+     [
+      "TT8",
+      "upper-loft",
+      "right",
+      1430.0,
+      690.0
+     ],
+     [
+      "TT9",
+      "upper-loft",
+      "right",
+      2120.0,
+      710.0
+     ],
+     [
+      "TD6",
+      "base",
+      "back",
+      1250.0,
+      450.0
+     ]
+    ],
+    "common": {
+     "plinthHeight": 110.0,
+     "ceiling": 2640.0
+    }
+   }
+  },
+  {
+   "name": "common block change",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "op": {
+     "op": "common",
+     "changes": {
+      "plinthHeight": 100
+     }
+    }
+   },
+   "expected": {
+    "modules": [
+     [
+      "TC1",
+      "tall-fridge",
+      "back",
+      1250.0,
+      670.0
+     ],
+     [
+      "TD1",
+      "base",
+      "back",
+      550.0,
+      700.0
+     ],
+     [
+      "TT1",
+      "upper",
+      "back",
+      610.0,
+      640.0
+     ],
+     [
+      "TT2",
+      "upper-loft",
+      "back",
+      610.0,
+      640.0
+     ],
+     [
+      "KG1",
+      "corner-shelf",
+      "corner",
+      0.0,
+      0.0
+     ],
+     [
+      "TD2",
+      "base-corner-sink",
+      "right",
+      0.0,
+      1440.0
+     ],
+     [
+      "TD3",
+      "base",
+      "right",
+      1440.0,
+      370.0
+     ],
+     [
+      "TD4",
+      "base-oven",
+      "right",
+      1810.0,
+      630.0
+     ],
+     [
+      "TD5",
+      "base-end",
+      "right",
+      2440.0,
+      390.0
+     ],
+     [
+      "TT3",
+      "upper-glass",
+      "right",
+      630.0,
+      780.0
+     ],
+     [
+      "TT4",
+      "upper",
+      "right",
+      1410.0,
+      350.0
+     ],
+     [
+      "TT5",
+      "upper-hood",
+      "right",
+      1760.0,
+      740.0
+     ],
+     [
+      "TT6",
+      "upper",
+      "right",
+      2500.0,
+      330.0
+     ],
+     [
+      "TT7",
+      "upper-loft",
+      "right",
+      630.0,
+      800.0
+     ],
+     [
+      "TT8",
+      "upper-loft",
+      "right",
+      1430.0,
+      690.0
+     ],
+     [
+      "TT9",
+      "upper-loft",
+      "right",
+      2120.0,
+      710.0
+     ]
+    ],
+    "common": {
+     "plinthHeight": 100.0,
+     "ceiling": 2640.0
+    }
+   }
+  },
+  {
+   "name": "multi applies in order",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "op": {
+     "op": "multi",
+     "ops": [
+      {
+       "op": "remove",
+       "id": "TD1"
+      },
+      {
+       "op": "common",
+       "changes": {
+        "plinthHeight": 90
+       }
+      }
+     ]
+    }
+   },
+   "expected": {
+    "modules": [
+     [
+      "TC1",
+      "tall-fridge",
+      "back",
+      550.0,
+      670.0
+     ],
+     [
+      "TT1",
+      "upper",
+      "back",
+      610.0,
+      640.0
+     ],
+     [
+      "TT2",
+      "upper-loft",
+      "back",
+      610.0,
+      640.0
+     ],
+     [
+      "KG1",
+      "corner-shelf",
+      "corner",
+      0.0,
+      0.0
+     ],
+     [
+      "TD2",
+      "base-corner-sink",
+      "right",
+      0.0,
+      1440.0
+     ],
+     [
+      "TD3",
+      "base",
+      "right",
+      1440.0,
+      370.0
+     ],
+     [
+      "TD4",
+      "base-oven",
+      "right",
+      1810.0,
+      630.0
+     ],
+     [
+      "TD5",
+      "base-end",
+      "right",
+      2440.0,
+      390.0
+     ],
+     [
+      "TT3",
+      "upper-glass",
+      "right",
+      630.0,
+      780.0
+     ],
+     [
+      "TT4",
+      "upper",
+      "right",
+      1410.0,
+      350.0
+     ],
+     [
+      "TT5",
+      "upper-hood",
+      "right",
+      1760.0,
+      740.0
+     ],
+     [
+      "TT6",
+      "upper",
+      "right",
+      2500.0,
+      330.0
+     ],
+     [
+      "TT7",
+      "upper-loft",
+      "right",
+      630.0,
+      800.0
+     ],
+     [
+      "TT8",
+      "upper-loft",
+      "right",
+      1430.0,
+      690.0
+     ],
+     [
+      "TT9",
+      "upper-loft",
+      "right",
+      2120.0,
+      710.0
+     ]
+    ],
+    "common": {
+     "plinthHeight": 90.0,
+     "ceiling": 2640.0
+    }
+   }
+  },
+  {
+   "name": "unknown module is not-found",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "op": {
+     "op": "update",
+     "id": "NOPE",
+     "changes": {
+      "width": 1
+     }
+    }
+   },
+   "error": {
+    "kind": "not-found",
+    "code": "module-not-found"
+   }
+  },
+  {
+   "name": "unknown op is invalid input",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "op": {
+     "op": "explode"
+    }
+   },
+   "error": {
+    "kind": "validation",
+    "code": "invalid-input"
+   }
+  },
+  {
+   "name": "nested multi is invalid input",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "op": {
+     "op": "multi",
+     "ops": [
+      {
+       "op": "multi",
+       "ops": []
+      }
+     ]
+    }
+   },
+   "error": {
+    "kind": "validation",
+    "code": "invalid-input"
+   }
+  }
+ ]
+}

@@ -13,6 +13,7 @@ import math
 from typing import Any
 
 from .placement import Placement
+from .errors import InvalidInput
 
 DEFAULT_WALL_THICKNESS = 140.0   # mm, used only for edges without a measured wall element
 DEFAULT_WALL_HEIGHT = 3000.0     # mm
@@ -117,36 +118,36 @@ def _long_dir(pts):
 def _frame_vectors(data: dict[str, Any]):
     frame = data.get("frame")
     if not isinstance(frame, dict):
-        raise ValueError("Floorplan has no 'frame'; axis directions would have to be guessed")
+        raise InvalidInput("Floorplan has no 'frame'; axis directions would have to be guessed")
     names = [frame.get(k) for k in ("x", "y", "z")]
     if any(n not in AXIS for n in names):
-        raise ValueError(f"Unsupported frame axes {names}; known names: {', '.join(AXIS)}")
+        raise InvalidInput(f"Unsupported frame axes {names}; known names: {', '.join(AXIS)}")
     vx, vy, vz = (AXIS[n] for n in names)
     if vx[2] or vy[2] or not vz[2]:
-        raise ValueError("Frame must have horizontal x and y axes and a vertical z axis")
+        raise InvalidInput("Frame must have horizontal x and y axes and a vertical z axis")
     det = (vx[0] * (vy[1] * vz[2] - vy[2] * vz[1]) - vx[1] * (vy[0] * vz[2] - vy[2] * vz[0]) + vx[2] * (vy[0] * vz[1] - vy[1] * vz[0]))
     declared = frame.get("handed")
     if declared in ("trai", "phai"):
         expected = -1 if declared == "trai" else 1
         if det != expected:
-            raise ValueError(f"Frame axes {names} are {'left' if det < 0 else 'right'}-handed but the file declares '{declared}'")
+            raise InvalidInput(f"Frame axes {names} are {'left' if det < 0 else 'right'}-handed but the file declares '{declared}'")
     return vx, vy
 
 
 def _points(value: Any, element_id: str, what: str = "outline") -> list[tuple[float, float]]:
     outline = value.get(what) if isinstance(value, dict) else None
     if not isinstance(outline, list) or len(outline) < 3:
-        raise ValueError(f"{element_id}: geometry.{what} must contain at least three points")
+        raise InvalidInput(f"{element_id}: geometry.{what} must contain at least three points")
     pts = []
     for index, point in enumerate(outline):
         if not isinstance(point, (list, tuple)) or len(point) != 2:
-            raise ValueError(f"{element_id}: {what} point {index} must be [x, y]")
+            raise InvalidInput(f"{element_id}: {what} point {index} must be [x, y]")
         try:
             x, y = float(point[0]), float(point[1])
         except (TypeError, ValueError) as error:
-            raise ValueError(f"{element_id}: {what} point {index} must be numeric") from error
+            raise InvalidInput(f"{element_id}: {what} point {index} must be numeric") from error
         if not (math.isfinite(x) and math.isfinite(y)):
-            raise ValueError(f"{element_id}: {what} point {index} must be finite")
+            raise InvalidInput(f"{element_id}: {what} point {index} must be finite")
         pts.append((x, y))
     return pts
 
@@ -198,20 +199,20 @@ def derive_region(data: dict[str, Any], seeds: list[str]) -> dict[str, Any]:
     """
     unit = data.get("unit")
     if unit not in UNIT_MM:
-        raise ValueError("Floorplan unit must be cm, mm, or m")
+        raise InvalidInput("Floorplan unit must be cm, mm, or m")
     k = UNIT_MM[unit]
     tol = TOL / k
     by_id = {e.get("id"): e for e in (data.get("elements") or [])}
     boxes = []
     for sid in seeds:
         if sid not in by_id:
-            raise ValueError(f"Region seed '{sid}' not found")
+            raise InvalidInput(f"Region seed '{sid}' not found")
         bb = _bbox(by_id[sid])
         if not bb:
-            raise ValueError(f"Region seed '{sid}' has no geometry")
+            raise InvalidInput(f"Region seed '{sid}' has no geometry")
         boxes.append(bb)
     if not boxes:
-        raise ValueError("A region needs at least one seed element")
+        raise InvalidInput("A region needs at least one seed element")
     seed = [min(b[0] for b in boxes), min(b[1] for b in boxes), max(b[2] for b in boxes), max(b[3] for b in boxes)]
     walls = [(e.get("id"), bb) for e in by_id.values() if e.get("kind") == "wall" and (bb := _bbox(e))]
     out = [0.0] * 4
@@ -308,7 +309,7 @@ def parse_region(data: dict[str, Any], spec: str) -> dict[str, Any]:
     if body == "kitchen":
         cands = _kitchen_candidates(data)
         if len(cands) != 1:
-            raise ValueError("region:kitchen needs exactly one kitchen area; found " + (", ".join("region:around=" + ",".join(g["seeds"]) for g in cands) or "none"))
+            raise InvalidInput("region:kitchen needs exactly one kitchen area; found " + (", ".join("region:around=" + ",".join(g["seeds"]) for g in cands) or "none"))
         return derive_region(data, cands[0]["seeds"])
     if body.startswith("around="):
         return derive_region(data, [x for x in body[len("around="):].split(",") if x])
@@ -316,11 +317,11 @@ def parse_region(data: dict[str, Any], spec: str) -> dict[str, Any]:
         try:
             x0, y0, x1, y1 = (float(v) for v in body[len("bbox="):].split(","))
         except ValueError as err:
-            raise ValueError("region:bbox needs four numbers x0,y0,x1,y1") from err
+            raise InvalidInput("region:bbox needs four numbers x0,y0,x1,y1") from err
         if x1 <= x0 or y1 <= y0:
-            raise ValueError("region:bbox must have x1 > x0 and y1 > y0")
+            raise InvalidInput("region:bbox must have x1 > x0 and y1 > y0")
         return {"bbox": [x0, y0, x1, y1], "seeds": None, "sides": None, "unit": data.get("unit")}
-    raise ValueError(f"Unknown region '{spec}'. Use region:kitchen, region:around=<ids> or region:bbox=x0,y0,x1,y1")
+    raise InvalidInput(f"Unknown region '{spec}'. Use region:kitchen, region:around=<ids> or region:bbox=x0,y0,x1,y1")
 
 
 # ---------------------------------------------------------------- trim a room outline where wall elements sit inside it
@@ -444,26 +445,26 @@ def normalize(data: dict[str, Any], room_id: str | None = None) -> dict[str, Any
     The result never contains the source document (it is stored once, under ``ref``); everything in it is derived.
     """
     if not isinstance(data, dict) or data.get("kind") != "floorplan-audited":
-        raise ValueError("Expected a floorplan-audited JSON document")
+        raise InvalidInput("Expected a floorplan-audited JSON document")
     warnings: list[dict] = []
     cv = str(data.get("contractVersion", ""))
     if not cv.startswith(SUPPORTED_CONTRACT):
         warnings.append({"code": "contract-version", "message": f"contractVersion '{cv}' was not tested (expected {SUPPORTED_CONTRACT}x)"})
     unit = data.get("unit")
     if unit not in UNIT_MM:
-        raise ValueError("Floorplan unit must be cm, mm, or m")
+        raise InvalidInput("Floorplan unit must be cm, mm, or m")
     frame_unit = (data.get("frame") or {}).get("unit")
     if frame_unit not in (None, unit):
-        raise ValueError(f"frame.unit '{frame_unit}' differs from unit '{unit}'")
+        raise InvalidInput(f"frame.unit '{frame_unit}' differs from unit '{unit}'")
     k = UNIT_MM[unit]
     vx, vy = _frame_vectors(data)
     elements = data.get("elements")
     if not isinstance(elements, list):
-        raise ValueError("Floorplan elements must be an array")
+        raise InvalidInput("Floorplan elements must be an array")
     ids = [e.get("id") for e in elements]
     dup = sorted({str(i) for i in ids if ids.count(i) > 1})
     if dup:
-        raise ValueError("Duplicate element ids: " + ", ".join(dup))
+        raise InvalidInput("Duplicate element ids: " + ", ".join(dup))
 
     rooms = [r for r in list_rooms(data) if r["kind"] == "room"]
     region = None
@@ -482,13 +483,13 @@ def normalize(data: dict[str, Any], room_id: str | None = None) -> dict[str, Any
     else:
         if not rooms:
             cands = [r["id"] for r in list_rooms(data) if r["kind"] == "region"]
-            raise ValueError("No room outline (kind 'area' with tag 'room') in the floorplan" + (". To import the kitchen area pass one of: " + ", ".join(cands) if cands else ""))
+            raise InvalidInput("No room outline (kind 'area' with tag 'room') in the floorplan" + (". To import the kitchen area pass one of: " + ", ".join(cands) if cands else ""))
         if room_id is None:
             if len(rooms) > 1:
-                raise ValueError("The floorplan has several rooms; pass room_id. Rooms: " + ", ".join(f"{r['id']} ({r['label']})" for r in rooms))
+                raise InvalidInput("The floorplan has several rooms; pass room_id. Rooms: " + ", ".join(f"{r['id']} ({r['label']})" for r in rooms))
             room_id = rooms[0]["id"]
         if room_id not in {r["id"] for r in rooms}:
-            raise ValueError(f"Room '{room_id}' not found. Rooms: " + ", ".join(str(r["id"]) for r in rooms))
+            raise InvalidInput(f"Room '{room_id}' not found. Rooms: " + ", ".join(str(r["id"]) for r in rooms))
         room_el = next(e for e in elements if e.get("id") == room_id)
         room_label = _fv(room_el, "label")
         raw_room = _points(_fv(room_el, "geometry"), room_id)
@@ -514,15 +515,15 @@ def normalize(data: dict[str, Any], room_id: str | None = None) -> dict[str, Any
         warnings.append({"code": "duplicate-points", "message": f"{room_id}: {len(poly) - len(dedup)} repeated outline point(s) removed"})
     poly = dedup
     if len(poly) < 3 or abs(_area2(poly)) < 1e-3:
-        raise ValueError(f"{room_id}: outline has zero area")
+        raise InvalidInput(f"{room_id}: outline has zero area")
     if _self_intersects(poly):
-        raise ValueError(f"{room_id}: outline crosses itself; fix the drawing (nothing was changed)")
+        raise InvalidInput(f"{room_id}: outline crosses itself; fix the drawing (nothing was changed)")
     ccw = _area2(poly) > 0
 
     edges = _room_edges(poly)
     for ed in edges:
         if ed["length"] < 1.0:
-            raise ValueError(f"{room_id}: outline contains a zero-length edge at point {ed['i']}")
+            raise InvalidInput(f"{room_id}: outline contains a zero-length edge at point {ed['i']}")
         ed["skew"] = min(_angle_between(ed["dir"], (1, 0)), _angle_between(ed["dir"], (0, 1)))
         if 0.5 < ed["skew"] < 10:
             warnings.append({"code": "skewed-edge", "message": f"edge {ed['i']} is {ed['skew']:.1f} deg off the nearest axis; kept as drawn"})
@@ -859,14 +860,14 @@ def bind_kitchen(fp: dict, need: dict, back_edge: int | None = None, offset: flo
     if back_edge is not None:
         chosen = next((x for x in verdicts if x["edge"] == back_edge), None)
         if chosen is None:
-            raise ValueError(f"edge {back_edge} does not exist (0..{n_edges - 1})")
+            raise InvalidInput(f"edge {back_edge} does not exist (0..{n_edges - 1})")
         if not chosen["ok"]:
-            raise ValueError(f"edge {back_edge} cannot carry the kitchen: " + "; ".join(chosen["why"]))
+            raise InvalidInput(f"edge {back_edge} cannot carry the kitchen: " + "; ".join(chosen["why"]))
         source = "manual"
     else:
         ok = sorted((x for x in verdicts if x["ok"]), key=lambda x: -x["score"])
         if not ok:
-            raise ValueError("The kitchen does not fit any wall of the room: " + "; ".join(f"edge {x['edge']}: {', '.join(x['why'])}" for x in verdicts)[:700])
+            raise InvalidInput("The kitchen does not fit any wall of the room: " + "; ".join(f"edge {x['edge']}: {', '.join(x['why'])}" for x in verdicts)[:700], code="kitchen-fits-no-wall")
         chosen, source = ok[0], "auto"
         if len(ok) > 1 and abs(ok[0]["score"] - ok[1]["score"]) < 0.05:
             chosen = {**chosen, "warnings": [*chosen["warnings"], f"edge {ok[1]['edge']} fits equally well; pass back_edge to choose"]}

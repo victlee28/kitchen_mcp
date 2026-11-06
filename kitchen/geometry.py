@@ -8,7 +8,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from . import roomctx, structure_mesh
-from .spec import ViewAngle, KitchenSpec, Module, effective_handle
+from .spec import ViewAngle, KitchenSpec, Module, effective_handle, to_data
+from .errors import InvalidInput
 
 COLORS = {  # màu hiển thị theo loại chi tiết (viewer 3D, mask ngữ nghĩa)
     "carcass": "#d9c3a0", "plinth": "#5b5348", "door": "#c8a273", "glass-door": "#9fc7d8", "drawer": "#b98f5e",
@@ -110,7 +111,7 @@ class _Builder:
             z0, depth = isl or self._isl[module]
             mn, mx = (-s1, y0, z0 + depth - d1), (-s0, y1, z0 + depth - d0)
         else:
-            raise ValueError(wall)
+            raise InvalidInput(wall)
         key = f"{module or 'room'}-{type}"
         self._n[key] = self._n.get(key, 0) + 1
         self.parts.append(Part(f"{key}-{self._n[key]}", module, type, mn, mx, wall))
@@ -381,7 +382,7 @@ def scene_json(spec: KitchenSpec) -> dict:
         "version": "2.0", "units": "mm",
         "parts": [p.to_json() for p in sc.parts],
         "bounds": {"min": openings, "max": hi},
-        "views": {k: v.model_dump(mode="json") for k, v in views_of(spec).items()},
+        "views": {k: to_data(v) for k, v in views_of(spec).items()},
         "modules": [{"id": m.id, "name": m.name, "type": m.type, "wall": m.wall} for m in spec.module],
         "moldings": [{"id": m.id, "molding": m.module, "vertices": len(m.vertices), "faces": len(m.faces)} for m in sc.meshes],
     }

@@ -1,0 +1,61 @@
+{
+ "function": "placement.to_kitchen",
+ "cases": [
+  {
+   "name": "identity",
+   "input": {
+    "yaw": 0,
+    "ox": 0,
+    "oz": 0,
+    "x": 5,
+    "z": 7
+   },
+   "expected": {
+    "x": 5.0,
+    "z": 7.0
+   }
+  },
+  {
+   "name": "inverse of the yaw 90 case",
+   "input": {
+    "yaw": 90,
+    "ox": 100,
+    "oz": 200,
+    "x": 100,
+    "z": 190
+   },
+   "expected": {
+    "x": 10.0,
+    "z": -6.123233995736766e-16
+   }
+  },
+  {
+   "name": "inverse of the yaw 180 case",
+   "input": {
+    "yaw": 180,
+    "ox": 5000,
+    "oz": 0,
+    "x": 4700,
+    "z": -55
+   },
+   "expected": {
+    "x": 300.0,
+    "z": 54.999999999999964
+   }
+  },
+  {
+   "name": "yaw 37.5 round trip target",
+   "input": {
+    "yaw": 37.5,
+    "ox": 12.5,
+    "oz": -7.25,
+    "x": 300,
+    "z": 200
+   },
+   "expected": {
+    "x": 101.92327917167276,
+    "z": 339.44139061536566
+   }
+  }
+ ]
+}

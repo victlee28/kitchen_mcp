@@ -1,14 +1,17 @@
 """Shared application service used by the MCP server and HTTP API."""
 from __future__ import annotations
+import datetime as _dt
 import json
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 from . import edit, geometry, intent, regions, render, rules, threejs_export
 from .intent import KitchenTemplate as KitchenTemplate
 from .spec import Common, KitchenSpec, Room, Wall, dump_spec, load_spec
 from .store import ConflictError, Store
 from . import legacy as legacy_schema
+from .config import Config
+from .errors import InvalidInput
 ROOT = Path(__file__).resolve().parent.parent
 
 def load_dotenv(path: Path=ROOT / '.env') -> None:
@@ -21,13 +24,20 @@ def load_dotenv(path: Path=ROOT / '.env') -> None:
             key, value = line.split('=', 1)
             os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
 
+def utc_now() -> str:
+    """The shell's clock: ISO-8601 UTC, whole seconds."""
+    return _dt.datetime.now(_dt.timezone.utc).replace(microsecond=0).isoformat()
+
+
 class KitchenService:
     """Coordinate design, persistence, validation, geometry, and image jobs."""
 
-    def __init__(self, db_path: str | Path | None=None, render_dir: str | Path | None=None):
+    def __init__(self, db_path: str | Path | None=None, render_dir: str | Path | None=None, clock: Callable[[], str] | None=None):
         load_dotenv()
-        self.store = Store(db_path or os.getenv('KITCHEN_DB') or ROOT / 'kitchen.db')
-        self.render_dir = Path(render_dir or os.getenv('KITCHEN_RENDERS') or ROOT / 'renders')
+        self.clock = clock or utc_now
+        self.config = Config.from_env()      # the environment is read here, once; below this line the service uses the value
+        self.store = Store(db_path or self.config.db_path)
+        self.render_dir = Path(render_dir or self.config.render_dir)
         legacy_schema.migrate_renders(self.render_dir)
         from .imagejobs import ImageJobs
         self.images = ImageJobs(self.store, self.render_dir, self.apply)
@@ -72,9 +82,9 @@ class KitchenService:
         spec, _rev = self.store.get(design_id)
         fp = spec.floorplan
         if not isinstance(fp, dict):
-            raise ValueError('The design has no imported floorplan')
+            raise InvalidInput('The design has no imported floorplan')
         if not spec.module:
-            raise ValueError('The design has no cabinets to place')
+            raise InvalidInput('The design has no cabinets to place')
         scene = geometry.compile_spec(spec)
         need = {'back': scene.lsau, 'right': scene.lphai if any(m.wall == 'right' for m in spec.module) else 0,
                 'left': scene.lphai if any(m.wall == 'left' for m in spec.module) else 0}
@@ -127,7 +137,7 @@ class KitchenService:
         if expect is not None:
             from . import proposal
             if base_revision is None or proposal.op_hash(operation, base_revision) != expect:
-                raise ValueError('The operation differs from the one that was previewed; preview it again before confirming')
+                raise InvalidInput('The operation differs from the one that was previewed; preview it again before confirming', code='operation-differs-from-preview')
         spec, _current_revision = self.store.get(design_id)
         updated_spec = edit.apply_op(spec, operation)
         new_revision = self.store.add_revision(design_id, base_revision, updated_spec, operation, source)
@@ -230,12 +240,12 @@ class KitchenService:
         if legacy:
             raise TypeError(f"Unexpected options: {', '.join(legacy)}")
         spec, stored_revision = self.store.get(design_id, revision)
-        return threejs_export.export(spec, design_id, stored_revision, self.store.rule_rows(), country)
+        return threejs_export.export(spec, design_id, stored_revision, self.store.rule_rows(), country, self.clock())
 
     def render(self, design_id: str, revision: int | None=None, views: list[str] | None=None, width: int=1280, height: int=960) -> dict:
         """Render control images for selected views and persist them by revision."""
         if not (256 <= width <= 4096 and 256 <= height <= 4096):
-            raise ValueError('Width and height must be between 256 and 4096.')
+            raise InvalidInput('Width and height must be between 256 and 4096.')
         spec, stored_revision = self.store.get(design_id, revision)
         output_dir = self.render_dir / design_id / f'rev{stored_revision}'
         result = render.render_views(spec, output_dir, views, width, height, meta={'designId': design_id, 'rev': stored_revision})
@@ -254,8 +264,8 @@ class KitchenService:
         """Image backends, ComfyUI workflows, geometry-edit operations and lighting presets the UI can offer."""
         from . import backends, geometry_edit, realism
         return {'backends': backends.BACKENDS, 'workflows': backends.workflow_names(), 'operation': geometry_edit.OPERATIONS,
-                'lighting': realism.LIGHTING_VI, 'default': os.getenv('KITCHEN_IMAGE_BACKEND') or 'recolor',
-                'comfyuiUrl': os.getenv('COMFYUI_URL', 'http://127.0.0.1:8188')}
+                'lighting': realism.LIGHTING_VI, 'default': self.config.default_backend,
+                'comfyuiUrl': self.config.comfyui_url}
 
     def check_request(self, text: str) -> dict:
         """Check a pasted customer request for contradictions and gaps before designing."""

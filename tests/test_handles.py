@@ -6,6 +6,8 @@ import shutil
 import sys
 import tempfile
 import unittest
+
+import numpy as np
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -217,7 +219,8 @@ class TestMultiSelect(unittest.TestCase):
         from kitchen import imaging
         d = self.svc.images.ensure_render(self.did, None, VIEW)[3]
         hid = "TD1-handle-1"
-        spot = next(((x, y) for y in range(0, 480) for x in range(0, 640) if (q := imaging.pick(d, x, y, 0)) and q["id"] == hid), None)
+        ys, xs = np.nonzero(imaging.mask_of(d, [hid]))  # một lần đọc ảnh, không quét từng điểm
+        spot = (int(xs[0]), int(ys[0])) if len(xs) else None
         self.assertIsNotNone(spot, "tay nắm phải hiện trong ảnh")
         x, y = spot
         for dx in (-3, 3):  # bấm lệch vài điểm ảnh vẫn trúng tay nắm

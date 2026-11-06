@@ -1,0 +1,85 @@
+{
+ "function": "numeric.round_half_away",
+ "cases": [
+  {
+   "name": "halves go away from zero",
+   "input": {
+    "x": 2.5,
+    "ndigits": 0
+   },
+   "expected": {
+    "value": 3.0
+   }
+  },
+  {
+   "name": "negative halves too",
+   "input": {
+    "x": -2.5,
+    "ndigits": 0
+   },
+   "expected": {
+    "value": -3.0
+   }
+  },
+  {
+   "name": "0.5 is 1 (python round gives 0)",
+   "input": {
+    "x": 0.5,
+    "ndigits": 0
+   },
+   "expected": {
+    "value": 1.0
+   }
+  },
+  {
+   "name": "just under a half stays down",
+   "input": {
+    "x": 0.49999999999999994,
+    "ndigits": 0
+   },
+   "expected": {
+    "value": 0.0
+   }
+  },
+  {
+   "name": "1.005 to 2 places is 1.0 because 1.005*100 = 100.49999999999999",
+   "input": {
+    "x": 1.005,
+    "ndigits": 2
+   },
+   "expected": {
+    "value": 1.0
+   }
+  },
+  {
+   "name": "typical value",
+   "input": {
+    "x": 123.4567,
+    "ndigits": 2
+   },
+   "expected": {
+    "value": 123.46
+   }
+  },
+  {
+   "name": "small negative keeps its sign (-0.0)",
+   "input": {
+    "x": -0.0004,
+    "ndigits": 3
+   },
+   "expected": {
+    "value": -0.0
+   }
+  },
+  {
+   "name": "zero decimals large",
+   "input": {
+    "x": 1000000000000000.5,
+    "ndigits": 0
+   },
+   "expected": {
+    "value": 1000000000000001.0
+   }
+  }
+ ]
+}

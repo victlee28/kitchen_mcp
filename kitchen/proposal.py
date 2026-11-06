@@ -9,7 +9,7 @@ import hashlib
 import json
 from typing import Any
 
-from .spec import KitchenSpec
+from .spec import KitchenSpec, to_data
 
 MAX_ENTRIES = 200
 SKIP = {"floorplan"}   # imported plan: not part of an operation preview (and large)
@@ -38,7 +38,7 @@ def _walk(a: Any, b: Any, path: str, out: list[dict]) -> None:
 
 def spec_diff(old: KitchenSpec, new: KitchenSpec) -> dict:
     """{"modules": {"added", "removed", "changed": {id: [{field, old, new}]}}, "other": [{path, old, new}], "truncated": bool}"""
-    a, b = old.model_dump(mode="json"), new.model_dump(mode="json")
+    a, b = to_data(old), to_data(new)
     mods_a, mods_b = {m["id"]: m for m in a.get("module", [])}, {m["id"]: m for m in b.get("module", [])}
     changed: dict[str, list] = {}
     for mid in mods_a.keys() & mods_b.keys():

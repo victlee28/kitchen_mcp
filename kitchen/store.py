@@ -10,12 +10,14 @@ import unicodedata
 import uuid
 from contextlib import contextmanager
 from pathlib import Path
-from . import knowledge_seed, migrations, regions
+from . import errors, knowledge_seed, migrations, regions
 from .spec import KitchenSpec, dump_spec
+from .errors import InvalidInput, NotFound
 SCHEMA = migrations.BASELINE   # frozen baseline; changes go in kitchen/migrations.py
 
-class ConflictError(Exception):
+class ConflictError(errors.Conflict):
     """The supplied base revision is no longer the latest revision."""
+    default_code = "revision-conflict"
 
 def _slug(text: str) -> str:
     normalized_text = unicodedata.normalize('NFD', text.lower()).replace('đ', 'd')
@@ -96,7 +98,7 @@ class Store:
             raise TypeError(f"Unexpected options: {', '.join(legacy)}")
         region_code = (region or 'GLOBAL').upper()
         if region_code not in regions.REGIONS:
-            raise ValueError(f"region must be one of: {', '.join(regions.REGIONS)}")
+            raise InvalidInput(f"region must be one of: {', '.join(regions.REGIONS)}")
         country_codes = [value.strip().upper() for value in (country or '').split(',') if value.strip()]
         for country_code in country_codes:
             regions.normalize(country_code)
@@ -141,7 +143,7 @@ class Store:
         with self._conn() as connection:
             row = connection.execute('SELECT source_json FROM floorplans WHERE ref=?', (ref,)).fetchone()
         if not row:
-            raise KeyError(f"Floorplan '{ref}' was not found")
+            raise NotFound(f"Floorplan '{ref}' was not found", code="floorplan-not-found")
         return json.loads(row['source_json'])
 
     def get(self, design_id: str, rev: int | None=None) -> tuple[KitchenSpec, int]:
@@ -151,7 +153,7 @@ class Store:
             else:
                 row = connection.execute('SELECT rev, spec_json FROM revisions WHERE design_id=? AND rev=?', (design_id, rev)).fetchone()
         if not row:
-            raise KeyError(f"Design '{design_id}' was not found" + (f' at revision {rev}' if rev else ''))
+            raise NotFound(f"Design '{design_id}' was not found" + (f' at revision {rev}' if rev else ''), code="design-not-found")
         return (KitchenSpec.model_validate_json(row['spec_json']), row['rev'])
 
     def add_revision(self, design_id: str, base_rev: int | None, spec: KitchenSpec, op: dict, source: str='', **legacy) -> int:
@@ -162,7 +164,7 @@ class Store:
             row = connection.execute('SELECT MAX(rev) FROM revisions WHERE design_id=?', (design_id,)).fetchone()
             latest = row[0]
             if latest is None:
-                raise KeyError(f"Design '{design_id}' was not found")
+                raise NotFound(f"Design '{design_id}' was not found", code="design-not-found")
             if base_rev is not None and base_rev != latest:
                 raise ConflictError(f'base_rev={base_rev}, but the latest revision is {latest}; reload before editing')
             connection.execute('INSERT INTO revisions(design_id, rev, spec_json, operation, source) VALUES(?,?,?,?,?)', (design_id, latest + 1, json.dumps(dump_spec(spec), ensure_ascii=False), json.dumps(op, ensure_ascii=False), source))
@@ -200,7 +202,7 @@ class Store:
         with self._conn() as connection:
             row = connection.execute('SELECT result_json FROM image_jobs WHERE id=?', (job_id,)).fetchone()
             if not row:
-                raise KeyError(f"Image job '{job_id}' was not found")
+                raise NotFound(f"Image job '{job_id}' was not found", code="image-job-not-found")
             result_data = {**json.loads(row['result_json'] or '{}'), **(result or {})}
             connection.execute('UPDATE image_jobs SET status=COALESCE(?, status), result_json=?, error=?, updated_at=CURRENT_TIMESTAMP WHERE id=?', (status, json.dumps(result_data, ensure_ascii=False), error, job_id))
             if status == 'running':
@@ -240,7 +242,7 @@ class Store:
         with self._conn() as connection:
             row = connection.execute('SELECT * FROM image_jobs WHERE id=?', (job_id,)).fetchone()
         if not row:
-            raise KeyError(f"Image job '{job_id}' was not found")
+            raise NotFound(f"Image job '{job_id}' was not found", code="image-job-not-found")
         return self._job(row)
 
     def list_jobs(self, design_id: str | None=None, view: str | None=None, status: str | None=None, limit: int=50) -> list[dict]:

@@ -20,6 +20,7 @@ Both interfaces should delegate application behavior to `kitchen.service.Kitchen
 - `kitchen/edit.py`: applies design operations to specifications.
 - `kitchen/rules.py`, `kitchen/rules_kb.py`, `kitchen/rules_nkba.py`: validates designs using geometry and stored knowledge.
 - `kitchen/regions.py`: country and region mappings used to select applicable knowledge.
+- `kitchen/errors.py`, `kitchen/config.py`, `kitchen/numeric.py`, `kitchen/palette.py`, `kitchen/placement.py`, `kitchen/roomctx.py`, `kitchen/migrations.py`: typed errors, one-time environment settings, number conventions, shared colours, kitchen-room transform, room context, versioned database migrations.
 - `kitchen/geometry.py`: compiles specifications into geometry and view definitions.
 - `kitchen/render.py`: creates raster control images and render metadata.
 - `kitchen/threejs_export.py`: exports the scene format consumed by the browser renderer.
@@ -29,6 +30,17 @@ Both interfaces should delegate application behavior to `kitchen.service.Kitchen
 - `schemas/`: published scene schemas and related documentation.
 - `workflows/`: ComfyUI workflow templates.
 - `fixtures/` and `tests/`: sample designs and automated tests.
+
+## Portable core (read before touching `kitchen/`)
+
+The code is organised so the backend can later move to Rust without re-deciding behaviour. The rules are R1-R23 in `CODING_STANDARDS.md`; the reasoning is in `docs/adr/0003-portable-core.md`.
+
+- Each module is in one zone: **core** (pure functions on JSON-like data), **data** (`spec`, `knowledge_seed`), **shell** (store, service, backends, config, intent: may do I/O), **pixel** (numpy/PIL, image jobs). The list is `tests/architecture_rules.py`; a new module must be added to a zone or `tests/test_architecture.py` fails.
+- Core code does not read files, the environment, the clock, random numbers or the network, and does not call Pydantic behaviour. Take a value as an argument instead; use `spec.to_data` / `spec.from_data` at the boundary, `numeric.round_half_away` for written-out numbers, `errors.*` for failures.
+- Raise `kitchen.errors` types with a stable `code`; do not raise bare `ValueError`/`KeyError` in core and do not `except Exception` to hide a failure.
+- A new public core function gets golden cases (`tests/golden/<area>/<name>.json`, a wrapper in `tests/golden_functions.py`). Fill expected values with `python tests/golden_regen.py`, then read the diff before committing.
+- The exceptions list `tests/architecture_allowlist.py` may only shrink. If a test says an entry is stale, delete it.
+- Run before finishing: `python -m unittest tests.test_architecture tests.test_golden tests.test_errors`, then the full suite.
 
 ## Important Runtime Flows
 

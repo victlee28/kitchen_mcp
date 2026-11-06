@@ -1,0 +1,89 @@
+{
+ "function": "proposal.op_hash",
+ "cases": [
+  {
+   "name": "plain operation",
+   "input": {
+    "operation": {
+     "op": "remove",
+     "id": "TD1"
+    },
+    "baseRev": 3
+   },
+   "expected": {
+    "hash": "b7c5695b574b69c1"
+   }
+  },
+  {
+   "name": "key order does not matter",
+   "input": {
+    "operation": {
+     "id": "TD1",
+     "op": "remove"
+    },
+    "baseRev": 3
+   },
+   "expected": {
+    "hash": "b7c5695b574b69c1"
+   }
+  },
+  {
+   "name": "closeGap true and null keys are defaults",
+   "input": {
+    "operation": {
+     "op": "remove",
+     "id": "TD1",
+     "closeGap": true,
+     "afterModule": null
+    },
+    "baseRev": 3
+   },
+   "expected": {
+    "hash": "b7c5695b574b69c1"
+   }
+  },
+  {
+   "name": "closeGap false is a different operation",
+   "input": {
+    "operation": {
+     "op": "remove",
+     "id": "TD1",
+     "closeGap": false
+    },
+    "baseRev": 3
+   },
+   "expected": {
+    "hash": "6c95037f99e9490a"
+   }
+  },
+  {
+   "name": "another revision",
+   "input": {
+    "operation": {
+     "op": "remove",
+     "id": "TD1"
+    },
+    "baseRev": 4
+   },
+   "expected": {
+    "hash": "c9a91f99ef0db6ef"
+   }
+  },
+  {
+   "name": "non-ascii text is hashed as utf-8",
+   "input": {
+    "operation": {
+     "op": "update",
+     "id": "TD1",
+     "changes": {
+      "material": "Gỗ sồi"
+     }
+    },
+    "baseRev": 1
+   },
+   "expected": {
+    "hash": "4ad52a02c0716398"
+   }
+  }
+ ]
+}

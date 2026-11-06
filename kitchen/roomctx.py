@@ -5,6 +5,7 @@ resolved a single time and both agree on the transform. ``geometry`` depends on 
 """
 from __future__ import annotations
 
+import hashlib
 import json
 from dataclasses import dataclass
 from typing import Any
@@ -12,6 +13,8 @@ from typing import Any
 from . import floorplan as fpmod
 from .placement import IDENTITY, Placement
 
+# A memo, not state the result depends on: the key is the full content of the floorplan (digest) + binding + run lengths, so a hit is
+# always what a fresh computation would give. (In a Rust port this is an LRU in the shell.)
 _CACHE: dict[tuple, "RoomContext"] = {}
 _MAX = 32
 
@@ -38,10 +41,10 @@ def for_spec(spec: Any, back: float, side: float) -> RoomContext | None:
     if not isinstance(fp, dict):
         return None
     need = need_for(spec, back, side)
-    key = (fp.get("ref"), fp.get("roomId"), json.dumps(fp.get("binding"), sort_keys=True, default=str), tuple(sorted(need.items())) if need else None,
-           len(fp.get("elements") or ()))
+    digest = hashlib.sha256(json.dumps(fp, sort_keys=True, default=str, ensure_ascii=False).encode("utf-8")).hexdigest()
+    key = (digest, tuple(sorted(need.items())) if need else None)
     hit = _CACHE.get(key)
-    if hit is not None and hit.floorplan is fp:
+    if hit is not None:
         return hit
     binding = fpmod.resolve_binding(fp, need)
     placement = Placement.from_transform(binding.get("transform") or fpmod.kitchen_transform(fp, binding)) if binding else IDENTITY

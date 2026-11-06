@@ -18,6 +18,44 @@ Rules the `code-review` skill checks the diff against. Where this file and `AGEN
 - S9. A design changes only through an operation that produces a new revision. An accepted image job that changes the design does the same.
 - S10. Generated files stay in their established places: `renders/<design-id>/rev<N>/`, `logs/`, `kitchen.db`.
 
+## Portable core (rules R1-R23)
+
+The backend may be rewritten in Rust later. Python stays the reference implementation, JSON stays the contract. The rules below keep the logic portable; `tests/test_architecture.py`, `tests/test_golden.py` and `tests/test_errors.py` enforce what a machine can check. Rationale and the full discussion: `docs/adr/0003-portable-core.md`.
+
+Zones (every module in `kitchen/` is in exactly one; the list lives in `tests/architecture_rules.py`):
+- **Core** (pure): `placement roomctx rules rules_kb rules_nkba edit proposal geometry moldings handles hardware structure_mesh layers floorplan threejs_export lexicon vocab regions realism errors palette numeric`.
+- **Data** (boundary types, constant tables): `spec knowledge_seed`.
+- **Shell** (may touch disk, network, environment, clock): `store migrations service backends ai_export legacy config intent`.
+- **Pixel** (numpy/PIL and job orchestration; compared by tolerance, not bit for bit): `render imaging geometry_edit request_check imagejobs view_sync`.
+
+| ID | Rule | Checked by |
+|---|---|---|
+| R1 | Core imports only the pure stdlib (`math dataclasses typing enum re hashlib itertools unicodedata json`) and other core or data modules. Forbidden in core: `os sqlite3 pathlib open threading urllib http subprocess time datetime random uuid numpy PIL pydantic logging print`, wall-clock calls. | architecture test |
+| R2 | I/O only in the shell. The environment is read once into `config.Config` and passed down; core never reads `os.environ`. | architecture test (ENV_READERS) |
+| R3 | Only three ports cross the boundary: a design store, an artifact store (renders), an image backend; plus injected `clock` and seed. No other injection without two real users. | review |
+| R4 | A core function's public arguments and results are JSON data (`dict list str int float bool None`) or frozen dataclasses of them. No Pydantic instances, numpy arrays, `Path`, `datetime`, callables across the boundary. | review + golden |
+| R5 | Explicit types: no `Any`, no bare `dict` in new core signatures; use frozen dataclasses, `TypedDict`, `NamedTuple`, `Enum`/`Literal`. | review |
+| R6 | Pydantic only at the boundary: core calls `spec.to_data` / `spec.from_data`, never `model_dump`, `model_validate`, `model_copy`. Do not mutate arguments; return new values. | architecture test (pydantic part) + review |
+| R7 | `extra="allow"` stays on the spec models for stored-data compatibility; core reads only declared fields. New stored fields are additive with a default; a stored-shape change ships a migration (`kitchen/migrations.py`) and a compatibility test. | migration tests |
+| R8 | Enum values and codes are closed ASCII kebab-case strings declared in one place. An unknown value is a validation error, never silently replaced by a default. | review |
+| R9 | Units and frames are named: `*_mm`, `yaw_deg`, `room`/`kitchen`/`scene`. Geometry docstrings say which frame they take and return. | review |
+| R10 | Reals are `f64`. Compare with named tolerances (`numeric.EPS_MM`), never `==`. Values written out are rounded with `numeric.round_half_away` (Python's `round` rounds halves to even, Rust's `f64::round` away from zero). New code does not call the builtin `round`; the count per module may only go down. | architecture test (round baseline) |
+| R11 | Deterministic: no wall clock, randomness or `uuid4` in core; time, seed and ids are injected. Sort explicitly wherever order matters (a Rust `HashMap` is unordered). | architecture test |
+| R12 | Text is UTF-8, NFC from users; keys and codes are ASCII; never slice by bytes. Normalisation functions have test vectors. | golden |
+| R13 | Defaults, evaluation order and edge cases (empty, zero, negative, overlapping) are documented and covered by a case. | golden |
+| R14 | Core raises only `kitchen.errors` types: `InvalidInput`, `Conflict`, `NotFound`, `Unsupported`, `Infrastructure`, each with a stable kebab-case `code`. No `except Exception` that returns a default. Adapters map kind to status in one place (`errors.http_status`). | architecture test + `test_errors.py` |
+| R15 | Warnings are data (`warnings: [{code, ...}]`), not log lines; never turn a failure into a silent success. | review |
+| R16 | No mutable module state or `global` in core; caches are memos keyed by content hash; no monkey-patching in production code; tests fake the ports, not modules. | architecture test |
+| R17 | SQL only in `store` and `migrations`; schema changes only as a new `migrations.STEPS` entry. Stored time is UTC ISO-8601; JSON is encoded consistently; no `pickle`/`repr`. `PRAGMA user_version` is a shared contract. | migration tests |
+| R18 | Adapters parse, validate, call `KitchenService`, format. No business rules, no store access; every feature exists in both MCP and HTTP. | `test_adapters.py` |
+| R19 | Every public core function has golden cases in `tests/golden/<area>/<name>.json` (normal, edge and error cases). Values are regenerated only with `tests/golden_regen.py`, reviewed in the diff, never during a test run. | `test_golden.py` |
+| R20 | Test public behaviour at JSON level, not private helpers; do not use `sleep` to wait for logic (inject the clock). | review |
+| R21 | Ratchet: new and changed code meets R1-R20. Existing exceptions are in `tests/architecture_allowlist.py` and may only shrink; adding one needs a reason in the PR. | architecture test |
+| R22 | No premature restructuring: no folder moves, no `core/` package, no imitation of `Result`/`Option`, no builders. Split a module only when its responsibilities are clear and tests pin its behaviour. | review |
+| R23 | Core uses only the standard library. Heavy libraries stay in the pixel zone. A new third-party dependency needs a note on its Rust counterpart. | review |
+
+Review question for every change that touches core: if this module were replaced by a Rust function, would it have to carry Pydantic, SQLite, `Path`, the environment, a clock, numpy or a web library with it? If yes, the boundary is not clean yet.
+
 ## Compatibility
 
 - S11. Code must run on Python 3.11. Do not nest the same quote character inside an f-string expression.

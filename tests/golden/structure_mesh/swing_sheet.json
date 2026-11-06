@@ -1,0 +1,274 @@
+{
+ "function": "structure_mesh.swing_sheet",
+ "cases": [
+  {
+   "name": "identity placement: a fan of two triangles 2 mm above the floor",
+   "input": {
+    "structure": {
+     "id": "STRUCT-d",
+     "kind": "opening",
+     "base": 0,
+     "height": 2200,
+     "hinge": {
+      "x": 0,
+      "z": 0
+     },
+     "swing": [
+      {
+       "x": 900,
+       "z": 0
+      },
+      {
+       "x": 636,
+       "z": 636
+      },
+      {
+       "x": 0,
+       "z": 900
+      }
+     ]
+    },
+    "placement": {
+     "yaw": 0,
+     "ox": 0,
+     "oz": 0
+    }
+   },
+   "expected": {
+    "vertices": [
+     [
+      0.0,
+      2.0,
+      0.0
+     ],
+     [
+      900.0,
+      2.0,
+      0.0
+     ],
+     [
+      636.0,
+      2.0,
+      636.0
+     ],
+     [
+      0.0,
+      2.0,
+      900.0
+     ]
+    ],
+    "faces": [
+     [
+      0,
+      1,
+      2
+     ],
+     [
+      0,
+      2,
+      3
+     ]
+    ]
+   }
+  },
+  {
+   "name": "raised base moves the sheet up",
+   "input": {
+    "structure": {
+     "id": "STRUCT-d",
+     "kind": "opening",
+     "base": 100,
+     "height": 2200,
+     "hinge": {
+      "x": 0,
+      "z": 0
+     },
+     "swing": [
+      {
+       "x": 900,
+       "z": 0
+      },
+      {
+       "x": 636,
+       "z": 636
+      },
+      {
+       "x": 0,
+       "z": 900
+      }
+     ]
+    },
+    "placement": {
+     "yaw": 0,
+     "ox": 0,
+     "oz": 0
+    }
+   },
+   "expected": {
+    "vertices": [
+     [
+      0.0,
+      102.0,
+      0.0
+     ],
+     [
+      900.0,
+      102.0,
+      0.0
+     ],
+     [
+      636.0,
+      102.0,
+      636.0
+     ],
+     [
+      0.0,
+      102.0,
+      900.0
+     ]
+    ],
+    "faces": [
+     [
+      0,
+      1,
+      2
+     ],
+     [
+      0,
+      2,
+      3
+     ]
+    ]
+   }
+  },
+  {
+   "name": "placed with a quarter turn",
+   "input": {
+    "structure": {
+     "id": "STRUCT-d",
+     "kind": "opening",
+     "base": 0,
+     "height": 2200,
+     "hinge": {
+      "x": 0,
+      "z": 0
+     },
+     "swing": [
+      {
+       "x": 900,
+       "z": 0
+      },
+      {
+       "x": 636,
+       "z": 636
+      },
+      {
+       "x": 0,
+       "z": 900
+      }
+     ]
+    },
+    "placement": {
+     "yaw": 90,
+     "ox": 100,
+     "oz": 200
+    }
+   },
+   "expected": {
+    "vertices": [
+     [
+      200.0,
+      2.0,
+      -100.00000000000001
+     ],
+     [
+      200.00000000000006,
+      2.0,
+      800.0
+     ],
+     [
+      -435.99999999999994,
+      2.0,
+      536.0
+     ],
+     [
+      -700.0,
+      2.0,
+      -99.99999999999996
+     ]
+    ],
+    "faces": [
+     [
+      0,
+      1,
+      2
+     ],
+     [
+      0,
+      2,
+      3
+     ]
+    ]
+   }
+  },
+  {
+   "name": "no hinge: nothing to draw",
+   "input": {
+    "structure": {
+     "id": "STRUCT-d",
+     "kind": "opening",
+     "base": 0,
+     "height": 2200,
+     "hinge": null,
+     "swing": [
+      {
+       "x": 900,
+       "z": 0
+      },
+      {
+       "x": 636,
+       "z": 636
+      },
+      {
+       "x": 0,
+       "z": 900
+      }
+     ]
+    },
+    "placement": {
+     "yaw": 0,
+     "ox": 0,
+     "oz": 0
+    }
+   },
+   "expected": null
+  },
+  {
+   "name": "a single arc point is not a fan",
+   "input": {
+    "structure": {
+     "id": "STRUCT-d",
+     "kind": "opening",
+     "base": 0,
+     "height": 2200,
+     "hinge": {
+      "x": 0,
+      "z": 0
+     },
+     "swing": [
+      {
+       "x": 900,
+       "z": 0
+      }
+     ]
+    },
+    "placement": {
+     "yaw": 0,
+     "ox": 0,
+     "oz": 0
+    }
+   },
+   "expected": null
+  }
+ ]
+}

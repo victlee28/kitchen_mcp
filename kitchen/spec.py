@@ -16,6 +16,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from .errors import NotFound
+
 WALLS = ("back", "right", "left")
 STOREYS = ("base", "upper", "loft", "tall", "corner")
 MODULE_TYPES = (
@@ -287,7 +289,7 @@ class KitchenSpec(_Base):
         for m in self.module:
             if m.id == id:
                 return m
-        raise KeyError(f"Không có module '{id}'")
+        raise NotFound(f"Không có module '{id}'", code="module-not-found")
 
     def walls_with_modules(self) -> list[str]:
         return [t for t in WALLS if any(m.wall == t for m in self.module)]
@@ -310,3 +312,13 @@ def load_spec(data: dict | str) -> KitchenSpec:
 
 def dump_spec(spec: KitchenSpec) -> dict:
     return spec.model_dump(mode="json", exclude_none=True)
+
+
+def to_data(model: BaseModel, exclude_none: bool = False) -> dict:
+    """Spec-side value -> plain JSON data (the one place the core turns a model into data; in Rust this is serde)."""
+    return model.model_dump(mode="json", exclude_none=exclude_none)
+
+
+def from_data(cls: type, data: dict):
+    """Plain JSON data -> validated model of type ``cls`` (the boundary validation; raises pydantic.ValidationError)."""
+    return cls.model_validate(data)

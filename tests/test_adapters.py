@@ -16,7 +16,7 @@ from kitchen.imagejobs import ImageJobs  # noqa: E402
 from kitchen.service import KitchenService  # noqa: E402
 
 ADAPTERS = ("server.py", "web_server.py")
-ALLOWED_KITCHEN_IMPORTS = {"kitchen.service", "kitchen.store", "kitchen.intent"}  # the facade, its error type, the template type MCP exposes
+ALLOWED_KITCHEN_IMPORTS = {"kitchen.service", "kitchen.store", "kitchen.intent", "kitchen.errors"}  # the facade, its error types, the template type MCP exposes
 SERVICE_NAMES = {"svc", "s", "SVC"}
 
 

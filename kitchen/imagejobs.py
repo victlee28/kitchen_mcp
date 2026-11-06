@@ -27,6 +27,7 @@ from PIL import Image
 from . import request_check, backends, edit, geometry, geometry_edit, imaging, layers, realism, render, view_sync, vocab
 from .backends import BACKENDS, BackendError
 from .store import ConflictError
+from .errors import InvalidInput
 
 GROW_PX = 12     # nở mask gửi model (ngữ cảnh quanh mép)
 FEATHER_PX = 2   # viền mềm khi ghép, chỉ vào trong mask
@@ -82,7 +83,7 @@ class ImageJobs:
         spec, r = self.store.get(did, rev)
         views = geometry.views_of(spec)
         if view not in views:
-            raise ValueError(f"Không có góc nhìn '{view}'. Có: {', '.join(views)}")
+            raise InvalidInput(f"Không có góc nhìn '{view}'. Có: {', '.join(views)}")
         d = self._render_dir(did, r, view)
         man = d / "manifest.json"
         scene = geometry.compile_spec(spec)
@@ -93,7 +94,7 @@ class ImageJobs:
                 return spec, r, scene, d, m
         w, h = width or VIEW_COLORS[0], height or VIEW_COLORS[1]
         if not (256 <= w <= 4096 and 256 <= h <= 4096):
-            raise ValueError("width/height phải trong 256–4096")
+            raise InvalidInput("width/height phải trong 256–4096")
         render.render_views(spec, d.parent, [view], w, h, meta={"designId": did, "rev": r})
         return spec, r, scene, d, json.loads(man.read_text(encoding="utf-8"))
 
@@ -153,19 +154,19 @@ class ImageJobs:
         image and fills the border with its edge colour. Crop/pad change the scale, so the line check may report a mismatch.
         """
         if fit not in ("reject", "crop", "pad"):
-            raise ValueError("fit phải là reject, crop hoặc pad")
+            raise InvalidInput("fit phải là reject, crop hoặc pad")
         import io
         try:
             with Image.open(io.BytesIO(image)) as f:
                 im = f.convert("RGB")
         except Exception:
-            raise ValueError("Ảnh không đọc được (cần PNG/JPEG)")
+            raise InvalidInput("Ảnh không đọc được (cần PNG/JPEG)")
         W, H = man["width"], man["height"]
         if im.size != (W, H):
             iw, ih = im.size
             if abs(iw / ih - W / H) > 0.01:
                 if fit == "reject":
-                    raise ValueError(f"Ảnh {iw}×{ih} khác tỉ lệ ảnh điều khiển {W}×{H}; chọn cắt/thêm viền hoặc tạo lại đúng tỉ lệ")
+                    raise InvalidInput(f"Ảnh {iw}×{ih} khác tỉ lệ ảnh điều khiển {W}×{H}; chọn cắt/thêm viền hoặc tạo lại đúng tỉ lệ")
                 if fit == "crop":
                     cw, ch = (round(ih * W / H), ih) if iw / ih > W / H else (iw, round(iw * H / W))
                     left, top = (iw - cw) // 2, (ih - ch) // 2
@@ -244,27 +245,27 @@ class ImageJobs:
         dùng target/vat_lieu/instruction như một việc. preview=True: chỉ chuẩn bị (mask, request.json), dừng ở 'cho-gui'
         để người dùng xem trước; gửi bằng send(), hủy bằng reject()."""
         if kind not in ("edit", "gen0", "geometry_edit"):
-            raise ValueError("kind phải là edit, gen0 hoặc geometry_edit")
+            raise InvalidInput("kind phải là edit, gen0 hoặc geometry_edit")
         if lighting not in (None, "", *realism.LIGHTING):
-            raise ValueError(f"anhSang phải là một trong: {', '.join(realism.LIGHTING)}")
+            raise InvalidInput(f"anhSang phải là một trong: {', '.join(realism.LIGHTING)}")
         if operation is not None:  # bảng thao tác: workflow + trọng số ControlNet mặc định theo loại việc
             if operation not in geometry_edit.OPERATIONS:
-                raise ValueError(f"thaoTac phải là một trong: {', '.join(geometry_edit.OPERATIONS)}")
+                raise InvalidInput(f"thaoTac phải là một trong: {', '.join(geometry_edit.OPERATIONS)}")
             pre = geometry_edit.OPERATIONS[operation]
             if pre["kind"] != kind:
-                raise ValueError(f"thaoTac '{operation}' dùng cho kind={pre['kind']} (đang là {kind})")
+                raise InvalidInput(f"thaoTac '{operation}' dùng cho kind={pre['kind']} (đang là {kind})")
             workflow = workflow or pre["workflow"]
             params = {**pre["params"], **(params or {})}
         if kind == "geometry_edit":
             if not geometry_items:
-                raise ValueError("kind=hinh cần danh sách thao tác hình học (hinh)")
+                raise InvalidInput("kind=hinh cần danh sách thao tác hình học (hinh)")
             mode = "design"  # sửa hình: chấp nhận ảnh = ghi thao tác vào thiết kế
         if backend not in BACKENDS:
-            raise ValueError(f"backend phải là một trong: {', '.join(BACKENDS)}")
+            raise InvalidInput(f"backend phải là một trong: {', '.join(BACKENDS)}")
         if kind not in BACKENDS[backend]["kind"]:
-            raise ValueError(f"backend '{backend}' không hỗ trợ {kind}")
+            raise InvalidInput(f"backend '{backend}' không hỗ trợ {kind}")
         if mode not in ("quick", "design"):
-            raise ValueError("mode phải là quick hoặc design")
+            raise InvalidInput("mode phải là quick hoặc design")
         if kind == "geometry_edit":
             tasks = []
         elif kind == "edit" and not tasks:  # một việc: yêu cầu thuộc về việc đó, không lặp ở cấp job
@@ -300,17 +301,17 @@ class ImageJobs:
         """Gửi job đang chờ (đã xem trước) sang backend. Thiết kế đổi hình học/camera sau khi tạo thì từ chối."""
         job = self.store.get_job(jid)
         if job["status"] != "awaiting-send":
-            raise ValueError(f"Chỉ gửi được job đang chờ gửi (hiện: {job['status']})")
+            raise InvalidInput(f"Chỉ gửi được job đang chờ gửi (hiện: {job['status']})")
         spec, rev = self.store.get(job["design_id"])
         views = geometry.views_of(spec)
         if job["view"] in views:
             W, H = job["request"]["size"]
             if render.render_key(geometry.compile_spec(spec), views[job["view"]], W, H) != job["render_key"]:
-                raise ValueError("Thiết kế đã đổi hình học/góc nhìn sau khi tạo job; mask không còn khớp — hãy tạo job mới")
+                raise InvalidInput("Thiết kế đã đổi hình học/góc nhìn sau khi tạo job; mask không còn khớp — hãy tạo job mới")
         if job["backend"] in ("gemini", "job-package"):  # model nhận chỉ dẫn: request phải đủ ảnh, đúng kích thước
             kt = json.loads(self.export_request(jid).read_text(encoding="utf-8")).get("validation") or {}
             if not kt.get("ok", True):
-                raise ValueError("Request chưa đạt kiểm tra, chưa gửi: " + "; ".join(kt.get("errors", [])))
+                raise InvalidInput("Request chưa đạt kiểm tra, chưa gửi: " + "; ".join(kt.get("errors", [])))
         job = self.store.update_job(jid, "running")
         return self._dispatch(job)
 
@@ -318,17 +319,17 @@ class ImageJobs:
     def _norm_tasks(tasks, target, material, instruction) -> list[dict]:
         if not tasks:
             if not target:
-                raise ValueError("Cần targetLayer hoặc danh sách tasks")
+                raise InvalidInput("Cần targetLayer hoặc danh sách tasks")
             tasks = [{"targetLayer": target, "material": material, "instruction": instruction}]
         if not isinstance(tasks, list) or len(tasks) > MAX_TASKS:
-            raise ValueError(f"tasks phải là danh sách tối đa {MAX_TASKS} việc")
+            raise InvalidInput(f"tasks phải là danh sách tối đa {MAX_TASKS} việc")
         out = []
         for i, t in enumerate(tasks, 1):
             if not isinstance(t, dict):
-                raise ValueError(f"Việc {i} không hợp lệ")
+                raise InvalidInput(f"Việc {i} không hợp lệ")
             tl = t.get("targetLayer") or t.get("target") or t.get("target_layer")
             if not tl:
-                raise ValueError(f"Việc {i} thiếu targetLayer")
+                raise InvalidInput(f"Việc {i} thiếu targetLayer")
             out.append({"targetLayer": str(tl), "material": (t.get("material") or t.get("material") or None),
                         "instruction": str(t.get("instruction") or "").strip()})
         return out
@@ -362,32 +363,32 @@ class ImageJobs:
             for i, t in enumerate(tasks, 1):
                 layer, ids = layers.resolve(cat, t["targetLayer"])
                 if not layer.get("allowAppearanceChange"):
-                    raise ValueError(f"Việc {i}: layer '{t['targetLayer']}' bị khóa")
+                    raise InvalidInput(f"Việc {i}: layer '{t['targetLayer']}' bị khóa")
                 rec = dict(t)
                 if mode == "design":
                     if not t["material"]:
-                        raise ValueError(f"Việc {i} ({t['targetLayer']}): chế độ design cần material (vd 'Laminate xanh rêu mờ')")
+                        raise InvalidInput(f"Việc {i} ({t['targetLayer']}): chế độ design cần material (vd 'Laminate xanh rêu mờ')")
                     op = layers.design_op(cur, layers.resolve(layers.catalogue(cur, scene), t["targetLayer"])[0], t["material"], scene)
                     if op is None:
-                        raise ValueError(f"Việc {i}: '{layer['name']}' chưa sửa được trong thiết kế; dùng chế độ quick")
+                        raise InvalidInput(f"Việc {i}: '{layer['name']}' chưa sửa được trong thiết kế; dùng chế độ quick")
                     nxt = edit.apply_op(cur, op[0])
                     if render.scene_hash(geometry.compile_spec(nxt)) != render.scene_hash(scene):
-                        raise ValueError(f"Việc {i}: thao tác làm đổi hình học; sửa ảnh chỉ nhận thay đổi vật liệu")
+                        raise InvalidInput(f"Việc {i}: thao tác làm đổi hình học; sửa ảnh chỉ nhận thay đổi vật liệu")
                     selected = list(ids)
                     ids = layers.changed_parts(cur, nxt, scene)
                     if set(ids) != set(selected):  # the spec can only express a wider or different scope: say so instead of hiding it
                         rec["scopeNote"] = f"Thiết kế đổi {len(ids)} chi tiết, vùng chọn có {len(selected)}"
                     if not ids:
-                        raise ValueError(f"Việc {i}: vật liệu mới trùng vật liệu hiện tại")
+                        raise InvalidInput(f"Việc {i}: vật liệu mới trùng vật liệu hiện tại")
                     rec.update(pendingOp=op[0], scope=op[1])
                     cur = nxt
                 clash = sorted({owner[p] for p in ids if p in owner})
                 if clash:
                     both = [p for p in ids if p in owner]
-                    raise ValueError(f"Việc {i} và việc {clash[0]} cùng sửa chi tiết {', '.join(both[:4])}; tách layer hoặc gộp thành một việc")
+                    raise InvalidInput(f"Việc {i} và việc {clash[0]} cùng sửa chi tiết {', '.join(both[:4])}; tách layer hoặc gộp thành một việc")
                 tmask = imaging.mask_of(d, ids)
                 if not tmask.any():
-                    raise ValueError(f"Việc {i}: layer '{t['targetLayer']}' không nhìn thấy ở góc '{view}'")
+                    raise InvalidInput(f"Việc {i}: layer '{t['targetLayer']}' không nhìn thấy ở góc '{view}'")
                 for p in ids:
                     owner[p] = i
                 union |= tmask
@@ -472,9 +473,9 @@ class ImageJobs:
             if any(x.get("doorStyle") == "frame" for x in desc):
                 lines_new = geometry_edit.shaker_lines(lines_new, doors)
         if not m.any():
-            raise ValueError(f"Thao tác không làm đổi gì nhìn thấy ở góc '{view}'")
+            raise InvalidInput(f"Thao tác không làm đổi gì nhìn thấy ở góc '{view}'")
         if m.mean() > 0.85:
-            raise ValueError("Thao tác đổi gần như toàn ảnh (camera/khung hình đổi?); dùng gen-0 cho thiết kế mới")
+            raise InvalidInput("Thao tác đổi gần như toàn ảnh (camera/khung hình đổi?); dùng gen-0 cho thiết kế mới")
         imaging.save_mask(m, jdir / "target_1.png")
         imaging.save_mask(m, jdir / "target.png")
         region = imaging.grow(m, GROW_PX)
@@ -520,19 +521,19 @@ class ImageJobs:
             return d / "albedo.png", {"type": "albedo"}
         if reference == "imported":
             if self._imported_meta(d) is None:
-                raise ValueError("Chưa có ảnh nền nhập từ ngoài cho góc này (dùng nút “Nhập ảnh kết quả từ ChatGPT”)")
+                raise InvalidInput("Chưa có ảnh nền nhập từ ngoài cho góc này (dùng nút “Nhập ảnh kết quả từ ChatGPT”)")
             return d / "base_imported.png", {"type": "imported"}
         if reference == "beauty":
             if not (d / "beauty.png").exists():
-                raise ValueError("Chưa có ảnh render three.js cho góc này (mở trang render.html, chọn thiết kế, bấm Render)")
+                raise InvalidInput("Chưa có ảnh render three.js cho góc này (mở trang render.html, chọn thiết kế, bấm Render)")
             return d / "beauty.png", {"type": "beauty"}
         j = self.store.get_job(reference)
         if j["design_id"] != did or j["view"] != view:
-            raise ValueError("Ảnh gốc thuộc thiết kế/góc nhìn khác")
+            raise InvalidInput("Ảnh gốc thuộc thiết kế/góc nhìn khác")
         if self._key_of(j) != key:
-            raise ValueError("Ảnh gốc thuộc hình học/camera khác (renderKey lệch); hãy dùng ảnh mới hoặc albedo")
+            raise InvalidInput("Ảnh gốc thuộc hình học/camera khác (renderKey lệch); hãy dùng ảnh mới hoặc albedo")
         if j["status"] not in ("accepted", "needs-review"):
-            raise ValueError(f"Job {reference} chưa có ảnh dùng được (trạng thái {j['status']})")
+            raise InvalidInput(f"Job {reference} chưa có ảnh dùng được (trạng thái {j['status']})")
         return Path(j["result"]["dir"]) / "composite.png", {"type": "job", "jobId": j["id"]}
 
     # ------------------------------------------------------------------ chạy backend
@@ -566,7 +567,7 @@ class ImageJobs:
                 return self.store.get_job(jid)
         except BackendError as e:
             return self.store.update_job(jid, f"error:{e.code}", error=str(e))
-        raise ValueError(b)
+        raise InvalidInput(b)
 
     def _values(self, req: dict, wf: dict) -> dict:
         W, H = req["size"]
@@ -807,13 +808,13 @@ class ImageJobs:
     def submit_result(self, jid: str, image: bytes) -> dict:
         job = self.store.get_job(jid)
         if job["status"] in ("accepted", "rejected", "running"):
-            raise ValueError(f"Job đang ở trạng thái {job['status']}, không nhận ảnh")
+            raise InvalidInput(f"Job đang ở trạng thái {job['status']}, không nhận ảnh")
         jdir = Path(job["result"]["dir"])
         import io
         try:
             im = Image.open(io.BytesIO(image)).convert("RGB")
         except Exception:
-            raise ValueError("Ảnh nộp không đọc được (cần PNG/JPEG)")
+            raise InvalidInput("Ảnh nộp không đọc được (cần PNG/JPEG)")
         im.save(jdir / "raw.png")
         return self._finish(jid, {"backend": {"name": job["backend"], "submitManual": True}})
 
@@ -873,7 +874,7 @@ class ImageJobs:
     def accept(self, jid: str, apply_to_design: bool = False, base_rev: int | None = None) -> dict:
         job = self.store.get_job(jid)
         if job["status"] != "needs-review":
-            raise ValueError(f"Chỉ chấp nhận job đang cần duyệt (hiện: {job['status']})")
+            raise InvalidInput(f"Chỉ chấp nhận job đang cần duyệt (hiện: {job['status']})")
         req = job["request"]
         design = None
         if job["kind"] == "geometry_edit":  # sửa hình: ảnh chỉ đúng khi thiết kế đổi theo -> luôn ghi rev
@@ -881,7 +882,7 @@ class ImageJobs:
             W, H = req["size"]
             _, _, _, _, man = self.ensure_render(job["design_id"], res["rev"], job["view"], W, H)
             if man["renderKey"] != req["newRenderKey"]:
-                raise ValueError("Render của rev mới lệch hình mẫu của job (renderKey khác) — báo lỗi cho nhà phát triển")
+                raise InvalidInput("Render của rev mới lệch hình mẫu của job (renderKey khác) — báo lỗi cho nhà phát triển")
             design = {"rev": res["rev"], "op": req["designOp"], "scope": req.get("scope")}
         elif job["mode"] == "design" or apply_to_design:
             tasks = req.get("tasks") or [{"targetLayer": job["target"], "material": req.get("material"),
@@ -905,7 +906,7 @@ class ImageJobs:
                 ops.append(op)
                 scope.append(pv)
             if not ops:
-                raise ValueError("Không có việc nào áp được vào thiết kế (" + "; ".join(skip) + ")")
+                raise InvalidInput("Không có việc nào áp được vào thiết kế (" + "; ".join(skip) + ")")
             op = edit.combine_ops(ops)
             res = self._apply(job["design_id"], op, base_rev if base_rev is not None else job["rev"], f"image-job:{jid}")
             design = {"rev": res["rev"], "op": op, "scope": "; ".join(scope), **({"skip": skip} if skip else {})}
@@ -926,7 +927,7 @@ class ImageJobs:
     def reject(self, jid: str) -> dict:
         job = self.store.get_job(jid)
         if job["status"] == "accepted":
-            raise ValueError("Job đã chấp nhận")
+            raise InvalidInput("Job đã chấp nhận")
         return self.store.update_job(jid, "rejected")
 
     def regenerate(self, jid: str, seed: int | None = None) -> dict:

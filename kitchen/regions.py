@@ -6,6 +6,7 @@ rỗng = áp dụng cả khu vực). Khi tra cứu/kiểm tra cho quốc gia C t
 Hòa điểm thì xét độ mạnh của nguồn: bat-buoc > tieu-chuan > khuyen-nghi > thuc-hanh > chua-ro.
 """
 from __future__ import annotations
+from .errors import InvalidInput
 
 import unicodedata
 
@@ -47,9 +48,9 @@ def normalize(country: str | None = None, region: str | None = None) -> tuple[st
     qg = (country or "").strip().upper() or None
     kv = (region or "").strip().upper() or None
     if qg and qg not in COUNTRIES:
-        raise ValueError(f"Mã quốc gia '{qg}' chưa hỗ trợ; dùng một trong: {', '.join(COUNTRIES)}")
+        raise InvalidInput(f"Mã quốc gia '{qg}' chưa hỗ trợ; dùng một trong: {', '.join(COUNTRIES)}")
     if kv and kv not in REGIONS:
-        raise ValueError(f"Mã khu vực '{kv}' không hợp lệ; dùng một trong: {', '.join(REGIONS)}")
+        raise InvalidInput(f"Mã khu vực '{kv}' không hợp lệ; dùng một trong: {', '.join(REGIONS)}")
     if qg and not kv:
         kv = COUNTRIES[qg][1]
     return qg, kv

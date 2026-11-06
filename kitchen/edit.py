@@ -7,11 +7,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from .spec import KitchenSpec, Module
+from .spec import KitchenSpec, Module, from_data, to_data
+from .errors import InvalidInput, NotFound
 
 
 def _clone(spec: KitchenSpec) -> KitchenSpec:
-    return KitchenSpec.model_validate(spec.model_dump(mode="json"))
+    return from_data(KitchenSpec, to_data(spec))
 
 
 def _same_run(a: Module, b: Module) -> bool:
@@ -57,11 +58,11 @@ def add_module(spec: KitchenSpec, module: dict[str, Any], after_module: str | No
     if not data.get("id"):
         storey = data.get("type", "base")
         data["id"] = new_id(s, "TC" if storey.startswith("tall") else "TT" if storey.startswith("upper") else "TD")
-    new = Module.model_validate(data)
+    new = from_data(Module, data)
     if close_gap:
         _shift(s, new, new.fromCorner, new.width, set())
     s.module.append(new)
-    return KitchenSpec.model_validate(s.model_dump(mode="json"))
+    return from_data(KitchenSpec, to_data(s))
 
 
 def remove_module(spec: KitchenSpec, id: str, close_gap: bool = True) -> KitchenSpec:
@@ -71,25 +72,25 @@ def remove_module(spec: KitchenSpec, id: str, close_gap: bool = True) -> Kitchen
     s.appliances = [t for t in s.appliances if t.module != id]
     if close_gap and m.wall != "corner":
         _shift(s, m, m.endAt, -m.width, set())
-    return KitchenSpec.model_validate(s.model_dump(mode="json"))
+    return from_data(KitchenSpec, to_data(s))
 
 
 def update_module(spec: KitchenSpec, id: str, changes: dict[str, Any], close_gap: bool = True) -> KitchenSpec:
     s = _clone(spec)
     old = s.find(id)
     if "id" in changes and changes["id"] != id:
-        raise ValueError("Không đổi mã module bằng update; hãy xóa rồi thêm")
-    merged = {**old.model_dump(mode="json"), **changes}
+        raise InvalidInput("Không đổi mã module bằng update; hãy xóa rồi thêm")
+    merged = {**to_data(old), **changes}
     if "width" in changes and "door" not in changes and old.doors:  # giữ tỉ lệ cánh khi đổi rộng
         free_old = old.width - old.blindCorner - old.endPanel
         free_new = merged["width"] - merged.get("blindCorner", 0) - merged.get("endPanel", 0)
         merged["doors"] = [round(w * free_new / free_old, 1) for w in old.doors]
-    new = Module.model_validate(merged)
+    new = from_data(Module, merged)
     if close_gap and new.wall == old.wall and new.wall != "corner":
         if new.endAt != old.endAt:
             _shift(s, old, old.endAt, new.endAt - old.endAt, {id})
     s.module = [new if x.id == id else x for x in s.module]
-    return KitchenSpec.model_validate(s.model_dump(mode="json"))
+    return from_data(KitchenSpec, to_data(s))
 
 
 def combine_ops(ops: list[dict[str, Any]]) -> dict[str, Any]:
@@ -100,9 +101,9 @@ def combine_ops(ops: list[dict[str, Any]]) -> dict[str, Any]:
 
 def update_common(spec: KitchenSpec, changes: dict[str, Any]) -> KitchenSpec:
     s = _clone(spec)
-    data = s.model_dump(mode="json")
+    data = to_data(s)
     data["common"].update(changes)
-    return KitchenSpec.model_validate(data)
+    return from_data(KitchenSpec, data)
 
 
 def apply_op(spec: KitchenSpec, op: dict[str, Any]) -> KitchenSpec:
@@ -125,34 +126,34 @@ def apply_op(spec: KitchenSpec, op: dict[str, Any]) -> KitchenSpec:
     if kind == "common":
         return update_common(spec, op.get("changes", {}))
     if kind == "replace":
-        return KitchenSpec.model_validate(op["spec"])
+        return from_data(KitchenSpec, op["spec"])
     if kind == "lower-top":  # hạ đỉnh tủ (vd để phào nóc lọt trần)
         from .moldings import lower_top
         return lower_top(spec, float(op["newTop"]))
     if kind == "molding":  # sửa một phào: {"ma": "phao-noc", "thayDoi": {...}}
-        data = spec.model_dump(mode="json")
+        data = to_data(spec)
         hit = [m for m in data["moldings"] if m["id"] == op["id"]]
         if not hit:
-            raise KeyError(f"Không có phào '{op['id']}'")
+            raise NotFound(f"Không có phào '{op['id']}'", code="molding-not-found")
         hit[0].update(op.get("changes", {}))
-        return KitchenSpec.model_validate(data)
+        return from_data(KitchenSpec, data)
     if kind == "set-moldings":  # thay toàn bộ phào (+ mặt cắt riêng) và phong cách
-        data = spec.model_dump(mode="json")
+        data = to_data(spec)
         data["moldings"] = op.get("moldings", [])
         if "moldingProfiles" in op:
             data["moldingProfiles"] = op["moldingProfiles"]
         if op.get("style"):
             data["style"] = op["style"]
-        return KitchenSpec.model_validate(data)
+        return from_data(KitchenSpec, data)
     if kind == "set-views":  # ghim / thay bộ góc nhìn (vd giữ camera cũ khi xóa tủ làm khung bao đổi)
-        data = spec.model_dump(mode="json")
+        data = to_data(spec)
         data["cameraViews"] = op.get("cameraViews") or {}
-        return KitchenSpec.model_validate(data)
+        return from_data(KitchenSpec, data)
     if kind == "multi":
         ops = op.get("ops") or []
         if not ops or any(o.get("op") == "multi" for o in ops):
-            raise ValueError("op 'nhieu' cần danh sách ops (không lồng 'nhieu')")
+            raise InvalidInput("op 'nhieu' cần danh sách ops (không lồng 'nhieu')")
         for o in ops:
             spec = apply_op(spec, o)
         return spec
-    raise ValueError(f"op không hợp lệ: {kind!r}")
+    raise InvalidInput(f"op không hợp lệ: {kind!r}")

@@ -16,13 +16,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
-from . import knowledge_seed
+from . import errors, knowledge_seed
 from . import legacy as legacy_schema
 
 BASELINE = "\nCREATE TABLE IF NOT EXISTS knowledge (\n id INTEGER PRIMARY KEY AUTOINCREMENT,\n kind TEXT NOT NULL CHECK(kind IN ('standard','rule','material')),\n code TEXT NOT NULL, title TEXT NOT NULL, content TEXT NOT NULL,\n source_url TEXT, metadata_json TEXT NOT NULL DEFAULT '{}', active INTEGER NOT NULL DEFAULT 1,\n created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP\n);\nCREATE INDEX IF NOT EXISTS idx_knowledge_kind ON knowledge(kind, active);\nCREATE TABLE IF NOT EXISTS designs (\n id TEXT PRIMARY KEY, name TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP\n);\nCREATE TABLE IF NOT EXISTS revisions (\n design_id TEXT NOT NULL REFERENCES designs(id), rev INTEGER NOT NULL, spec_json TEXT NOT NULL,\n operation TEXT NOT NULL, source TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,\n PRIMARY KEY (design_id, rev)\n);\nCREATE TABLE IF NOT EXISTS image_jobs (\n id TEXT PRIMARY KEY, design_id TEXT NOT NULL REFERENCES designs(id), rev INTEGER NOT NULL, view TEXT NOT NULL,\n render_key TEXT NOT NULL, kind TEXT NOT NULL, mode TEXT NOT NULL, target TEXT, backend TEXT NOT NULL,\n status TEXT NOT NULL, request_json TEXT NOT NULL, result_json TEXT NOT NULL DEFAULT '{}', error TEXT,\n created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP\n);\nCREATE INDEX IF NOT EXISTS idx_image_jobs_design ON image_jobs(design_id, view, render_key, status);\nCREATE TABLE IF NOT EXISTS floorplans (\n ref TEXT PRIMARY KEY, source_json TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP\n);\n"
 
 
-class MigrationError(RuntimeError):
+class MigrationError(errors.Infrastructure):
     """A step failed (the database stays at the previous version) or the database is newer than this code."""
 
 

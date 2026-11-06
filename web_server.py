@@ -56,7 +56,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 from pydantic import ValidationError
 
 from kitchen.service import KitchenService
-from kitchen.store import ConflictError
+from kitchen import errors
 
 ROOT = Path(__file__).resolve().parent
 log = logging.getLogger("web-server")
@@ -355,8 +355,8 @@ class Handler(BaseHTTPRequestHandler):
             self._route(method)
         except ApiError as e:
             self._json(e.status, {"error": str(e)})
-        except ConflictError as e:
-            self._json(409, {"error": str(e)})
+        except errors.KitchenError as e:             # one mapping: kind -> status; the stable code is added for clients
+            self._json(errors.http_status(e), {"error": str(e), "code": e.code})
         except FileNotFoundError as e:
             self._json(404, {"error": str(e)})
         except ValidationError as e:

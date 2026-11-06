@@ -10,14 +10,13 @@ File xuất ra hợp lệ với CẢ schema gốc v1.0.0 lẫn bản mở rộng
 """
 from __future__ import annotations
 
-import datetime as _dt
 import math
 import re
 from collections import defaultdict
 
 from . import floorplan as fpmod, roomctx, hardware, regions, vocab
 from .geometry import Part, backsplash_height, compile_spec, views_of
-from .render import SEGMENT_COLORS, _module_color
+from .palette import SEGMENT_COLORS, module_color as _module_color
 from .spec import Handle, KitchenSpec, Module, effective_handle
 
 ROT = {"back": 0.0, "right": -90.0, "left": 90.0, "corner": 0.0, "island": 180.0}
@@ -343,8 +342,12 @@ def _module_entry(spec: KitchenSpec, m: Module, parts: list[Part], frame: Frame,
 
 
 # ------------------------------------------------------------------ xuất toàn cảnh
+UNSET_TIME = "1970-01-01T00:00:00+00:00"   # what an export made without a clock says; the service always passes the real time
+
+
 def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: list[dict] | None = None,
-           country: str | None = None) -> dict:
+           country: str | None = None, created_at: str = UNSET_TIME) -> dict:
+    """Scene document for ``spec``. Pure: ``created_at`` (ISO-8601 UTC) comes from the caller's clock, never from the wall clock here."""
     from .rules import default_rows
     from .rules_kb import select
 
@@ -521,7 +524,7 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
         "schemaVersion": "1.3.0",
         "metadata": {"designId": re.sub(r"[^A-Za-z0-9_.:-]", "-", design_id) or "design", "projectName": spec.name,
                      "description": spec.source or "", "style": spec.style, "revision": max(1, rev), "author": "kitchen-design-mcp",
-                     "createdAt": _dt.datetime.now(_dt.timezone.utc).replace(microsecond=0).isoformat(),
+                     "createdAt": created_at,
                      "region": {"countryCode": qg, "regionCode": kv, "appliedRules": {t: v["code"] for t, v in sel.items()}},
                      "source": {"generator": "kitchen.threejs_export", "specSchemaVersion": spec.schemaVersion, "specRevision": rev},
                      **({"styleTags": list(spec.styleTags)} if spec.styleTags else {}),

@@ -9,11 +9,12 @@ from __future__ import annotations
 from collections import defaultdict
 
 from .geometry import Scene
-from .spec import KitchenSpec, effective_handle
+from .spec import KitchenSpec, effective_handle, to_data
+from .errors import InvalidInput
 
 
 def _dump(override) -> dict:
-    return override.model_dump(mode="json", exclude_none=True) if override is not None else {}
+    return to_data(override, exclude_none=True) if override is not None else {}
 
 
 def material_slot(spec: KitchenSpec, module_id: str | None) -> tuple[str, str]:
@@ -45,10 +46,10 @@ def material_ops(spec: KitchenSpec, scene: Scene, part_ids: list[str], material:
             if p.id in wanted:
                 chosen[p.module].add(p.id)
     if not chosen:
-        raise ValueError("Không có tay nắm nào trong vùng chọn")
+        raise InvalidInput("Không có tay nắm nào trong vùng chọn")
     partial = sorted(m for m, ids in chosen.items() if ids != all_by_module[m])
     if partial:
-        raise ValueError(f"Thiết kế lưu tay nắm theo module và theo tầng, không theo từng tay: {', '.join(partial)} mới chọn một phần "
+        raise InvalidInput(f"Thiết kế lưu tay nắm theo module và theo tầng, không theo từng tay: {', '.join(partial)} mới chọn một phần "
                          "tay nắm của module. Chọn trọn tay nắm của module (nhóm 'tay nắm <module>') hoặc dùng chế độ Thử nhanh.")
     storey_of = {m.id: m.storey for m in spec.module}
     module_of = {m.id: m for m in spec.module}
@@ -58,7 +59,7 @@ def material_ops(spec: KitchenSpec, scene: Scene, part_ids: list[str], material:
     covered: set[str] = set()
     ops: list[dict] = []
     if chosen_modules == all_modules:
-        changes["handle"] = {**spec.common.handle.model_dump(mode="json"), "material": material}
+        changes["handle"] = {**to_data(spec.common.handle), "material": material}
         for k in list(by_storey):
             by_storey[k].pop("material", None)
             if not by_storey[k]:

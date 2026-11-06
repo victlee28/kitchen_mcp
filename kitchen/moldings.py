@@ -10,7 +10,8 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass, field
 
-from .spec import KitchenSpec, Molding, MoldingProfile, Module
+from .spec import KitchenSpec, Molding, MoldingProfile, Module, from_data, to_data
+from .errors import InvalidInput
 
 PRESETS: dict[str, MoldingProfile] = {p.id: p for p in [
     MoldingProfile(id="classic-crown-simple", name="Phào nóc đơn giản",
@@ -344,23 +345,23 @@ def _can_lower(spec: KitchenSpec, delta: float) -> bool:
 
 def lower_top(spec: KitchenSpec, new_top: float) -> KitchenSpec:
     """Hạ đỉnh tủ: rút chiều cao các module đang chạm đỉnh (tủ nóc, tủ cao, kệ góc, tủ trên nếu không có nóc)."""
-    data = spec.model_dump(mode="json")
+    data = to_data(spec)
     old = spec.common.cabinetTop
     delta = old - new_top
     if delta <= 0:
-        raise ValueError("Đỉnh mới phải thấp hơn đỉnh hiện tại")
+        raise InvalidInput("Đỉnh mới phải thấp hơn đỉnh hiện tại")
     for m in data["module"]:
         if abs(m["y"] + m["height"] - old) > 1:
             continue
         new_h = m["height"] - delta
         min_h = 150 if m["type"] == "upper-loft" else 300
         if new_h < min_h:
-            raise ValueError(f"{m['id']} còn {new_h:g} mm, thấp hơn mức tối thiểu {min_h}")
+            raise InvalidInput(f"{m['id']} còn {new_h:g} mm, thấp hơn mức tối thiểu {min_h}")
         if m.get("niche") and m["y"] + new_h < m["niche"] + 150:
-            raise ValueError(f"{m['id']}: phần trên hốc thiết bị còn quá thấp")
+            raise InvalidInput(f"{m['id']}: phần trên hốc thiết bị còn quá thấp")
         m["height"] = new_h
     c = data["common"]
     if abs(c["upperTierSplit"] - old) <= 1:
         c["upperTierSplit"] = new_top
     c["cabinetTop"] = new_top
-    return KitchenSpec.model_validate(data)
+    return from_data(KitchenSpec, data)
