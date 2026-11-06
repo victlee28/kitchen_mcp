@@ -128,12 +128,13 @@ export function buildKitchen(doc, THREE, opts = {}) {
       g.add(group); pickables.push(mesh);
     }
     for (const d of [...(m.doors || []), ...(m.drawers || [])]) {
-      const { group, mesh } = box(d.dimensions, material_text(d.materialId), d.transform, { ...info, role: d.hingeSide ? 'door' : 'drawer' });
+      const { group, mesh } = box(d.dimensions, material_text(d.materialId), d.transform, { ...info, role: d.hingeSide ? 'door' : 'drawer', part: d.partRef });
       if (d.openingAngle && d.hingeSide) openDoor(group, d, s);
       const h = d.hardware;
       if (h && h.transform) {
         const hd = h.dimensions || { width: 12, height: 160, depth: 30 };
-        group.add(box(hd, material_text(h.materialId), h.transform, { ...info, role: 'handle' }, false).group);
+        const hb = box(hd, material_text(h.materialId), h.transform, { ...info, role: 'handle', part: h.partRef }, false);
+        group.add(hb.group); pickables.push(hb.mesh);   // the handle is in front of the door, so a ray reaches it first
       }
       g.add(group); pickables.push(mesh);
     }
@@ -152,7 +153,7 @@ export function buildKitchen(doc, THREE, opts = {}) {
   // thiết bị, phụ kiện, trang trí dạng hộp
   for (const a of [...(doc.appliances || []), ...(doc.accessories || []), ...(doc.decorations || []).filter((d) => !d.path)]) {
     if (!a.dimensions) continue;
-    const { group, mesh } = box(a.dimensions, material_text(a.materialId), a.transform, { module: a.sourceRef || a.id, role: a.type });
+    const { group, mesh } = box(a.dimensions, material_text(a.materialId), a.transform, { module: a.sourceRef || a.id, role: a.type, part: a.partRef });
     group.name = a.id; root.add(group); pickables.push(mesh);
   }
 

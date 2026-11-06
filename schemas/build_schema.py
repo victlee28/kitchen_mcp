@@ -1,4 +1,4 @@
-"""Sinh schema mở rộng v1.3.0 (gồm các bổ sung v1.1) từ schema gốc v1.0.0 của người dùng.
+"""Sinh schema mở rộng v1.4.0 (gồm các bổ sung v1.1) từ schema gốc v1.0.0 của người dùng.
 
 Nguyên tắc: KHÔNG đổi/bớt gì của bản gốc; chỉ thêm thuộc tính TÙY CHỌN vào $defs và các object con
 (những chỗ bản gốc không khóa additionalProperties). Nhờ vậy mọi file xuất ra hợp lệ với CẢ HAI bản.
@@ -22,11 +22,11 @@ def opt(schema: dict, desc: str) -> dict:
 def main():
     base = json.loads((HERE / "kitchen-threejs.v1.0.0.schema.json").read_text(encoding="utf-8"))
     s = copy.deepcopy(base)
-    s["$id"] = "https://example.com/schemas/kitchen-threejs-full.v1.3.0.schema.json"
-    s["title"] = base["title"] + " (v1.3)"
-    s["description"] = base["description"] + " v1.1 thêm trường tùy chọn cho tủ tham số, vùng tiêu chuẩn và ảnh điều khiển AI; v1.2 thêm phong cách phụ, gợi ý ảnh AI và bảng diễn giải mô tả; v1.3 thêm nguồn độ dày tường và thông tin mặt bằng nhập vào; tương thích ngược v1.0.0."
+    s["$id"] = "https://example.com/schemas/kitchen-threejs-full.v1.4.0.schema.json"
+    s["title"] = base["title"] + " (v1.4)"
+    s["description"] = base["description"] + " v1.1 thêm trường tùy chọn cho tủ tham số, vùng tiêu chuẩn và ảnh điều khiển AI; v1.2 thêm phong cách phụ, gợi ý ảnh AI và bảng diễn giải mô tả; v1.3 thêm nguồn độ dày tường và thông tin mặt bằng nhập vào; v1.4 thêm partRef (chi tiết nào bị chọn: cánh, ngăn kéo, tay nắm, mặt bàn); tương thích ngược v1.0.0."
     P, D = s["properties"], s["$defs"]
-    P["schemaVersion"]["default"] = "1.3.0"
+    P["schemaVersion"]["default"] = "1.4.0"
 
     D["vec2"] = {"type": "object", "required": ["u", "v"], "properties": {"u": {"type": "number"}, "v": {"type": "number"}},
                  "description": f"[{ADD}] Véc-tơ 2D cho lặp texture"}
@@ -158,6 +158,17 @@ def main():
         md["drawers"]["items"]["properties"]["sourceRef"] = opt({"type": "string"}, "ID chi tiết (= layer ID sửa ảnh)")
     dp["hinges"] = opt({"type": "array", "items": {"type": "object", "properties": {"offset": {"type": "number"}}}}, "Vị trí bản lề dọc cạnh")
 
+    # v1.4: partRef — which kind of detail a mesh is, so a click can be mapped to an action (door style, handle, countertop material...)
+    ADD4 = "Bổ sung v1.4 (VicKitchenCabinet)"
+    D["partRef"] = {"type": "object", "required": ["kind"], "description": f"[{ADD4}] Loại chi tiết của khối này, để giao diện biết bấm chuột phải vào thì sửa gì",
+                    "properties": {"kind": {"type": "string", "enum": ["door", "drawer", "handle", "countertop"]},
+                                   "module": {"type": "string", "description": "Mã module (KitchenSpec) chứa chi tiết; có với door/drawer/handle"},
+                                   "wall": {"type": "string", "description": "Tường của dải mặt bàn; có với countertop"}}}
+    PART_REF = {"$ref": "#/$defs/partRef", "description": f"[{ADD4}] Loại chi tiết (cánh, ngăn kéo, tay nắm, mặt bàn)"}
+    dp["partRef"] = PART_REF
+    if "drawers" in md and "items" in md["drawers"] and "properties" in md["drawers"]["items"]:
+        md["drawers"]["items"]["properties"]["partRef"] = PART_REF
+
     # part
     pt = D["part"]["properties"]
     pt["customRole"] = opt({"type": "string", "enum": ["end_panel", "filler", "niche_back", "niche_board", "blind_panel"]},
@@ -168,6 +179,8 @@ def main():
 
     D["hardwareRef"].setdefault("properties", {})["sourceRef"] = opt({"type": "string"}, "ID chi tiết tay nắm trong bộ biên dịch (= layer sửa ảnh, vd TD1-tay-nam-1)")
 
+    D["hardwareRef"]["properties"]["partRef"] = PART_REF
+
     # thiết bị, phụ kiện
     apply = D["appliance"]["properties"]
     apply["sourceRef"] = opt({"type": "string"}, "Mã thiết bị trong KitchenSpec")
@@ -177,6 +190,7 @@ def main():
                            "Khoảng hở yêu cầu")
     ac = D["accessoryInstance"]["properties"]
     ac["sourceRef"] = opt({"type": "string"}, "Mã trong KitchenSpec")
+    ac["partRef"] = PART_REF
     ac["edgeProfile"] = opt({"type": "string", "enum": ["square", "eased", "bevel", "bullnose", "ogee"]}, "Mặt đá: kiểu mép")
     ac["overhang"] = opt({"type": "number"}, "Mặt đá: độ nhô trước")
     ac["cutouts"] = opt({"type": "array", "items": {"type": "object", "properties": {"forId": {"$ref": "#/$defs/id"},

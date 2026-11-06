@@ -4,6 +4,8 @@ export const CLICK_MAX_MS = 600;
 export const DOOR_STYLES = [['flat', 'Cánh phẳng'], ['frame', 'Cánh khung (shaker)'], ['glass', 'Cánh kính']];
 export const MATERIAL_PRESETS = ['Trắng mờ', 'Laminate vân gỗ sồi sáng', 'Acrylic xám đậm', 'Laminate xanh rêu mờ', 'Melamine trắng'];
 export const MIN_ADD_WIDTH = 200, MAX_ADD_WIDTH = 1200;
+export const HANDLE_VARIANTS = [['bar', 'Tay thanh'], ['knob', 'Núm'], ['concealed', 'Tay âm'], ['none', 'Không tay (nhấn mở)']];
+export const MAX_OVERHANG = 100;
 
 /** Was the press-and-release a click (pointer barely moved, short)? down/up: {x, y, t}. */
 export function isClick(down, up) {
@@ -16,6 +18,9 @@ export function pickTarget(hits, moduleIds) {
   for (const h of hits) {
     const u = h.object?.userData || {};
     if (u.structureId && h.object.visible !== false) return { kind: 'structure', id: u.structureId };
+    const part = u.part;   // schema 1.4 partRef: a door, drawer front, handle or countertop run
+    if (part?.kind === 'countertop') return { kind: 'part', part: 'countertop', id: part.wall || 'back' };
+    if (part && ['door', 'drawer', 'handle'].includes(part.kind) && moduleIds.includes(part.module)) return { kind: 'part', part: part.kind, id: part.module };
     if (u.module && moduleIds.includes(u.module)) return { kind: 'module', id: u.module };
   }
   return null;
@@ -24,6 +29,12 @@ export function pickTarget(hits, moduleIds) {
 /** Actions the menu offers for a target. */
 export function actionsFor(target, spec) {
   if (!target) return [];
+  if (target.kind === 'part') {
+    if (target.part === 'countertop') return [{ id: 'countertopMaterial', label: 'Đổi vật liệu mặt bàn' }, { id: 'countertopOverhang', label: 'Đổi độ nhô mặt bàn' }];
+    if (target.part === 'handle') return [{ id: 'handleVariant', label: 'Đổi kiểu tay nắm' }, { id: 'handleMaterial', label: 'Đổi vật liệu tay nắm' }];
+    return [...(target.part === 'door' ? [{ id: 'doorStyle', label: 'Đổi kiểu cánh' }] : []), { id: 'material', label: 'Đổi vật liệu mặt trước' },
+      { id: 'handleVariant', label: 'Đổi kiểu tay nắm' }, { id: 'image', label: 'Sửa ảnh của module này' }];
+  }
   if (target.kind === 'structure') return [{ id: 'struct-hide', label: 'Ẩn thành phần này' }, { id: 'struct-isolate', label: 'Chỉ giữ thành phần này' }, { id: 'struct-all', label: 'Hiện tất cả' }];
   const m = spec?.module?.find((x) => x.id === target.id);
   const out = [{ id: 'material', label: 'Đổi vật liệu mặt trước' }, { id: 'doorStyle', label: 'Đổi kiểu cánh' }];
@@ -34,6 +45,18 @@ export function actionsFor(target, spec) {
 
 /** Operation for a form. Throws Error with a message the user can read. */
 export function buildOp(action, id, form, spec) {
+  if (action === 'countertopMaterial') {
+    const material = String(form.material || '').trim();
+    if (!material) throw new Error('Nhập tên vật liệu mặt bàn');
+    if (material === spec?.common?.material?.countertop) throw new Error('Mặt bàn đã dùng vật liệu này');
+    return { op: 'common', changes: { material: { ...(spec?.common?.material || {}), countertop: material } } };
+  }
+  if (action === 'countertopOverhang') {
+    const mm = Number(form.overhang);
+    if (!Number.isFinite(mm) || mm < 0 || mm > MAX_OVERHANG) throw new Error(`Độ nhô 0–${MAX_OVERHANG} mm`);
+    if (mm === spec?.common?.countertopOverhang) throw new Error('Mặt bàn đã nhô đúng mức này');
+    return { op: 'common', changes: { countertopOverhang: mm } };
+  }
   const m = spec?.module?.find((x) => x.id === id);
   if (!m) throw new Error(`Không còn module ${id} trong thiết kế`);
   if (action === 'material') {
@@ -45,6 +68,15 @@ export function buildOp(action, id, form, spec) {
   if (action === 'doorStyle') {
     if (!DOOR_STYLES.some(([v]) => v === form.style)) throw new Error('Chọn kiểu cánh');
     return { op: 'update', id, changes: { doorStyle: form.style }, closeGap: false };
+  }
+  if (action === 'handleVariant') {
+    if (!HANDLE_VARIANTS.some(([v]) => v === form.variant)) throw new Error('Chọn kiểu tay nắm');
+    return { op: 'update', id, changes: { handle: { ...(m.handle || {}), variant: form.variant } }, closeGap: false };   // keep the module's other handle overrides
+  }
+  if (action === 'handleMaterial') {
+    const material = String(form.material || '').trim();
+    if (!material) throw new Error('Nhập vật liệu tay nắm');
+    return { op: 'update', id, changes: { handle: { ...(m.handle || {}), material } }, closeGap: false };
   }
   if (action === 'remove') return { op: 'remove', id, closeGap: !!form.closeGap };
   if (action === 'add') {

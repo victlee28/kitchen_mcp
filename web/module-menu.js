@@ -1,6 +1,6 @@
 // Context menu on a cabinet module in the 3D view: pick an action, fill a small form, preview what it would change, confirm.
 // The server decides what a change means (POST .../propose previews, POST .../ops saves); nothing here edits data directly.
-import { actionsFor, buildOp, describeProposal, layerFor, menuPosition, DOOR_STYLES, MATERIAL_PRESETS } from './menu-logic.js';
+import { actionsFor, buildOp, describeProposal, layerFor, menuPosition, DOOR_STYLES, HANDLE_VARIANTS, MATERIAL_PRESETS } from './menu-logic.js';
 
 const el = (tag, props = {}, ...kids) => {
   const n = document.createElement(tag);
@@ -35,7 +35,9 @@ export function createModuleMenu(ctx) {
 
   function list() {
     const { spec } = ctx.getState();
-    const title = target.kind === 'module' ? `Module ${target.id}` : `Thành phần mặt bằng ${target.id.replace(/^STRUCT-/, '')}`;
+    const partName = { door: 'Cánh', drawer: 'Mặt ngăn kéo', handle: 'Tay nắm', countertop: 'Mặt bàn' }[target.part];
+    const title = target.kind === 'part' ? (target.part === 'countertop' ? 'Mặt bàn' : `${partName} · ${target.id}`)
+      : target.kind === 'module' ? `Module ${target.id}` : `Thành phần mặt bằng ${target.id.replace(/^STRUCT-/, '')}`;
     box.replaceChildren(header(title), el('ul', { class: 'ctx-list' }, ...actionsFor(target, spec).map((a) =>
       el('li', {}, el('button', { type: 'button', onclick: () => choose(a.id) }, a.label)))));
   }
@@ -52,7 +54,18 @@ export function createModuleMenu(ctx) {
     const { spec } = ctx.getState();
     const m = spec.module.find((x) => x.id === target.id);
     const f = {}; const fields = [];
-    if (action === 'material') {
+    if (action === 'countertopMaterial' || action === 'handleMaterial') {
+      f.material = el('input', { type: 'text', value: action === 'handleMaterial' ? (m?.handle?.material || spec.common?.handle?.material || '') : (spec.common?.material?.countertop || ''),
+        placeholder: action === 'handleMaterial' ? 'vd Nhôm đen mờ' : 'vd Đá granite tối', autocomplete: 'off' });
+      fields.push(el('label', {}, action === 'handleMaterial' ? 'Vật liệu tay nắm' : 'Vật liệu mặt bàn', f.material));
+    } else if (action === 'countertopOverhang') {
+      f.overhang = el('input', { type: 'number', min: 0, max: 100, step: 5, value: spec.common?.countertopOverhang ?? 20 });
+      fields.push(el('label', {}, 'Độ nhô phía trước (mm)', f.overhang));
+    } else if (action === 'handleVariant') {
+      const current = m?.handle?.variant || spec.common?.handleByStorey?.[m?.storey]?.variant || spec.common?.handle?.variant;
+      f.variant = el('select', {}, ...HANDLE_VARIANTS.map(([v, t]) => el('option', { value: v, selected: v === current }, t)));
+      fields.push(el('label', {}, 'Kiểu tay nắm', f.variant));
+    } else if (action === 'material') {
       const used = [...new Set([...Object.values(spec.common?.material || {}), ...spec.module.map((x) => x.material)].filter((v) => typeof v === 'string' && v))];
       const dl = el('datalist', { id: 'ctxMats' }, ...[...used, ...MATERIAL_PRESETS.filter((p) => !used.includes(p))].map((v) => el('option', { value: v })));
       f.material = el('input', { type: 'text', value: m?.material || '', placeholder: 'vd Laminate xanh rêu mờ', autocomplete: 'off' }); f.material.setAttribute('list', 'ctxMats');
@@ -80,7 +93,7 @@ export function createModuleMenu(ctx) {
       extra.push(el('button', { type: 'button', class: 'ghost', title: 'Mở tab sửa ảnh với vật liệu này; chưa đổi thiết kế',
         onclick: () => { const material = read().material.trim(); if (!material) return form(action, 'Nhập tên vật liệu'); const id = target.id; close(); ctx.imageEdit({ layer: layerFor('material', id), module: id, material, mode: 'quick', preview: true }); } }, 'Tạo ảnh với vật liệu này'));
     }
-    box.replaceChildren(header(`${target.id}: ${actionsFor(target, spec).find((a) => a.id === action)?.label}`), ...fields, out,
+    box.replaceChildren(header(`${target.part === 'countertop' ? 'Mặt bàn' : target.id}: ${actionsFor(target, spec).find((a) => a.id === action)?.label}`), ...fields, out,
       el('div', { class: 'row' }, go, ...extra, el('button', { type: 'button', class: 'ghost', onclick: list }, 'Quay lại')));
     (f.material || f.style || f.width || go).focus?.();
     box.onkeydown = (e) => { if (e.key === 'Enter' && e.target.tagName !== 'BUTTON') { e.preventDefault(); go.click(); } };
@@ -92,7 +105,7 @@ export function createModuleMenu(ctx) {
     try { op = buildOp(action, target.id, read(), spec); } catch (e) { return form(action, e.message); }
     busy = true; ctx.setStatus('Xem trước thay đổi…');
     try {
-      const { status, data } = await call(`/api/designs/${id}/propose`, { op, baseRev: rev, scope: [target.id] });
+      const { status, data } = await call(`/api/designs/${id}/propose`, { op, baseRev: rev, ...(target.part === 'countertop' ? {} : { scope: [target.id] }) });
       busy = false;
       if (status === 409) return stale(action);
       if (!data || data.error) return form(action, data?.error || `Lỗi ${status}`);

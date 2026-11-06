@@ -65,3 +65,28 @@ test('menu stays inside the viewport', () => {
   assert.deepEqual(menuPosition(900, 700, 300, 200, 1000, 800), { left: 692, top: 592 });
   assert.deepEqual(menuPosition(-5, 2, 300, 200, 1000, 800), { left: 8, top: 8 });
 });
+
+test('schema 1.4 partRef: a click on a handle, door or countertop maps to that part; the handle in front wins over its door', () => {
+  const ids = ['TD1'];
+  assert.deepEqual(pickTarget([hit({ module: 'TD1', part: { kind: 'handle', module: 'TD1' } }), hit({ module: 'TD1', part: { kind: 'door', module: 'TD1' } })], ids), { kind: 'part', part: 'handle', id: 'TD1' });
+  assert.deepEqual(pickTarget([hit({ module: 'TD1', part: { kind: 'door', module: 'TD1' } })], ids), { kind: 'part', part: 'door', id: 'TD1' });
+  assert.deepEqual(pickTarget([hit({ module: 'countertop-back', part: { kind: 'countertop', wall: 'back' } })], ids), { kind: 'part', part: 'countertop', id: 'back' });
+  assert.deepEqual(pickTarget([hit({ module: 'TD1', part: { kind: 'door', module: 'GONE' } })], ids), { kind: 'module', id: 'TD1' });   // module no longer in the design: fall back
+});
+
+test('part actions and their operations', () => {
+  const sp = { ...spec, common: { material: { base: 'Trắng', countertop: 'Đá trắng' }, countertopOverhang: 20 } };
+  sp.module[0].handle = { variant: 'bar', material: 'Nhôm' };
+  const ids = (t) => actionsFor(t, sp).map((a) => a.id);
+  assert.deepEqual(ids({ kind: 'part', part: 'countertop', id: 'back' }), ['countertopMaterial', 'countertopOverhang']);
+  assert.deepEqual(ids({ kind: 'part', part: 'handle', id: 'TD1' }), ['handleVariant', 'handleMaterial']);
+  assert.ok(ids({ kind: 'part', part: 'door', id: 'TD1' }).includes('doorStyle'));
+  assert.ok(!ids({ kind: 'part', part: 'drawer', id: 'TD1' }).includes('doorStyle'));
+  assert.deepEqual(buildOp('countertopMaterial', 'back', { material: 'Đá granite tối' }, sp), { op: 'common', changes: { material: { base: 'Trắng', countertop: 'Đá granite tối' } } });
+  assert.throws(() => buildOp('countertopMaterial', 'back', { material: 'Đá trắng' }, sp), /đã dùng/);
+  assert.deepEqual(buildOp('countertopOverhang', 'back', { overhang: '35' }, sp), { op: 'common', changes: { countertopOverhang: 35 } });
+  assert.throws(() => buildOp('countertopOverhang', 'back', { overhang: '500' }, sp));
+  assert.deepEqual(buildOp('handleVariant', 'TD1', { variant: 'knob' }, sp).changes, { handle: { variant: 'knob', material: 'Nhôm' } });   // keeps the other override
+  assert.deepEqual(buildOp('handleMaterial', 'TD1', { material: 'Đồng thau' }, sp).changes, { handle: { variant: 'bar', material: 'Đồng thau' } });
+  assert.throws(() => buildOp('handleVariant', 'TD1', { variant: 'ring' }, sp));
+});

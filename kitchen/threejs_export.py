@@ -340,6 +340,11 @@ def _module_entry(spec: KitchenSpec, m: Module, parts: list[Part], frame: Frame,
         if hw:
             door["hardware"] = hw
         entry["doors"].append(door)
+    for kind, items in (("door", entry["doors"]), ("drawer", entry["drawers"])):   # v1.4: what a click on this mesh means
+        for item in items:
+            item["partRef"] = {"kind": kind, "module": m.id}
+            if item.get("hardware"):
+                item["hardware"]["partRef"] = {"kind": "handle", "module": m.id}
     entry["construction"]["hingeCountPerDoor"] = max((len(dd["hinges"]) for dd in entry["doors"]), default=0)
     return entry
 
@@ -445,7 +450,8 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
                                 "dimensions": _dims(cw, h, cd), "transform": _tf((llo[0] + 10, 0, llo[2] + 10)), "estimated": True})
         accessories.append({"id": f"ACC-COUNTERTOP-{i + 1}", "type": "Countertop", "assetId": "ASSET-COUNTERTOP", "dimensions": _dims(w, h, d),
                             "transform": _tf(fr.pos, fr.rot), "materialId": mats["countertop"], "edgeProfile": "eased", "overhang": c.countertopOverhang,
-                            "cutouts": cutouts, "sourceRef": f"countertop-{p.wall}"})
+                            "cutouts": cutouts, "sourceRef": f"countertop-{p.wall}",
+                            "partRef": {"kind": "countertop", "wall": p.wall}})
         height = backsplash_height(spec, require(p.wall, "countertop wall"))  # cùng một hàm với hình học 3D
         if c.material.get("wallTile") and height >= 50:  # ốp tường giữa mặt đá và tủ trên, sát tường
             accessories.append({"id": f"ACC-BACKSPLASH-{i + 1}", "type": "Backsplash_Tile", "assetId": "ASSET-PANEL",
@@ -524,7 +530,7 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
     palette.update({f"module:{m.id}": _hex(_module_color(m.id)) for m in spec.module})
 
     doc = {
-        "schemaVersion": "1.3.0",
+        "schemaVersion": "1.4.0",
         "metadata": {"designId": re.sub(r"[^A-Za-z0-9_.:-]", "-", design_id) or "design", "projectName": spec.name,
                      "description": spec.source or "", "style": spec.style, "revision": max(1, rev), "author": "kitchen-design-mcp",
                      "createdAt": created_at,

@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://example.com/schemas/kitchen-threejs-full.v1.3.0.schema.json",
-  "title": "Complete Kitchen Three.js Scene Schema (v1.3)",
-  "description": "Comprehensive parametric schema for rendering fully-detailed kitchen scenes and cabinet systems in Three.js. v1.1 thêm trường tùy chọn cho tủ tham số, vùng tiêu chuẩn và ảnh điều khiển AI; v1.2 thêm phong cách phụ, gợi ý ảnh AI và bảng diễn giải mô tả; v1.3 thêm nguồn độ dày tường và thông tin mặt bằng nhập vào; tương thích ngược v1.0.0.",
+  "$id": "https://example.com/schemas/kitchen-threejs-full.v1.4.0.schema.json",
+  "title": "Complete Kitchen Three.js Scene Schema (v1.4)",
+  "description": "Comprehensive parametric schema for rendering fully-detailed kitchen scenes and cabinet systems in Three.js. v1.1 thêm trường tùy chọn cho tủ tham số, vùng tiêu chuẩn và ảnh điều khiển AI; v1.2 thêm phong cách phụ, gợi ý ảnh AI và bảng diễn giải mô tả; v1.3 thêm nguồn độ dày tường và thông tin mặt bằng nhập vào; v1.4 thêm partRef (chi tiết nào bị chọn: cánh, ngăn kéo, tay nắm, mặt bàn); tương thích ngược v1.0.0.",
   "type": "object",
   "required": [
     "schemaVersion",
@@ -17,7 +17,7 @@
   "properties": {
     "schemaVersion": {
       "type": "string",
-      "default": "1.3.0"
+      "default": "1.4.0"
     },
     "metadata": {
       "type": "object",
@@ -1311,6 +1311,10 @@
                   }
                 },
                 "description": "[Bổ sung v1.1 (VicKitchenCabinet)] Vị trí bản lề dọc cạnh"
+              },
+              "partRef": {
+                "$ref": "#/$defs/partRef",
+                "description": "[Bổ sung v1.4 (VicKitchenCabinet)] Loại chi tiết (cánh, ngăn kéo, tay nắm, mặt bàn)"
               }
             }
           }
@@ -1344,6 +1348,10 @@
               "sourceRef": {
                 "type": "string",
                 "description": "[Bổ sung v1.1 (VicKitchenCabinet)] ID chi tiết (= layer ID sửa ảnh)"
+              },
+              "partRef": {
+                "$ref": "#/$defs/partRef",
+                "description": "[Bổ sung v1.4 (VicKitchenCabinet)] Loại chi tiết (cánh, ngăn kéo, tay nắm, mặt bàn)"
               }
             }
           }
@@ -1571,6 +1579,10 @@
         "sourceRef": {
           "type": "string",
           "description": "[Bổ sung v1.1 (VicKitchenCabinet)] ID chi tiết tay nắm trong bộ biên dịch (= layer sửa ảnh, vd TD1-tay-nam-1)"
+        },
+        "partRef": {
+          "$ref": "#/$defs/partRef",
+          "description": "[Bổ sung v1.4 (VicKitchenCabinet)] Loại chi tiết (cánh, ngăn kéo, tay nắm, mặt bàn)"
         }
       }
     },
@@ -1714,6 +1726,10 @@
         "sourceRef": {
           "type": "string",
           "description": "[Bổ sung v1.1 (VicKitchenCabinet)] Mã trong KitchenSpec"
+        },
+        "partRef": {
+          "$ref": "#/$defs/partRef",
+          "description": "[Bổ sung v1.4 (VicKitchenCabinet)] Loại chi tiết (cánh, ngăn kéo, tay nắm, mặt bàn)"
         },
         "edgeProfile": {
           "type": "string",
@@ -1973,6 +1989,32 @@
             "type": "string"
           },
           "description": "chủ đề -> mã quy tắc đã áp"
+        }
+      }
+    },
+    "partRef": {
+      "type": "object",
+      "required": [
+        "kind"
+      ],
+      "description": "[Bổ sung v1.4 (VicKitchenCabinet)] Loại chi tiết của khối này, để giao diện biết bấm chuột phải vào thì sửa gì",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "door",
+            "drawer",
+            "handle",
+            "countertop"
+          ]
+        },
+        "module": {
+          "type": "string",
+          "description": "Mã module (KitchenSpec) chứa chi tiết; có với door/drawer/handle"
+        },
+        "wall": {
+          "type": "string",
+          "description": "Tường của dải mặt bàn; có với countertop"
         }
       }
     }

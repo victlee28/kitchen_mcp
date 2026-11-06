@@ -121,7 +121,9 @@ renderer.domElement.addEventListener('pointerup', (ev) => {
   raycaster.setFromCamera(pointer, camera);
   const target = pickTarget(raycaster.intersectObjects([...meshes, ...structSel.pickables()], false), state.spec.module.map((m) => m.id));
   if (!target) { moduleMenu.close(); return; }
-  if (target.kind === 'module') { structSel.clear(); selectModule(target.id); } else structSel.select(target.id);
+  if (target.kind === 'module' || (target.kind === 'part' && target.part !== 'countertop')) { structSel.clear(); selectModule(target.id); }
+  else if (target.kind === 'part') structSel.clear();
+  else structSel.select(target.id);
   moduleMenu.open(target, ev.clientX, ev.clientY);
 });
 const moduleMenu = createModuleMenu({

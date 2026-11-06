@@ -450,7 +450,7 @@ class TestHttp(Tmp):
         self.assertGreater(len(json.loads(d)["parts"]), 50)
         st, _, d = self.req("GET", f"/api/designs/{did}/threejs?country=AU")
         doc = json.loads(d)
-        self.assertEqual((st, doc["schemaVersion"], doc["metadata"]["region"]["countryCode"]), (200, "1.3.0", "AU"))
+        self.assertEqual((st, doc["schemaVersion"], doc["metadata"]["region"]["countryCode"]), (200, "1.4.0", "AU"))
 
 
 if __name__ == "__main__":
