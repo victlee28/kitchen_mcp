@@ -92,8 +92,16 @@ def _module_frame(m: Module, lsau: float) -> tuple[Frame, tuple[float, float, fl
         return Frame((-(m.fromCorner + m.width), m.y, 0), 0.0), (m.width, m.height, m.depth)
     if m.wall == "right":
         return Frame((0, m.y, m.fromCorner), -90.0), (m.width, m.height, m.depth)
-    if m.wall == "island":  # faces the back wall: local +z points to world -z, anchor = back-left corner seen from the front
-        return Frame((-m.fromCorner, m.y, m.offset + m.depth), 180.0), (m.width, m.height, m.depth)
+    if m.wall == "island":  # free run; anchor = back-left corner seen from the front, one frame per facing
+        size = (m.width, m.height, m.depth)
+        facing = m.facing or "-z"
+        if facing == "-z":      # faces the back wall: local +z points to world -z
+            return Frame((-m.fromCorner, m.y, m.offset + m.depth), 180.0), size
+        if facing == "+z":      # like the back wall, standing at z = offset - depth
+            return Frame((-(m.fromCorner + m.width), m.y, m.offset - m.depth), 0.0), size
+        if facing == "-x":      # like the right wall, door face at x = -offset
+            return Frame((-m.offset + m.depth, m.y, m.fromCorner), -90.0), size
+        return Frame((-m.offset - m.depth, m.y, m.fromCorner + m.width), 90.0), size
     return Frame((-lsau, m.y, m.fromCorner + m.width), 90.0), (m.width, m.height, m.depth)
 
 
@@ -412,7 +420,7 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
         p = ps[0]
         host = spec.find(tb.module) if tb.module else next((mm for mm in spec.module if mm.wall == tb.wall and mm.storey == "base"
                                                           and tb.center is not None and mm.fromCorner <= tb.center < mm.endAt), None)
-        wall = host.wall if host and host.wall != "corner" else (tb.wall or "back")
+        wall = host.orient if host and host.wall != "corner" else (tb.wall or "back")
         fr = Frame.for_aabb(p.min, p.max, wall)
         openings, hi = fr.box_local(p.min, p.max)
         dims = _dims(*(hi[i] - openings[i] for i in range(3)))
@@ -437,7 +445,7 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
     # mặt đá (+ lỗ khoét ước lượng) và ốp tường
     cut_targets = [x for x in appliances if x["type"].startswith("Cooktop")] + [x for x in accessories if x["type"].startswith("Sink")]
     for i, p in enumerate([p for p in scene.parts if p.type == "countertop"]):
-        fr = Frame.for_aabb(p.min, p.max, p.wall)
+        fr = Frame.for_aabb(p.min, p.max, p.orient)
         openings, hi = fr.box_local(p.min, p.max)
         w, h, d = (hi[k] - openings[k] for k in range(3))
         cutouts = []

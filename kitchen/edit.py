@@ -18,6 +18,8 @@ def _clone(spec: KitchenSpec) -> KitchenSpec:
 
 def _same_run(a: Module, b: Module) -> bool:
     """Hai module cùng tường và chồng nhau theo phương đứng."""
+    if a.wall == "island" and (a.offset, a.facing or "-z") != (b.offset, b.facing or "-z"):
+        return False                      # free runs at another place or facing are other runs
     return a.wall == b.wall and a.wall != "corner" and min(a.y + a.height, b.y + b.height) - max(a.y, b.y) > 1
 
 

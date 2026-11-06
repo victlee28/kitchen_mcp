@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 
 from .numeric import round_half_away
 from . import roomctx, structure_mesh
-from .spec import ViewAngle, KitchenSpec, Module, effective_handle, to_data
+from .spec import ORIENT_OF_FACING, ViewAngle, KitchenSpec, Module, effective_handle, to_data
 from .errors import InvalidInput, require
 
 COLORS = {  # màu hiển thị theo loại chi tiết (viewer 3D, mask ngữ nghĩa)
@@ -31,6 +31,11 @@ class Part:
     max: tuple[float, float, float]
     wall: str | None = None  # tường chứa chi tiết (để suy hướng mặt trước khi xuất three.js)
     parent: str | None = None  # chi tiết cha (tay nắm -> cánh/ngăn kéo)
+    face: str | None = None  # hướng mặt trước (back/right/left/island) khi khác tường: dãy tự do quay ra một trong bốn hướng
+
+    @property
+    def orient(self) -> str:
+        return self.face or self.wall or "back"
 
     def to_json(self) -> dict:
         c = [(a + b) / 2 for a, b in zip(self.min, self.max)]
@@ -85,7 +90,7 @@ def _wall_length(spec: KitchenSpec) -> tuple[float, float]:
             vals += [m.rightLength or 0 for m in spec.module if m.type == "corner-shelf"]
         return max(vals, default=0)
     lsau = (spec.room.length("back") if spec.room else None) or endAt("back") + 600
-    lphai = (spec.room.length("right") if spec.room else None) or max(endAt("right"), endAt("left"), *[m.offset + m.depth for m in spec.module if m.wall == "island"], 0) + 600
+    lphai = (spec.room.length("right") if spec.room else None) or max(endAt("right"), endAt("left"), *[m.offset + m.depth for m in spec.module if m.wall == "island" and (m.facing or "-z") in ("-z", "+z")], 0) + 600
     return lsau, lphai
 
 
@@ -96,26 +101,35 @@ class _Builder:
         self.lsau, self.lphai = _wall_length(spec)
         self.parts: list[Part] = []
         self._n: dict[str, int] = {}
-        self._isl = {m.id: (m.offset, m.depth) for m in spec.module if m.wall == "island"}  # island / peninsula: (z of the door face, depth)
+        self._isl = {m.id: (m.offset, m.depth, m.facing or "-z") for m in spec.module if m.wall == "island"}  # free run: (door face position, depth, facing)
 
     # ---- toạ độ tường -> thế giới
-    def box(self, module: str | None, type: str, wall: str, s0, s1, d0, d1, y0, y1, isl: tuple[float, float] | None = None):
+    def box(self, module: str | None, type: str, wall: str, s0, s1, d0, d1, y0, y1, isl: tuple[float, float, str] | None = None):
         if s1 - s0 <= 0.01 or d1 - d0 <= 0.01 or y1 - y0 <= 0.01:
             return
+        face = None
         if wall == "back":
             mn, mx = (-s1, y0, d0), (-s0, y1, d1)
         elif wall == "right":
             mn, mx = (-d1, y0, s0), (-d0, y1, s1)
         elif wall == "left":
             mn, mx = (-self.lsau + d0, y0, s0), (-self.lsau + d1, y1, s1)
-        elif wall == "island":  # free-standing run along x; the door face looks towards the back wall (-z), so depth is mirrored
-            z0, depth = isl or self._isl[require(module, "island part module")]
-            mn, mx = (-s1, y0, z0 + depth - d1), (-s0, y1, z0 + depth - d0)
+        elif wall == "island":  # free run: s along x (facing -z / +z) or along z (facing -x / +x); d runs from the back of the cabinet to its door face
+            pos, depth, facing = isl or self._isl[require(module, "island part module")]
+            if facing == "-z":      # doors look at the back wall, so depth is mirrored
+                mn, mx = (-s1, y0, pos + depth - d1), (-s0, y1, pos + depth - d0)
+            elif facing == "+z":    # like the back wall, standing at z = pos - depth
+                mn, mx = (-s1, y0, pos - depth + d0), (-s0, y1, pos - depth + d1)
+            elif facing == "-x":    # like the right wall, door face at x = -pos
+                mn, mx = (-pos + depth - d1, y0, s0), (-pos + depth - d0, y1, s1)
+            else:                   # "+x": like the left wall, door face at x = -pos
+                mn, mx = (-pos - depth + d0, y0, s0), (-pos - depth + d1, y1, s1)
+            face = ORIENT_OF_FACING[facing]
         else:
             raise InvalidInput(wall)
         key = f"{module or 'room'}-{type}"
         self._n[key] = self._n.get(key, 0) + 1
-        self.parts.append(Part(f"{key}-{self._n[key]}", module, type, mn, mx, wall))
+        self.parts.append(Part(f"{key}-{self._n[key]}", module, type, mn, mx, wall, face=face if wall == "island" else None))
 
     def door_widths(self, m: Module, s0, s1, y0, y1, type="door"):
         """Chia dải mặt trước [s0,s1]x[y0,y1] thành cánh theo tỉ lệ m.canh, chừa khe."""
@@ -209,9 +223,9 @@ class _Builder:
     def countertop(self):
         c = self.c
         groups = [(w, None) for w in ("back", "right", "left")] + \
-                 [("island", z) for z in sorted({m.offset for m in self.spec.module if m.wall == "island" and m.storey == "base"})]
+                 [("island", z) for z in sorted({(m.offset, m.facing or "-z") for m in self.spec.module if m.wall == "island" and m.storey == "base"})]
         for wall, z in groups:
-            ms = sorted((m for m in self.spec.module if m.wall == wall and m.storey == "base" and (z is None or m.offset == z)), key=lambda m: m.fromCorner)
+            ms = sorted((m for m in self.spec.module if m.wall == wall and m.storey == "base" and (z is None or (m.offset, m.facing or "-z") == z)), key=lambda m: m.fromCorner)
             run: list[list[float]] = []
             for m in ms:
                 if run and m.fromCorner <= run[-1][1] + 1:
@@ -221,7 +235,7 @@ class _Builder:
                     run.append([m.fromCorner, m.endAt, m.depth])
             for s0, s1, depth in run:
                 self.box(None, "countertop", wall, s0, s1, 0, depth + c.countertopOverhang,
-                         c.baseTop, c.countertop, isl=(z, depth) if z is not None else None)
+                         c.baseTop, c.countertop, isl=(z[0], depth, z[1]) if z is not None else None)
                 if c.material.get("wallTile") and wall != "island":  # an island has no wall behind it
                     self.box(None, "wall-tile", wall, s0, s1, 0, 8, c.countertop, c.countertop + backsplash_height(self.spec, wall))
 
@@ -282,11 +296,11 @@ class _Builder:
     # ---- tay nắm (kitchen.hardware: cùng quy tắc với bộ xuất three.js)
     def _local(self, p: Part) -> tuple[float, float, float, float, float]:
         """(x0, x1, y0, y1, mặt trước) của cánh trong hệ 'nhìn từ phía trước'."""
-        if p.wall == "right":
+        if p.orient == "right":
             return p.min[2], p.max[2], p.min[1], p.max[1], p.min[0]
-        if p.wall == "left":
+        if p.orient == "left":
             return -p.max[2], -p.min[2], p.min[1], p.max[1], p.max[0]
-        if p.wall == "island":
+        if p.orient == "island":
             return -p.max[0], -p.min[0], p.min[1], p.max[1], p.min[2]
         return p.min[0], p.max[0], p.min[1], p.max[1], p.max[2]
 
@@ -304,17 +318,17 @@ class _Builder:
             if hd is None:
                 continue
             (hw, hh, dd), u0, v0 = hd["size"], x0 + hd["x"], y0 + hd["y"]
-            if p.wall == "right":
+            if p.orient == "right":
                 mn, mx = (f - dd, v0, u0), (f, v0 + hh, u0 + hw)
-            elif p.wall == "left":
+            elif p.orient == "left":
                 mn, mx = (f, v0, -(u0 + hw)), (f + dd, v0 + hh, -u0)
-            elif p.wall == "island":
+            elif p.orient == "island":
                 mn, mx = (-(u0 + hw), v0, f - dd), (-u0, v0 + hh, f)
             else:
                 mn, mx = (u0, v0, f), (u0 + hw, v0 + hh, f + dd)
             key = f"{m.id}-handle"
             self._n[key] = self._n.get(key, 0) + 1
-            self.parts.append(Part(f"{key}-{self._n[key]}", m.id, "handle", mn, mx, p.wall, parent=p.id))
+            self.parts.append(Part(f"{key}-{self._n[key]}", m.id, "handle", mn, mx, p.wall, parent=p.id, face=p.face))
 
     def build(self) -> Scene:
         for m in self.spec.module:

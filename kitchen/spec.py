@@ -20,6 +20,10 @@ from .errors import NotFound
 
 WALLS = ("back", "right", "left")
 STOREYS = ("base", "upper", "loft", "tall", "corner")
+FACINGS = ("-z", "+z", "-x", "+x")       # direction the doors of a free-standing run look (scene axes); the default "-z" faces the back wall
+ORIENT_OF_FACING = {"-z": "island", "+z": "back", "-x": "right", "+x": "left"}   # which wall's frame has the same orientation
+
+
 MODULE_TYPES = (
     "base", "base-sink", "base-corner-sink", "base-cooktop", "base-oven", "base-end", "base-drawers",
     "upper", "upper-glass", "upper-open", "upper-hood", "upper-loft",
@@ -112,7 +116,8 @@ class Module(_Base):
     type: str = "base"
     name: str = ""
     wall: Literal["back", "right", "left", "corner", "island"] = "back"
-    offset: float = Field(default=0, ge=0, description="wall='island' only (island / peninsula): distance from the back-wall plane to the door face of the run, in mm; fromCorner is measured from the right-wall plane")
+    offset: float = Field(default=0, ge=0, description="wall='island' only (island / peninsula): door face position of the run in mm. For facing -z / +z (runs along x): distance from the back-wall plane (z); fromCorner is measured from the right-wall plane. For facing -x / +x (runs along z): distance from the right-wall plane towards -x (x = -offset); fromCorner is measured from the back-wall plane")
+    facing: Literal["-z", "+z", "-x", "+x"] | None = Field(default=None, description="wall='island' only: direction the doors look in scene axes. Default (null) = -z, towards the back wall. Lets a run stand against any axis-parallel edge of an object and face outward")
     fromCorner: float = Field(default=0, ge=0)
     width: float = Field(default=0, ge=0)
     y: float = Field(default=0, ge=0)
@@ -133,8 +138,15 @@ class Module(_Base):
     handle: HandleOverride | None = Field(default=None, description="Handle settings of this module only; overrides the storey and common handle")
     note: str | None = None
 
+    @property
+    def orient(self) -> str:
+        """Which of back / right / left / island this module's front looks like (a free run takes the orientation of its facing)."""
+        return ORIENT_OF_FACING[self.facing or "-z"] if self.wall == "island" else self.wall
+
     @model_validator(mode="after")
     def _validate(self):
+        if self.facing and self.wall != "island":
+            raise ValueError(f"{self.id}: facing only applies to wall='island'")
         if self.type not in MODULE_TYPES:
             raise ValueError(f"loai '{self.type}' không hỗ trợ; dùng một trong: {', '.join(MODULE_TYPES)}")
         if self.type == "corner-shelf":

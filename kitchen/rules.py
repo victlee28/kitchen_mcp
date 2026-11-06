@@ -38,7 +38,15 @@ def _envelopes(spec: KitchenSpec) -> list[tuple[str, tuple, tuple]]:
         elif m.wall == "right":
             out.append((m.id, (-m.depth, y0, m.fromCorner), (0, y1, m.endAt)))
         elif m.wall == "island":
-            out.append((m.id, (-m.endAt, y0, m.offset), (-m.fromCorner, y1, m.offset + m.depth)))
+            f = m.facing or "-z"
+            if f == "-z":
+                out.append((m.id, (-m.endAt, y0, m.offset), (-m.fromCorner, y1, m.offset + m.depth)))
+            elif f == "+z":
+                out.append((m.id, (-m.endAt, y0, m.offset - m.depth), (-m.fromCorner, y1, m.offset)))
+            elif f == "-x":
+                out.append((m.id, (-m.offset, y0, m.fromCorner), (-m.offset + m.depth, y1, m.endAt)))
+            else:
+                out.append((m.id, (-m.offset - m.depth, y0, m.fromCorner), (-m.offset, y1, m.endAt)))
         else:
             out.append((m.id, (-lsau, y0, m.fromCorner), (-lsau + m.depth, y1, m.endAt)))
     return out
