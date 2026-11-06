@@ -8,10 +8,9 @@ import unicodedata
 import uuid
 from contextlib import contextmanager
 from pathlib import Path
-from . import knowledge_seed, regions
-from . import legacy as legacy_schema
+from . import knowledge_seed, migrations, regions
 from .spec import KitchenSpec, dump_spec
-SCHEMA = "\nCREATE TABLE IF NOT EXISTS knowledge (\n id INTEGER PRIMARY KEY AUTOINCREMENT,\n kind TEXT NOT NULL CHECK(kind IN ('standard','rule','material')),\n code TEXT NOT NULL, title TEXT NOT NULL, content TEXT NOT NULL,\n source_url TEXT, metadata_json TEXT NOT NULL DEFAULT '{}', active INTEGER NOT NULL DEFAULT 1,\n created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP\n);\nCREATE INDEX IF NOT EXISTS idx_knowledge_kind ON knowledge(kind, active);\nCREATE TABLE IF NOT EXISTS designs (\n id TEXT PRIMARY KEY, name TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP\n);\nCREATE TABLE IF NOT EXISTS revisions (\n design_id TEXT NOT NULL REFERENCES designs(id), rev INTEGER NOT NULL, spec_json TEXT NOT NULL,\n operation TEXT NOT NULL, source TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,\n PRIMARY KEY (design_id, rev)\n);\nCREATE TABLE IF NOT EXISTS image_jobs (\n id TEXT PRIMARY KEY, design_id TEXT NOT NULL REFERENCES designs(id), rev INTEGER NOT NULL, view TEXT NOT NULL,\n render_key TEXT NOT NULL, kind TEXT NOT NULL, mode TEXT NOT NULL, target TEXT, backend TEXT NOT NULL,\n status TEXT NOT NULL, request_json TEXT NOT NULL, result_json TEXT NOT NULL DEFAULT '{}', error TEXT,\n created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP\n);\nCREATE INDEX IF NOT EXISTS idx_image_jobs_design ON image_jobs(design_id, view, render_key, status);\nCREATE TABLE IF NOT EXISTS floorplans (\n ref TEXT PRIMARY KEY, source_json TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP\n);\n"
+SCHEMA = migrations.BASELINE   # frozen baseline; changes go in kitchen/migrations.py
 
 class ConflictError(Exception):
     """The supplied base revision is no longer the latest revision."""
@@ -27,8 +26,7 @@ class Store:
         self.path = str(path)
         self._lock = threading.Lock()
         with self._conn() as connection:
-            legacy_schema.migrate_database(connection)
-            connection.executescript(SCHEMA)
+            self.migration = migrations.run(connection, self.path)
             self.seed_result = knowledge_seed.apply(connection)
 
     @contextmanager

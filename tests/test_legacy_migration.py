@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from kitchen import legacy
+from kitchen import legacy, migrations
 from kitchen.store import Store
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -55,7 +55,7 @@ class LegacyMigrationTest(unittest.TestCase):
             self.assertEqual(revision_cols[3:5], ["operation", "source"])
             self.assertEqual(json.loads(spec_json), legacy.convert_spec(old))
             self.assertEqual(json.loads(operation), {"op": "common", "changes": {}})
-            self.assertEqual(version, 1)
+            self.assertEqual(version, migrations.LATEST)
             Store(path)  # second open is a no-op
 
     def test_renders_migration(self):
