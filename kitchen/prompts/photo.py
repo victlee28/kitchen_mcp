@@ -4,14 +4,14 @@ Một nguồn cho mọi loại job để ảnh nhất quán:
 - full(spec, anh_sang)  : ảnh đầy đủ (gen-0, xuất cho AI) — ánh sáng, máy ảnh, vật liệu, bóng đổ, hậu kỳ.
 - local(spec, ...)      : sửa một vùng (edit / sửa hình) — vùng sửa phải hoà vào ảnh gốc: cùng hướng sáng, nhiễu hạt, độ nét…
 - tags(spec, anh_sang)  : cụm từ cho prompt ComfyUI.
-- NEGATIVE              : những dấu hiệu "ảnh dựng 3D / ảnh AI" cần tránh.
+- NEGATIVE_PHOTO        : những dấu hiệu "ảnh dựng 3D / ảnh AI" cần tránh.
 Nội dung suy từ thiết kế: có cửa sổ thì có nắng chiếu qua cửa sổ, có tủ trên thì có đèn LED hắt dưới tủ, vật liệu vân gỗ /
 đá / inox / kính / sơn bóng thì mô tả bề mặt tương ứng.
 """
 from __future__ import annotations
 
-from . import vocab
-from .spec import KitchenSpec
+from .. import vocab
+from ..spec import KitchenSpec
 
 LIGHTING = {
     "daylight": ("bright natural daylight on an overcast-to-sunny morning, neutral white balance around 5000K, soft large-source "
@@ -23,7 +23,7 @@ LIGHTING = {
 }
 LIGHTING_VI = {"daylight": "Ban ngày, sáng tự nhiên", "late-afternoon": "Nắng chiều ấm", "dim-evening": "Buổi tối, đèn ấm"}
 
-NEGATIVE = ["CGI", "3D render look", "video game graphics", "plastic-looking surfaces", "flat uniform lighting",
+NEGATIVE_PHOTO = ["CGI", "3D render look", "video game graphics", "plastic-looking surfaces", "flat uniform lighting",
             "oversaturated colors", "HDR halos", "overexposed highlights", "crushed black shadows", "cartoon", "illustration",
             "painting", "fisheye distortion", "converging vertical lines", "wavy or melted edges", "smeared textures",
             "repeated tiling texture pattern", "floating objects without contact shadows", "fake bokeh", "lens flare",

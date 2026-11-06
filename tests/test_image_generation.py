@@ -20,7 +20,7 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from kitchen import geometry, imaging, layers, render, threejs_export  # noqa: E402
+from kitchen import geometry, imaging, layers, prompts, render, threejs_export  # noqa: E402
 from kitchen.service import KitchenService  # noqa: E402
 from kitchen.spec import load_spec  # noqa: E402
 from kitchen.store import ConflictError  # noqa: E402
@@ -503,7 +503,7 @@ class TestRealism(_Base):
     """Câu lệnh luôn kèm yêu cầu ảnh thật; ánh sáng chọn được cho ảnh đầy đủ; sửa vùng bám ảnh gốc."""
 
     def test_prompts(self):
-        from kitchen import realism
+        from kitchen import prompts
         im = self.svc.images
         g = im.create(self.did, VIEW, backend="job-package", kind="gen0", lighting="dim-evening")
         r = json.loads((Path(g["result"]["dir"]) / "request.json").read_text(encoding="utf-8"))
@@ -523,7 +523,7 @@ class TestRealism(_Base):
         lean = json.loads(Path(self.svc.ai_export(self.did, views=[VIEW], embed=True, lighting="late-afternoon")["file"]).read_text(encoding="utf-8"))
         self.assertEqual(lean["lighting"], "late-afternoon")
         self.assertIn("late-afternoon", lean["views"][0]["instruction"])
-        self.assertIn("window", realism.full(_spec()) if any(openings for t in (_spec().room.wall if _spec().room else []) for openings in t.openings)
+        self.assertIn("window", prompts.full(_spec()) if any(openings for t in (_spec().room.wall if _spec().room else []) for openings in t.openings)
                       else "window")
 
 

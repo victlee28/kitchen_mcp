@@ -22,7 +22,7 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Any, Callable
 
-from .. import geometry, geometry_edit, realism, render
+from .. import geometry, geometry_edit, prompts, render
 from ..backends import BACKENDS
 from ..config import Config
 from ..errors import InvalidInput
@@ -71,8 +71,8 @@ class ImageJobs(BaseImages, RequestBuilder, Packages, Runners, Results):
         tasks, preview, geometry_items, operation, lighting = new.tasks, new.preview, new.geometry_items, new.operation, new.lighting
         if kind not in KINDS:
             raise InvalidInput("kind phải là edit, gen0 hoặc geometry_edit")
-        if lighting not in (None, "", *realism.LIGHTING):
-            raise InvalidInput(f"anhSang phải là một trong: {', '.join(realism.LIGHTING)}")
+        if lighting not in (None, "", *prompts.LIGHTING):
+            raise InvalidInput(f"anhSang phải là một trong: {', '.join(prompts.LIGHTING)}")
         if operation is not None:  # bảng thao tác: workflow + trọng số ControlNet mặc định theo loại việc
             if operation not in geometry_edit.OPERATIONS:
                 raise InvalidInput(f"thaoTac phải là một trong: {', '.join(geometry_edit.OPERATIONS)}")

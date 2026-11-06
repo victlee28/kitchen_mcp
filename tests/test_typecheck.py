@@ -22,7 +22,8 @@ BASELINE = Path(__file__).parent / "typecheck_baseline.json"
 
 def checked_files() -> list[str]:
     """Core modules plus every module of the image-job package (``images/``), as paths relative to ``kitchen/``."""
-    return [f"{m}.py" for m in rules.CORE_MODULES] + sorted(f"images/{p.name}" for p in (ROOT / "kitchen" / "images").glob("*.py"))
+    core = [rules.module_path(m).relative_to(rules.KITCHEN).as_posix() for m in rules.CORE_ALL]
+    return core + sorted(f"images/{p.name}" for p in (ROOT / "kitchen" / "images").glob("*.py"))
 
 
 def errors_per_file() -> dict[str, int]:

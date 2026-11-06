@@ -7,7 +7,7 @@ import shutil
 
 from PIL import Image
 
-from .. import request_check, backends, edit, imaging, realism
+from .. import request_check, backends, edit, imaging, prompts
 from ..errors import KitchenError
 from .request import JobRequest, size_of
 from .common import JobsContext, GROW_PX, ZONE_COLORS
@@ -73,11 +73,11 @@ class Packages(JobsContext):
             d = self._render_dir(job["design_id"], job["rev"], job["view"])
             src = d / "beauty.png" if (d / "beauty.png").exists() else d / "albedo.png"
             spec, _ = self.store.get(job["design_id"], job["rev"])
-            real = req.get("photoImage") or realism.full(spec, req.get("lighting") or "daylight")
-            return backends.gemini_text("gen0", "", req.get("instruction", ""), req["globalPrompt"], realism=real), [("input-image", src)]
+            real = req.get("photoImage") or prompts.full(spec, req.get("lighting") or "daylight")
+            return prompts.gemini_text("gen0", "", req.get("instruction", ""), req["globalPrompt"], realism=real), [("input-image", src)]
         if req["kind"] == "geometry_edit":
             t = req.get("tasks", [{}])[0]
-            text = backends.gemini_text_geometry(req.get("operation") or t.get("operation") or "replace-item", [x["en"] for x in req.get("description", [])],
+            text = prompts.gemini_text_geometry(req.get("operation") or t.get("operation") or "replace-item", [x["en"] for x in req.get("description", [])],
                                              (t.get("position") or {}).get("en"), t.get("instruction") or "", self._local_real(job))
             return text, [("marked-base-image", jdir / "reference_marked.png"), ("mask", jdir / "mask.png"),
                           ("new-geometry", jdir / "new_geometry.png")]
@@ -96,7 +96,7 @@ class Packages(JobsContext):
                             "material_text": t.get("materialText") or t.get("prompt", ""), "extra": extra,
                             "where": (t.get("position") or {}).get("en"), "others": t.get("remaining") or 0,
                             "kind": t.get("typeEn") or t.get("roleEn") or "element"})
-        text = backends.gemini_text_edit(regions, req.get("instruction", "") if multi else "", self._local_real(job))
+        text = prompts.gemini_text_edit(regions, req.get("instruction", "") if multi else "", self._local_real(job))
         return text, [("marked-base-image", marked), ("color-mask" if multi else "mask", jdir / ("mask_color.png" if multi else "mask.png"))]
 
     def _local_real(self, job: dict) -> str:
@@ -109,9 +109,9 @@ class Packages(JobsContext):
             except (KitchenError, ValueError, KeyError):  # the edit does not apply: describe the surface from the original design
                 pass
         if op:
-            return realism.local(spec)
+            return prompts.local(spec)
         mats = [t.get("material") for t in job["request"].get("tasks") or [] if t.get("material")]
-        return realism.local(None, mats)
+        return prompts.local(None, mats)
 
     def export_request(self, jid: str) -> Path:
         """Xuất request gửi AI, đã LỌC bỏ thông tin hệ thống AI không dùng (renderKey, id chi tiết, số pixel, prompt kiểu tag…).

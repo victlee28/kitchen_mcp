@@ -9,7 +9,7 @@ import shutil
 from PIL import Image
 import numpy as np
 
-from .. import backends, edit, geometry, geometry_edit, imaging, layers, realism, render, vocab
+from .. import backends, edit, geometry, geometry_edit, imaging, layers, prompts, render, vocab
 from ..errors import InvalidInput
 from .request import JobRequest, NewJob, Task, TaskInput
 from .common import JobsContext, GROW_PX, MAX_TASKS, ZONE_COLORS, MOLDING_EN, describe_position
@@ -44,7 +44,7 @@ class RequestBuilder(JobsContext):
                "instruction": instruction, "backend": backend,
                "workflow": workflow or {"gen0": "gen0-lineart-depth", "geometry_edit": "inpaint-lineart"}.get(kind, "inpaint"),
                "seed": int(seed if seed is not None else self.runtime.new_seed()), "params": params or {},
-               "size": [W, H], "preserve": "strict", "negativePrompt": ", ".join(layers.NEGATIVE + realism.NEGATIVE),
+               "size": [W, H], "preserve": "strict", "negativePrompt": ", ".join(prompts.NEGATIVE_LAYER + prompts.NEGATIVE_PHOTO),
                "lighting": lighting,  # ánh sáng cho ảnh đầy đủ (gen-0); sửa vùng thì bám ánh sáng ảnh gốc
                "prompt": "", "globalPrompt": ""}  # both filled by the branch of the kind below
         lines = imaging.read(d / "lines.png", "L")
@@ -108,8 +108,7 @@ class RequestBuilder(JobsContext):
                 rec["targetParts"] = ids
                 rec["maskPixels"] = int(tmask.sum())
                 rec["name"] = lay_new.get("name")
-                rec["prompt"] = (layers.layer_prompt(cur, lay_new, " ".join(x for x in (t["instruction"], instruction) if x), t["material"])
-                                 + ", photorealistic, matching scene lighting and grain, realistic texture, soft contact shadows")
+                rec["prompt"] = prompts.edit_task_prompt(cur, lay_new, " ".join(x for x in (t["instruction"], instruction) if x), t["material"])
                 rec["roleEn"] = role_en
                 rec["position"] = describe_position(tmask)
                 rec["remaining"] = self._others(cat, visible, ids, type)
@@ -132,7 +131,7 @@ class RequestBuilder(JobsContext):
             req["tasks"] = recs
             req["referenceImage"] = ref_info
             req["maskPixels"] = int(union.sum())
-            req["globalPrompt"] = layers.global_prompt(cur)
+            req["globalPrompt"] = prompts.global_prompt(cur)
             req["targetLayer"] = first["targetLayer"] + (f" +{len(recs) - 1}" if len(recs) > 1 else "")
             # trường cũ (1 việc) giữ để workflow/công cụ cũ đọc được
             req["prompt"] = first.get("prompt", "") if len(recs) == 1 else "; ".join(f"[{k + 1}] {r.get('prompt', '')}" for k, r in enumerate(recs))
@@ -140,9 +139,9 @@ class RequestBuilder(JobsContext):
             req["targetParts"] = [p for r in recs for p in r.get("targetParts", [])]
             req["scope"] = "; ".join(r.get("scope", "") for r in recs if r.get("scope")) or None
         else:
-            req["globalPrompt"] = layers.global_prompt(spec)
-            req["photoImage"] = realism.full(spec, lighting)
-            req["prompt"] = ", ".join(x for x in (layers.global_prompt(spec), realism.tags(spec, lighting), instruction.strip()) if x)
+            req["globalPrompt"] = prompts.global_prompt(spec)
+            req["photoImage"] = prompts.full(spec, lighting)
+            req["prompt"] = ", ".join(x for x in (prompts.global_prompt(spec), prompts.tags(spec, lighting), instruction.strip()) if x)
         if backend in ("job-package", "comfyui"):
             backends.load_workflow(req["workflow"])  # tên workflow sai -> báo ngay
         (jdir / "job.json").write_text(json.dumps({"id": jid, **req}, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -205,10 +204,10 @@ class RequestBuilder(JobsContext):
         Image.fromarray(imaging.mark_regions(ref, [(m, ZONE_COLORS[0][1], "1")], gap=GROW_PX + 2)).save(jdir / "reference_marked.png")
         en = "; ".join(x["en"] for x in desc)
         vi = "; ".join(x["vi"] for x in desc)
-        common = layers.global_prompt(nxt)
+        common = prompts.global_prompt(nxt)
         task: Task = {"targetLayer": "geometry_edit", "name": vi, "roleEn": en, "position": describe_position(m), "instruction": instruction, "material": None,
                       "operation": tt, "targetParts": info["part"], "maskPixels": int(m.sum()),
-                      "prompt": ", ".join(x for x in (en, instruction, common, realism.tags(nxt, req.get("lighting") or "daylight")) if x)}
+                      "prompt": ", ".join(x for x in (en, instruction, common, prompts.tags(nxt, req.get("lighting") or "daylight")) if x)}
         if "operation" not in req:  # trọng số mặc định theo thao tác suy ra (params người dùng vẫn ghi đè)
             req["params"] = {**geometry_edit.OPERATIONS[tt]["params"], **req["params"]}
         req["originalGeometry"] = items or []

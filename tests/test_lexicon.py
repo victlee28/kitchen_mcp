@@ -12,7 +12,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from kitchen import geometry, intent, layers, lexicon, threejs_export  # noqa: E402
+from kitchen import geometry, intent, layers, lexicon, prompts, threejs_export  # noqa: E402
 from kitchen.service import KitchenService  # noqa: E402
 from kitchen.spec import dump_spec  # noqa: E402
 
@@ -198,7 +198,7 @@ class TestReachesTheOutputs(unittest.TestCase):
         self.assertEqual(mats["MAT-FRONT-BASE"]["color"], "#5c3f2c", "walnut must not render as oak")
         for f in ("kitchen-threejs.v1.0.0.schema.json", "kitchen-threejs.schema.json"):
             jsonschema.Draft202012Validator(json.loads((ROOT / "schemas" / f).read_text(encoding="utf-8"))).validate(doc)
-        text = layers.global_prompt(spec)
+        text = prompts.global_prompt(spec)
         for part in ("Japandi", "herringbone", "fluted", "walnut", "marble"):
             self.assertIn(part, text)
 
@@ -250,14 +250,13 @@ if __name__ == "__main__":
 
 class TestRenderPreferences(unittest.TestCase):
     def test_photo_terms_reach_spec_realism_and_file(self):
-        from kitchen import realism
         t, _ = intent.parse_prompt("Bếp chữ L, wide-angle shot, natural daylight streaming through windows, tủ lạnh âm tủ")
         spec = intent.from_template(t)
         self.assertTrue(spec.renderPreferences)
         self.assertTrue(any("wide-angle" in p for p in spec.renderPreferences))
         doc = threejs_export.export(spec, "d", 1)
         self.assertEqual(doc["metadata"]["renderPreferences"], list(spec.renderPreferences))
-        self.assertIn("wide-angle", realism.full(spec) if hasattr(realism, "full") else "wide-angle")
+        self.assertIn("wide-angle", prompts.full(spec))
 
     def test_plain_has_none(self):
         spec = intent.from_template(intent.KitchenTemplate())

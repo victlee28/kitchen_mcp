@@ -13,7 +13,7 @@ import zipfile
 from collections import Counter
 from pathlib import Path
 
-from . import backends, geometry, layers, realism, vocab
+from . import backends, geometry, layers, prompts, vocab
 
 SCHEMA = "kitchen-ai-image-request/1.0"
 
@@ -73,10 +73,10 @@ def build(svc, did: str, rev: int | None = None, views: list[str] | None = None,
     tn = spec.common.handle
     part = (f"Door style: {_DOOR_STYLES.get(style, style)}. Hardware: {_hardware_text(spec)}. "
                 + ("Classic crown and base moldings as drawn. " if spec.moldings else "No crown molding. "))
-    common = layers.global_prompt(spec)
-    negative = ", ".join(layers.NEGATIVE + ["changed door style", "extra cabinets", "missing cabinets", "different layout"] + realism.NEGATIVE)
-    lighting = lighting if lighting in realism.LIGHTING else "daylight"
-    photo_image = realism.full(spec, lighting)
+    common = prompts.global_prompt(spec)
+    negative = ", ".join(prompts.NEGATIVE_LAYER + ["changed door style", "extra cabinets", "missing cabinets", "different layout"] + prompts.NEGATIVE_PHOTO)
+    lighting = lighting if lighting in prompts.LIGHTING else "daylight"
+    photo_image = prompts.full(spec, lighting)
 
     from . import view_sync
     try:  # approved image per view: current or out of date (see view_sync)
@@ -107,7 +107,7 @@ def build(svc, did: str, rev: int | None = None, views: list[str] | None = None,
             "id": v, "name": g.name or v, "dimensions": [man.get("width", 1280), man.get("height", 960)],
             "renderKey": man.get("renderKey"), "camera": camera,
             "suggestedInputImages": "beauty" if "beauty" in files else ("albedo" if "albedo" in files else "lines"),
-            "prompt": backends.gemini_text("gen0", "", part, common, realism=photo_image),
+            "prompt": prompts.gemini_text("gen0", "", part, common, realism=photo_image),
             "image": files,
             **({"approvedImage": {k: x for k, x in sync[v].items() if k in ("status", "changed", "approvedJob")}} if v in sync else {}),
         })
@@ -128,7 +128,7 @@ def build(svc, did: str, rev: int | None = None, views: list[str] | None = None,
         "commonPrompt": common,
         "lighting": lighting,
         "photoRequest": photo_image,
-        "promptComfyUI": f"{common}, {realism.tags(spec, lighting)}",
+        "promptComfyUI": f"{common}, {prompts.tags(spec, lighting)}",
         "part": part.strip(),
         "negativePrompt": negative,
         "material": _material(doc),

@@ -262,9 +262,9 @@ class KitchenService:
 
     def image_backends(self) -> dict:
         """Image backends, ComfyUI workflows, geometry-edit operations and lighting presets the UI can offer."""
-        from . import backends, geometry_edit, realism
+        from . import backends, geometry_edit, prompts
         return {'backends': backends.BACKENDS, 'workflows': backends.workflow_names(), 'operation': geometry_edit.OPERATIONS,
-                'lighting': realism.LIGHTING_VI, 'default': self.config.default_backend,
+                'lighting': prompts.LIGHTING_VI, 'default': self.config.default_backend,
                 'comfyuiUrl': self.config.comfyui_url}
 
     def check_request(self, text: str) -> dict:

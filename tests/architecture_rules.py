@@ -10,8 +10,17 @@ KITCHEN = ROOT / "kitchen"
 # R1: modules that must stay free of I/O, clocks, randomness and Pydantic behaviour.
 CORE_MODULES = (
     "placement", "roomctx", "rules", "rules_kb", "rules_nkba", "edit", "proposal", "geometry", "moldings", "handles", "hardware",
-    "structure_mesh", "layers", "floorplan", "threejs_export", "lexicon", "vocab", "regions", "realism", "errors", "palette", "numeric",
+    "structure_mesh", "layers", "floorplan", "threejs_export", "lexicon", "vocab", "regions", "errors", "palette", "numeric",
 )
+CORE_PACKAGES = ("prompts",)                      # packages whose every file is core (the files are found on disk)
+
+def _package_modules(pkg: str) -> tuple[str, ...]:
+    """The package itself plus ``pkg.<file>`` for every module in it."""
+    return (pkg, *sorted(f"{pkg}.{p.stem}" for p in (KITCHEN / pkg).glob("*.py") if p.stem != "__init__"))
+
+
+CORE_ALL = CORE_MODULES + tuple(m for pkg in CORE_PACKAGES for m in _package_modules(pkg))   # what the core checks run over
+
 # Data-model modules a core module may import (the boundary types); everything else it imports from kitchen must be core.
 DATA_MODULES = ("spec", "knowledge_seed")   # boundary types; constant data tables (their SQL helpers take a connection argument)
 
@@ -33,7 +42,18 @@ STATE_NAME_HINTS = ("CACHE", "STATE", "REGISTRY", "SINGLETON")
 
 
 def module_path(name: str) -> Path:
-    return KITCHEN / f"{name}.py"
+    """``layers`` -> kitchen/layers.py, ``prompts`` -> kitchen/prompts/__init__.py, ``prompts.photo`` -> kitchen/prompts/photo.py."""
+    p = KITCHEN / name.replace(".", "/")
+    return p / "__init__.py" if p.is_dir() else p.with_suffix(".py")
+
+
+def _resolve(name: str, node: ast.ImportFrom) -> list[str]:
+    """The kitchen modules a relative import names, as dotted names (``from ..layers import X`` in prompts.layer -> ["layers"])."""
+    base = name.split(".")[:-1] if (module_path(name).name != "__init__.py") else name.split(".")
+    base = base[: max(len(base) - (node.level - 1), 0)]
+    if node.module:
+        return [".".join([*base, *node.module.split(".")])]
+    return [".".join([*base, a.name]) for a in node.names]
 
 
 def violations(name: str) -> list[tuple[str, str]]:
@@ -52,9 +72,9 @@ def violations(name: str) -> list[tuple[str, str]]:
                     found.add(("R1-import", top))
         elif isinstance(node, ast.ImportFrom):
             if node.level:                                        # from . import x / from .x import y
-                targets = [a.name for a in node.names] if not node.module else [node.module.split(".")[0]]
-                for t in targets:
-                    if t not in CORE_MODULES and t not in DATA_MODULES and t != name:
+                for t in _resolve(name, node):
+                    top = t.split(".")[0]
+                    if t not in CORE_ALL and t not in DATA_MODULES and top not in DATA_MODULES and t != name:
                         found.add(("R1-kitchen-import", t))
             else:
                 top = (node.module or "").split(".")[0]
