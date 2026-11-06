@@ -45,7 +45,9 @@ copy .env.example .env      # tùy chọn: DEEPSEEK_API_KEY... (.env được n�
 | `kitchen/intent.py` | Mô tả -> mẫu (regex đã sửa lỗi đơn vị; DeepSeek JSON mode nếu có key, lỗi thì lùi về regex) -> spec |
 | `kitchen/store.py` | SQLite: `knowledge` (upsert theo code), `designs`, `revisions` (append-only, kiểm `base_rev`) |
 | `kitchen/render.py` | Rasterizer numpy, không cần GPU/trình duyệt |
-| `kitchen/threejs_export.py`, `schemas/`, `web/scene-loader.js` | Xuất JSON theo Complete Kitchen Three.js Scene Schema (v1.1, tương thích v1.0) và dựng lại bằng three.js — xem `schemas/README.md` |
+| `kitchen/edit_intent.py` | Ô lệnh tự do (`POST /api/designs/<id>/interpret`, tool MCP `interpret_edit`): câu như "xóa TD3", "TD2 rộng 80cm", "cánh kính cho tủ trên", "tay nắm âm" thành một thao tác hoặc một câu hỏi làm rõ; luôn đi qua `propose`, không lưu. DeepSeek chỉ thử khi bật `useLlm` và luật không đọc được |
+| `kitchen/recognition/` | Khung nhận diện ảnh/bản vẽ thành bản nháp (`POST /api/designs/<id>/recognize`, tool `recognize_design`): giao diện `Recognizer`, kiểm tra và chuẩn hóa bản nháp, một thao tác `replace` đi qua `propose`. **Chưa cắm mô hình thật**: cắm bằng `service.register_recognizer(name, obj)`; chưa có thì trả `unavailable` |
+| `kitchen/threejs_export.py`, `schemas/`, `web/scene-loader.js` | Xuất JSON theo Complete Kitchen Three.js Scene Schema (v1.4, tương thích v1.0; v1.4 thêm `partRef` để chuột phải vào cánh / ngăn kéo / tay nắm / mặt bàn) và dựng lại bằng three.js — xem `schemas/README.md` |
 | `kitchen/moldings.py` | Phào cổ điển: preset mặt cắt, đường chạy tự tính theo dãy tủ (góc chữ L vát 45°, đầu hở quay về tường, tủ sâu hơn tách đoạn), quét thành lưới, kiểm tra trần/cánh lật/phào chân |
 | `kitchen/hardware.py` | Bản lề từng cánh, vị trí/kích thước tay nắm — một nguồn cho hình học (render/mask) và JSON three.js |
 | `kitchen/layers.py`, `kitchen/vocab.py` | Danh mục layer (layer ID = ID chi tiết), vật liệu từng chi tiết, thao tác sửa thiết kế tương ứng, prompt |
@@ -118,6 +120,7 @@ Mọi góc render từ cùng một rev nên hình học khớp nhau giữa các 
   còn trong ảnh điều khiển). Gemini nhận 3 ảnh: ảnh gốc có viền, mask, hình mẫu thiết kế mới (màu phẳng + nét). Backend
   `recolor` dán hình mẫu vào vùng đổi để xem nhanh không cần AI. Chấp nhận ảnh = ghi rev mới; ảnh đó thành ảnh gốc của rev mới.
   Đổi kiểu cánh: render nhanh chưa dựng khung, nên mặt trước module được vẽ lại bắt buộc và hình mẫu có nét khung shaker.
+- **Ảnh tham chiếu phong cách** — ảnh góc đã duyệt (còn khớp bản thiết kế) làm tham chiếu *vật liệu / màu / ánh sáng* cho góc khác: tự động khi tạo gen0, tạo lại ảnh lỗi thời; chọn tay bằng `styleFrom` (`auto`, tên góc, `none`) ở `POST .../image-jobs` / tool `create_image_job`. Tham chiếu chỉ để khớp phong cách, không chép bố cục (`prompts.style_note`). Chưa có ô chọn trong giao diện web.
 - **Yêu cầu ảnh thật (v0.4.1)** — `kitchen/prompts/photo.py`, dùng chung cho Gemini (câu văn), ComfyUI (cụm từ khoá) và negative:
   máy ảnh kiến trúc (24–35 mm rectilinear, ngang mắt, f/8, đường đứng thẳng), ánh sáng theo thiết kế (cửa sổ, LED hắt dưới tủ trên),
   bề mặt theo vật liệu (vân gỗ, laminate, sơn mờ/bóng, đá, kim loại xước mịn, kính, gạch), bóng tiếp xúc / AO, khe cánh 2–3 mm,

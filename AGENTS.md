@@ -24,7 +24,8 @@ Both interfaces should delegate application behavior to `kitchen.service.Kitchen
 - `kitchen/errors.py`, `kitchen/config.py`, `kitchen/numeric.py`, `kitchen/palette.py`, `kitchen/placement.py`, `kitchen/roomctx.py`, `kitchen/migrations.py`: typed errors, one-time environment settings, number conventions, shared colours, kitchen-room transform, room context, versioned database migrations.
 - `kitchen/geometry.py`: compiles specifications into geometry and view definitions.
 - `kitchen/render.py`: creates raster control images and render metadata.
-- `kitchen/threejs_export.py`: exports the scene format consumed by the browser renderer.
+- `kitchen/threejs_export.py`: exports the scene format consumed by the browser renderer (schema 1.4.0; `partRef` on doors, drawers, handles and countertop runs tells the web menu what a click means — change `schemas/build_schema.py`, never the JSON).
+- `kitchen/edit_intent.py` (core): free-form edit sentence -> an `edit.apply_op` operation or a clarifying question; `service.interpret` previews it through `propose`. `kitchen/recognition/` (core package): `Recognizer` interface + draft checking + one `replace` operation; `service.recognize` previews it, no model is wired. Neither writes to the store.
 - `kitchen/images/` (package; `request.py` holds the typed `NewJob` input and `JobRequest`/`Task` stored shapes — add a request key there first), `kitchen/prompts/` (every sentence sent to an image model lives here; `test_architecture` refuses such wording elsewhere), `kitchen/layers.py`, `kitchen/imaging.py`, `kitchen/backends.py`: image layers, job lifecycle, compositing, and generation backends.
 - `kitchen/ai_export.py`: assembles design and render data into AI image-generation requests.
 - `web/`: browser editor, scene loader, and bundled front-end assets.
