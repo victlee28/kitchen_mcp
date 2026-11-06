@@ -111,6 +111,15 @@ def propose_change(design_id: str, op: dict[str, Any], base_rev: int | None=None
     """
     return _call(svc().propose, design_id, op, base_rev, scope_modules)
 
+def interpret_edit(design_id: str, text: str, base_rev: int | None=None, scope_modules: list[str] | None=None, use_llm: bool=False) -> dict[str, Any]:
+    """Turn a free-form edit sentence (e.g. 'xóa TD3', 'tủ trên đổi cánh kính') into a previewed operation; nothing is saved.
+
+    status 'ok' returns operation + proposal (same as propose_change): confirm with the matching editing tool and expect=proposal.opHash.
+    status 'clarify' returns a question (and choices) to put to the user; 'unsupported' means the sentence was not understood.
+    use_llm lets DeepSeek try only when the rules cannot read the sentence and a key is configured.
+    """
+    return _call(svc().interpret, design_id, text, base_rev, scope_modules, None, use_llm)
+
 def revert_design(design_id: str, base_rev: int, target_revision: int) -> dict[str, Any]:
     """Create a new revision matching an earlier revision."""
     return _call(svc().revert, design_id, target_revision, base_rev)
@@ -222,7 +231,7 @@ def reject_image_job(job_id: str) -> dict[str, Any]:
 def regenerate_image_job(job_id: str, seed: int | None=None) -> dict[str, Any]:
     """Create a replacement job with the same request and a new seed."""
     return _slim_job(_call(svc().images.regenerate, job_id, seed))
-TOOLS = [create_design, list_floorplan_rooms, import_floorplan, bind_floorplan, design_kitchen, list_designs, get_design, design_history, add_module, update_module, remove_module, update_global, set_moldings, list_molding_profiles, apply_action, propose_change, revert_design, validate_design, get_scene, export_threejs, render_views, search_knowledge, list_regions, add_knowledge, export_ai_package, list_layers, get_view_status, regenerate_stale_views, create_image_job, get_image_job, list_image_jobs, submit_image_result, import_base_image, accept_image_job, reject_image_job, regenerate_image_job, send_image_job]
+TOOLS = [create_design, list_floorplan_rooms, import_floorplan, bind_floorplan, design_kitchen, list_designs, get_design, design_history, add_module, update_module, remove_module, update_global, set_moldings, list_molding_profiles, apply_action, propose_change, interpret_edit, revert_design, validate_design, get_scene, export_threejs, render_views, search_knowledge, list_regions, add_knowledge, export_ai_package, list_layers, get_view_status, regenerate_stale_views, create_image_job, get_image_job, list_image_jobs, submit_image_result, import_base_image, accept_image_job, reject_image_job, regenerate_image_job, send_image_job]
 for tool_function in TOOLS:
     mcp.add_tool(tool_function, name=tool_function.__name__, description=(tool_function.__doc__ or '').strip(), structured_output=False if tool_function is render_views else None)
 

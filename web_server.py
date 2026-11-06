@@ -14,6 +14,7 @@ API:
   GET  /api/regions                       khu vực, quốc gia, số mục
   GET  /api/designs/<id>/history         lịch sử
   POST /api/designs/<id>/ops             {"baseRev": N, "op": {...}, "expect"?: opHash của /propose: chỉ lưu đúng thao tác đã xem trước}
+  POST /api/designs/<id>/interpret       {"text": "xóa TD3", "baseRev"?: N, "scope"?: ["TD1"], "useLlm"?: false} câu lệnh tự do -> thao tác + bản xem trước (không lưu) hoặc câu hỏi làm rõ
   POST /api/designs/<id>/propose         {"baseRev": N, "op": {...}, "scope"?: ["TD1"]} xem trước, không lưu: diff, validation mới/đã hết, module bị ảnh hưởng
   POST /api/designs/<id>/revert          {"baseRev": N, "rev": M}
   POST /api/designs/<id>/render          {"rev"?, "views"?, "width"?, "height"?}
@@ -210,7 +211,7 @@ class Handler(BaseHTTPRequestHandler):
                 b = self._body()
                 return self._json(201, self._job_out(s.images.regenerate(jid, b.get("seed"))))
             raise ApiError(405, "Phương thức không hỗ trợ")
-        m = re.fullmatch(r"/api/designs/([a-z0-9-]+)(?:/(scene|threejs|validate|history|ops|revert|render|layers|mask|pick|image-jobs|beauty|base-image|ai-export|floorplan-bind|view-status|regenerate-stale|propose))?", p)
+        m = re.fullmatch(r"/api/designs/([a-z0-9-]+)(?:/(scene|threejs|validate|history|ops|revert|render|layers|mask|pick|image-jobs|beauty|base-image|ai-export|floorplan-bind|view-status|regenerate-stale|propose|interpret))?", p)
         if not m:
             raise ApiError(404, "Không có endpoint")
         did, sub = m.groups()
@@ -297,6 +298,13 @@ class Handler(BaseHTTPRequestHandler):
                 if scope is not None and not (isinstance(scope, list) and all(isinstance(x, str) for x in scope)):
                     raise ApiError(400, "scope phải là danh sách id module")
                 return self._json(200, s.propose(did, b["op"], b.get("baseRev"), scope, b.get("country")))
+            if sub == "interpret":
+                if not isinstance(b.get("text"), str):
+                    raise ApiError(400, "thiếu text")
+                scope = b.get("scope")
+                if scope is not None and not (isinstance(scope, list) and all(isinstance(x, str) for x in scope)):
+                    raise ApiError(400, "scope phải là danh sách id module")
+                return self._json(200, s.interpret(did, b["text"], b.get("baseRev"), scope, b.get("country"), bool(b.get("useLlm"))))
             if sub == "revert":
                 return self._json(200, s.revert(did, int(b["rev"]), b.get("baseRev")))
             if sub == "image-jobs":
