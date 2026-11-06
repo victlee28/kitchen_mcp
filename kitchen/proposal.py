@@ -75,9 +75,22 @@ def validation_delta(before: dict[str, Any], after: dict[str, Any]) -> dict[str,
             "introducesErrors": any(i.get("severity") == "error" for i in introduced)}
 
 
+def _whole(value: Any) -> Any:
+    """600.0 and 600 are the same number: a browser (JSON.parse) turns 600.0 into 600, so the hash must not tell them apart."""
+    if isinstance(value, float) and value.is_integer():
+        return int(value)
+    if isinstance(value, dict):
+        mapping = cast("dict[str, Any]", value)
+        return {k: _whole(mapping[k]) for k in mapping}
+    if isinstance(value, list):
+        items = cast("list[Any]", value)
+        return [_whole(v) for v in items]
+    return value
+
+
 def op_hash(operation: dict[str, Any], base_revision: int | None) -> str:
     """Identifies exactly this operation on exactly this base revision; ``apply(..., expect=hash)`` refuses anything else."""
     # Defaults spelled out or left out are the same operation: the MCP editing tools always send closeGap and afterModule.
-    canon = {k: v for k, v in operation.items() if v is not None and not (k == "closeGap" and v is True)}
+    canon = _whole({k: v for k, v in operation.items() if v is not None and not (k == "closeGap" and v is True)})
     text = json.dumps({"op": canon, "baseRev": base_revision}, sort_keys=True, ensure_ascii=False, separators=(",", ":"), default=str)
     return hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]

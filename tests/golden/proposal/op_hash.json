@@ -84,6 +84,30 @@
    "expected": {
     "hash": "4ad52a02c0716398"
    }
+  },
+  {
+   "name": "integral floats hash like integers (a browser turns 600.0 into 600)",
+   "input": {
+    "operation": {
+     "op": "multi",
+     "ops": [
+      {
+       "op": "add",
+       "closeGap": false,
+       "module": {
+        "type": "base",
+        "width": 600.0,
+        "fromCorner": 2100.0,
+        "depth": 550.5
+       }
+      }
+     ]
+    },
+    "baseRev": 3
+   },
+   "expected": {
+    "hash": "fb2545f7b37f03aa"
+   }
   }
  ]
 }

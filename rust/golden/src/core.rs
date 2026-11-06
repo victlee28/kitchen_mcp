@@ -26,6 +26,16 @@ impl Placement {
     }
 }
 
+/// 600.0 and 600 are the same number (a browser turns 600.0 into 600): integral floats become integers before hashing.
+fn whole(v: &Json) -> Json {
+    match v {
+        Json::Float(f) if f.is_finite() && *f == f.trunc() && f.abs() < 9.0e15 => Json::Int(*f as i64),
+        Json::Arr(a) => Json::Arr(a.iter().map(whole).collect()),
+        Json::Obj(m) => Json::Obj(m.iter().map(|(k, x)| (k.clone(), whole(x))).collect()),
+        other => other.clone(),
+    }
+}
+
 /// kitchen/proposal.py::op_hash
 pub fn op_hash(operation: &Json, base_rev: &Json) -> Result<String, String> {
     let Json::Obj(m) = operation else { return Err("operation must be an object".into()) };
@@ -33,7 +43,7 @@ pub fn op_hash(operation: &Json, base_rev: &Json) -> Result<String, String> {
         .filter(|(k, v)| **v != Json::Null && !(k.as_str() == "closeGap" && **v == Json::Bool(true)))
         .map(|(k, v)| (k.clone(), v.clone())).collect();
     let mut top = BTreeMap::new();
-    top.insert("op".to_string(), Json::Obj(canon));
+    top.insert("op".to_string(), whole(&Json::Obj(canon)));
     top.insert("baseRev".to_string(), base_rev.clone());
     let mut text = String::new();
     canonical(&Json::Obj(top), &mut text);

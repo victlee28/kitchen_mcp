@@ -109,6 +109,22 @@ class TestService(unittest.TestCase):
         run = [m for m in spec.module if m.wall == "island"]
         self.assertEqual([(m.facing, m.width) for m in run], [("-z", 400.0)])
 
+    def test_confirm_survives_a_browser_round_trip(self):
+        """JSON.parse turns 600.0 into 600; the opHash of the preview must still match what the browser sends back."""
+        r = self.svc.template(self.did, self.click(-2300.0, 1990.0))
+
+        def browser(v):
+            if isinstance(v, float) and v.is_integer():
+                return int(v)
+            if isinstance(v, dict):
+                return {k: browser(x) for k, x in v.items()}
+            if isinstance(v, list):
+                return [browser(x) for x in v]
+            return v
+        sent = browser(json.loads(json.dumps(r["operation"])))
+        self.assertNotEqual(json.dumps(sent, sort_keys=True), json.dumps(r["operation"], sort_keys=True))     # the round trip really changed the text
+        self.svc.apply(self.did, sent, r["baseRev"], "web", r["proposal"]["opHash"])
+
     def test_bad_requests(self):
         with self.assertRaises(NotFound):
             self.svc.template(self.did, {**self.click(-2300.0, 1990.0), "structureId": "STRUCT-nope"})
