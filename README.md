@@ -118,7 +118,7 @@ Mọi góc render từ cùng một rev nên hình học khớp nhau giữa các 
   còn trong ảnh điều khiển). Gemini nhận 3 ảnh: ảnh gốc có viền, mask, hình mẫu thiết kế mới (màu phẳng + nét). Backend
   `recolor` dán hình mẫu vào vùng đổi để xem nhanh không cần AI. Chấp nhận ảnh = ghi rev mới; ảnh đó thành ảnh gốc của rev mới.
   Đổi kiểu cánh: render nhanh chưa dựng khung, nên mặt trước module được vẽ lại bắt buộc và hình mẫu có nét khung shaker.
-- **Yêu cầu ảnh thật (v0.4.1)** — `kitchen/realism.py`, dùng chung cho Gemini (câu văn), ComfyUI (cụm từ khoá) và negative:
+- **Yêu cầu ảnh thật (v0.4.1)** — `kitchen/prompts/photo.py`, dùng chung cho Gemini (câu văn), ComfyUI (cụm từ khoá) và negative:
   máy ảnh kiến trúc (24–35 mm rectilinear, ngang mắt, f/8, đường đứng thẳng), ánh sáng theo thiết kế (cửa sổ, LED hắt dưới tủ trên),
   bề mặt theo vật liệu (vân gỗ, laminate, sơn mờ/bóng, đá, kim loại xước mịn, kính, gạch), bóng tiếp xúc / AO, khe cánh 2–3 mm,
   cạnh vát bắt sáng, màu và dải sáng tự nhiên, hạt nhiễu mịn. Ảnh đầy đủ chọn ánh sáng `lighting`: `daylight` (mặc định),

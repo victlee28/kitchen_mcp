@@ -3,17 +3,14 @@ from __future__ import annotations
 
 import threading
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, cast
+from dataclasses import dataclass, field
+from typing import Any, Callable
 
 import numpy as np
 
 from .. import imaging
 from ..config import Config
-from .request import JobRequest, NewJob
 from .runtime import Runtime
-
-if TYPE_CHECKING:
-    from .jobs import ImageJobs
 
 GROW_PX = 12     # nở mask gửi model (ngữ cảnh quanh mép)
 FEATHER_PX = 2   # viền mềm khi ghép, chỉ vào trong mask
@@ -48,28 +45,41 @@ def describe_position(mask: np.ndarray) -> dict | None:
 MOLDING_EN = {"crown": "crown molding along the top of the cabinets", "base": "base molding at the bottom of the cabinets"}
 
 
-class JobsContext:
-    """What every part of ImageJobs expects ``self`` to carry (set by ``ImageJobs.__init__``)."""
+@dataclass
+class JobEnv:
+    """What every part of the image-job package shares: the store, where renders live, the callback that writes a design edit,
+    the settings and the clock/id/seed sources, and the worker threads by job id. One value, created by ``ImageJobs``."""
     store: Any
     render_dir: Path
+    apply: Callable[..., dict[str, Any]]
     config: Config
     runtime: Runtime
-    _apply: Callable[..., dict]
-    _threads: dict[str, threading.Thread]
+    threads: dict[str, threading.Thread] = field(default_factory=dict)
 
-    if TYPE_CHECKING:  # what the parts of the package call on each other; the real definitions are in the part named on each line
-        def ensure_render(self, did: str, rev: int | None, view: str, width: int | None = None, height: int | None = None) -> tuple[Any, int, Any, Path, dict[str, Any]]: ...  # base_images
-        def _pick_reference(self, did: str, view: str, key: str, d: Path, reference: str | None) -> tuple[Path, dict[str, Any]]: ...  # base_images
-        def submit(self, new: NewJob) -> dict[str, Any]: ...  # jobs
-        def _finish(self, jid: str, extra: dict[str, Any]) -> dict[str, Any]: ...  # results
-        def _export_package(self, jid: str, jdir: Path, req: JobRequest) -> dict[str, Any]: ...  # packages
-        def _ai_input(self, job: dict[str, Any], jdir: Path, req: JobRequest) -> tuple[str, list[tuple[str, Path]]]: ...  # packages
-        def _values(self, req: JobRequest, wf: dict[str, Any]) -> dict[str, Any]: ...  # packages
+
+class Component:
+    """A part of the package. It holds the shared ``JobEnv`` (so a replaced ``config`` or ``runtime`` is seen by every part) and,
+    in its own ``__init__``, the other parts it calls: parts are composed, not inherited."""
+
+    def __init__(self, env: JobEnv) -> None:
+        self.env = env
 
     @property
-    def jobs(self) -> "ImageJobs":
-        """``self`` seen as the assembled class (the view_sync functions take an ``ImageJobs``)."""
-        return cast("ImageJobs", self)
+    def store(self) -> Any:
+        return self.env.store
 
-    def _render_dir(self, did: str, rev: int, view: str) -> Path:
-        return self.render_dir / did / f"rev{rev}" / view
+    @property
+    def render_dir(self) -> Path:
+        return self.env.render_dir
+
+    @property
+    def config(self) -> Config:
+        return self.env.config
+
+    @property
+    def runtime(self) -> Runtime:
+        return self.env.runtime
+
+    def view_dir(self, did: str, rev: int, view: str) -> Path:
+        """Where the renders of one view of one revision live."""
+        return self.env.render_dir / did / f"rev{rev}" / view

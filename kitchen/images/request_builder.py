@@ -12,11 +12,16 @@ import numpy as np
 from .. import backends, edit, geometry, geometry_edit, imaging, layers, prompts, render, vocab
 from ..errors import InvalidInput
 from .request import JobRequest, NewJob, Task, TaskInput
-from .common import JobsContext, GROW_PX, MAX_TASKS, ZONE_COLORS, MOLDING_EN, describe_position
+from .base_images import BaseImages
+from .common import Component, JobEnv, GROW_PX, MAX_TASKS, ZONE_COLORS, MOLDING_EN, describe_position
 
-class RequestBuilder(JobsContext):
+class RequestBuilder(Component):
+    def __init__(self, env: JobEnv, base: BaseImages) -> None:
+        super().__init__(env)
+        self.base = base
+
     @staticmethod
-    def _norm_tasks(tasks: list[dict[str, Any]] | None, target: str | None, material: str | None, instruction: str) -> list[TaskInput]:
+    def norm_tasks(tasks: list[dict[str, Any]] | None, target: str | None, material: str | None, instruction: str) -> list[TaskInput]:
         if not tasks:
             if not target:
                 raise InvalidInput("Cần targetLayer hoặc danh sách tasks")
@@ -34,7 +39,7 @@ class RequestBuilder(JobsContext):
                         "instruction": str(t.get("instruction") or "").strip()})
         return out
 
-    def _prepare(self, jid: str, jdir: Path, d: Path, spec: Any, rev: int, scene: Any, man: dict[str, Any], new: NewJob,
+    def prepare(self, jid: str, jdir: Path, d: Path, spec: Any, rev: int, scene: Any, man: dict[str, Any], new: NewJob,
                  tasks: list[TaskInput]) -> JobRequest:
         """``new`` carries the already-resolved mode, workflow, params and lighting; ``tasks`` the normalised task inputs."""
         did, view, instruction, mode, backend, reference, kind = new.did, new.view, new.instruction, new.mode, new.backend, new.reference, new.kind
@@ -115,7 +120,7 @@ class RequestBuilder(JobsContext):
                 rec["typeEn"] = layers.ROLES.get(type, (None, "element"))[1]
                 rec["materialText"] = " ".join(x for x in (vocab.to_english(material_text), material_text and f"({material_text})") if x)
                 recs.append(rec)
-            ref_path, ref_info = self._pick_reference(did, view, man["renderKey"], d, reference)
+            ref_path, ref_info = self.base.pick_reference(did, view, man["renderKey"], d, reference)
             ref, _ = imaging.load_rgb(ref_path, (W, H))
             Image.fromarray(ref).save(jdir / "reference.png")
             imaging.save_mask(union, jdir / "target.png")
@@ -198,7 +203,7 @@ class RequestBuilder(JobsContext):
         Image.fromarray(255 - lines_new).save(jdir / "lines_inv.png")  # ControlNet: nét của thiết kế MỚI
         shutil.copyfile(nd / "depth.png", jdir / "depth.png")
         Image.fromarray(geometry_edit.preview(nd, lines_new)).save(jdir / "new_geometry.png")
-        ref_path, ref_info = self._pick_reference(did, view, man["renderKey"], d, reference)
+        ref_path, ref_info = self.base.pick_reference(did, view, man["renderKey"], d, reference)
         ref, _ = imaging.load_rgb(ref_path, (W, H))
         Image.fromarray(ref).save(jdir / "reference.png")
         Image.fromarray(imaging.mark_regions(ref, [(m, ZONE_COLORS[0][1], "1")], gap=GROW_PX + 2)).save(jdir / "reference_marked.png")

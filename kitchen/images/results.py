@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 import json
 
 from PIL import Image
@@ -10,11 +10,19 @@ from PIL import Image
 from .. import edit, geometry, imaging, layers, view_sync
 from ..errors import InvalidInput
 from ..errors import KitchenError
-from .common import JobsContext, FEATHER_PX
+from .base_images import BaseImages
+from .common import Component, JobEnv, FEATHER_PX
+if TYPE_CHECKING:
+    from .jobs import ImageJobs
 from .request import JobRequest, NewJob, task_inputs
 
 
-class Results(JobsContext):
+class Results(Component):
+    def __init__(self, env: JobEnv, base: BaseImages, owner: "ImageJobs") -> None:
+        super().__init__(env)
+        self.base = base
+        self.owner = owner      # the assembled ImageJobs: regenerate creates jobs through it and view_sync takes it
+
     def submit_result(self, jid: str, image: bytes) -> dict:
         job = self.store.get_job(jid)
         if job["status"] in ("accepted", "rejected", "running"):
@@ -26,9 +34,9 @@ class Results(JobsContext):
         except (OSError, ValueError) as e:
             raise InvalidInput("Ảnh nộp không đọc được (cần PNG/JPEG)") from e
         im.save(jdir / "raw.png")
-        return self._finish(jid, {"backend": {"name": job["backend"], "submitManual": True}})
+        return self.finish(jid, {"backend": {"name": job["backend"], "submitManual": True}})
 
-    def _finish(self, jid: str, extra: dict) -> dict:
+    def finish(self, jid: str, extra: dict) -> dict:
         job = self.store.get_job(jid)
         jdir = Path(job["result"]["dir"])
         req = job["request"]
@@ -37,7 +45,7 @@ class Results(JobsContext):
         if job["kind"] == "gen0":
             Image.fromarray(raw).save(jdir / "composite.png")
             rep = {"variant": "gen0", "resize": resized}
-            lp = self._render_dir(job["design_id"], job["rev"], job["view"]) / "lines.png"
+            lp = self.view_dir(job["design_id"], job["rev"], job["view"]) / "lines.png"
             if lp.exists():
                 rep["lineMatch"] = imaging.edge_alignment(raw, imaging.read(lp, "L"))
                 if rep["lineMatch"].get("khop") is False:
@@ -46,7 +54,7 @@ class Results(JobsContext):
             return self.store.update_job(jid, "needs-review", {**extra, "report": rep}, error=rep.get("warning"))
         ref = imaging.read(jdir / "reference.png", "RGB")
         lines_p = jdir / "lines_moi.png" if (jdir / "lines_moi.png").exists() else \
-            self._render_dir(job["design_id"], job["rev"], job["view"]) / "lines.png"  # sửa hình: so biên với nét MỚI
+            self.view_dir(job["design_id"], job["rev"], job["view"]) / "lines.png"  # sửa hình: so biên với nét MỚI
         lines = imaging.read(lines_p, "L") if lines_p.exists() else None
         tasks = req.get("tasks") or [{"targetLayer": job["target"]}]
         comp = ref.copy()
@@ -87,9 +95,9 @@ class Results(JobsContext):
         req = job["request"]
         design = None
         if job["kind"] == "geometry_edit":  # sửa hình: ảnh chỉ đúng khi thiết kế đổi theo -> luôn ghi rev
-            res = self._apply(job["design_id"], req["designOp"], base_rev if base_rev is not None else job["rev"], f"image-job:{jid}")
+            res = self.env.apply(job["design_id"], req["designOp"], base_rev if base_rev is not None else job["rev"], f"image-job:{jid}")
             W, H = req["size"]
-            _, _, _, _, man = self.ensure_render(job["design_id"], res["rev"], job["view"], W, H)
+            _, _, _, _, man = self.base.ensure_render(job["design_id"], res["rev"], job["view"], W, H)
             if man["renderKey"] != req["newRenderKey"]:
                 raise InvalidInput("Render của rev mới lệch hình mẫu của job (renderKey khác) — báo lỗi cho nhà phát triển")
             design = {"rev": res["rev"], "op": req["designOp"], "scope": req.get("scope")}
@@ -117,21 +125,21 @@ class Results(JobsContext):
             if not ops:
                 raise InvalidInput("Không có việc nào áp được vào thiết kế (" + "; ".join(skip) + ")")
             op = edit.combine_ops(ops)
-            res = self._apply(job["design_id"], op, base_rev if base_rev is not None else job["rev"], f"image-job:{jid}")
+            res = self.env.apply(job["design_id"], op, base_rev if base_rev is not None else job["rev"], f"image-job:{jid}")
             design = {"rev": res["rev"], "op": op, "scope": "; ".join(scope), **({"skip": skip} if skip else {})}
         now = self.runtime.now()
         try:  # what the approved image shows, for the multi-view consistency check (see view_sync)
-            appearance = view_sync.snapshot(self.jobs, job["design_id"], job["view"], design["rev"] if design else job["rev"], req.get("size"))
+            appearance = view_sync.snapshot(self.owner, job["design_id"], job["view"], design["rev"] if design else job["rev"], req.get("size"))
         except (KitchenError, ValueError, KeyError, OSError):  # acceptance must not fail because the snapshot could not be taken
             appearance = None
         return self.store.update_job(jid, "accepted", {"acceptNow": now, **({"design": design} if design else {}),
                                                       **({"appearance": appearance} if appearance else {})})
 
     def view_status(self, did: str, rev: int | None = None) -> dict:
-        return view_sync.view_status(self.jobs, did, rev)
+        return view_sync.view_status(self.owner, did, rev)
 
     def regenerate_stale(self, did: str, views: list[str] | None = None, backend: str = "recolor", base_rev: int | None = None) -> dict:
-        return view_sync.regenerate_stale(self.jobs, did, views, backend, base_rev)
+        return view_sync.regenerate_stale(self.owner, did, views, backend, base_rev)
 
     def reject(self, jid: str) -> dict:
         job = self.store.get_job(jid)
@@ -148,12 +156,12 @@ class Results(JobsContext):
         preview = bool(j["result"].get("preview"))
         if j["kind"] == "geometry_edit":
             first = (r.get("tasks") or [None])[0]
-            return self.submit(NewJob(j["design_id"], j["view"], instruction=(first or {}).get("instruction") or "", mode="design",
+            return self.owner.submit(NewJob(j["design_id"], j["view"], instruction=(first or {}).get("instruction") or "", mode="design",
                                       backend=j["backend"], reference=reference, kind="geometry_edit", workflow=r.get("workflow"), seed=seed,
                                       params=r.get("params"), preview=preview, geometry_items=r.get("originalGeometry"),
                                       operation=r.get("operation"), lighting=r.get("lighting")))
         tasks = [dict(t) for t in task_inputs(r.get("tasks") or [])] or None
-        return self.submit(NewJob(j["design_id"], j["view"], target=None if tasks else r.get("targetLayer"), instruction=r.get("instruction", ""),
+        return self.owner.submit(NewJob(j["design_id"], j["view"], target=None if tasks else r.get("targetLayer"), instruction=r.get("instruction", ""),
                                   mode=j["mode"], material=None if tasks else r.get("material"), backend=j["backend"], reference=reference,
                                   kind=j["kind"], workflow=r.get("workflow"), seed=seed, params=r.get("params"), tasks=tasks,
                                   preview=preview, lighting=r.get("lighting")))

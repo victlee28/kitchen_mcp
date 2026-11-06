@@ -51,14 +51,14 @@ class TestImagesPackage(unittest.TestCase):
             raise RuntimeError("worker blew up")
 
         logged = []
-        old_hook, old_run = threading.excepthook, im._run_gemini
+        old_hook, old_run = threading.excepthook, im.runners._run_gemini
         threading.excepthook = lambda args: logged.append(args.exc_value)
-        im._run_gemini = boom
+        im.runners._run_gemini = boom
         try:
             j = im.create(self.did, VIEW, "TD1-door-1", instruction="Walnut", mode="quick", backend="gemini")
             j = im.wait(j["id"], 30)
         finally:
-            threading.excepthook, im._run_gemini = old_hook, old_run
+            threading.excepthook, im.runners._run_gemini = old_hook, old_run
         self.assertEqual(j["status"], "error:generation-failed")
         self.assertIn("worker blew up", j["error"])
         self.assertEqual([str(e) for e in logged], ["worker blew up"], "the traceback still reaches the thread excepthook")
@@ -107,6 +107,22 @@ class TestImagesPackage(unittest.TestCase):
         self.assertEqual(k["request"]["seed"], 7)
         self.assertEqual([(t["targetLayer"], t["material"]) for t in k["request"]["tasks"]],
                          [(t["targetLayer"], t["material"]) for t in j["request"]["tasks"]])
+
+    def test_the_parts_are_composed_not_inherited_and_share_one_environment(self):
+        from kitchen.images import ImageJobs
+        from kitchen.images.common import Component
+        im = self.svc.images
+        self.assertEqual(ImageJobs.__mro__, (ImageJobs, object), "ImageJobs forwards to its parts; it does not inherit from them")
+        parts = [im.base, im.builder, im.packages, im.results, im.runners]
+        for part in parts:
+            self.assertEqual(part.__class__.__mro__, (part.__class__, Component, object), f"{type(part).__name__} should only extend Component")
+            self.assertIs(part.env, im.env)
+        old = im.config
+        try:
+            im.config = dataclasses.replace(old, comfyui_url="http://example.invalid:1")
+            self.assertTrue(all(part.config.comfyui_url == "http://example.invalid:1" for part in parts), "a replaced config reaches every part")
+        finally:
+            im.config = old
 
 
 if __name__ == "__main__":

@@ -10,16 +10,16 @@ from PIL import Image
 from .. import request_check, backends, edit, imaging, prompts
 from ..errors import KitchenError
 from .request import JobRequest, size_of
-from .common import JobsContext, GROW_PX, ZONE_COLORS
+from .common import Component, GROW_PX, ZONE_COLORS
 
 
-class Packages(JobsContext):
-    def _values(self, req: JobRequest, wf: dict) -> dict:
+class Packages(Component):
+    def values(self, req: JobRequest, wf: dict) -> dict:
         W, H = req["size"]
         return {**wf.get("kitchen", {}).get("default", {}), **req.get("params", {}),
                 "prompt": req["prompt"], "negative": req["negativePrompt"], "seed": req["seed"], "width": W, "height": H}
 
-    def _export_package(self, jid: str, jdir: Path, req: JobRequest) -> dict:
+    def export_package(self, jid: str, jdir: Path, req: JobRequest) -> dict:
         wf = backends.load_workflow(req["workflow"])
         tasks = req.get("tasks") or []
         if len(tasks) > 1:
@@ -28,7 +28,7 @@ class Packages(JobsContext):
         files = {"reference": "reference.png", "mask": "mask.png", "lines": "lines_inv.png", "depth": "depth.png"}
         for k, name in imgs.items():
             shutil.copyfile(jdir / files[k], jdir / name)
-        prompt = backends.build_prompt(wf, imgs, self._values(req, wf), backends.model_defaults(self.config))
+        prompt = backends.build_prompt(wf, imgs, self.values(req, wf), backends.model_defaults(self.config))
         (jdir / "workflow_api.json").write_text(json.dumps(prompt, ensure_ascii=False, indent=1), encoding="utf-8")
         (jdir / "INSTRUCTIONS.txt").write_text(
             f"Job {jid} ({req['kind']}, workflow {req['workflow']})\n"
@@ -45,19 +45,19 @@ class Packages(JobsContext):
             imgs = {}
             for k in wf["kitchen"].get("image", []):
                 if k == "reference":
-                    imgs[k] = f"{jid}_reference.png" if i == 1 else f"{jid}_ket_qua_{i - 1}.png"
+                    imgs[k] = f"{jid}reference.png" if i == 1 else f"{jid}_ket_qua_{i - 1}.png"
                 elif k == "mask":
                     imgs[k] = f"{jid}_mask_{i}.png"
                     shutil.copyfile(jdir / f"mask_{i}.png", jdir / imgs[k])
                 else:
                     imgs[k] = f"{jid}_{k}.png"
                     shutil.copyfile(jdir / files[k], jdir / imgs[k])
-            vals = {**self._values(req, wf), "prompt": t.get("prompt", ""), "seed": req["seed"] + i - 1}
+            vals = {**self.values(req, wf), "prompt": t.get("prompt", ""), "seed": req["seed"] + i - 1}
             name = f"workflow_api_{i}.json"
             (jdir / name).write_text(json.dumps(backends.build_prompt(wf, imgs, vals, backends.model_defaults(self.config)), ensure_ascii=False, indent=1), encoding="utf-8")
             steps.append(f"  Việc {i} [{ZONE_COLORS[(i - 1) % 8][0]}] {t['targetLayer']}: {name}, ảnh vào {imgs.get('reference', '-')}, "
                          f"lưu ảnh ra thành {jid}_ket_qua_{i}.png\n     Prompt: {t['prompt']}")
-        shutil.copyfile(jdir / "reference.png", jdir / f"{jid}_reference.png")
+        shutil.copyfile(jdir / "reference.png", jdir / f"{jid}reference.png")
         (jdir / "INSTRUCTIONS.txt").write_text(
             f"Job {jid}: {len(tasks)} việc, workflow {req['workflow']}\n"
             "Cách 1 (ComfyUI): chép các file PNG vào thư mục input, chạy lần lượt từng workflow; ảnh ra của việc trước là ảnh vào của việc sau.\n"
@@ -67,10 +67,10 @@ class Packages(JobsContext):
             encoding="utf-8")
         return self.store.update_job(jid, "awaiting-result", {"package": sorted(p.name for p in jdir.iterdir())})
 
-    def _ai_input(self, job: dict, jdir: Path, req: JobRequest) -> tuple[str, list[tuple[str, Path]]]:
+    def ai_input(self, job: dict, jdir: Path, req: JobRequest) -> tuple[str, list[tuple[str, Path]]]:
         """Chỉ dẫn dạng câu + ảnh gửi model nhận chỉ dẫn (Gemini, gói request). Một nguồn cho cả gọi API lẫn file xuất."""
         if req["kind"] == "gen0":
-            d = self._render_dir(job["design_id"], job["rev"], job["view"])
+            d = self.view_dir(job["design_id"], job["rev"], job["view"])
             src = d / "beauty.png" if (d / "beauty.png").exists() else d / "albedo.png"
             spec, _ = self.store.get(job["design_id"], job["rev"])
             real = req.get("photoImage") or prompts.full(spec, req.get("lighting") or "daylight")
@@ -125,7 +125,7 @@ class Packages(JobsContext):
         job = self.store.get_job(jid)
         jdir = Path(job["result"]["dir"])
         req = job["request"]
-        text, imgs = self._ai_input(job, jdir, req)
+        text, imgs = self.ai_input(job, jdir, req)
         size = size_of(req)
         image_name = {"base-image": "anh goc can sua", "marked-base-image": "anh goc can sua, vung sua co vien mau + so",
                    "mask": "mask (trang = vung sua)", "new-geometry": "hinh mau thiet ke moi (mau phang + net, chi de lay hinh)", "color-mask": "mask mau (moi mau mot viec)", "input-image": "anh dau vao"}

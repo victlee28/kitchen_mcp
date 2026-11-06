@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import json
 import shutil
-import threading
 from dataclasses import replace
 from pathlib import Path
 from typing import Any, Callable
@@ -27,9 +26,10 @@ from ..backends import BACKENDS
 from ..config import Config
 from ..errors import InvalidInput
 from ..store import ConflictError
-from .base_images import BaseImages
-from .packages import Packages
 from .request import KINDS, MODES, NewJob, TaskInput
+from .base_images import BaseImages
+from .common import JobEnv
+from .packages import Packages
 from .request_builder import RequestBuilder
 from .results import Results
 from .runners import Runners
@@ -37,22 +37,57 @@ from .runtime import Runtime
 
 
 
-class ImageJobs(BaseImages, RequestBuilder, Packages, Runners, Results):
-    """Image-edit jobs. Depends on a store, a render directory and one callback to write a design edit; not on KitchenService.
+class ImageJobs:
+    """Image-edit jobs: the object the service (and the adapters through it) talk to. Depends on a store, a render directory and one
+    callback to write a design edit; not on KitchenService.
 
     ``apply(design_id, operation, base_revision, source)`` is how an accepted job changes the design (one revision).
 
     ``config`` carries the backend settings (ComfyUI url, Gemini key...); ``runtime`` the clock, id and seed sources.
+
+    It is assembled from parts that call each other through attributes, not through inheritance: ``base`` (renders, masks, base images),
+    ``builder`` (building a request), ``packages`` (request files and instructions for a model), ``results`` (check, accept, regenerate),
+    ``runners`` (backends and worker threads). The public methods below only forward to them.
     """
 
     def __init__(self, store: Any, render_dir: str | Path, apply: Callable[..., dict[str, Any]], config: Config | None = None, runtime: Runtime | None = None):
-        self.store = store
-        self.render_dir = Path(render_dir)
-        self._apply = apply
-        self.config = config or Config(db_path=Path(":memory:"), render_dir=self.render_dir)
-        self.runtime = runtime or Runtime()
-        self._threads: dict[str, threading.Thread] = {}
+        render_dir = Path(render_dir)
+        self.env = JobEnv(store, render_dir, apply, config or Config(db_path=Path(":memory:"), render_dir=render_dir), runtime or Runtime())
+        self.base = BaseImages(self.env)
+        self.builder = RequestBuilder(self.env, self.base)
+        self.packages = Packages(self.env)
+        self.results = Results(self.env, self.base, self)
+        self.runners = Runners(self.env, self.packages, self.results)
         self.store.mark_stale_jobs()
+
+    # the shared settings: replacing them here replaces them for every part
+    @property
+    def store(self) -> Any:
+        return self.env.store
+
+    @property
+    def render_dir(self) -> Path:
+        return self.env.render_dir
+
+    @property
+    def config(self) -> Config:
+        return self.env.config
+
+    @config.setter
+    def config(self, value: Config) -> None:
+        self.env.config = value
+
+    @property
+    def runtime(self) -> Runtime:
+        return self.env.runtime
+
+    @runtime.setter
+    def runtime(self, value: Runtime) -> None:
+        self.env.runtime = value
+
+    def view_dir(self, did: str, rev: int, view: str) -> Path:
+        """Where the renders of one view of one revision live."""
+        return self.base.view_dir(did, rev, view)
 
     def create(self, did: str, view: str, target: str | None = None, *, instruction: str = "", mode: str = "quick",
                material: str | None = None, backend: str = "recolor", reference: str | None = None, base_rev: int | None = None,
@@ -95,19 +130,19 @@ class ImageJobs(BaseImages, RequestBuilder, Packages, Runners, Results):
         if kind == "geometry_edit":
             task_list = []
         elif kind == "edit" and not tasks:  # một việc: yêu cầu thuộc về việc đó, không lặp ở cấp job
-            task_list, instruction = self._norm_tasks(None, target, material, instruction), ""
+            task_list, instruction = self.builder.norm_tasks(None, target, material, instruction), ""
         else:
-            task_list = self._norm_tasks(tasks, None, None, "") if kind == "edit" else []
+            task_list = self.builder.norm_tasks(tasks, None, None, "") if kind == "edit" else []
         latest = self.store.get(did)[1]
         if base_rev is not None and base_rev != latest:
             raise ConflictError(f"baseRev={base_rev} nhưng bản mới nhất là {latest}; hãy tải lại")
-        spec, rev, scene, d, man = self.ensure_render(did, latest, view)
+        spec, rev, scene, d, man = self.base.ensure_render(did, latest, view)
         jid = f"job-{self.runtime.new_id()}"
         jdir = d / "jobs" / jid
         jdir.mkdir(parents=True, exist_ok=True)
         prepared = False
         try:
-            req = self._prepare(jid, jdir, d, spec, rev, scene, man,
+            req = self.builder.prepare(jid, jdir, d, spec, rev, scene, man,
                                 replace(new, mode=mode, instruction=instruction, workflow=workflow, params=params, lighting=lighting or "daylight"), task_list)
             prepared = True
         finally:
@@ -118,12 +153,12 @@ class ImageJobs(BaseImages, RequestBuilder, Packages, Runners, Results):
                                      "request": req})
         self.store.update_job(jid, result={"dir": str(jdir), **({"newRenderKey": req.get("newRenderKey", "")} if kind == "geometry_edit" else {})})
         try:
-            self.export_request(jid)  # request.json tự chứa (chỉ dẫn + ảnh gốc + mask nhúng) cho mọi backend
+            self.packages.export_request(jid)  # request.json tự chứa (chỉ dẫn + ảnh gốc + mask nhúng) cho mọi backend
         except (OSError, ValueError, TypeError, KeyError):  # the side file is a convenience; the job does not depend on it
             pass
         if preview:
             return self.store.update_job(jid, "awaiting-send", {"preview": True})
-        return self._dispatch(job)
+        return self.runners.dispatch(job)
 
     def send(self, jid: str) -> dict:
         """Gửi job đang chờ (đã xem trước) sang backend. Thiết kế đổi hình học/camera sau khi tạo thì từ chối."""
@@ -137,8 +172,72 @@ class ImageJobs(BaseImages, RequestBuilder, Packages, Runners, Results):
             if render.render_key(geometry.compile_spec(spec), views[job["view"]], W, H) != job["render_key"]:
                 raise InvalidInput("Thiết kế đã đổi hình học/góc nhìn sau khi tạo job; mask không còn khớp — hãy tạo job mới")
         if job["backend"] in ("gemini", "job-package"):  # model nhận chỉ dẫn: request phải đủ ảnh, đúng kích thước
-            kt = json.loads(self.export_request(jid).read_text(encoding="utf-8")).get("validation") or {}
+            kt = json.loads(self.packages.export_request(jid).read_text(encoding="utf-8")).get("validation") or {}
             if not kt.get("ok", True):
                 raise InvalidInput("Request chưa đạt kiểm tra, chưa gửi: " + "; ".join(kt.get("errors", [])))
         job = self.store.update_job(jid, "running")
-        return self._dispatch(job)
+        return self.runners.dispatch(job)
+
+    # ---- forwarding to the parts
+    def ensure_render(self, did: str, rev: int | None, view: str, width: int | None = None, height: int | None = None):
+        return self.base.ensure_render(did, rev, view, width, height)
+
+    def layers(self, did: str, view: str, rev: int | None = None, all_layers: bool = False) -> dict:
+        return self.base.layers(did, view, rev, all_layers)
+
+    def mask_png(self, did: str, view: str, layer_id: str, rev: int | None = None) -> bytes:
+        return self.base.mask_png(did, view, layer_id, rev)
+
+    def pick(self, did: str, view: str, x: int, y: int, rev: int | None = None, radius: int = 0) -> dict:
+        return self.base.pick(did, view, x, y, rev, radius)
+
+    def save_beauty(self, did: str, view: str, image: bytes, rev: int | None = None) -> dict:
+        """Ảnh render three.js (trình duyệt) -> beauty.png của rev/góc; dùng làm ảnh gốc khi chưa có ảnh AI đã duyệt."""
+        return self.base.save_beauty(did, view, image, rev)
+
+    def import_base(self, did: str, view: str, image: bytes, rev: int | None = None, source: str = 'external image', fit: str = 'reject') -> dict:
+        """Replace the base image of a rev/view with an externally generated image (e.g. a fully lit ChatGPT render)."""
+        return self.base.import_base(did, view, image, rev, source, fit)
+
+    def clear_imported_base(self, did: str, view: str, rev: int | None = None) -> dict:
+        """Drop the imported base image of a rev/view so the default base image order applies again."""
+        return self.base.clear_imported_base(did, view, rev)
+
+    def reference(self, did: str, view: str, key: str, d: Path) -> tuple[Path, dict]:
+        return self.base.reference(did, view, key, d)
+
+    def export_request(self, jid: str) -> Path:
+        """Xuất request gửi AI, đã LỌC bỏ thông tin hệ thống AI không dùng (renderKey, id chi tiết, số pixel, prompt kiểu tag…)."""
+        return self.packages.export_request(jid)
+
+    def export_full(self, jid: str) -> Path:
+        """Bản ĐẦY ĐỦ để kiểm tra (không gửi AI): toàn bộ yêu cầu nội bộ (renderKey, chi tiết bị sửa, thao tác thiết kế chờ ghi,"""
+        return self.packages.export_full(jid)
+
+    def submit_result(self, jid: str, image: bytes) -> dict:
+        return self.results.submit_result(jid, image)
+
+    def accept(self, jid: str, apply_to_design: bool = False, base_rev: int | None = None) -> dict:
+        return self.results.accept(jid, apply_to_design, base_rev)
+
+    def view_status(self, did: str, rev: int | None = None) -> dict:
+        return self.results.view_status(did, rev)
+
+    def regenerate_stale(self, did: str, views: list[str] | None = None, backend: str = 'recolor', base_rev: int | None = None) -> dict:
+        return self.results.regenerate_stale(did, views, backend, base_rev)
+
+    def reject(self, jid: str) -> dict:
+        return self.results.reject(jid)
+
+    def regenerate(self, jid: str, seed: int | None = None) -> dict[str, Any]:
+        """A new job with the same request (and a new seed when given)."""
+        return self.results.regenerate(jid, seed)
+
+    def get(self, jid: str) -> dict:
+        return self.results.get(jid)
+
+    def list(self, did: str | None = None, view: str | None = None, status: str | None = None, limit: int = 50) -> list[dict]:
+        return self.results.list(did, view, status, limit)
+
+    def wait(self, jid: str, timeout: float = 60) -> dict:
+        return self.runners.wait(jid, timeout)

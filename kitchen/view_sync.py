@@ -67,7 +67,7 @@ def view_status(images: "ImageJobs", did: str, rev: int | None = None) -> dict[s
         size = (newest.get("request") or {}).get("size") or [None, None]  # compare at the size the approved image was made at
         _, _, _, d, man = images.ensure_render(did, r, view, *size)
         key = man["renderKey"]
-        ref, info = images._reference(did, view, key, d)
+        ref, info = images.reference(did, view, key, d)
         if info.get("type") != "job":
             out[view] = {"status": "stale-geometry", "renderKey": key, "approvedJob": newest["id"], "approvedRev": newest["rev"]}
             continue

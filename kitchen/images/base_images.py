@@ -9,16 +9,16 @@ import numpy as np
 
 from .. import geometry, imaging, layers, render
 from ..errors import InvalidInput
-from .common import JobsContext, VIEW_COLORS
+from .common import Component, VIEW_COLORS
 
 
-class BaseImages(JobsContext):
+class BaseImages(Component):
     def ensure_render(self, did: str, rev: int | None, view: str, width: int | None = None, height: int | None = None):
         spec, r = self.store.get(did, rev)
         views = geometry.views_of(spec)
         if view not in views:
             raise InvalidInput(f"Không có góc nhìn '{view}'. Có: {', '.join(views)}")
-        d = self._render_dir(did, r, view)
+        d = self.view_dir(did, r, view)
         man = d / "manifest.json"
         scene = geometry.compile_spec(spec)
         if man.exists():
@@ -48,7 +48,7 @@ class BaseImages(JobsContext):
                     op, note = None, str(e)
                 out.append({**x, "pixels": n, "designEdit": op[1] if op else None, **({"designEditNote": note} if note else {})})
         return {"id": did, "rev": r, "view": view, "renderKey": man["renderKey"], "width": man["width"], "height": man["height"],
-                "dir": str(d), "layers": out, "baseImage": self._reference(did, view, man["renderKey"], d)[1]}
+                "dir": str(d), "layers": out, "baseImage": self.reference(did, view, man["renderKey"], d)[1]}
 
     def mask_png(self, did: str, view: str, layer_id: str, rev: int | None = None) -> bytes:
         import io
@@ -119,7 +119,7 @@ class BaseImages(JobsContext):
         """Replace the base image of a rev/view with an externally generated image (e.g. a fully lit ChatGPT render).
 
         The image is stored as base_imported.png next to the control renders. It is used as the base image until a job
-        accepted after the import takes over (see _reference).
+        accepted after the import takes over (see reference).
         """
         spec, r, scene, d, man = self.ensure_render(did, rev, view)
         im = self._fit_to_render(image, man, fit)
@@ -156,7 +156,7 @@ class BaseImages(JobsContext):
         """renderKey hình học mà ẢNH KẾT QUẢ của job khớp: job sửa hình cho ảnh của thiết kế mới."""
         return (j["result"] or {}).get("newRenderKey") or j["render_key"] if j["kind"] == "geometry_edit" else j["render_key"]
 
-    def _reference(self, did: str, view: str, key: str, d: Path) -> tuple[Path, dict]:
+    def reference(self, did: str, view: str, key: str, d: Path) -> tuple[Path, dict]:
         acc = [j for j in self.store.list_jobs(did, view, "accepted", 200) if self._key_of(j) == key]
         acc.sort(key=lambda j: (j["result"].get("acceptNow", ""), j["updated_at"]), reverse=True)
         imported = self._imported_meta(d)
@@ -169,9 +169,9 @@ class BaseImages(JobsContext):
             return d / "beauty.png", {"type": "beauty"}
         return d / "albedo.png", {"type": "albedo"}
 
-    def _pick_reference(self, did, view, key, d, reference):
+    def pick_reference(self, did, view, key, d, reference):
         if reference in (None, "", "auto"):
-            return self._reference(did, view, key, d)
+            return self.reference(did, view, key, d)
         if reference == "albedo":
             return d / "albedo.png", {"type": "albedo"}
         if reference == "imported":

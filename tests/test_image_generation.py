@@ -432,11 +432,11 @@ class TestGeometryEdit(_Base):
         self.assertIn("TD3-door-1", r["different"]["xoa"])
         d = Path(j["result"]["dir"])
         m = imaging.read(d / "target.png", "L") > 127
-        old = imaging.mask_of(Path(self.svc.images._render_dir(self.did, rev0, VIEW)), ["TD3-door-1"])
+        old = imaging.mask_of(Path(self.svc.images.view_dir(self.did, rev0, VIEW)), ["TD3-door-1"])
         self.assertTrue((m | ~old).all(), "vùng đổi phủ hết cánh bị xóa")
         self.assertLess(m.mean(), 0.3, "chỉ vùng thay đổi, không phải cả ảnh")
         self.assertFalse((imaging.read(d / "lines_moi.png", "L") == imaging.read(
-            Path(self.svc.images._render_dir(self.did, rev0, VIEW)) / "lines.png", "L")).all(), "nét gửi model là của thiết kế mới")
+            Path(self.svc.images.view_dir(self.did, rev0, VIEW)) / "lines.png", "L")).all(), "nét gửi model là của thiết kế mới")
         self.assertTrue(j["result"]["report"]["outsideMask"]["setPreserve"])
         req = json.loads((d / "request.json").read_text(encoding="utf-8"))
         self.assertEqual(req["type"], "geometry_edit")
@@ -466,7 +466,7 @@ class TestGeometryEdit(_Base):
         self.assertEqual(k["request"]["different"]["pixels"], 0, "render nhanh không dựng khung cánh")
         self.assertGreater(k["request"]["maskPixels"], 0, "vẫn bắt buộc vẽ lại mặt trước TD1")
         kd = Path(k["result"]["dir"])
-        old = Path(self.svc.images._render_dir(self.did, k["rev"], VIEW)) / "lines.png"
+        old = Path(self.svc.images.view_dir(self.did, k["rev"], VIEW)) / "lines.png"
         self.assertGreater(int((imaging.read(kd / "lines_moi.png", "L") < 128).sum()), int((imaging.read(old, "L") < 128).sum()),
                            "có thêm nét khung shaker")
         with self.assertRaises(ValueError):
