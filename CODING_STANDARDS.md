@@ -25,8 +25,8 @@ The backend may be rewritten in Rust later. Python stays the reference implement
 Zones (every module in `kitchen/` is in exactly one; the list lives in `tests/architecture_rules.py`):
 - **Core** (pure): `placement roomctx rules rules_kb rules_nkba edit proposal geometry moldings handles hardware structure_mesh layers floorplan threejs_export lexicon vocab regions realism errors palette numeric`.
 - **Data** (boundary types, constant tables): `spec knowledge_seed`.
-- **Shell** (may touch disk, network, environment, clock): `store migrations service backends ai_export legacy config intent llm` (only `config`, `service`, `backends` read the environment; `llm` is given a `Config`).
-- **Pixel** (numpy/PIL and job orchestration; compared by tolerance, not bit for bit): `render imaging geometry_edit request_check imagejobs view_sync`.
+- **Shell** (may touch disk, network, environment, clock): `store migrations service backends ai_export legacy config intent llm` (only `config` and `service` read the environment; `backends`, `llm` and `images` are given a `Config`).
+- **Pixel** (numpy/PIL and job orchestration; compared by tolerance, not bit for bit): `render imaging geometry_edit request_check view_sync` and the package `kitchen/images/` (image jobs: `common runtime base_images request_builder packages runners results jobs`; it takes a `Config` and a `Runtime` (clock, ids, seeds) and never imports the service).
 
 | ID | Rule | Checked by |
 |---|---|---|

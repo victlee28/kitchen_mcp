@@ -1,4 +1,4 @@
-"""Adapter backend sinh ảnh. Orchestrator (kitchen.imagejobs) không phụ thuộc cách gọi model cụ thể.
+"""Adapter backend sinh ảnh. Orchestrator (kitchen.images) không phụ thuộc cách gọi model cụ thể.
 
 - `to-mau`  : đổi màu vùng đích giữ sáng tối (không AI, chạy ngay) — kiểm chứng mask/ghép ảnh, xem nhanh màu.
 - `job-package` : xuất gói job (ảnh gốc, mask, nét, depth, prompt, workflow ComfyUI dạng API) để chạy ở nơi khác,
@@ -17,7 +17,6 @@ from __future__ import annotations
 import base64
 import copy
 import json
-import os
 import time
 import urllib.error
 import urllib.parse
@@ -27,6 +26,7 @@ import uuid
 from pathlib import Path
 
 from . import legacy
+from .config import Config
 
 ROOT = Path(__file__).resolve().parent.parent
 WORKFLOWS = ROOT / "workflows"
@@ -86,17 +86,15 @@ def fill(template, values: dict):
     return template
 
 
-def model_defaults() -> dict:
-    return {"ckpt": os.getenv("COMFYUI_CKPT", "sd_xl_base_1.0.safetensors"),
-            "controlnet_lineart": os.getenv("COMFYUI_CN_LINEART", "controlnet-lineart-sdxl.safetensors"),
-            "controlnet_depth": os.getenv("COMFYUI_CN_DEPTH", "controlnet-depth-sdxl.safetensors")}
+def model_defaults(config: Config) -> dict:
+    return {"ckpt": config.comfyui_ckpt, "controlnet_lineart": config.comfyui_cn_lineart, "controlnet_depth": config.comfyui_cn_depth}
 
 
 # ------------------------------------------------------------------ ComfyUI
 class ComfyUI:
-    def __init__(self, url: str | None = None, timeout: float | None = None, poll: float = 1.0):
-        self.url = (url or os.getenv("COMFYUI_URL") or "http://127.0.0.1:8188").rstrip("/")
-        self.timeout = float(timeout or os.getenv("COMFYUI_TIMEOUT") or 600)
+    def __init__(self, config: Config, url: str | None = None, timeout: float | None = None, poll: float = 1.0):
+        self.url = (url or config.comfyui_url).rstrip("/")
+        self.timeout = float(timeout or config.comfyui_timeout)
         self.poll = poll
 
     def _req(self, path: str, data: bytes | None = None, headers: dict | None = None, t: float = 30):
@@ -147,9 +145,9 @@ class ComfyUI:
             time.sleep(self.poll)
 
 
-def build_prompt(workflow: dict, images: dict[str, str], values: dict) -> dict:
+def build_prompt(workflow: dict, images: dict[str, str], values: dict, models: dict) -> dict:
     """workflow = {"kitchen": {...}, "prompt": {...}}; images: khóa ảnh -> tên file đã upload."""
-    return fill(copy.deepcopy(workflow["prompt"]), {**model_defaults(), **values, **images})
+    return fill(copy.deepcopy(workflow["prompt"]), {**models, **values, **images})
 
 
 # ------------------------------------------------------------------ Gemini
@@ -169,15 +167,14 @@ def _read_env_file(path: str) -> dict:
     return out
 
 
-def gemini_config() -> dict:
-    """Khóa/model: biến môi trường ưu tiên, sau đó file GEMINI_ENV_FILE. Không bao giờ trả khóa ra ngoài log."""
-    f = _read_env_file(os.environ["GEMINI_ENV_FILE"]) if os.getenv("GEMINI_ENV_FILE") else {}
-    key = os.getenv("GEMINI_API_KEY") or f.get("GEMINI_API_KEY", "")
+def gemini_config(config: Config) -> dict:
+    """Khóa/model: giá trị trong Config (từ biến môi trường) ưu tiên, sau đó file ``config.gemini_env_file``. Không bao giờ trả khóa ra ngoài log."""
+    f = _read_env_file(config.gemini_env_file) if config.gemini_env_file else {}
+    key = config.gemini_api_key or f.get("GEMINI_API_KEY", "")
     if not key:
         raise BackendError("unsupported", "Chưa có GEMINI_API_KEY (đặt trong .env hoặc trỏ GEMINI_ENV_FILE tới .env của mcp-image)")
-    return {"key": key, "model": os.getenv("GEMINI_IMAGE_MODEL") or f.get("GEMINI_IMAGE_MODEL") or "gemini-3-pro-image",
-            "base": (os.getenv("GEMINI_BASE_URL") or "https://generativelanguage.googleapis.com/v1beta").rstrip("/"),
-            "timeout": float(os.getenv("GEMINI_TIMEOUT") or 300), "imageSize": os.getenv("GEMINI_IMAGE_SIZE") or ""}
+    return {"key": key, "model": config.gemini_model or f.get("GEMINI_IMAGE_MODEL") or "gemini-3-pro-image",
+            "base": config.gemini_base_url, "timeout": config.gemini_timeout, "imageSize": config.gemini_image_size}
 
 
 def ratio(w: int, h: int) -> str:
@@ -199,8 +196,8 @@ def gemini_body(text: str, images: list[Path], size: tuple[int, int], image_size
 
 
 class Gemini:
-    def __init__(self, cfg: dict | None = None):
-        self.cfg = cfg or gemini_config()
+    def __init__(self, config: Config):
+        self.cfg = gemini_config(config)
 
     def generate(self, text: str, images: list[Path], out_path: Path, size: tuple[int, int]) -> dict:
         body = gemini_body(text, images, size, self.cfg["imageSize"])

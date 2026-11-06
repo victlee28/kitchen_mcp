@@ -16,8 +16,9 @@ CORE_MODULES = (
 DATA_MODULES = ("spec", "knowledge_seed")   # boundary types; constant data tables (their SQL helpers take a connection argument)
 
 SHELL_MODULES = ("store", "migrations", "service", "backends", "ai_export", "legacy", "config", "intent", "llm")      # touch disk, network, env, clock
-PIXEL_MODULES = ("render", "imaging", "geometry_edit", "request_check", "imagejobs", "view_sync")        # numpy / PIL / job orchestration
-ENV_READERS = ("config", "service", "backends")                                                # may read os.environ / getenv
+PIXEL_MODULES = ("render", "imaging", "geometry_edit", "request_check", "view_sync")        # the image-job package kitchen/images/ is pixel zone as a whole (see test_architecture)
+PIXEL_PACKAGES = ("images",)                                                                   # numpy / PIL / job orchestration (every file in the package)
+ENV_READERS = ("config", "service")                                                # may read os.environ / getenv
 ALL_ZONES = CORE_MODULES + DATA_MODULES + SHELL_MODULES + PIXEL_MODULES
 
 FORBIDDEN_IMPORTS = {

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import base64
 import io
+import dataclasses
 import json
 import os
 import shutil
@@ -113,7 +114,7 @@ class TestInstanceAndLayers(_Base):
 class TestImageJobsIsIndependent(unittest.TestCase):
     def test_it_does_not_import_or_hold_the_service(self):
         import ast
-        src = (ROOT / "kitchen" / "imagejobs.py").read_text(encoding="utf-8")
+        src = "\n".join(p.read_text(encoding="utf-8") for p in sorted((ROOT / "kitchen" / "images").glob("*.py")))
         mods = set()
         for n in ast.walk(ast.parse(src)):
             if isinstance(n, ast.ImportFrom):
@@ -122,7 +123,7 @@ class TestImageJobsIsIndependent(unittest.TestCase):
         self.assertNotIn("self.svc", src)
 
     def test_it_runs_with_only_a_store_a_render_dir_and_an_apply_callback(self):
-        from kitchen.imagejobs import ImageJobs
+        from kitchen.images import ImageJobs
         svc = KitchenService(Path(tempfile.mkdtemp()) / "k.db", Path(tempfile.mkdtemp()))
         calls = []
         jobs = ImageJobs(svc.store, svc.render_dir, lambda *a: calls.append(a) or {"rev": 2})
@@ -382,7 +383,7 @@ class TestMarkingAndChecks(_Base):
         self.assertGreater(tasks[0]["remaining"], 0, "đếm các cánh khác cùng loại để dặn giữ nguyên")
 
     def test_position_words(self):
-        from kitchen.imagejobs import describe_position
+        from kitchen.images import describe_position
         m = np.zeros((100, 200), bool); m[5:20, 10:40] = True
         self.assertTrue(describe_position(m)["en"].startswith("upper-left area"))
         m = np.zeros((100, 200), bool); m[80:95, 5:195] = True
@@ -677,12 +678,12 @@ class TestComfyUIAdapter(_Base):
         super().setUpClass()
         cls.srv = ThreadingHTTPServer(("127.0.0.1", 0), _FakeComfy)
         threading.Thread(target=cls.srv.serve_forever, daemon=True).start()
-        os.environ["COMFYUI_URL"] = f"http://127.0.0.1:{cls.srv.server_address[1]}"
+        cls.url = f"http://127.0.0.1:{cls.srv.server_address[1]}"
+        cls.svc.images.config = dataclasses.replace(cls.svc.images.config, comfyui_url=cls.url)  # settings are a value passed in, not the environment
 
     @classmethod
     def tearDownClass(cls):
         cls.srv.shutdown()
-        os.environ.pop("COMFYUI_URL", None)
         super().tearDownClass()
 
     def test_edit_via_comfyui(self):
@@ -721,13 +722,13 @@ class TestComfyUIAdapter(_Base):
         self.assertIn("blue", last["4"]["inputs"]["text"])
 
     def test_unreachable(self):
-        old = os.environ["COMFYUI_URL"]
-        os.environ["COMFYUI_URL"] = "http://127.0.0.1:9"
+        old = self.svc.images.config
+        self.svc.images.config = dataclasses.replace(old, comfyui_url="http://127.0.0.1:9")
         try:
             f = self.svc.images.wait(self.svc.images.create(self.did, VIEW, "TD1-door-1", "x", backend="comfyui")["id"], 30)
             self.assertEqual(f["status"], "error:overloaded")
         finally:
-            os.environ["COMFYUI_URL"] = old
+            self.svc.images.config = old
 
 
 class _FakeGemini(BaseHTTPRequestHandler):
@@ -767,16 +768,13 @@ class TestGeminiAdapter(_Base):
         threading.Thread(target=cls.srv.serve_forever, daemon=True).start()
         cls.envfile = cls.tmp / "mcp-image.env"
         cls.envfile.write_text("GEMINI_API_KEY=test-key\nGEMINI_IMAGE_MODEL=gemini-thu\n", encoding="utf-8")
-        cls._old = {k: os.environ.get(k) for k in ("GEMINI_ENV_FILE", "GEMINI_BASE_URL", "GEMINI_API_KEY")}
-        os.environ.pop("GEMINI_API_KEY", None)
-        os.environ["GEMINI_ENV_FILE"] = str(cls.envfile)
-        os.environ["GEMINI_BASE_URL"] = f"http://127.0.0.1:{cls.srv.server_address[1]}/v1beta"
+        cls.config = dataclasses.replace(cls.svc.images.config, gemini_api_key=None, gemini_env_file=str(cls.envfile),
+                                         gemini_base_url=f"http://127.0.0.1:{cls.srv.server_address[1]}/v1beta")
+        cls.svc.images.config = cls.config
 
     @classmethod
     def tearDownClass(cls):
         cls.srv.shutdown()
-        for k, v in cls._old.items():
-            os.environ.pop(k, None) if v is None else os.environ.__setitem__(k, v)
         super().tearDownClass()
 
     def _run(self, **kw):
@@ -859,11 +857,11 @@ class TestGeminiAdapter(_Base):
         self.assertEqual(f["status"], "error:generation-failed")
         self.assertIn("SAFETY", f["error"])
         _FakeGemini.mode = "ok"
-        old = os.environ.pop("GEMINI_ENV_FILE")
+        self.svc.images.config = dataclasses.replace(self.config, gemini_env_file=None)
         try:
             self.assertEqual(self._run(target="TD1-door-1", instruction="x")["status"], "error:unsupported")
         finally:
-            os.environ["GEMINI_ENV_FILE"] = old
+            self.svc.images.config = self.config
         self.assertNotIn("test-key", json.dumps(self.svc.images.list(self.did)), "không lộ khóa trong job")
 
 

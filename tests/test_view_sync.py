@@ -78,7 +78,7 @@ class TestBeforeSnapshots(unittest.TestCase):
         did = svc.create_from_spec(json.loads(FIX.read_text(encoding="utf-8")))["id"]
         svc.images.ensure_render(did, None, NO_BASE, 640, 480)
         j = svc.images.create(did, NO_BASE, tasks=[{"targetLayer": "type:countertop", "material": "Đá nhân tạo đen"}], mode="quick")
-        real, view_sync.snapshot = view_sync.snapshot, lambda *a, **k: (_ for _ in ()).throw(RuntimeError("old job"))
+        real, view_sync.snapshot = view_sync.snapshot, lambda *a, **k: (_ for _ in ()).throw(OSError("old job"))
         try:
             svc.images.accept(j["id"])
         finally:

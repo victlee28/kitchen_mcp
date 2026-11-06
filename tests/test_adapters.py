@@ -12,7 +12,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from kitchen.imagejobs import ImageJobs  # noqa: E402
+from kitchen.images import ImageJobs  # noqa: E402
 from kitchen.service import KitchenService  # noqa: E402
 
 ADAPTERS = ("server.py", "web_server.py")

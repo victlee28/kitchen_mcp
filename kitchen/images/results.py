@@ -1,0 +1,162 @@
+"""What comes back: raw result, strict compositing, review, accept / reject / regenerate, listing."""
+from __future__ import annotations
+
+from pathlib import Path
+import json
+
+from PIL import Image
+
+from .. import edit, geometry, imaging, layers, view_sync
+from ..errors import InvalidInput
+from ..errors import KitchenError
+from .common import JobsContext, FEATHER_PX
+
+
+class Results(JobsContext):
+    def submit_result(self, jid: str, image: bytes) -> dict:
+        job = self.store.get_job(jid)
+        if job["status"] in ("accepted", "rejected", "running"):
+            raise InvalidInput(f"Job đang ở trạng thái {job['status']}, không nhận ảnh")
+        jdir = Path(job["result"]["dir"])
+        import io
+        try:
+            im = Image.open(io.BytesIO(image)).convert("RGB")
+        except (OSError, ValueError) as e:
+            raise InvalidInput("Ảnh nộp không đọc được (cần PNG/JPEG)") from e
+        im.save(jdir / "raw.png")
+        return self._finish(jid, {"backend": {"name": job["backend"], "submitManual": True}})
+
+    def _finish(self, jid: str, extra: dict) -> dict:
+        job = self.store.get_job(jid)
+        jdir = Path(job["result"]["dir"])
+        req = job["request"]
+        W, H = req["size"]
+        raw, resized = imaging.load_rgb(jdir / "raw.png", (W, H))
+        if job["kind"] == "gen0":
+            Image.fromarray(raw).save(jdir / "composite.png")
+            rep = {"variant": "gen0", "resize": resized}
+            lp = self._render_dir(job["design_id"], job["rev"], job["view"]) / "lines.png"
+            if lp.exists():
+                rep["lineMatch"] = imaging.edge_alignment(raw, imaging.read(lp, "L"))
+                if rep["lineMatch"].get("khop") is False:
+                    rep["warning"] = "Ảnh AI có vẻ lệch hình học so với bản vẽ: mask các lần sửa sau có thể không khớp"
+            (jdir / "report.json").write_text(json.dumps(rep, ensure_ascii=False, indent=2), encoding="utf-8")
+            return self.store.update_job(jid, "needs-review", {**extra, "report": rep}, error=rep.get("warning"))
+        ref = imaging.read(jdir / "reference.png", "RGB")
+        lines_p = jdir / "lines_moi.png" if (jdir / "lines_moi.png").exists() else \
+            self._render_dir(job["design_id"], job["rev"], job["view"]) / "lines.png"  # sửa hình: so biên với nét MỚI
+        lines = imaging.read(lines_p, "L") if lines_p.exists() else None
+        tasks = req.get("tasks") or [{"targetLayer": job["target"]}]
+        comp = ref.copy()
+        per = []
+        raws = []
+        for i, t in enumerate(tasks, 1):
+            tp, mp = jdir / f"target_{i}.png", jdir / f"mask_{i}.png"
+            if not tp.exists():  # job cũ (trước khi có nhiều việc)
+                tp, mp = jdir / "target.png", jdir / "mask.png"
+            raw_i, _ = imaging.load_rgb(jdir / f"raw_{i}.png", (W, H)) if (jdir / f"raw_{i}.png").exists() else (raw, resized)
+            tm = imaging.read(tp, "L") > 127
+            comp = imaging.composite(comp, raw_i, imaging.alpha(tm, FEATHER_PX))
+            raws.append((raw_i, tm, imaging.read(mp, "L") > 127))
+        Image.fromarray(comp).save(jdir / "composite.png")
+        for i, (t, (raw_i, tm, region)) in enumerate(zip(tasks, raws), 1):
+            c = imaging.check(ref, raw_i, comp, tm, region, lines)
+            per.append({"task": i, "targetLayer": t["targetLayer"], "maskPixels": int(tm.sum()), "insideMask": c["insideMask"],
+                        **({"bien": c["bien"]} if "bien" in c else {}), "rawImage": c["rawImage"]})
+        union = imaging.read(jdir / "target.png", "L") > 127
+        region_all = imaging.read(jdir / "mask.png", "L") > 127
+        overall = imaging.check(ref, raw, comp, union, region_all, lines)
+        rep = {"variant": "edit", "resize": resized, "renderKey": job["render_key"], "rev": job["rev"],
+               "targetLayer": job["target"], "maskPixels": int(union.sum()), "preserveMode": "strict", **overall, "task": per}
+        unchanged = [p["task"] for p in per if not p["insideMask"]["changed"]]
+        if unchanged and len(unchanged) == len(per):
+            rep["warning"] = "Vùng đích gần như không đổi — model có thể đã bỏ qua mask/prompt"
+        elif unchanged:
+            rep["warning"] = f"Việc {', '.join(map(str, unchanged))} gần như không đổi; các việc khác đã đổi"
+        ok = rep["outsideMask"]["setPreserve"] and len(unchanged) < len(per)
+        status = "needs-review" if ok else "error:check-failed"
+        (jdir / "report.json").write_text(json.dumps(rep, ensure_ascii=False, indent=2), encoding="utf-8")
+        return self.store.update_job(jid, status, {**extra, "report": rep}, error=rep.get("warning"))
+
+    def accept(self, jid: str, apply_to_design: bool = False, base_rev: int | None = None) -> dict:
+        job = self.store.get_job(jid)
+        if job["status"] != "needs-review":
+            raise InvalidInput(f"Chỉ chấp nhận job đang cần duyệt (hiện: {job['status']})")
+        req = job["request"]
+        design = None
+        if job["kind"] == "geometry_edit":  # sửa hình: ảnh chỉ đúng khi thiết kế đổi theo -> luôn ghi rev
+            res = self._apply(job["design_id"], req["designOp"], base_rev if base_rev is not None else job["rev"], f"image-job:{jid}")
+            W, H = req["size"]
+            _, _, _, _, man = self.ensure_render(job["design_id"], res["rev"], job["view"], W, H)
+            if man["renderKey"] != req["newRenderKey"]:
+                raise InvalidInput("Render của rev mới lệch hình mẫu của job (renderKey khác) — báo lỗi cho nhà phát triển")
+            design = {"rev": res["rev"], "op": req["designOp"], "scope": req.get("scope")}
+        elif job["mode"] == "design" or apply_to_design:
+            tasks = req.get("tasks") or [{"targetLayer": job["target"], "material": req.get("material"),
+                                          "pendingOp": req.get("pendingOp"), "scope": req.get("scope")}]
+            ops, scope, skip = [], [], []
+            spec, _ = self.store.get(job["design_id"])
+            scene = geometry.compile_spec(spec)
+            cur = spec
+            for i, t in enumerate(tasks, 1):
+                op, pv = t.get("pendingOp"), t.get("scope")
+                if op is None:
+                    if not t.get("material"):
+                        skip.append(f"việc {i}: không nêu vật liệu")
+                        continue
+                    r = layers.design_op(cur, layers.resolve(layers.catalogue(cur, scene), t["targetLayer"])[0], t["material"], scene)
+                    if r is None:
+                        skip.append(f"việc {i}: layer chưa sửa được trong thiết kế")
+                        continue
+                    op, pv = r
+                cur = edit.apply_op(cur, op)
+                ops.append(op)
+                scope.append(pv)
+            if not ops:
+                raise InvalidInput("Không có việc nào áp được vào thiết kế (" + "; ".join(skip) + ")")
+            op = edit.combine_ops(ops)
+            res = self._apply(job["design_id"], op, base_rev if base_rev is not None else job["rev"], f"image-job:{jid}")
+            design = {"rev": res["rev"], "op": op, "scope": "; ".join(scope), **({"skip": skip} if skip else {})}
+        now = self.runtime.now()
+        try:  # what the approved image shows, for the multi-view consistency check (see view_sync)
+            appearance = view_sync.snapshot(self, job["design_id"], job["view"], design["rev"] if design else job["rev"], req.get("size"))
+        except (KitchenError, ValueError, KeyError, OSError):  # acceptance must not fail because the snapshot could not be taken
+            appearance = None
+        return self.store.update_job(jid, "accepted", {"acceptNow": now, **({"design": design} if design else {}),
+                                                      **({"appearance": appearance} if appearance else {})})
+
+    def view_status(self, did: str, rev: int | None = None) -> dict:
+        return view_sync.view_status(self, did, rev)
+
+    def regenerate_stale(self, did: str, views: list[str] | None = None, backend: str = "recolor", base_rev: int | None = None) -> dict:
+        return view_sync.regenerate_stale(self, did, views, backend, base_rev)
+
+    def reject(self, jid: str) -> dict:
+        job = self.store.get_job(jid)
+        if job["status"] == "accepted":
+            raise InvalidInput("Job đã chấp nhận")
+        return self.store.update_job(jid, "rejected")
+
+    def regenerate(self, jid: str, seed: int | None = None) -> dict:
+        j = self.store.get_job(jid)
+        r = j["request"]
+        ref = r.get("referenceImage") or {}
+        if j["kind"] == "geometry_edit":
+            return self.create(j["design_id"], j["view"], None, (r.get("tasks") or [{}])[0].get("instruction") or "", "design", None,
+                               j["backend"], ref.get("jobId") or (ref.get("type") if ref.get("type") in ("albedo", "beauty", "imported") else None),
+                               None, "geometry_edit", r.get("workflow"), seed, r.get("params"), None, bool(j["result"].get("preview")),
+                               r.get("originalGeometry"), r.get("operation"), r.get("lighting"))
+        tasks = [{k: t.get(k) for k in ("targetLayer", "material", "instruction")} for t in r.get("tasks") or []] or None
+        return self.create(j["design_id"], j["view"], None if tasks else r.get("targetLayer"), r.get("instruction", ""), j["mode"],
+                           None if tasks else r.get("material"), j["backend"],
+                           ref.get("jobId") or (ref.get("type") if ref.get("type") in ("albedo", "beauty", "imported") else None), None, j["kind"],
+                           r.get("workflow"), seed, r.get("params"), tasks, bool(j["result"].get("preview")),
+                           None, None, r.get("lighting"))
+
+    def get(self, jid: str) -> dict:
+        self.store.mark_stale_jobs()
+        return self.store.get_job(jid)
+
+    def list(self, did: str | None = None, view: str | None = None, status: str | None = None, limit: int = 50) -> list[dict]:
+        self.store.mark_stale_jobs()
+        return self.store.list_jobs(did, view, status, limit)

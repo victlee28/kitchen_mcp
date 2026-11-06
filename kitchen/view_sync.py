@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING, Any
 from . import geometry
 
 if TYPE_CHECKING:  # pragma: no cover
-    from .imagejobs import ImageJobs
+    from .images import ImageJobs
 
 
 def snapshot(images: "ImageJobs", did: str, view: str, rev: int | None = None, size: list | tuple | None = None) -> dict[str, Any]:
@@ -91,7 +91,7 @@ def regenerate_stale(images: "ImageJobs", did: str, views: list[str] | None = No
 
     Each job re-applies the new materials onto the approved image. Nothing is sent to a backend until the user sends it.
     """
-    from .imagejobs import MAX_TASKS
+    from .images import MAX_TASKS
     status = view_status(images, did)
     chosen = views or [v for v, s in status.items() if s["status"] == "stale-appearance"]
     jobs, skipped = [], []

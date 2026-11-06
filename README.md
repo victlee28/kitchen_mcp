@@ -49,7 +49,7 @@ copy .env.example .env      # tùy chọn: DEEPSEEK_API_KEY... (.env được n�
 | `kitchen/moldings.py` | Phào cổ điển: preset mặt cắt, đường chạy tự tính theo dãy tủ (góc chữ L vát 45°, đầu hở quay về tường, tủ sâu hơn tách đoạn), quét thành lưới, kiểm tra trần/cánh lật/phào chân |
 | `kitchen/hardware.py` | Bản lề từng cánh, vị trí/kích thước tay nắm — một nguồn cho hình học (render/mask) và JSON three.js |
 | `kitchen/layers.py`, `kitchen/vocab.py` | Danh mục layer (layer ID = ID chi tiết), vật liệu từng chi tiết, thao tác sửa thiết kế tương ứng, prompt |
-| `kitchen/imaging.py`, `kitchen/imagejobs.py`, `kitchen/backends.py`, `workflows/` | Sửa ảnh theo lớp: mask từ instance, job, ghép strict, kiểm tra, backend `recolor` / `job-package` / `comfyui` |
+| `kitchen/imaging.py`, `kitchen/images/`, `kitchen/backends.py`, `workflows/` | Sửa ảnh theo lớp: mask từ instance, job, ghép strict, kiểm tra, backend `recolor` / `job-package` / `comfyui` |
 | `kitchen/ai_export.py` | Gói JSON cuối cùng gửi AI tạo ảnh (prompt từng góc, vật liệu, cảnh three.js, ảnh điều khiển) |
 | `server.py` | 29 tool MCP; lỗi trả về `ToolError` có lý do rõ ràng |
 | `web_server.py` | HTTP API + web; chỉ phục vụ `/web` và `/renders`, không CORS, bắt buộc JSON |

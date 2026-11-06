@@ -29,28 +29,32 @@ UNIT_MM = {"mm": 1.0, "cm": 10.0, "m": 1000.0}
 
 
 # ---------------------------------------------------------------- small geometry helpers
-def _sub(a, b):
+Pt = tuple[float, float]
+Poly = list[Pt]
+
+
+def _sub(a: Pt, b: Pt) -> Pt:
     return (a[0] - b[0], a[1] - b[1])
 
 
-def _dot(a, b):
+def _dot(a: Pt, b: Pt) -> float:
     return a[0] * b[0] + a[1] * b[1]
 
 
-def _cross(a, b):
+def _cross(a: Pt, b: Pt) -> float:
     return a[0] * b[1] - a[1] * b[0]
 
 
-def _norm(a):
+def _norm(a: Pt) -> Pt:
     n = math.hypot(*a)
     return (a[0] / n, a[1] / n) if n > 1e-9 else (0.0, 0.0)
 
 
-def _area2(poly):
+def _area2(poly: Poly) -> float:
     return sum(_cross(poly[i], poly[(i + 1) % len(poly)]) for i in range(len(poly)))
 
 
-def _seg_dist(p, a, b):
+def _seg_dist(p: Pt, a: Pt, b: Pt) -> float:
     ab = _sub(b, a)
     L2 = _dot(ab, ab)
     t = 0.0 if L2 < 1e-12 else max(0.0, min(1.0, _dot(_sub(p, a), ab) / L2))
@@ -58,11 +62,11 @@ def _seg_dist(p, a, b):
     return math.hypot(p[0] - q[0], p[1] - q[1])
 
 
-def _boundary_dist(p, poly):
+def _boundary_dist(p: Pt, poly: Poly) -> float:
     return min(_seg_dist(p, poly[i], poly[(i + 1) % len(poly)]) for i in range(len(poly)))
 
 
-def _pip(p, poly):
+def _pip(p: Pt, poly: Poly) -> bool:
     x, y = p
     inside = False
     for i, (x1, y1) in enumerate(poly):
@@ -72,18 +76,18 @@ def _pip(p, poly):
     return inside
 
 
-def _proper_cross(a, b, c, d):
+def _proper_cross(a: Pt, b: Pt, c: Pt, d: Pt) -> bool:
     """Segments ab and cd cross at a single interior point of both (touching/collinear does not count)."""
     d1, d2 = _cross(_sub(b, a), _sub(c, a)), _cross(_sub(b, a), _sub(d, a))
     d3, d4 = _cross(_sub(d, c), _sub(a, c)), _cross(_sub(d, c), _sub(b, c))
     return d1 * d2 < -1e-9 and d3 * d4 < -1e-9
 
 
-def _polys_cross(p, q):
+def _polys_cross(p: Poly, q: Poly) -> bool:
     return any(_proper_cross(p[i], p[(i + 1) % len(p)], q[j], q[(j + 1) % len(q)]) for i in range(len(p)) for j in range(len(q)))
 
 
-def _poly_dist(p, q):
+def _poly_dist(p: Poly, q: Poly) -> float:
     """Distance between two polygon boundaries (0 when they touch or cross)."""
     if _polys_cross(p, q):
         return 0.0
@@ -91,7 +95,7 @@ def _poly_dist(p, q):
                [_seg_dist(v, p[j], p[(j + 1) % len(p)]) for v in q for j in range(len(p))])
 
 
-def _self_intersects(poly):
+def _self_intersects(poly: Poly) -> bool:
     n = len(poly)
     for i in range(n):
         for j in range(i + 1, n):
@@ -102,12 +106,12 @@ def _self_intersects(poly):
     return False
 
 
-def _angle_between(d1, d2):
+def _angle_between(d1: Pt, d2: Pt) -> float:
     """Smallest angle (deg) between two undirected lines."""
     return math.degrees(math.atan2(abs(_cross(d1, d2)), abs(_dot(d1, d2))))
 
 
-def _long_dir(pts):
+def _long_dir(pts: Poly) -> Pt:
     best, d = 0.0, (1.0, 0.0)
     for i in range(len(pts)):
         v = _sub(pts[(i + 1) % len(pts)], pts[i])
@@ -117,7 +121,7 @@ def _long_dir(pts):
 
 
 # ---------------------------------------------------------------- reading the document
-def _frame_vectors(data: dict[str, Any]):
+def _frame_vectors(data: dict[str, Any]) -> tuple[Any, Any]:
     frame = data.get("frame")
     if not isinstance(frame, dict):
         raise InvalidInput("Floorplan has no 'frame'; axis directions would have to be guessed")
@@ -154,12 +158,12 @@ def _points(value: Any, element_id: str, what: str = "outline") -> list[tuple[fl
     return pts
 
 
-def _field(element: dict, name: str) -> dict:
+def _field(element: dict[str, Any], name: str) -> dict[str, Any]:
     f = (element.get("fields") or {}).get(name)
     return f if isinstance(f, dict) else {}
 
 
-def _fv(element: dict, name: str) -> Any:
+def _fv(element: dict[str, Any], name: str) -> Any:
     return _field(element, name).get("value")
 
 
@@ -173,7 +177,7 @@ REGION_COVER = 0.2          # a wall bounds a side of the region when it covers 
 REGION_MARGIN_MM = 600.0    # how far an open side (no wall found) reaches beyond the seed
 
 
-def _bbox(e: dict) -> list[float] | None:
+def _bbox(e: dict[str, Any]) -> list[float] | None:
     g = _fv(e, "geometry")
     if not isinstance(g, dict):
         return None
@@ -186,7 +190,7 @@ def _bbox(e: dict) -> list[float] | None:
     return [min(p[0] for p in pts), min(p[1] for p in pts), max(p[0] for p in pts), max(p[1] for p in pts)]
 
 
-def _is_kitchen_unit(e: dict) -> bool:
+def _is_kitchen_unit(e: dict[str, Any]) -> bool:
     if e.get("kind") != "furniture":
         return False
     text = f"{_fv(e, 'tag') or ''} {_fv(e, 'label') or ''}".lower()
@@ -258,7 +262,7 @@ def derive_region(data: dict[str, Any], seeds: list[str]) -> dict[str, Any]:
     return {"bbox": [out[0], out[1], out[2], out[3]], "seeds": list(seeds), "sides": sides, "unit": unit}
 
 
-def _kitchen_candidates(data: dict[str, Any]) -> list[dict]:
+def _kitchen_candidates(data: dict[str, Any]) -> list[dict[str, Any]]:
     """Kitchen units that sit in no listed room, grouped by the region the walls give them."""
     rooms = {r["id"]: r for r in list_rooms(data, regions=False)}
     room_polys = {}
@@ -289,7 +293,7 @@ def _kitchen_candidates(data: dict[str, Any]) -> list[dict]:
     return groups
 
 
-def list_rooms(data: dict[str, Any], regions: bool = True) -> list[dict]:
+def list_rooms(data: dict[str, Any], regions: bool = True) -> list[dict[str, Any]]:
     """Every element tagged as a room, then (kind 'region') areas the walls enclose around kitchen units that no room covers."""
     out = []
     for e in (data.get("elements") or []):
@@ -332,7 +336,7 @@ def _snap_orthogonal(poly: list[tuple[float, float]], slope: float = 0.1) -> lis
     n = len(poly)
     gx, gy = list(range(n)), list(range(n))
 
-    def find(g, i):
+    def find(g: list[int], i: int) -> int:
         while g[i] != i:
             g[i] = g[g[i]]
             i = g[i]
@@ -356,7 +360,7 @@ def _snap_orthogonal(poly: list[tuple[float, float]], slope: float = 0.1) -> lis
     return [(sum(sx[find(gx, i)]) / len(sx[find(gx, i)]), sum(sy[find(gy, i)]) / len(sy[find(gy, i)])) for i in range(n)]
 
 
-def _inside(pt, poly) -> bool:
+def _inside(pt: Pt, poly: Poly) -> bool:
     x, y = pt
     c = False
     for a, b in zip(poly, poly[1:] + poly[:1]):
@@ -408,7 +412,7 @@ def trim_room(poly: list[tuple[float, float]], rects: list[tuple[str, list[float
         return list(poly), []
     px, py = sorted({round_half_away(p[0], 6) for p in base}), sorted({round_half_away(p[1], 6) for p in base})
 
-    def near(v, grid):
+    def near(v: float, grid: list[float]) -> float:
         best = min(grid, key=lambda g: abs(g - v))
         return best if abs(best - v) <= snap else round_half_away(v, 6)
     snapped = [(i, [near(bb[0], px), near(bb[1], py), near(bb[2], px), near(bb[3], py)]) for i, bb in rects]
@@ -502,13 +506,13 @@ def normalize(data: dict[str, Any], room_id: str | None = None) -> dict[str, Any
             warnings.append({"code": "room-trimmed", "message": f"the room outline overlapped wall elements {', '.join(trimmed)}; those parts were cut out of the room"})
 
     # file coordinates -> (right, forward) in mm -> scene (x = right - r0, z = f0 - forward)
-    def to_rf(p):
+    def to_rf(p: Pt) -> Pt:
         return ((p[0] * vx[0] + p[1] * vy[0]) * k, (p[0] * vx[1] + p[1] * vy[1]) * k)
 
     rf = [to_rf(p) for p in raw_room]
     r0, f0 = min(p[0] for p in rf), max(p[1] for p in rf)
 
-    def to_scene(p):
+    def to_scene(p: Pt) -> Pt:
         r, f = to_rf(p)
         return (round_half_away(r - r0, 3), round_half_away(f0 - f, 3))
 
@@ -655,7 +659,7 @@ def normalize(data: dict[str, Any], room_id: str | None = None) -> dict[str, Any
             "walls": walls, "elements": retained, "counts": counts, "binding": None, "warnings": warnings}
 
 
-def _membership(pts, poly, near):
+def _membership(pts: Poly, poly: Poly, near: float) -> tuple[str, float]:
     inside = [(_pip(p, poly) or _boundary_dist(p, poly) <= TOL) for p in pts]
     if all(inside):
         return "inside", 0.0
@@ -668,7 +672,7 @@ def _membership(pts, poly, near):
     return "outside", round_half_away(dist, 3)
 
 
-def _corner_extensions(edges, walls, ccw):
+def _corner_extensions(edges: list[dict[str, Any]], walls: list[dict[str, Any]], ccw: bool) -> list[float]:
     """How far the end of each wall box runs on over the outside corner of a convex vertex, so per-edge boxes leave no notch."""
     n = len(edges)
     ext = [0.0] * n
@@ -687,7 +691,7 @@ def _corner_extensions(edges, walls, ccw):
     return ext
 
 
-def _attach_opening(e, pts, rec, edges, walls, k, note):
+def _attach_opening(e: dict[str, Any], pts: Poly, rec: dict[str, Any], edges: list[dict[str, Any]], walls: list[dict[str, Any]], k: float, note: list[str]) -> dict[str, Any] | None:
     if not pts:
         note.append("no geometry")
         return None
@@ -725,7 +729,7 @@ def _attach_opening(e, pts, rec, edges, walls, k, note):
 
 
 # ---------------------------------------------------------------- back face of a unit next to a wall
-def _room_edges(room):
+def _room_edges(room: Poly) -> list[dict[str, Any]]:
     ccw = _area2(room) > 0
     out = []
     for i, a in enumerate(room):
@@ -735,11 +739,11 @@ def _room_edges(room):
     return out
 
 
-def _xy(outline):
+def _xy(outline: list[Any]) -> Poly:
     return [(p["x"], p["z"]) if isinstance(p, dict) else tuple(p) for p in outline]
 
 
-def detect_back(outline, fp: dict, gap_tol: float = 100.0, min_len: float = 200.0) -> dict | None:
+def detect_back(outline: list[Any], fp: dict[str, Any], gap_tol: float = 100.0, min_len: float = 200.0) -> dict[str, Any] | None:
     """Which side of a unit is its back, i.e. the side lying against a wall of the room.
 
     The back is the unit's edge that is parallel to a room edge, on the room side of it, within ``gap_tol`` of the wall
@@ -787,7 +791,7 @@ def detect_back(outline, fp: dict, gap_tol: float = 100.0, min_len: float = 200.
     return best
 
 
-def detect_element_backs(fp: dict, kinds: tuple[str, ...] = ("furniture",), tags: tuple[str, ...] | None = None) -> list[dict]:
+def detect_element_backs(fp: dict[str, Any], kinds: tuple[str, ...] = ("furniture",), tags: tuple[str, ...] | None = None) -> list[dict[str, Any]]:
     """detect_back for every retained furniture/cabinet that belongs to the room."""
     out = []
     for e in fp["elements"]:
@@ -800,7 +804,7 @@ def detect_element_backs(fp: dict, kinds: tuple[str, ...] = ("furniture",), tags
 
 
 # ---------------------------------------------------------------- binding the kitchen frame to the room
-def kitchen_transform(fp: dict, binding: dict) -> dict:
+def kitchen_transform(fp: dict[str, Any], binding: dict[str, Any]) -> dict[str, Any]:
     """Rigid transform kitchen frame -> scene: origin = right-hand corner of the back wall (as seen from inside), +z = into the room."""
     ed = _room_edges(_xy(fp["outline"]))[binding["back"]]
     n = ed["n"]
@@ -812,11 +816,11 @@ def kitchen_transform(fp: dict, binding: dict) -> dict:
             "right": {"x": round_half_away(right[0], 6), "z": round_half_away(right[1], 6)}, "into": {"x": round_half_away(n[0], 6), "z": round_half_away(n[1], 6)}}
 
 
-def _perp(e1, e2):
+def _perp(e1: dict[str, Any], e2: dict[str, Any]) -> bool:
     return abs(_angle_between(e1["dir"], e2["dir"]) - 90.0) <= 10.0
 
 
-def bind_kitchen(fp: dict, need: dict, back_edge: int | None = None, offset: float = 0.0) -> dict:
+def bind_kitchen(fp: dict[str, Any], need: dict[str, Any], back_edge: int | None = None, offset: float = 0.0) -> dict[str, Any]:
     """Choose (or validate) the room edge that carries the back run of the kitchen.
 
     ``need``: {"back": mm, "right": mm or 0, "left": mm or 0}. Raises ValueError when nothing fits; never stretches or
@@ -882,21 +886,21 @@ def bind_kitchen(fp: dict, need: dict, back_edge: int | None = None, offset: flo
     return b
 
 
-def apply_binding(doc: dict, fp: dict, binding: dict) -> dict:
+def apply_binding(doc: dict[str, Any], fp: dict[str, Any], binding: dict[str, Any]) -> dict[str, Any]:
     """A copy of a three.js document with the kitchen content moved from the kitchen frame into the floorplan room (``doc`` is not changed)."""
     doc = copy.deepcopy(doc)
     t = binding.get("transform") or kitchen_transform(fp, binding)
     pl = Placement.from_transform(t)
 
-    def vec(v):  # direction (rotation about +Y, same convention as three.js)
+    def vec(v: dict[str, Any]) -> dict[str, Any]:  # direction (rotation about +Y, same convention as three.js)
         x, z = pl.dir_to_room(v["x"], v["z"])
         return {**v, "x": round_half_away(x, 6), "z": round_half_away(z, 6)}
 
-    def pos(v):
+    def pos(v: dict[str, Any]) -> dict[str, Any]:
         w = vec(v)
         return {**v, "x": round_half_away(w["x"] + pl.ox, 3), "z": round_half_away(w["z"] + pl.oz, 3)}
 
-    def wrap(a):
+    def wrap(a: float) -> float:
         a = round_half_away(a % 360, 6)
         return a - 360 if a > 180 else a
 
@@ -928,7 +932,7 @@ STAIR_STEPS = 10
 STAIR_RISE = 1800.0
 
 
-def default_height(rec: dict) -> float:
+def default_height(rec: dict[str, Any]) -> float:
     """Height for an element that has none in the drawing (flagged heightSource 'assumed')."""
     kind, tag, label = rec["kind"], rec.get("tag") or "", (rec.get("label") or "").lower()
     if kind in ("wall", "column", "shaft"):
@@ -946,7 +950,7 @@ def default_height(rec: dict) -> float:
     return 0.0
 
 
-def structures(fp: dict) -> list[dict]:
+def structures(fp: dict[str, Any]) -> list[dict[str, Any]]:
     """Every retained element (all the walls included) as an extruded outline in scene coordinates."""
     out = []
     for e in fp["elements"]:
@@ -971,11 +975,11 @@ def structures(fp: dict) -> list[dict]:
 
 
 # ---------------------------------------------------------------- the 3D file: what threejs_export takes from a floorplan
-def _v3(p: dict) -> dict:
+def _v3(p: dict[str, Any]) -> dict[str, Any]:
     return {"x": p["x"], "y": 0, "z": p["z"]}
 
 
-def resolve_binding(fp: dict, need: dict | None) -> dict | None:
+def resolve_binding(fp: dict[str, Any], need: dict[str, Any] | None) -> dict[str, Any] | None:
     """The stored binding, else an automatic one when the design has cabinets (``need`` = run lengths), else None.
 
     Raises ValueError when the kitchen fits no wall: a wrong scene is never produced.
@@ -985,7 +989,7 @@ def resolve_binding(fp: dict, need: dict | None) -> dict | None:
     return bind_kitchen(fp, need) if need else None
 
 
-def room_section(fp: dict, binding: dict | None, wall_material: str, structs: list | None = None) -> dict:
+def room_section(fp: dict[str, Any], binding: dict[str, Any] | None, wall_material: str, structs: list[Any] | None = None) -> dict[str, Any]:
     """Pieces of the three.js ``room``: size, floor outline, wall data (``visible`` False: anchors and openings only) and structures."""
     names = {}
     if binding:
@@ -1014,7 +1018,7 @@ def room_section(fp: dict, binding: dict | None, wall_material: str, structs: li
             "walls": walls, "structures": out_structs}
 
 
-def finish_document(doc: dict, fp: dict, binding: dict | None) -> dict:
+def finish_document(doc: dict[str, Any], fp: dict[str, Any], binding: dict[str, Any] | None) -> dict[str, Any]:
     """A copy of the finished document: references to walls that do not exist dropped, the floorplan recorded, the kitchen moved into the room."""
     doc = copy.deepcopy(doc)
     ids = {w["id"] for w in doc["room"]["walls"]}

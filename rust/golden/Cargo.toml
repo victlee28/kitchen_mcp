@@ -1,0 +1,7 @@
+[package]
+name = "kitchen-golden"
+version = "0.1.0"
+edition = "2021"
+
+# No dependencies on purpose: std only, so it builds offline. Replace json.rs/sha256.rs by serde_json/sha2 when the real port starts.
+[dependencies]

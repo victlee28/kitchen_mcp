@@ -31,6 +31,20 @@ class TestPortableCore(unittest.TestCase):
         self.assertFalse(set(zones) - on_disk, f"Zones name modules that do not exist: {sorted(set(zones) - on_disk)}")
         self.assertEqual(len(zones), len(set(zones)), "a module is listed in two zones")
 
+    def test_packages_are_classified_and_the_image_package_stays_independent(self):
+        import ast
+        packages = {os.path.basename(os.path.dirname(f)) for f in glob.glob(str(rules.KITCHEN / "*" / "__init__.py"))}
+        self.assertEqual(packages, set(rules.PIXEL_PACKAGES), "a package under kitchen/ must be listed in a zone (PIXEL_PACKAGES)")
+        for pkg in rules.PIXEL_PACKAGES:
+            for f in sorted((rules.KITCHEN / pkg).glob("*.py")):
+                text = f.read_text(encoding="utf-8")
+                self.assertNotIn("os.environ", text, f"{f.name} reads the environment; take a Config instead")
+                self.assertNotIn("getenv", text, f"{f.name} reads the environment; take a Config instead")
+                for n in ast.walk(ast.parse(text)):
+                    if isinstance(n, ast.ImportFrom):
+                        names = {n.module or ""} | {a.name for a in n.names}
+                        self.assertFalse(names & {"service", "web_server", "server"}, f"{f.name} imports the facade or an adapter")
+
     def test_only_the_shell_reads_the_environment(self):
         readers = [m for m in rules.ALL_ZONES if rules.env_reads(m)]
         self.assertFalse(set(readers) - set(rules.ENV_READERS), f"These modules read os.environ but are not in ENV_READERS: {sorted(set(readers) - set(rules.ENV_READERS))}")
