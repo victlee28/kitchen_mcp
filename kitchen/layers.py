@@ -53,6 +53,8 @@ def material_slot(spec: KitchenSpec, module: str | None, type: str) -> tuple[str
         return f"molding:{module}", mols[module].material or "Gỗ sơn"
     if type == "handle":
         return handles.material_slot(spec, module)
+    if type.startswith("structure-"):  # drawn from the imported floorplan: not a material of the kitchen
+        return f"structure:{type[len('structure-'):]}", ""
     if type in _APPLIANCES:
         return f"appliances:{type}", _APPLIANCES[type]
     if type in ("countertop", "wall", "floor", "plinth"):
@@ -106,10 +108,10 @@ def catalogue(spec: KitchenSpec, scene: Scene) -> list[dict]:
     for p in list(scene.parts) + list(scene.meshes):
         key, name = material_slot(spec, p.module, p.type)
         vt = ROLES.get(p.type, (p.type, p.type))
-        out.append({"id": p.id, "variant": "part", "module": p.module, "type": p.type, "semanticClass": SEMANTIC.get(p.type, "custom"),
+        out.append({"id": p.id, "variant": "part", "module": p.module, "type": p.type, "semanticClass": SEMANTIC.get(p.type, "structure" if p.type.startswith("structure-") else "custom"),
                     "name": f"{vt[0]} {p.module or ''}".strip(), "material": name, "materialLocked": key,
                     "storey": storey_of.get(p.module), "parent": getattr(p, "parent", None),
-                    "selectable": True, "allowAppearanceChange": True,
+                    "selectable": True, "allowAppearanceChange": not p.type.startswith("structure-"),
                     "allowGeometryChange": False, "allowPositionChange": False})
     by_id = {x["id"]: x for x in out}
     groups = []
@@ -144,7 +146,8 @@ def catalogue(spec: KitchenSpec, scene: Scene) -> list[dict]:
                            "materialLocked": "common:handle" if type == "handle" else (first["materialLocked"] if same else ""), "component": ids})
     groups.extend(_tier_groups(out))
     for g in groups:
-        g.update(selectable=True, allowAppearanceChange=True, allowGeometryChange=False, allowPositionChange=False)
+        g.update(selectable=True, allowAppearanceChange=not str(g.get("type", "")).startswith("structure-"),
+                 allowGeometryChange=False, allowPositionChange=False)
     return out + groups
 
 

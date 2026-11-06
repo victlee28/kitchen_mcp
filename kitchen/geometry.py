@@ -14,6 +14,8 @@ COLORS = {  # màu hiển thị theo loại chi tiết (viewer 3D, mask ngữ ng
     "side-panel": "#c19a6b", "shelf": "#a77f55", "countertop": "#f1f0ec", "fridge": "#c9ccd1", "sink": "#2f3236",
     "faucet": "#8a8f96", "cooktop": "#121212", "hood": "#6f747a", "oven": "#3a3d42", "wall": "#ece7de", "floor": "#bdb4a6",
     "molding": "#a87542", "handle": "#2b2b2b", "wall-tile": "#dedbd4",
+    "structure-wall": "#E7E2D5", "structure-column": "#F2B65D", "structure-opening": "#55C6A9", "structure-furniture": "#D38662",
+    "structure-shaft": "#8C83D6", "structure-stair": "#CFAE52", "structure-area": "#7D9EAA",  # = floorplan.STRUCTURE_COLORS
 }
 
 
@@ -257,12 +259,39 @@ class _Builder:
                     self.box(tb.id, tb.type, tb.wall, tb.center - w / 2, tb.center + w / 2, dc_ - d / 2, dc_ + d / 2,
                              c.countertop, c.countertop + height)
 
+    def structures(self) -> list:
+        """Meshes of the imported floorplan's elements in the kitchen frame (none without a floorplan or when the kitchen fits no wall)."""
+        fp = getattr(self.spec, "floorplan", None)
+        if not isinstance(fp, dict):
+            return []
+        import math
+        from . import floorplan as fpmod, structure_mesh
+        mods = self.spec.module
+        need = {"back": self.lsau, "right": self.lphai if any(m.wall == "right" for m in mods) else 0,
+                "left": self.lphai if any(m.wall == "left" for m in mods) else 0} if mods else None
+        try:
+            binding = fpmod.resolve_binding(fp, need)
+        except ValueError:
+            return []
+        if binding:
+            t = binding.get("transform") or fpmod.kitchen_transform(fp, binding)
+            yaw, ox, oz = math.radians(t["yaw"]), t["origin"]["x"], t["origin"]["z"]
+        else:
+            yaw, ox, oz = 0.0, 0.0, 0.0
+        c, s = math.cos(yaw), math.sin(yaw)
+
+        def to_kitchen(x, z):  # inverse of floorplan.apply_binding
+            ux, uz = x - ox, z - oz
+            return ux * c - uz * s, ux * s + uz * c
+        return structure_mesh.meshes(fpmod.structures(fp), to_kitchen)
+
     def room(self):
         ceiling = self.c.ceiling
-        self.box(None, "wall", "back", -100, self.lsau, -100, 0, 0, ceiling)
-        self.box(None, "wall", "right", 0, self.lphai, -100, 0, 0, ceiling)
-        if any(m.wall == "left" for m in self.spec.module):
-            self.box(None, "wall", "left", 0, self.lphai, -100, 0, 0, ceiling)
+        if not isinstance(getattr(self.spec, "floorplan", None), dict):  # an imported plan brings its own (real) walls
+            self.box(None, "wall", "back", -100, self.lsau, -100, 0, 0, ceiling)
+            self.box(None, "wall", "right", 0, self.lphai, -100, 0, 0, ceiling)
+            if any(m.wall == "left" for m in self.spec.module):
+                self.box(None, "wall", "left", 0, self.lphai, -100, 0, 0, ceiling)
         self.parts.append(Part("room-floor-1", None, "floor", (-self.lsau - 100, -40, -100), (100, 0, self.lphai + 1500)))
 
     # ---- tay nắm (kitchen.hardware: cùng quy tắc với bộ xuất three.js)
@@ -319,7 +348,8 @@ class _Builder:
         self.appliance()
         self.room()
         from .moldings import meshes as molding_meshes
-        return Scene(self.parts, self.lsau, self.lphai, molding_meshes(self.spec) if self.spec.moldings else [])
+        meshes = molding_meshes(self.spec) if self.spec.moldings else []
+        return Scene(self.parts, self.lsau, self.lphai, meshes + self.structures())
 
 
 def compile_spec(spec: KitchenSpec) -> Scene:

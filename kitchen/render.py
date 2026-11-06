@@ -6,6 +6,7 @@ Rasterizer phần mềm bằng numpy trên các khối hộp do compiler sinh ra
 - normal.png     : normal trong hệ camera, RGB = n*0.5+0.5 (x phải, y lên, z hướng về camera)
 - seg.png        : mask theo loại chi tiết (màu cố định, xem legend.json)
 - seg_module.png : mask theo module (mỗi module một màu, xem legend.json)
+- seg_structure.png : mask riêng cho phần tử của mặt bằng đã nhập (tường, cột, cửa, thang… theo loại; còn lại đen)
 - camera.json    : nội/ngoại tham số camera để chiếu ngược sau này
 - instance.png   : 16-bit, giá trị = chỉ số chi tiết + 1 (0 = nền); bảng tra trong instances.json (ID chi tiết = layer ID)
 - albedo.png     : màu vật liệu × đổ bóng đơn giản, cùng rasterizer nên khớp mask từng pixel (ảnh khởi tạo / xem trước)
@@ -33,6 +34,9 @@ SEGMENT_COLORS = {  # màu mask ngữ nghĩa (cố định giữa các lần ren
     "fridge": (120, 120, 200), "sink": (40, 40, 40), "faucet": (160, 160, 160), "cooktop": (90, 0, 90),
     "hood": (0, 90, 90), "oven": (120, 60, 20), "wall": (180, 170, 150), "floor": (110, 100, 90),
     "molding": (168, 117, 66), "handle": (255, 0, 140),
+    "structure-wall": (231, 226, 213), "structure-column": (242, 182, 93), "structure-opening": (85, 198, 169),
+    "structure-furniture": (211, 134, 98), "structure-shaft": (140, 131, 214), "structure-stair": (207, 174, 82),
+    "structure-area": (125, 158, 170),
 }
 
 # 6 mặt của hộp: (chỉ số đỉnh, normal)
@@ -297,6 +301,12 @@ def render_view(scene: Scene, view: ViewAngle, out_dir: Path, width: int = 1280,
     segm[hit] = mod_lut[pid[hit]]
     Image.fromarray(seg, "RGB").save(out_dir / "seg.png")
     Image.fromarray(segm, "RGB").save(out_dir / "seg_module.png")
+    # structures of an imported floorplan: their own mask (colour by kind), everything else black; one file so a view can be edited layer by layer
+    is_struct = np.array([p.type.startswith("structure-") for p in all_parts] + [False], bool)
+    segs = np.zeros((height, width, 3), np.uint8)
+    sm = hit & is_struct[pid]
+    segs[sm] = type_lut[pid[sm]]
+    Image.fromarray(segs, "RGB").save(out_dir / "seg_structure.png")
 
     camera_info = {"view": view.model_dump(mode="json"), **camera.json()}
     (out_dir / "camera.json").write_text(json.dumps(camera_info, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -330,7 +340,7 @@ def render_view(scene: Scene, view: ViewAngle, out_dir: Path, width: int = 1280,
     alb[lines] *= 0.72
     Image.fromarray(alb.clip(0, 255).astype(np.uint8), "RGB").save(out_dir / "albedo.png")
 
-    files = ["lines.png", "depth.png", "depth16.png", "normal.png", "seg.png", "seg_module.png", "camera.json",
+    files = ["lines.png", "depth.png", "depth16.png", "normal.png", "seg.png", "seg_module.png", "seg_structure.png", "camera.json",
              "instance.png", "instances.json", "albedo.png"]
     key = render_key(scene, view, width, height)
     manifest = {**(meta or {}), "view": out_dir.name, "renderKey": key, "sceneHash": scene_hash(scene)[:16],
@@ -352,6 +362,9 @@ def part_colors(spec: KitchenSpec, scene: Scene) -> list[tuple[int, int, int]]:
     from . import layers, vocab
     out = []
     for p in list(scene.parts) + list(scene.meshes):
+        if p.type.startswith("structure-"):
+            out.append(_hex_rgb_part(p))
+            continue
         _, name = layers.material_slot(spec, p.module, p.type)
         c = vocab.color(name) if p.type not in ("sink", "cooktop", "oven", "glass-door", "plinth", "fridge", "faucet", "hood") else None
         out.append(vocab.hex_rgb(c) if c else _hex_rgb_part(p))
@@ -369,6 +382,7 @@ def render_views(spec: KitchenSpec, out_root: Path, views: list[str] | None = No
         raise ValueError(f"Không có góc nhìn: {unknown}. Có: {list(all_views)}")
     out_root.mkdir(parents=True, exist_ok=True)
     legend = {"seg": {k: list(v) for k, v in SEGMENT_COLORS.items()},
+              "seg_structure": {k: list(v) for k, v in SEGMENT_COLORS.items() if k.startswith("structure-")},
               "seg_module": {**{m.id: list(_module_color(m.id)) for m in spec.module},
                              **{x.id: list(_module_color(x.id)) for x in spec.moldings}}}
     (out_root / "legend.json").write_text(json.dumps(legend, ensure_ascii=False, indent=2), encoding="utf-8")
