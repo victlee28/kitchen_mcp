@@ -15,6 +15,7 @@ API:
   GET  /api/designs/<id>/history         lịch sử
   POST /api/designs/<id>/ops             {"baseRev": N, "op": {...}, "expect"?: opHash của /propose: chỉ lưu đúng thao tác đã xem trước}
   POST /api/designs/<id>/interpret       {"text": "xóa TD3", "baseRev"?: N, "scope"?: ["TD1"], "useLlm"?: false} câu lệnh tự do -> thao tác + bản xem trước (không lưu) hoặc câu hỏi làm rõ
+  POST /api/designs/<id>/recognize       {"source": {"kind": "photo"|"drawing", "imageBase64": "..."}, "recognizer"?: "tên", "baseRev"?: N} ảnh/bản vẽ -> bản nháp + xem trước (không lưu); chưa có bộ nhận diện thì status "unavailable"
   POST /api/designs/<id>/propose         {"baseRev": N, "op": {...}, "scope"?: ["TD1"]} xem trước, không lưu: diff, validation mới/đã hết, module bị ảnh hưởng
   POST /api/designs/<id>/revert          {"baseRev": N, "rev": M}
   POST /api/designs/<id>/render          {"rev"?, "views"?, "width"?, "height"?}
@@ -211,7 +212,7 @@ class Handler(BaseHTTPRequestHandler):
                 b = self._body()
                 return self._json(201, self._job_out(s.images.regenerate(jid, b.get("seed"))))
             raise ApiError(405, "Phương thức không hỗ trợ")
-        m = re.fullmatch(r"/api/designs/([a-z0-9-]+)(?:/(scene|threejs|validate|history|ops|revert|render|layers|mask|pick|image-jobs|beauty|base-image|ai-export|floorplan-bind|view-status|regenerate-stale|propose|interpret))?", p)
+        m = re.fullmatch(r"/api/designs/([a-z0-9-]+)(?:/(scene|threejs|validate|history|ops|revert|render|layers|mask|pick|image-jobs|beauty|base-image|ai-export|floorplan-bind|view-status|regenerate-stale|propose|interpret|recognize))?", p)
         if not m:
             raise ApiError(404, "Không có endpoint")
         did, sub = m.groups()
@@ -251,7 +252,7 @@ class Handler(BaseHTTPRequestHandler):
             if sub == "pick":
                 return self._json(200, s.images.pick(did, self._need(q, "view"), int(self._need(q, "x")), int(self._need(q, "y")), rev, int(q.get("radius") or 0)))
         if method == "POST":
-            b = self._body(MAX_IMAGE_BODY if sub in ("beauty", "base-image") else MAX_BODY)
+            b = self._body(MAX_IMAGE_BODY if sub in ("beauty", "base-image", "recognize") else MAX_BODY)
             if sub == "regenerate-stale":
                 return self._json(201, s.images.regenerate_stale(did, b.get("views") if isinstance(b.get("views"), list) else None,
                                                                  b.get("backend") or "recolor", b.get("baseRev")))
@@ -298,6 +299,10 @@ class Handler(BaseHTTPRequestHandler):
                 if scope is not None and not (isinstance(scope, list) and all(isinstance(x, str) for x in scope)):
                     raise ApiError(400, "scope phải là danh sách id module")
                 return self._json(200, s.propose(did, b["op"], b.get("baseRev"), scope, b.get("country")))
+            if sub == "recognize":
+                if not isinstance(b.get("source"), dict):
+                    raise ApiError(400, "thiếu source")
+                return self._json(200, s.recognize(did, b["source"], b.get("recognizer"), b.get("baseRev"), b.get("country")))
             if sub == "interpret":
                 if not isinstance(b.get("text"), str):
                     raise ApiError(400, "thiếu text")

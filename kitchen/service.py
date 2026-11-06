@@ -1,11 +1,13 @@
 """Shared application service used by the MCP server and HTTP API."""
 from __future__ import annotations
+import base64
+import binascii
 import datetime as _dt
 import json
 import os
 from pathlib import Path
 from typing import Any, Callable
-from . import edit, edit_intent, geometry, intent, llm, regions, render, rules, threejs_export
+from . import edit, edit_intent, geometry, intent, llm, recognition, regions, render, rules, threejs_export
 from .intent import KitchenTemplate as KitchenTemplate
 from .spec import Common, KitchenSpec, Room, Wall, dump_spec, load_spec
 from .store import ConflictError, Store
@@ -37,6 +39,7 @@ class KitchenService:
         self.clock = clock or utc_now
         self.config = Config.from_env()      # the environment is read here, once; below this line the service uses the value
         self.store = Store(db_path or self.config.db_path)
+        self.recognizers: dict[str, recognition.Recognizer] = {}     # plug-ins; none is wired by default
         self.render_dir = Path(render_dir or self.config.render_dir)
         legacy_schema.migrate_renders(self.render_dir)
         from .images import ImageJobs
@@ -162,6 +165,47 @@ class KitchenService:
             return {'id': design_id, 'baseRev': current, **result}
         preview = self.propose(design_id, result['operation'], current, scope or result.get('targets') or None, country)
         return {'id': design_id, 'baseRev': current, **result, 'proposal': preview}
+
+    def register_recognizer(self, name: str, recognizer: recognition.Recognizer) -> None:
+        """Plug in a photo/drawing recognizer (anything with ``recognize(RecognitionInput) -> dict``)."""
+        self.recognizers[name] = recognizer
+
+    def recognize(self, design_id: str, source: dict[str, Any], recognizer: str | None=None, base_revision: int | None=None,
+                  country: str | None=None) -> dict:
+        """Photo or drawing -> a DRAFT kitchen, previewed, never saved. ``source``: ``{"kind": "photo"|"drawing", "imageBase64": "...", "name"?, "mediaType"?}``.
+
+        ``status``: ``ok`` (``draft`` + ``operation`` + the :meth:`propose` result under ``proposal``; confirm with :meth:`apply` and its opHash),
+        ``empty`` (nothing usable was recognised), ``unavailable`` (no recognizer plugged in) or ``failed`` (the recognizer raised).
+        """
+        spec, current = self.store.get(design_id)
+        if base_revision is not None and base_revision != current:
+            raise ConflictError(f'base_rev={base_revision}, but the latest revision is {current}; reload before editing')
+        kind = source.get('kind')
+        if kind not in recognition.contract.SOURCE_KINDS:
+            raise InvalidInput(f"source.kind must be one of {', '.join(recognition.contract.SOURCE_KINDS)}", code='bad-source-kind')
+        try:
+            data = base64.b64decode(str(source.get('imageBase64') or ''), validate=True)
+        except (binascii.Error, ValueError) as error:
+            raise InvalidInput('source.imageBase64 is not valid base64', code='bad-source-data') from error
+        if not data or len(data) > 20 * 1024 * 1024:
+            raise InvalidInput('source image must be 1 byte to 20 MB', code='bad-source-size')
+        out: dict[str, Any] = {'id': design_id, 'baseRev': current}
+        if not self.recognizers:
+            return {**out, 'status': 'unavailable', 'message': 'No recognizer is configured'}
+        name = recognizer or (next(iter(self.recognizers)) if len(self.recognizers) == 1 else None)
+        if name not in self.recognizers:
+            raise InvalidInput(f"recognizer must be one of: {', '.join(self.recognizers)}", code='unknown-recognizer')
+        inp = recognition.RecognitionInput(kind=kind, data=data, name=str(source.get('name') or ''), media_type=str(source.get('mediaType') or ''))
+        try:
+            raw = self.recognizers[name].recognize(inp)
+        except Exception as error:  # a plug-in may raise anything; the caller gets a status, not a crash
+            return {**out, 'status': 'failed', 'recognizer': name, 'message': f'{type(error).__name__}: {error}'[:300]}
+        draft = recognition.build_draft(raw)
+        if not draft.modules:
+            return {**out, 'status': 'empty', 'recognizer': name, 'draft': draft.to_data()}
+        operation = recognition.draft_operation(spec, draft)
+        preview = self.propose(design_id, operation, current, None, country)
+        return {**out, 'status': 'ok', 'recognizer': name, 'draft': draft.to_data(), 'operation': operation, 'proposal': preview}
 
     def propose(self, design_id: str, operation: dict[str, Any], base_revision: int | None=None, scope: list[str] | None=None,
                 country: str | None=None) -> dict:

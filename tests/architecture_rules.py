@@ -12,7 +12,7 @@ CORE_MODULES = (
     "placement", "roomctx", "rules", "rules_kb", "rules_nkba", "edit", "proposal", "geometry", "moldings", "handles", "hardware",
     "structure_mesh", "layers", "threejs_export", "lexicon", "vocab", "edit_intent", "regions", "errors", "palette", "numeric",
 )
-CORE_PACKAGES = ("prompts", "floorplan")                      # packages whose every file is core (the files are found on disk)
+CORE_PACKAGES = ("prompts", "floorplan", "recognition")                      # packages whose every file is core (the files are found on disk)
 
 def _package_modules(pkg: str) -> tuple[str, ...]:
     """The package itself plus ``pkg.<file>`` for every module in it."""
