@@ -5,7 +5,7 @@ import json
 import os
 from pathlib import Path
 from typing import Any, Callable
-from . import edit, geometry, intent, llm, regions, render, rules, threejs_export
+from . import edit, edit_intent, geometry, intent, llm, regions, render, rules, threejs_export
 from .intent import KitchenTemplate as KitchenTemplate
 from .spec import Common, KitchenSpec, Room, Wall, dump_spec, load_spec
 from .store import ConflictError, Store
@@ -142,6 +142,26 @@ class KitchenService:
         updated_spec = edit.apply_op(spec, operation)
         new_revision = self.store.add_revision(design_id, base_revision, updated_spec, operation, source)
         return self._summary(design_id, new_revision, updated_spec)
+
+    def interpret(self, design_id: str, text: str, base_revision: int | None=None, scope: list[str] | None=None,
+                  country: str | None=None, use_llm: bool=False) -> dict:
+        """Free-form edit sentence -> a previewed operation, never saved. Send ``operation`` to :meth:`apply` with ``proposal.opHash`` to confirm.
+
+        ``status`` is ``ok`` (with ``operation``, ``summary`` and the full :meth:`propose` result under ``proposal``), ``clarify`` (a
+        ``question`` and optional ``choices``) or ``unsupported``. ``use_llm`` asks DeepSeek only when the rules cannot read the sentence
+        and a key is configured; its operation passes ``edit_intent.check_operation`` and then ``propose`` like any other.
+        """
+        spec, current = self.store.get(design_id)
+        if base_revision is not None and base_revision != current:
+            raise ConflictError(f'base_rev={base_revision}, but the latest revision is {current}; reload before editing')
+        result = edit_intent.interpret_edit(spec, text, scope)
+        if result['status'] == 'unsupported' and use_llm:
+            guess, status = llm.edit_operation_llm(text, spec, self.config)
+            result = edit_intent.check_operation(guess) if guess else {**result, 'llm': status}
+        if result['status'] != 'ok':
+            return {'id': design_id, 'baseRev': current, **result}
+        preview = self.propose(design_id, result['operation'], current, scope or result.get('targets') or None, country)
+        return {'id': design_id, 'baseRev': current, **result, 'proposal': preview}
 
     def propose(self, design_id: str, operation: dict[str, Any], base_revision: int | None=None, scope: list[str] | None=None,
                 country: str | None=None) -> dict:

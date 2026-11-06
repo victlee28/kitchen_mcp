@@ -78,7 +78,7 @@ class TestAdapterBoundary(unittest.TestCase):
         """A feature added to one adapter must be reachable from the other."""
         mcp = {p for p in _service_calls(_tree("server.py"))}
         http = {p for p in _service_calls(_tree("web_server.py"))}
-        for feature in (("import_floorplan",), ("bind_floorplan",), ("list_floorplan_rooms",), ("images", "view_status"), ("images", "regenerate_stale"), ("propose",)):
+        for feature in (("import_floorplan",), ("bind_floorplan",), ("list_floorplan_rooms",), ("images", "view_status"), ("images", "regenerate_stale"), ("propose",), ("interpret",)):
             self.assertIn(feature, mcp, f"MCP lacks {feature}")
             self.assertIn(feature, http, f"HTTP lacks {feature}")
 
