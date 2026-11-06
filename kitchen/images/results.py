@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 import json
 
 from PIL import Image
@@ -10,6 +11,7 @@ from .. import edit, geometry, imaging, layers, view_sync
 from ..errors import InvalidInput
 from ..errors import KitchenError
 from .common import JobsContext, FEATHER_PX
+from .request import JobRequest, NewJob, task_inputs
 
 
 class Results(JobsContext):
@@ -119,17 +121,17 @@ class Results(JobsContext):
             design = {"rev": res["rev"], "op": op, "scope": "; ".join(scope), **({"skip": skip} if skip else {})}
         now = self.runtime.now()
         try:  # what the approved image shows, for the multi-view consistency check (see view_sync)
-            appearance = view_sync.snapshot(self, job["design_id"], job["view"], design["rev"] if design else job["rev"], req.get("size"))
+            appearance = view_sync.snapshot(self.jobs, job["design_id"], job["view"], design["rev"] if design else job["rev"], req.get("size"))
         except (KitchenError, ValueError, KeyError, OSError):  # acceptance must not fail because the snapshot could not be taken
             appearance = None
         return self.store.update_job(jid, "accepted", {"acceptNow": now, **({"design": design} if design else {}),
                                                       **({"appearance": appearance} if appearance else {})})
 
     def view_status(self, did: str, rev: int | None = None) -> dict:
-        return view_sync.view_status(self, did, rev)
+        return view_sync.view_status(self.jobs, did, rev)
 
     def regenerate_stale(self, did: str, views: list[str] | None = None, backend: str = "recolor", base_rev: int | None = None) -> dict:
-        return view_sync.regenerate_stale(self, did, views, backend, base_rev)
+        return view_sync.regenerate_stale(self.jobs, did, views, backend, base_rev)
 
     def reject(self, jid: str) -> dict:
         job = self.store.get_job(jid)
@@ -137,21 +139,24 @@ class Results(JobsContext):
             raise InvalidInput("Job đã chấp nhận")
         return self.store.update_job(jid, "rejected")
 
-    def regenerate(self, jid: str, seed: int | None = None) -> dict:
+    def regenerate(self, jid: str, seed: int | None = None) -> dict[str, Any]:
+        """A new job with the same request (and a new seed when given)."""
         j = self.store.get_job(jid)
-        r = j["request"]
+        r: JobRequest = j["request"]
         ref = r.get("referenceImage") or {}
+        reference = ref.get("jobId") or (ref.get("type") if ref.get("type") in ("albedo", "beauty", "imported") else None)
+        preview = bool(j["result"].get("preview"))
         if j["kind"] == "geometry_edit":
-            return self.create(j["design_id"], j["view"], None, (r.get("tasks") or [{}])[0].get("instruction") or "", "design", None,
-                               j["backend"], ref.get("jobId") or (ref.get("type") if ref.get("type") in ("albedo", "beauty", "imported") else None),
-                               None, "geometry_edit", r.get("workflow"), seed, r.get("params"), None, bool(j["result"].get("preview")),
-                               r.get("originalGeometry"), r.get("operation"), r.get("lighting"))
-        tasks = [{k: t.get(k) for k in ("targetLayer", "material", "instruction")} for t in r.get("tasks") or []] or None
-        return self.create(j["design_id"], j["view"], None if tasks else r.get("targetLayer"), r.get("instruction", ""), j["mode"],
-                           None if tasks else r.get("material"), j["backend"],
-                           ref.get("jobId") or (ref.get("type") if ref.get("type") in ("albedo", "beauty", "imported") else None), None, j["kind"],
-                           r.get("workflow"), seed, r.get("params"), tasks, bool(j["result"].get("preview")),
-                           None, None, r.get("lighting"))
+            first = (r.get("tasks") or [None])[0]
+            return self.submit(NewJob(j["design_id"], j["view"], instruction=(first or {}).get("instruction") or "", mode="design",
+                                      backend=j["backend"], reference=reference, kind="geometry_edit", workflow=r.get("workflow"), seed=seed,
+                                      params=r.get("params"), preview=preview, geometry_items=r.get("originalGeometry"),
+                                      operation=r.get("operation"), lighting=r.get("lighting")))
+        tasks = [dict(t) for t in task_inputs(r.get("tasks") or [])] or None
+        return self.submit(NewJob(j["design_id"], j["view"], target=None if tasks else r.get("targetLayer"), instruction=r.get("instruction", ""),
+                                  mode=j["mode"], material=None if tasks else r.get("material"), backend=j["backend"], reference=reference,
+                                  kind=j["kind"], workflow=r.get("workflow"), seed=seed, params=r.get("params"), tasks=tasks,
+                                  preview=preview, lighting=r.get("lighting")))
 
     def get(self, jid: str) -> dict:
         self.store.mark_stale_jobs()

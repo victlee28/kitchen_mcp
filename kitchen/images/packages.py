@@ -9,16 +9,17 @@ from PIL import Image
 
 from .. import request_check, backends, edit, imaging, realism
 from ..errors import KitchenError
+from .request import JobRequest, size_of
 from .common import JobsContext, GROW_PX, ZONE_COLORS
 
 
 class Packages(JobsContext):
-    def _values(self, req: dict, wf: dict) -> dict:
+    def _values(self, req: JobRequest, wf: dict) -> dict:
         W, H = req["size"]
         return {**wf.get("kitchen", {}).get("default", {}), **req.get("params", {}),
                 "prompt": req["prompt"], "negative": req["negativePrompt"], "seed": req["seed"], "width": W, "height": H}
 
-    def _export_package(self, jid: str, jdir: Path, req: dict) -> dict:
+    def _export_package(self, jid: str, jdir: Path, req: JobRequest) -> dict:
         wf = backends.load_workflow(req["workflow"])
         tasks = req.get("tasks") or []
         if len(tasks) > 1:
@@ -51,7 +52,7 @@ class Packages(JobsContext):
                 else:
                     imgs[k] = f"{jid}_{k}.png"
                     shutil.copyfile(jdir / files[k], jdir / imgs[k])
-            vals = {**self._values(req, wf), "prompt": t["prompt"], "seed": req["seed"] + i - 1}
+            vals = {**self._values(req, wf), "prompt": t.get("prompt", ""), "seed": req["seed"] + i - 1}
             name = f"workflow_api_{i}.json"
             (jdir / name).write_text(json.dumps(backends.build_prompt(wf, imgs, vals, backends.model_defaults(self.config)), ensure_ascii=False, indent=1), encoding="utf-8")
             steps.append(f"  Việc {i} [{ZONE_COLORS[(i - 1) % 8][0]}] {t['targetLayer']}: {name}, ảnh vào {imgs.get('reference', '-')}, "
@@ -66,7 +67,7 @@ class Packages(JobsContext):
             encoding="utf-8")
         return self.store.update_job(jid, "awaiting-result", {"package": sorted(p.name for p in jdir.iterdir())})
 
-    def _ai_input(self, job: dict, jdir: Path, req: dict) -> tuple[str, list[tuple[str, Path]]]:
+    def _ai_input(self, job: dict, jdir: Path, req: JobRequest) -> tuple[str, list[tuple[str, Path]]]:
         """Chỉ dẫn dạng câu + ảnh gửi model nhận chỉ dẫn (Gemini, gói request). Một nguồn cho cả gọi API lẫn file xuất."""
         if req["kind"] == "gen0":
             d = self._render_dir(job["design_id"], job["rev"], job["view"])
@@ -75,12 +76,12 @@ class Packages(JobsContext):
             real = req.get("photoImage") or realism.full(spec, req.get("lighting") or "daylight")
             return backends.gemini_text("gen0", "", req.get("instruction", ""), req["globalPrompt"], realism=real), [("input-image", src)]
         if req["kind"] == "geometry_edit":
-            t = req["tasks"][0]
+            t = req.get("tasks", [{}])[0]
             text = backends.gemini_text_geometry(req.get("operation") or t.get("operation") or "replace-item", [x["en"] for x in req.get("description", [])],
                                              (t.get("position") or {}).get("en"), t.get("instruction") or "", self._local_real(job))
             return text, [("marked-base-image", jdir / "reference_marked.png"), ("mask", jdir / "mask.png"),
                           ("new-geometry", jdir / "new_geometry.png")]
-        tasks = req["tasks"]
+        tasks = req.get("tasks", [])
         multi = len(tasks) > 1
         marked = jdir / "reference_marked.png"
         if not marked.exists():  # job tạo trước khi có ảnh đánh dấu
@@ -92,7 +93,7 @@ class Packages(JobsContext):
         for i, t in enumerate(tasks, 1):
             extra = " ".join(x for x in (t.get("instruction"), None if multi else req.get("instruction")) if x)
             regions.append({"n": i, "color": ZONE_COLORS[(i - 1) % len(ZONE_COLORS)][0], "role": t.get("roleEn") or "kitchen element",
-                            "material_text": t.get("materialText") or t["prompt"], "extra": extra,
+                            "material_text": t.get("materialText") or t.get("prompt", ""), "extra": extra,
                             "where": (t.get("position") or {}).get("en"), "others": t.get("remaining") or 0,
                             "kind": t.get("typeEn") or t.get("roleEn") or "element"})
         text = backends.gemini_text_edit(regions, req.get("instruction", "") if multi else "", self._local_real(job))
@@ -125,7 +126,7 @@ class Packages(JobsContext):
         jdir = Path(job["result"]["dir"])
         req = job["request"]
         text, imgs = self._ai_input(job, jdir, req)
-        size = tuple(req["size"])
+        size = size_of(req)
         image_name = {"base-image": "anh goc can sua", "marked-base-image": "anh goc can sua, vung sua co vien mau + so",
                    "mask": "mask (trang = vung sua)", "new-geometry": "hinh mau thiet ke moi (mau phang + net, chi de lay hinh)", "color-mask": "mask mau (moi mau mot viec)", "input-image": "anh dau vao"}
         for old in jdir.glob("image-*.png"):  # bỏ bản đánh số của lần xuất trước (tên vai trò có thể đã đổi)
@@ -141,7 +142,7 @@ class Packages(JobsContext):
             vt = t.get("position") or {}
             task.append({k: v for k, v in {
                 "task": i, "label": str(i), "borderColor": ZONE_COLORS[(i - 1) % len(ZONE_COLORS)][0],
-                "zoneColor": ZONE_COLORS[(i - 1) % len(ZONE_COLORS)][0] if len(req["tasks"]) > 1 else "WHITE",
+                "zoneColor": ZONE_COLORS[(i - 1) % len(ZONE_COLORS)][0] if len(req.get("tasks", [])) > 1 else "WHITE",
                 "name": t.get("name"), "target": t.get("roleEn"), "position": vt.get("vi"), "boxPercent": vt.get("frame"),
                 "sameTypeUnchanged": t.get("remaining"),
                 "material": t.get("material"), "english": t.get("materialText"), "request": t.get("instruction")}.items() if v})

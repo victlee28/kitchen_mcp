@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from kitchen.images import Runtime  # noqa: E402
+from kitchen.images.request import JobRequest, NewJob  # noqa: E402
 from kitchen.service import KitchenService  # noqa: E402
 
 FIX = ROOT / "fixtures" / "l-shaped-kitchen.json"
@@ -37,7 +38,7 @@ class TestImagesPackage(unittest.TestCase):
         old = im.runtime
         im.runtime = Runtime(now=lambda: "2026-01-02T03:04:05+00:00", new_id=lambda: "fixed-id", new_seed=lambda: 1234)
         try:
-            j = im.create(self.did, VIEW, "TD1-door-1", "Walnut", mode="quick", backend="recolor")
+            j = im.create(self.did, VIEW, "TD1-door-1", instruction="Walnut", mode="quick", backend="recolor")
         finally:
             im.runtime = old
         self.assertEqual(j["id"], "job-fixed-id")
@@ -54,7 +55,7 @@ class TestImagesPackage(unittest.TestCase):
         threading.excepthook = lambda args: logged.append(args.exc_value)
         im._run_gemini = boom
         try:
-            j = im.create(self.did, VIEW, "TD1-door-1", "Walnut", mode="quick", backend="gemini")
+            j = im.create(self.did, VIEW, "TD1-door-1", instruction="Walnut", mode="quick", backend="gemini")
             j = im.wait(j["id"], 30)
         finally:
             threading.excepthook, im._run_gemini = old_hook, old_run
@@ -66,10 +67,46 @@ class TestImagesPackage(unittest.TestCase):
         im = self.svc.images
         im.config = dataclasses.replace(im.config, gemini_api_key=None, gemini_env_file=None)
         try:
-            j = im.wait(im.create(self.did, VIEW, "TD1-door-1", "Walnut", mode="quick", backend="gemini")["id"], 30)
+            j = im.wait(im.create(self.did, VIEW, "TD1-door-1", instruction="Walnut", mode="quick", backend="gemini")["id"], 30)
         finally:
             im.config = self.svc.config
         self.assertEqual(j["status"], "error:unsupported", "no key in the Config means no key, whatever the process environment holds")
+
+    def test_every_stored_request_has_the_core_keys_of_job_request(self):
+        im = self.svc.images
+        core = set(JobRequest.__required_keys__)
+        edit = im.create(self.did, VIEW, "TD1-door-1", material="Walnut", backend="recolor")["request"]
+        gen0 = im.create(self.did, VIEW, kind="gen0", backend="job-package")["request"]
+        geo = im.create(self.did, VIEW, kind="geometry_edit", backend="recolor", geometry_items=[{"type": "remove-module", "id": "TD3"}])["request"]
+        for name, req in (("edit", edit), ("gen0", gen0), ("geometry_edit", geo)):
+            self.assertEqual(core - set(req), set(), name)
+            unknown = set(req) - set(JobRequest.__required_keys__) - set(JobRequest.__optional_keys__)
+            self.assertEqual(unknown, set(), f"{name}: keys the JobRequest type does not know")
+        self.assertNotIn("tasks", gen0)
+        self.assertEqual(len(geo["tasks"]), 1)
+        for t in edit["tasks"]:
+            self.assertTrue({"targetLayer", "material", "instruction"} <= set(t))
+
+    def test_submit_takes_a_new_job_value_and_create_is_the_keyword_form(self):
+        im = self.svc.images
+        new = NewJob(self.did, VIEW, target="TD1-door-1", material="Walnut", backend="recolor")
+        with self.assertRaises(dataclasses.FrozenInstanceError):
+            new.view = "x"  # type: ignore[misc]
+        a = im.submit(new)
+        b = im.create(self.did, VIEW, "TD1-door-1", material="Walnut", backend="recolor")
+        for key in ("tasks", "kind", "mode", "backend", "workflow"):
+            self.assertEqual(a["request"].get(key), b["request"].get(key), key)
+        with self.assertRaises(TypeError):  # more than (did, view, target) by position is refused: the 19-argument form is gone
+            im.create(self.did, VIEW, "TD1-door-1", "Walnut")
+
+    def test_regenerate_keeps_the_request(self):
+        im = self.svc.images
+        j = im.create(self.did, VIEW, backend="recolor", tasks=[{"targetLayer": "TD1-door-1", "material": "Walnut"},
+                                                                   {"targetLayer": "type:countertop", "material": "Đá đen"}])
+        k = im.regenerate(j["id"], seed=7)
+        self.assertEqual(k["request"]["seed"], 7)
+        self.assertEqual([(t["targetLayer"], t["material"]) for t in k["request"]["tasks"]],
+                         [(t["targetLayer"], t["material"]) for t in j["request"]["tasks"]])
 
 
 if __name__ == "__main__":

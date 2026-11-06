@@ -112,7 +112,7 @@ class BaseImages(JobsContext):
                     canvas = Image.new("RGB", (cw, ch), tuple(int(v) for v in edge))
                     canvas.paste(im, ((cw - iw) // 2, (ch - ih) // 2))
                     im = canvas
-            im = im.resize((W, H), Image.LANCZOS)
+            im = im.resize((W, H), Image.Resampling.LANCZOS)
         return im
 
     def import_base(self, did: str, view: str, image: bytes, rev: int | None = None, source: str = "external image", fit: str = "reject") -> dict:

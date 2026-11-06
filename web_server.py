@@ -300,13 +300,13 @@ class Handler(BaseHTTPRequestHandler):
             if sub == "revert":
                 return self._json(200, s.revert(did, int(b["rev"]), b.get("baseRev")))
             if sub == "image-jobs":
-                job = s.images.create(did, str(b.get("view") or ""), b.get("targetLayer"), str(b.get("instruction") or ""),
-                                      b.get("mode") or "quick", b.get("material") or None, b.get("backend") or "recolor",
-                                      b.get("reference"), b.get("baseRev"), b.get("kind") or "edit", b.get("workflow"),
-                                      b.get("seed"), b.get("params") if isinstance(b.get("params"), dict) else None,
-                                      b.get("tasks") if isinstance(b.get("tasks"), list) and b.get("tasks") else None,
-                                      bool(b.get("preview")), b.get("geometry_edit") if isinstance(b.get("geometry_edit"), list) else None,
-                                      b.get("operation") or None, b.get("lighting") or None)
+                job = s.images.create(did, str(b.get("view") or ""), b.get("targetLayer"), instruction=str(b.get("instruction") or ""),
+                                      mode=b.get("mode") or "quick", material=b.get("material") or None, backend=b.get("backend") or "recolor",
+                                      reference=b.get("reference"), base_rev=b.get("baseRev"), kind=b.get("kind") or "edit", workflow=b.get("workflow"),
+                                      seed=b.get("seed"), params=b.get("params") if isinstance(b.get("params"), dict) else None,
+                                      tasks=b.get("tasks") if isinstance(b.get("tasks"), list) and b.get("tasks") else None,
+                                      preview=bool(b.get("preview")), geometry_items=b.get("geometry_edit") if isinstance(b.get("geometry_edit"), list) else None,
+                                      operation=b.get("operation") or None, lighting=b.get("lighting") or None)
                 return self._json(201, self._job_out(job))
             if sub == "render":
                 res = s.render(did, b.get("rev"), b.get("views"), int(b.get("width", 1280)), int(b.get("height", 960)))

@@ -18,7 +18,9 @@ from __future__ import annotations
 import json
 import shutil
 import threading
+from dataclasses import replace
 from pathlib import Path
+from typing import Any, Callable
 
 from .. import geometry, geometry_edit, realism, render
 from ..backends import BACKENDS
@@ -27,6 +29,7 @@ from ..errors import InvalidInput
 from ..store import ConflictError
 from .base_images import BaseImages
 from .packages import Packages
+from .request import KINDS, MODES, NewJob, TaskInput
 from .request_builder import RequestBuilder
 from .results import Results
 from .runners import Runners
@@ -42,7 +45,7 @@ class ImageJobs(BaseImages, RequestBuilder, Packages, Runners, Results):
     ``config`` carries the backend settings (ComfyUI url, Gemini key...); ``runtime`` the clock, id and seed sources.
     """
 
-    def __init__(self, store, render_dir, apply, config: Config | None = None, runtime: Runtime | None = None):
+    def __init__(self, store: Any, render_dir: str | Path, apply: Callable[..., dict[str, Any]], config: Config | None = None, runtime: Runtime | None = None):
         self.store = store
         self.render_dir = Path(render_dir)
         self._apply = apply
@@ -51,15 +54,22 @@ class ImageJobs(BaseImages, RequestBuilder, Packages, Runners, Results):
         self._threads: dict[str, threading.Thread] = {}
         self.store.mark_stale_jobs()
 
-    def create(self, did: str, view: str, target: str | None = None, instruction: str = "", mode: str = "quick",
+    def create(self, did: str, view: str, target: str | None = None, *, instruction: str = "", mode: str = "quick",
                material: str | None = None, backend: str = "recolor", reference: str | None = None, base_rev: int | None = None,
-               kind: str = "edit", workflow: str | None = None, seed: int | None = None, params: dict | None = None,
-               tasks: list[dict] | None = None, preview: bool = False, geometry_items: list[dict] | None = None,
-               operation: str | None = None, lighting: str | None = None) -> dict:
-        """tasks: [{"targetLayer": "TD1-door-1", "material": "...", "instruction": "..."}, ...]. Không có tasks thì
-        dùng target/vat_lieu/instruction như một việc. preview=True: chỉ chuẩn bị (mask, request.json), dừng ở 'cho-gui'
-        để người dùng xem trước; gửi bằng send(), hủy bằng reject()."""
-        if kind not in ("edit", "gen0", "geometry_edit"):
+               kind: str = "edit", workflow: str | None = None, seed: int | None = None, params: dict[str, Any] | None = None,
+               tasks: list[dict[str, Any]] | None = None, preview: bool = False, geometry_items: list[dict[str, Any]] | None = None,
+               operation: str | None = None, lighting: str | None = None) -> dict[str, Any]:
+        """Keyword form of ``submit(NewJob(...))``. tasks: [{"targetLayer": "TD1-door-1", "material": "...", "instruction": "..."}, ...];
+        without tasks, target/material/instruction are one task. preview=True prepares only (mask, request.json) and stops at
+        'awaiting-send' so the person can look first; send() sends it, reject() drops it."""
+        return self.submit(NewJob(did, view, target, instruction, mode, material, backend, reference, base_rev, kind, workflow, seed,
+                                  params, tasks, preview, geometry_items, operation, lighting))
+
+    def submit(self, new: NewJob) -> dict[str, Any]:
+        did, view, target, instruction, mode, material, backend = new.did, new.view, new.target, new.instruction, new.mode, new.material, new.backend
+        reference, base_rev, kind, workflow, seed, params = new.reference, new.base_rev, new.kind, new.workflow, new.seed, new.params
+        tasks, preview, geometry_items, operation, lighting = new.tasks, new.preview, new.geometry_items, new.operation, new.lighting
+        if kind not in KINDS:
             raise InvalidInput("kind phải là edit, gen0 hoặc geometry_edit")
         if lighting not in (None, "", *realism.LIGHTING):
             raise InvalidInput(f"anhSang phải là một trong: {', '.join(realism.LIGHTING)}")
@@ -79,14 +89,15 @@ class ImageJobs(BaseImages, RequestBuilder, Packages, Runners, Results):
             raise InvalidInput(f"backend phải là một trong: {', '.join(BACKENDS)}")
         if kind not in BACKENDS[backend]["kind"]:
             raise InvalidInput(f"backend '{backend}' không hỗ trợ {kind}")
-        if mode not in ("quick", "design"):
+        if mode not in MODES:
             raise InvalidInput("mode phải là quick hoặc design")
+        task_list: list[TaskInput]
         if kind == "geometry_edit":
-            tasks = []
+            task_list = []
         elif kind == "edit" and not tasks:  # một việc: yêu cầu thuộc về việc đó, không lặp ở cấp job
-            tasks, instruction = self._norm_tasks(None, target, material, instruction), ""
+            task_list, instruction = self._norm_tasks(None, target, material, instruction), ""
         else:
-            tasks = self._norm_tasks(tasks, None, None, "") if kind == "edit" else []
+            task_list = self._norm_tasks(tasks, None, None, "") if kind == "edit" else []
         latest = self.store.get(did)[1]
         if base_rev is not None and base_rev != latest:
             raise ConflictError(f"baseRev={base_rev} nhưng bản mới nhất là {latest}; hãy tải lại")
@@ -96,8 +107,8 @@ class ImageJobs(BaseImages, RequestBuilder, Packages, Runners, Results):
         jdir.mkdir(parents=True, exist_ok=True)
         prepared = False
         try:
-            req = self._prepare(jid, jdir, d, spec, rev, scene, man, did, view, tasks, instruction, mode, backend,
-                                reference, kind, workflow, seed, params, geometry_items, operation, lighting or "daylight")
+            req = self._prepare(jid, jdir, d, spec, rev, scene, man,
+                                replace(new, mode=mode, instruction=instruction, workflow=workflow, params=params, lighting=lighting or "daylight"), task_list)
             prepared = True
         finally:
             if not prepared:  # nothing half-written is left behind when the request cannot be built
@@ -105,7 +116,7 @@ class ImageJobs(BaseImages, RequestBuilder, Packages, Runners, Results):
         job = self.store.create_job({"id": jid, "design_id": did, "rev": rev, "view": view, "render_key": man["renderKey"],
                                      "kind": kind, "mode": mode, "target": req.get("targetLayer"), "backend": backend, "status": "running",
                                      "request": req})
-        self.store.update_job(jid, result={"dir": str(jdir), **({"newRenderKey": req["newRenderKey"]} if kind == "geometry_edit" else {})})
+        self.store.update_job(jid, result={"dir": str(jdir), **({"newRenderKey": req.get("newRenderKey", "")} if kind == "geometry_edit" else {})})
         try:
             self.export_request(jid)  # request.json tự chứa (chỉ dẫn + ảnh gốc + mask nhúng) cho mọi backend
         except (OSError, ValueError, TypeError, KeyError):  # the side file is a convenience; the job does not depend on it

@@ -10,6 +10,7 @@ from PIL import Image
 from .. import backends, imaging, vocab
 from ..backends import BackendError
 from ..errors import InvalidInput
+from .request import JobRequest, size_of
 from .common import JobsContext, FEATHER_PX
 
 
@@ -25,7 +26,7 @@ class Runners(JobsContext):
             if b == "recolor":
                 img = imaging.read(jdir / "reference.png", "RGB")
                 used = []
-                for i, t in enumerate(req["tasks"], 1):
+                for i, t in enumerate(req.get("tasks", []), 1):
                     rgb = vocab.color(t.get("material") or "") or vocab.color(t.get("instruction") or "")
                     if not rgb:
                         raise BackendError("unsupported", f"Việc {i} ({t['targetLayer']}): không suy được màu từ vật liệu/yêu cầu; "
@@ -46,19 +47,19 @@ class Runners(JobsContext):
             return self.store.update_job(jid, f"error:{e.code}", error=str(e))
         raise InvalidInput(b)
 
-    def _run_gemini(self, jid: str, jdir: Path, req: dict):
+    def _run_gemini(self, jid: str, jdir: Path, req: JobRequest):
         try:
             cli = backends.Gemini(self.config)
             job = self.store.get_job(jid)
             text, named = self._ai_input(job, jdir, req)
             images = [p for _, p in named]
             self.store.update_job(jid, result={"geminiPrompt": text})
-            info = cli.generate(text, images, jdir / "raw.png", tuple(req["size"]))
+            info = cli.generate(text, images, jdir / "raw.png", size_of(req))
             self._finish(jid, {"backend": {"name": "gemini", **info}})
         except BackendError as e:
             self.store.update_job(jid, f"error:{e.code}", error=str(e))
 
-    def _run_comfy(self, jid: str, jdir: Path, req: dict):
+    def _run_comfy(self, jid: str, jdir: Path, req: JobRequest):
         try:
             wf = backends.load_workflow(req["workflow"])
             cli = backends.ComfyUI(self.config)
@@ -70,9 +71,9 @@ class Runners(JobsContext):
                     Image.fromarray(cur).save(jdir / f"vao_{i}.png")
                     src = {"reference": f"vao_{i}.png", "mask": f"mask_{i}.png", "lines": "lines_inv.png", "depth": "depth.png"}
                     imgs = {k: cli.upload(jdir / src[k], f"{jid}_{i}_{k}.png") for k in wf["kitchen"].get("image", [])}
-                    vals = {**self._values(req, wf), "prompt": t["prompt"], "seed": req["seed"] + i - 1}
+                    vals = {**self._values(req, wf), "prompt": t.get("prompt", ""), "seed": req["seed"] + i - 1}
                     infos.append(cli.run(backends.build_prompt(wf, imgs, vals, backends.model_defaults(self.config)), jdir / f"raw_{i}.png"))
-                    raw_i, _ = imaging.load_rgb(jdir / f"raw_{i}.png", tuple(req["size"]))
+                    raw_i, _ = imaging.load_rgb(jdir / f"raw_{i}.png", size_of(req))
                     cur = imaging.composite(cur, raw_i, imaging.alpha(imaging.read(jdir / f"target_{i}.png", "L") > 127, FEATHER_PX))
                 Image.fromarray(cur).save(jdir / "raw.png")
                 return self._finish(jid, {"backend": {"name": "comfyui", "url": cli.url, "workflow": req["workflow"], "step": infos}})
@@ -89,7 +90,7 @@ class Runners(JobsContext):
             t.join(timeout)
         return self.store.get_job(jid)
 
-    def _run_guarded(self, fn, jid: str, jdir: Path, req: dict) -> None:
+    def _run_guarded(self, fn, jid: str, jdir: Path, req: JobRequest) -> None:
         """Thread entry. A job must never stay 'running' because a worker raised something unforeseen: mark it failed, then re-raise
         so the thread excepthook still logs the traceback. Known backend failures are handled inside the runners."""
         try:

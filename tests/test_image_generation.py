@@ -688,7 +688,7 @@ class TestComfyUIAdapter(_Base):
 
     def test_edit_via_comfyui(self):
         _FakeComfy.fail = False
-        j = self.svc.images.create(self.did, VIEW, "TD1-door-1", "matte sage green", backend="comfyui", seed=42)
+        j = self.svc.images.create(self.did, VIEW, "TD1-door-1", instruction="matte sage green", backend="comfyui", seed=42)
         j = self.svc.images.wait(j["id"], 30)
         self.assertEqual(j["status"], "needs-review", j["error"])
         p = list(_FakeComfy.prompts.values())[-1]
@@ -705,7 +705,7 @@ class TestComfyUIAdapter(_Base):
         self.svc.images.accept(g["id"])
         self.assertEqual(self.svc.images.layers(self.did, VIEW)["baseImage"]["jobId"], g["id"])
         _FakeComfy.fail = True
-        f = self.svc.images.wait(self.svc.images.create(self.did, VIEW, "TD1-door-1", "x", backend="comfyui")["id"], 30)
+        f = self.svc.images.wait(self.svc.images.create(self.did, VIEW, "TD1-door-1", instruction="x", backend="comfyui")["id"], 30)
         self.assertEqual(f["status"], "error:generation-failed")
         _FakeComfy.fail = False
 
@@ -725,7 +725,7 @@ class TestComfyUIAdapter(_Base):
         old = self.svc.images.config
         self.svc.images.config = dataclasses.replace(old, comfyui_url="http://127.0.0.1:9")
         try:
-            f = self.svc.images.wait(self.svc.images.create(self.did, VIEW, "TD1-door-1", "x", backend="comfyui")["id"], 30)
+            f = self.svc.images.wait(self.svc.images.create(self.did, VIEW, "TD1-door-1", instruction="x", backend="comfyui")["id"], 30)
             self.assertEqual(f["status"], "error:overloaded")
         finally:
             self.svc.images.config = old
@@ -841,9 +841,9 @@ class TestGeminiAdapter(_Base):
         self.assertEqual(api["contents"], _FakeGemini.calls[-1]["body"]["contents"], "gemini-request.json = đúng thân request đã gửi")
         with self.assertRaises(ValueError):
             im.send(j["id"])
-        h = im.create(self.did, VIEW, "TD1-door-1", "x", backend="gemini", preview=True)
+        h = im.create(self.did, VIEW, "TD1-door-1", instruction="x", backend="gemini", preview=True)
         self.assertEqual(im.reject(h["id"])["status"], "rejected")
-        k = im.create(self.did, VIEW, "TD1-door-1", "x", backend="gemini", preview=True)
+        k = im.create(self.did, VIEW, "TD1-door-1", instruction="x", backend="gemini", preview=True)
         self.svc.apply(self.did, {"op": "update", "id": "TD1", "changes": {"height": 700}}, None, "test")
         with self.assertRaises(ValueError) as e:
             im.send(k["id"])

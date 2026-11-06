@@ -1,9 +1,8 @@
 """Building the request of a job: tasks, masks, prompt inputs, geometry edits."""
 from __future__ import annotations
 
-from typing import TypedDict
-
 from pathlib import Path
+from typing import Any
 import json
 import shutil
 
@@ -12,42 +11,19 @@ import numpy as np
 
 from .. import backends, edit, geometry, geometry_edit, imaging, layers, realism, render, vocab
 from ..errors import InvalidInput
+from .request import JobRequest, NewJob, Task, TaskInput
 from .common import JobsContext, GROW_PX, MAX_TASKS, ZONE_COLORS, MOLDING_EN, describe_position
-
-class JobRequest(TypedDict, total=False):
-    """The request stored with a job (``image_jobs.request``). Built by ``RequestBuilder._prepare``; further keys are added there per kind."""
-    designId: str
-    baseRevision: int
-    view: str
-    renderKey: str
-    kind: str
-    mode: str
-    instruction: str
-    backend: str
-    workflow: str
-    seed: int
-    params: dict
-    size: list[int]
-    preserve: str
-    tasks: list[dict]
-    targetLayer: str | None
-    newRenderKey: str
-    designOp: dict | None
-    operation: str | None
-    lighting: str
-    negativePrompt: str
-
 
 class RequestBuilder(JobsContext):
     @staticmethod
-    def _norm_tasks(tasks, target, material, instruction) -> list[dict]:
+    def _norm_tasks(tasks: list[dict[str, Any]] | None, target: str | None, material: str | None, instruction: str) -> list[TaskInput]:
         if not tasks:
             if not target:
                 raise InvalidInput("Cần targetLayer hoặc danh sách tasks")
             tasks = [{"targetLayer": target, "material": material, "instruction": instruction}]
         if not isinstance(tasks, list) or len(tasks) > MAX_TASKS:
             raise InvalidInput(f"tasks phải là danh sách tối đa {MAX_TASKS} việc")
-        out = []
+        out: list[TaskInput] = []
         for i, t in enumerate(tasks, 1):
             if not isinstance(t, dict):
                 raise InvalidInput(f"Việc {i} không hợp lệ")
@@ -58,19 +34,22 @@ class RequestBuilder(JobsContext):
                         "instruction": str(t.get("instruction") or "").strip()})
         return out
 
-    def _prepare(self, jid, jdir, d, spec, rev, scene, man, did, view, tasks, instruction, mode, backend,
-                 reference, kind, workflow, seed, params, geometry_items=None, operation=None, lighting="daylight") -> JobRequest:
+    def _prepare(self, jid: str, jdir: Path, d: Path, spec: Any, rev: int, scene: Any, man: dict[str, Any], new: NewJob,
+                 tasks: list[TaskInput]) -> JobRequest:
+        """``new`` carries the already-resolved mode, workflow, params and lighting; ``tasks`` the normalised task inputs."""
+        did, view, instruction, mode, backend, reference, kind = new.did, new.view, new.instruction, new.mode, new.backend, new.reference, new.kind
+        workflow, seed, params, geometry_items, operation, lighting = new.workflow, new.seed, new.params, new.geometry_items, new.operation, new.lighting or "daylight"
         W, H = man["width"], man["height"]
-        req = {"designId": did, "baseRevision": rev, "view": view, "renderKey": man["renderKey"], "kind": kind, "mode": mode,
+        req: JobRequest = {"designId": did, "baseRevision": rev, "view": view, "renderKey": man["renderKey"], "kind": kind, "mode": mode,
                "instruction": instruction, "backend": backend,
                "workflow": workflow or {"gen0": "gen0-lineart-depth", "geometry_edit": "inpaint-lineart"}.get(kind, "inpaint"),
                "seed": int(seed if seed is not None else self.runtime.new_seed()), "params": params or {},
-               "size": [W, H], "preserve": "strict"}
+               "size": [W, H], "preserve": "strict", "negativePrompt": ", ".join(layers.NEGATIVE + realism.NEGATIVE),
+               "lighting": lighting,  # ánh sáng cho ảnh đầy đủ (gen-0); sửa vùng thì bám ánh sáng ảnh gốc
+               "prompt": "", "globalPrompt": ""}  # both filled by the branch of the kind below
         lines = imaging.read(d / "lines.png", "L")
         Image.fromarray(255 - lines).save(jdir / "lines_inv.png")  # ControlNet lineart: nét trắng nền đen
         shutil.copyfile(d / "depth.png", jdir / "depth.png")
-        req["negativePrompt"] = ", ".join(layers.NEGATIVE + realism.NEGATIVE)
-        req["lighting"] = lighting  # ánh sáng cho ảnh đầy đủ (gen-0); sửa vùng thì bám ánh sáng ảnh gốc
         if operation:
             req["operation"] = operation
         if kind == "geometry_edit":
@@ -83,12 +62,12 @@ class RequestBuilder(JobsContext):
             visible = {x["id"] for x in meta["instances"] if x["value"] in present}
             owner: dict[str, int] = {}
             union = np.zeros((H, W), bool)
-            recs = []
+            recs: list[Task] = []
             for i, t in enumerate(tasks, 1):
                 layer, ids = layers.resolve(cat, t["targetLayer"])
                 if not layer.get("allowAppearanceChange"):
                     raise InvalidInput(f"Việc {i}: layer '{t['targetLayer']}' bị khóa")
-                rec = dict(t)
+                rec: Task = {"targetLayer": t["targetLayer"], "material": t["material"], "instruction": t["instruction"]}
                 if mode == "design":
                     if not t["material"]:
                         raise InvalidInput(f"Việc {i} ({t['targetLayer']}): chế độ design cần material (vd 'Laminate xanh rêu mờ')")
@@ -104,7 +83,8 @@ class RequestBuilder(JobsContext):
                         rec["scopeNote"] = f"Thiết kế đổi {len(ids)} chi tiết, vùng chọn có {len(selected)}"
                     if not ids:
                         raise InvalidInput(f"Việc {i}: vật liệu mới trùng vật liệu hiện tại")
-                    rec.update(pendingOp=op[0], scope=op[1])
+                    rec["pendingOp"] = op[0]
+                    rec["scope"] = op[1]
                     cur = nxt
                 clash = sorted({owner[p] for p in ids if p in owner})
                 if clash:
@@ -124,13 +104,17 @@ class RequestBuilder(JobsContext):
                 role_en = layers.ROLES.get(type, (None, "kitchen element"))[1]
                 if type == "molding":
                     variant = {m.id: m.variant for m in cur.moldings}.get(lay_new.get("module") or "")
-                    role_en = MOLDING_EN.get(variant, role_en)
-                rec.update(targetParts=ids, maskPixels=int(tmask.sum()), name=lay_new.get("name"),
-                           prompt=layers.layer_prompt(cur, lay_new, " ".join(x for x in (t["instruction"], instruction) if x), t["material"])
-                           + ", photorealistic, matching scene lighting and grain, realistic texture, soft contact shadows",
-                           roleEn=role_en, position=describe_position(tmask), remaining=self._others(cat, visible, ids, type),
-                           typeEn=layers.ROLES.get(type, (None, "element"))[1],
-                           materialText=" ".join(x for x in (vocab.to_english(material_text), material_text and f"({material_text})") if x))
+                    role_en = MOLDING_EN.get(variant or "", role_en)
+                rec["targetParts"] = ids
+                rec["maskPixels"] = int(tmask.sum())
+                rec["name"] = lay_new.get("name")
+                rec["prompt"] = (layers.layer_prompt(cur, lay_new, " ".join(x for x in (t["instruction"], instruction) if x), t["material"])
+                                 + ", photorealistic, matching scene lighting and grain, realistic texture, soft contact shadows")
+                rec["roleEn"] = role_en
+                rec["position"] = describe_position(tmask)
+                rec["remaining"] = self._others(cat, visible, ids, type)
+                rec["typeEn"] = layers.ROLES.get(type, (None, "element"))[1]
+                rec["materialText"] = " ".join(x for x in (vocab.to_english(material_text), material_text and f"({material_text})") if x)
                 recs.append(rec)
             ref_path, ref_info = self._pick_reference(did, view, man["renderKey"], d, reference)
             ref, _ = imaging.load_rgb(ref_path, (W, H))
@@ -145,16 +129,20 @@ class RequestBuilder(JobsContext):
                      for i in range(1, len(recs) + 1)]
             Image.fromarray(imaging.mark_regions(ref, marks, gap=GROW_PX + 2)).save(jdir / "reference_marked.png")
             first = recs[0]
-            req.update(tasks=recs, referenceImage=ref_info, maskPixels=int(union.sum()), globalPrompt=layers.global_prompt(cur),
-                       targetLayer=first["targetLayer"] + (f" +{len(recs) - 1}" if len(recs) > 1 else ""),
-                       # trường cũ (1 việc) giữ để workflow/công cụ cũ đọc được
-                       prompt=first["prompt"] if len(recs) == 1 else "; ".join(f"[{k + 1}] {r['prompt']}" for k, r in enumerate(recs)),
-                       material=first["material"] if len(recs) == 1 else None,
-                       targetParts=[p for r in recs for p in r["targetParts"]],
-                       scope="; ".join(r["scope"] for r in recs if r.get("scope")) or None)
+            req["tasks"] = recs
+            req["referenceImage"] = ref_info
+            req["maskPixels"] = int(union.sum())
+            req["globalPrompt"] = layers.global_prompt(cur)
+            req["targetLayer"] = first["targetLayer"] + (f" +{len(recs) - 1}" if len(recs) > 1 else "")
+            # trường cũ (1 việc) giữ để workflow/công cụ cũ đọc được
+            req["prompt"] = first.get("prompt", "") if len(recs) == 1 else "; ".join(f"[{k + 1}] {r.get('prompt', '')}" for k, r in enumerate(recs))
+            req["material"] = first["material"] if len(recs) == 1 else None
+            req["targetParts"] = [p for r in recs for p in r.get("targetParts", [])]
+            req["scope"] = "; ".join(r.get("scope", "") for r in recs if r.get("scope")) or None
         else:
-            req.update(globalPrompt=layers.global_prompt(spec), photoImage=realism.full(spec, lighting),
-                       prompt=", ".join(x for x in (layers.global_prompt(spec), realism.tags(spec, lighting), instruction.strip()) if x))
+            req["globalPrompt"] = layers.global_prompt(spec)
+            req["photoImage"] = realism.full(spec, lighting)
+            req["prompt"] = ", ".join(x for x in (layers.global_prompt(spec), realism.tags(spec, lighting), instruction.strip()) if x)
         if backend in ("job-package", "comfyui"):
             backends.load_workflow(req["workflow"])  # tên workflow sai -> báo ngay
         (jdir / "job.json").write_text(json.dumps({"id": jid, **req}, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -172,11 +160,12 @@ class RequestBuilder(JobsContext):
             return len({x["module"] for x in rest})
         return len(rest)
 
-    def _prepare_geometry(self, jdir, d, spec, man, did, view, items, instruction, reference, req) -> None:
+    def _prepare_geometry(self, jdir: Path, d: Path, spec: Any, man: dict[str, Any], did: str, view: str, items: list[dict[str, Any]] | None,
+                          instruction: str, reference: str | None, req: JobRequest) -> None:
         """Áp thao tác hình học lên bản sao thiết kế, render lại ĐÚNG camera cũ, so cũ/mới ra vùng thay đổi.
         Nét/depth gửi model là của thiết kế MỚI; ảnh 'hình mẫu' (màu phẳng + nét) cho model nhận chỉ dẫn."""
         W, H = man["width"], man["height"]
-        ops, desc, tt = geometry_edit.build_ops(spec, items)
+        ops, desc, tt = geometry_edit.build_ops(spec, items or [])
         nxt = spec
         for op in ops:
             nxt = edit.apply_op(nxt, op)
@@ -217,14 +206,27 @@ class RequestBuilder(JobsContext):
         en = "; ".join(x["en"] for x in desc)
         vi = "; ".join(x["vi"] for x in desc)
         common = layers.global_prompt(nxt)
-        task = {"targetLayer": "geometry_edit", "name": vi, "roleEn": en, "position": describe_position(m), "instruction": instruction, "material": None,
-                "operation": tt, "targetParts": info["part"], "maskPixels": int(m.sum()),
-                "prompt": ", ".join(x for x in (en, instruction, common, realism.tags(nxt, req.get("lighting") or "daylight")) if x)}
+        task: Task = {"targetLayer": "geometry_edit", "name": vi, "roleEn": en, "position": describe_position(m), "instruction": instruction, "material": None,
+                      "operation": tt, "targetParts": info["part"], "maskPixels": int(m.sum()),
+                      "prompt": ", ".join(x for x in (en, instruction, common, realism.tags(nxt, req.get("lighting") or "daylight")) if x)}
         if "operation" not in req:  # trọng số mặc định theo thao tác suy ra (params người dùng vẫn ghi đè)
             req["params"] = {**geometry_edit.OPERATIONS[tt]["params"], **req["params"]}
-        req.update(originalGeometry=items, tasks=[task], designOp=design_op, description=desc, operation=req.get("operation") or tt, newRenderKey=key_new,
-                   different=info, pinCamera=bool(pin), referenceImage=ref_info, maskPixels=int(m.sum()), globalPrompt=common,
-                   targetLayer=f"geometry: {vi}"[:120], prompt=task["prompt"], targetParts=info["part"], scope=vi, instruction="")
+        req["originalGeometry"] = items or []
+        req["tasks"] = [task]
+        req["designOp"] = design_op
+        req["description"] = desc
+        req["operation"] = req.get("operation") or tt
+        req["newRenderKey"] = key_new
+        req["different"] = info
+        req["pinCamera"] = bool(pin)
+        req["referenceImage"] = ref_info
+        req["maskPixels"] = int(m.sum())
+        req["globalPrompt"] = common
+        req["targetLayer"] = f"geometry: {vi}"[:120]
+        req["prompt"] = task["prompt"]
+        req["targetParts"] = info["part"]
+        req["scope"] = vi
+        req["instruction"] = ""
         if instruction:
             task["instruction"] = instruction
 

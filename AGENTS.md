@@ -25,7 +25,7 @@ Both interfaces should delegate application behavior to `kitchen.service.Kitchen
 - `kitchen/geometry.py`: compiles specifications into geometry and view definitions.
 - `kitchen/render.py`: creates raster control images and render metadata.
 - `kitchen/threejs_export.py`: exports the scene format consumed by the browser renderer.
-- `kitchen/images/` (package), `kitchen/layers.py`, `kitchen/imaging.py`, `kitchen/backends.py`: image layers, job lifecycle, compositing, and generation backends.
+- `kitchen/images/` (package; `request.py` holds the typed `NewJob` input and `JobRequest`/`Task` stored shapes — add a request key there first), `kitchen/layers.py`, `kitchen/imaging.py`, `kitchen/backends.py`: image layers, job lifecycle, compositing, and generation backends.
 - `kitchen/ai_export.py`: assembles design and render data into AI image-generation requests.
 - `web/`: browser editor, scene loader, and bundled front-end assets.
 - `schemas/`: published scene schemas and related documentation.

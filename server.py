@@ -177,7 +177,7 @@ def regenerate_stale_views(design_id: str, views: list[str] | None=None, backend
 
 def create_image_job(design_id: str, view: str, target_layer: str | None=None, instruction: str='', mode: Literal['quick', 'design']='quick', material: str | None=None, backend: Literal['recolor', 'job-package', 'comfyui', 'gemini']='recolor', kind: Literal['edit', 'gen0', 'geometry_edit']='edit', reference: str | None=None, base_rev: int | None=None, workflow: str | None=None, seed: int | None=None, tasks: list[dict[str, Any]] | None=None, preview_only: bool=False, image_changes: list[dict[str, Any]] | None=None, operation: Literal['change-material', 'replace-item', 'remove-item', 'add-item', 'change-style'] | None=None, lighting: Literal['daylight', 'late-afternoon', 'dim-evening'] | None=None) -> dict[str, Any]:
     """Create an image-generation or image-editing job."""
-    return _slim_job(_call(svc().images.create, design_id, view, target_layer, instruction, mode, material, backend, reference, base_rev, kind, workflow, seed, None, tasks, preview_only, image_changes, operation, lighting))
+    return _slim_job(_call(svc().images.create, design_id, view, target_layer, instruction=instruction, mode=mode, material=material, backend=backend, reference=reference, base_rev=base_rev, kind=kind, workflow=workflow, seed=seed, tasks=tasks, preview=preview_only, geometry_items=image_changes, operation=operation, lighting=lighting))
 
 def send_image_job(job_id: str) -> dict[str, Any]:
     """Send a prepared image job to its configured backend."""

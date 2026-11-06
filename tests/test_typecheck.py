@@ -20,12 +20,18 @@ import architecture_rules as rules  # noqa: E402
 BASELINE = Path(__file__).parent / "typecheck_baseline.json"
 
 
+def checked_files() -> list[str]:
+    """Core modules plus every module of the image-job package (``images/``), as paths relative to ``kitchen/``."""
+    return [f"{m}.py" for m in rules.CORE_MODULES] + sorted(f"images/{p.name}" for p in (ROOT / "kitchen" / "images").glob("*.py"))
+
+
 def errors_per_file() -> dict[str, int]:
-    files = [f"kitchen/{m}.py" for m in rules.CORE_MODULES]
-    out = subprocess.run(["pyright", "--outputjson", *files], cwd=ROOT, capture_output=True, text=True, timeout=600)
+    names = checked_files()
+    out = subprocess.run(["pyright", "--outputjson", *[f"kitchen/{n}" for n in names]], cwd=ROOT, capture_output=True, text=True, timeout=600)
     data = json.loads(out.stdout)
-    counts = collections.Counter(Path(d["file"]).name for d in data["generalDiagnostics"] if d["severity"] == "error")
-    return {f"{m}.py": counts.get(f"{m}.py", 0) for m in rules.CORE_MODULES}
+    counts = collections.Counter(Path(d["file"]).resolve().relative_to(ROOT / "kitchen").as_posix()
+                                 for d in data["generalDiagnostics"] if d["severity"] == "error")
+    return {n: counts.get(n, 0) for n in names}
 
 
 @unittest.skipUnless(shutil.which("pyright"), "pyright is not installed")
