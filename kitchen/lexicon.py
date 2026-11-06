@@ -20,6 +20,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from . import vocab
+from .errors import require
 
 STATUSES = ("built", "exported", "ai-only", "unsupported", "ambiguous")
 FRONT_SLOTS = ("base", "upper", "tall")
@@ -467,7 +468,7 @@ def interpret(text: str) -> Result:
         sl = sorted(scopes_in(c), key=lambda x: x.start)
         near = ([x for x in sl if x.start < m.start] or sl or [None])[-1] if any(x.start < m.start for x in sl) else (sl[0] if sl else None)
         sc = list(near.e.value) if near is not None else []
-        slots = [s for s in FRONT_SLOTS if s in sc] or (list(("base", "upper", "tall")) if m.e.slot == "fronts" else [m.e.slot])
+        slots = [s for s in FRONT_SLOTS if s in sc] or (list(("base", "upper", "tall")) if m.e.slot == "fronts" else [require(m.e.slot, f"{m.e.id}.slot")])
         for s in slots:
             door_style[s] = m.e.value
         items.append(_item(m, None, m.e.value, slots, "module.doorStyle", message=m.e.message))

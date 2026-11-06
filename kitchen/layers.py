@@ -13,7 +13,7 @@ from __future__ import annotations
 from .geometry import Scene
 from .spec import KitchenSpec
 from . import handles, lexicon, vocab
-from .errors import InvalidInput, NotFound
+from .errors import InvalidInput, NotFound, require
 
 FRONT_SECTIONS = ("door", "glass-door", "drawer")
 
@@ -92,13 +92,13 @@ def design_op(spec: KitchenSpec, layer: dict, material: str, scene: Scene | None
     if kind == "molding":
         return {"op": "molding", "id": ref, "changes": {"material": material}}, f"toàn bộ phào {ref}"
     if kind == "common":
-        k = ref
+        k: str = require(ref, "common layer")
         if k == "plinth":
             return None
-        scope = {"countertop": "toàn bộ mặt đá", "wall": "toàn bộ tường", "floor": "toàn bộ sàn", "carcass": "thân mọi tủ",
+        what: str = {"countertop": "toàn bộ mặt đá", "wall": "toàn bộ tường", "floor": "toàn bộ sàn", "carcass": "thân mọi tủ",
                    "base": "mặt trước mọi tủ dưới", "upper": "mặt trước mọi tủ trên", "tall": "mặt trước mọi tủ cao",
                    "cornerShelf": "mọi kệ góc"}.get(k, k)
-        return {"op": "common", "changes": {"material": {**spec.common.material, k: material}}}, scope
+        return {"op": "common", "changes": {"material": {**spec.common.material, k: material}}}, what
     return None
 
 
@@ -111,7 +111,7 @@ def catalogue(spec: KitchenSpec, scene: Scene) -> list[dict]:
         vt = ROLES.get(p.type, (p.type, p.type))
         out.append({"id": p.id, "variant": "part", "module": p.module, "type": p.type, "semanticClass": SEMANTIC.get(p.type, "structure" if p.type.startswith("structure-") else "custom"),
                     "name": f"{vt[0]} {p.module or ''}".strip(), "material": name, "materialLocked": key,
-                    "storey": storey_of.get(p.module), "parent": getattr(p, "parent", None),
+                    "storey": storey_of.get(p.module or ""), "parent": getattr(p, "parent", None),
                     "selectable": True, "allowAppearanceChange": not p.type.startswith("structure-"),
                     "allowGeometryChange": False, "allowPositionChange": False})
     by_id = {x["id"]: x for x in out}

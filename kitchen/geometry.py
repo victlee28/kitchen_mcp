@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 
 from . import roomctx, structure_mesh
 from .spec import ViewAngle, KitchenSpec, Module, effective_handle, to_data
-from .errors import InvalidInput
+from .errors import InvalidInput, require
 
 COLORS = {  # màu hiển thị theo loại chi tiết (viewer 3D, mask ngữ nghĩa)
     "carcass": "#d9c3a0", "plinth": "#5b5348", "door": "#c8a273", "glass-door": "#9fc7d8", "drawer": "#b98f5e",
@@ -108,7 +108,7 @@ class _Builder:
         elif wall == "left":
             mn, mx = (-self.lsau + d0, y0, s0), (-self.lsau + d1, y1, s1)
         elif wall == "island":  # free-standing run along x; the door face looks towards the back wall (-z), so depth is mirrored
-            z0, depth = isl or self._isl[module]
+            z0, depth = isl or self._isl[require(module, "island part module")]
             mn, mx = (-s1, y0, z0 + depth - d1), (-s0, y1, z0 + depth - d0)
         else:
             raise InvalidInput(wall)
@@ -199,7 +199,7 @@ class _Builder:
     def corner_shelf(self, m: Module):
         dc = self.c.doorThickness
         n = max(1, m.shelfCount)
-        for wall, length in (("back", m.backLength), ("right", m.rightLength)):
+        for wall, length in (("back", require(m.backLength, f"{m.id}.backLength")), ("right", require(m.rightLength, f"{m.id}.rightLength"))):
             for i in range(n + 1):
                 yb = m.y + i * (m.height - dc) / n
                 self.box(m.id, "shelf", wall, 0, length, 0, m.depth, yb, yb + dc)

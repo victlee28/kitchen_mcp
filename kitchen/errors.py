@@ -6,6 +6,10 @@ catches the builtin keeps working during the migration; new code should catch th
 """
 from __future__ import annotations
 
+from typing import TypeVar
+
+T = TypeVar("T")
+
 VALIDATION = "validation"
 CONFLICT = "conflict"
 NOT_FOUND = "not-found"
@@ -75,3 +79,10 @@ def kind_of(exc: BaseException) -> str | None:
 def http_status(exc: BaseException) -> int | None:
     kind = kind_of(exc)
     return HTTP_STATUS[kind] if kind else None
+
+
+def require(value: T | None, what: str) -> T:
+    """Narrow an optional field that the caller's context guarantees (R5): ``None`` becomes a typed validation error, not a TypeError."""
+    if value is None:
+        raise InvalidInput(f"{what} is required", code="missing-value")
+    return value

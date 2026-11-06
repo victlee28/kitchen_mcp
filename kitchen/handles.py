@@ -10,7 +10,7 @@ from collections import defaultdict
 
 from .geometry import Scene
 from .spec import KitchenSpec, effective_handle, to_data
-from .errors import InvalidInput
+from .errors import InvalidInput, require
 
 
 def _dump(override) -> dict:
@@ -42,9 +42,10 @@ def material_ops(spec: KitchenSpec, scene: Scene, part_ids: list[str], material:
     wanted = set(part_ids)
     for p in scene.parts:
         if p.type == "handle":
-            all_by_module[p.module].add(p.id)
+            mod = require(p.module, f"{p.id}.module")
+            all_by_module[mod].add(p.id)
             if p.id in wanted:
-                chosen[p.module].add(p.id)
+                chosen[mod].add(p.id)
     if not chosen:
         raise InvalidInput("Không có tay nắm nào trong vùng chọn")
     partial = sorted(m for m, ids in chosen.items() if ids != all_by_module[m])

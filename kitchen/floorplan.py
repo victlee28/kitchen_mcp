@@ -13,7 +13,7 @@ import math
 from typing import Any
 
 from .placement import Placement
-from .errors import InvalidInput
+from .errors import InvalidInput, require
 
 DEFAULT_WALL_THICKNESS = 140.0   # mm, used only for edges without a measured wall element
 DEFAULT_WALL_HEIGHT = 3000.0     # mm
@@ -122,7 +122,7 @@ def _frame_vectors(data: dict[str, Any]):
     names = [frame.get(k) for k in ("x", "y", "z")]
     if any(n not in AXIS for n in names):
         raise InvalidInput(f"Unsupported frame axes {names}; known names: {', '.join(AXIS)}")
-    vx, vy, vz = (AXIS[n] for n in names)
+    vx, vy, vz = (AXIS[str(n)] for n in names)
     if vx[2] or vy[2] or not vz[2]:
         raise InvalidInput("Frame must have horizontal x and y axes and a vertical z axis")
     det = (vx[0] * (vy[1] * vz[2] - vy[2] * vz[1]) - vx[1] * (vy[0] * vz[2] - vy[2] * vz[0]) + vx[2] * (vy[0] * vz[1] - vy[1] * vz[0]))
@@ -157,7 +157,7 @@ def _field(element: dict, name: str) -> dict:
     return f if isinstance(f, dict) else {}
 
 
-def _fv(element: dict, name: str):
+def _fv(element: dict, name: str) -> Any:
     return _field(element, name).get("value")
 
 
@@ -490,6 +490,7 @@ def normalize(data: dict[str, Any], room_id: str | None = None) -> dict[str, Any
             room_id = rooms[0]["id"]
         if room_id not in {r["id"] for r in rooms}:
             raise InvalidInput(f"Room '{room_id}' not found. Rooms: " + ", ".join(str(r["id"]) for r in rooms))
+        room_id = require(room_id, "room_id")
         room_el = next(e for e in elements if e.get("id") == room_id)
         room_label = _fv(room_el, "label")
         raw_room = _points(_fv(room_el, "geometry"), room_id)
@@ -634,6 +635,8 @@ def normalize(data: dict[str, Any], room_id: str | None = None) -> dict[str, Any
 
     # ---- review state of what was read
     for fld in ("label", "tag") if room_el is not None else ():
+        if room_el is None:
+            break
         st = _field(room_el, fld).get("status")
         if st and st not in ("confirmed", "edited"):
             warnings.append({"code": "unreviewed", "element": room_id, "message": f"room {fld} '{_fv(room_el, fld)}' is {st}"})

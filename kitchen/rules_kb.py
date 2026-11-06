@@ -10,6 +10,7 @@ from __future__ import annotations
 import math
 
 from . import regions
+from .errors import require
 from .spec import KitchenSpec, Appliance
 
 TOPICS = {
@@ -74,12 +75,13 @@ def _runs(spec: KitchenSpec, wall: str) -> list[tuple[float, float]]:
 
 def _span(tb: Appliance) -> tuple[float, float]:
     w = (tb.numeric_dimensions() or [0])[0]
-    return tb.center - w / 2, tb.center + w / 2
+    center = require(tb.center, f"{tb.id}.center")
+    return center - w / 2, center + w / 2
 
 
 def _landing(spec: KitchenSpec, tb: Appliance):
     s0, s1 = _span(tb)
-    run = next(((a, b) for a, b in _runs(spec, tb.wall) if a - 1 <= s0 and s1 <= b + 1), None)
+    run = next(((a, b) for a, b in _runs(spec, require(tb.wall, f"{tb.id}.wall")) if a - 1 <= s0 and s1 <= b + 1), None)
     if not run:
         return None
     left, right = run
@@ -153,7 +155,7 @@ def check(spec: KitchenSpec, sel: dict[str, dict]) -> list[dict]:
         for a in sink:
             for b in cooktop:
                 if a.wall == b.wall:
-                    gap = abs(a.center - b.center) - (a.numeric_dimensions() or [0])[0] / 2 - (b.numeric_dimensions() or [0])[0] / 2
+                    gap = abs(require(a.center, f"{a.id}.center") - require(b.center, f"{b.id}.center")) - (a.numeric_dimensions() or [0])[0] / 2 - (b.numeric_dimensions() or [0])[0] / 2
                     if gap < p["sink_cooktop_min"] - 1:
                         ctx.add("sink-cooktop", [a.id, b.id], f"Chậu {a.id} cách bếp {b.id} {gap:g} mm < {p['sink_cooktop_min']}", gap, p["sink_cooktop_min"])
     # mặt bàn thao tác
@@ -171,7 +173,7 @@ def check(spec: KitchenSpec, sel: dict[str, dict]) -> list[dict]:
     if (p := ctx.p("fridge-table")):
         for t in fridge:
             try:
-                m = spec.find(t.module)
+                m = spec.find(t.module or "")
             except KeyError:
                 continue
             best = 0.0
@@ -195,7 +197,7 @@ def check(spec: KitchenSpec, sel: dict[str, dict]) -> list[dict]:
         above = [m for m in ups if m.wall == t.wall and m.fromCorner < s1 and m.endAt > s0]
         if not above:
             continue
-        direct = [m for m in above if m.fromCorner <= t.center < m.endAt]
+        direct = [m for m in above if m.fromCorner <= require(t.center, f"{t.id}.center") < m.endAt]
         lowest = min(direct or above, key=lambda m: m.y)
         if lowest.id in hood and (p := ctx.p("hood")):
             h = (hood[lowest.id].numeric_dimensions() + [0, 0])[1]
@@ -227,7 +229,7 @@ def check(spec: KitchenSpec, sel: dict[str, dict]) -> list[dict]:
     # tam giác làm việc
     if (p := ctx.p("triangle")) and sink and cooktop and fridge:
         try:
-            m = spec.find(fridge[0].module)
+            m = spec.find(fridge[0].module or "")
             dm = c.baseDepth / 2
             pts = {"chậu": _plan_point(spec, sink[0].wall, sink[0].center, dm), "bếp": _plan_point(spec, cooktop[0].wall, cooktop[0].center, dm),
                    "tủ lạnh": _plan_point(spec, m.wall, m.fromCorner + m.width / 2, m.depth)}

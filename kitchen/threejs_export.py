@@ -16,6 +16,7 @@ from collections import defaultdict
 
 from . import floorplan as fpmod, roomctx, hardware, regions, vocab
 from .geometry import Part, backsplash_height, compile_spec, views_of
+from .errors import require
 from .palette import SEGMENT_COLORS, module_color as _module_color
 from .spec import Handle, KitchenSpec, Module, effective_handle
 
@@ -84,7 +85,8 @@ class Frame:
 
 def _module_frame(m: Module, lsau: float) -> tuple[Frame, tuple[float, float, float]]:
     if m.type == "corner-shelf":
-        return Frame((-m.backLength, m.y, 0), 0.0), (m.backLength, m.height, m.rightLength)
+        bl, rl = require(m.backLength, f"{m.id}.backLength"), require(m.rightLength, f"{m.id}.rightLength")
+        return Frame((-bl, m.y, 0), 0.0), (bl, m.height, rl)
     if m.wall == "back":
         return Frame((-(m.fromCorner + m.width), m.y, 0), 0.0), (m.width, m.height, m.depth)
     if m.wall == "right":
@@ -383,7 +385,7 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
     ctx = roomctx.for_spec(spec, lsau, lphai)   # imported floorplan: its room, real walls and elements replace the default room
     floorplan = ctx.floorplan if ctx else None
     binding = ctx.binding if ctx else None
-    if ctx:
+    if ctx and floorplan is not None:
         sec = fpmod.room_section(floorplan, binding, mats["wall"], ctx.structures)
         room.update(walls=sec["walls"], structures=sec["structures"], dimensions=_dims(sec["width"], c.ceiling, sec["depth"]))
         room["floor"]["outline"] = sec["floorOutline"]
@@ -443,7 +445,7 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
         accessories.append({"id": f"ACC-COUNTERTOP-{i + 1}", "type": "Countertop", "assetId": "ASSET-COUNTERTOP", "dimensions": _dims(w, h, d),
                             "transform": _tf(fr.pos, fr.rot), "materialId": mats["countertop"], "edgeProfile": "eased", "overhang": c.countertopOverhang,
                             "cutouts": cutouts, "sourceRef": f"countertop-{p.wall}"})
-        height = backsplash_height(spec, p.wall)  # cùng một hàm với hình học 3D
+        height = backsplash_height(spec, require(p.wall, "countertop wall"))  # cùng một hàm với hình học 3D
         if c.material.get("wallTile") and height >= 50:  # ốp tường giữa mặt đá và tủ trên, sát tường
             accessories.append({"id": f"ACC-BACKSPLASH-{i + 1}", "type": "Backsplash_Tile", "assetId": "ASSET-PANEL",
                                 "dimensions": _dims(w, height, 8), "materialId": mats["wallTile"],

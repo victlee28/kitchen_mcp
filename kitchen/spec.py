@@ -40,8 +40,8 @@ class Common(_Base):
     baseDepth: float = 550
     countertopOverhang: float = 20
     backsplashHeight: Literal["standard", "to-upper", "to-ceiling"] = "standard"
-    backsplashHeightMm: float | None = Field(None, ge=50, le=3000, description="Backsplash height in mm; overrides backsplashHeight when set")
-    wallTilePattern: str | None = Field(None, description="How the wall tile is laid (herringbone, running-bond); carried to the 3D file and the image prompt")
+    backsplashHeightMm: float | None = Field(default=None, ge=50, le=3000, description="Backsplash height in mm; overrides backsplashHeight when set")
+    wallTilePattern: str | None = Field(default=None, description="How the wall tile is laid (herringbone, running-bond); carried to the 3D file and the image prompt")
     upperBottom: float = 1530
     upperTierSplit: float = 2280
     cabinetTop: float = 2610
@@ -49,7 +49,7 @@ class Common(_Base):
     upperDepth: float = 320
     doorThickness: float = 18
     doorGap: float = 3
-    backThickness: float = Field(9, gt=0, description="Độ dày tấm hậu (mm)")
+    backThickness: float = Field(default=9, gt=0, description="Độ dày tấm hậu (mm)")
     material: dict[str, str] = Field(default_factory=dict, description="base, upper, tall, cornerShelf, carcass, countertop, wallTile, floor, wall")
     handle: "Handle" = Field(default_factory=lambda: Handle())
     handleByStorey: dict[str, "HandleOverride"] | None = Field(
@@ -66,14 +66,14 @@ class Common(_Base):
 
 class Handle(_Base):
     variant: Literal["bar", "knob", "concealed", "none"] = "bar"  # tay thanh, núm, âm (khoét), không tay (nhấn mở)
-    length: float = Field(160, ge=0, description="Chiều dài tay thanh (mm)")
+    length: float = Field(default=160, ge=0, description="Chiều dài tay thanh (mm)")
     material: str = "Nhôm đen mờ"
 
 
 class HandleOverride(_Base):
     """Partial handle settings for one storey or one module; unset fields fall back to the next level."""
     variant: Literal["bar", "knob", "concealed", "none"] | None = None
-    length: float | None = Field(None, ge=0)
+    length: float | None = Field(default=None, ge=0)
     material: str | None = None
 
 
@@ -83,19 +83,19 @@ class WallOpening(_Base):
     fromCorner: float = Field(ge=0, description="Khoảng cách từ góc dọc theo tường (mm)")
     width: float = Field(gt=0)
     height: float = Field(gt=0)
-    sillHeight: float = Field(0, ge=0, description="Cao độ đáy lỗ mở (bậu cửa sổ), cửa đi = 0")
+    sillHeight: float = Field(default=0, ge=0, description="Cao độ đáy lỗ mở (bậu cửa sổ), cửa đi = 0")
 
 
 class Wall(_Base):
     id: Literal["back", "right", "left"]
     length: float = Field(gt=0, description="Chiều dài tường (mm)")
-    thickness: float = Field(100, gt=0, description="Độ dày tường (mm)")
+    thickness: float = Field(default=100, gt=0, description="Độ dày tường (mm)")
     openings: list[WallOpening] = Field(default_factory=list)
 
 
 class Room(_Base):
     wall: list[Wall] = Field(default_factory=list)
-    walkway: float | None = Field(None, description="Khoảng trống phía trước dãy tủ tới vật cản đối diện (mm)")
+    walkway: float | None = Field(default=None, description="Khoảng trống phía trước dãy tủ tới vật cản đối diện (mm)")
 
     def length(self, id: str) -> float | None:
         return next((t.length for t in self.wall if t.id == id), None)
@@ -112,25 +112,25 @@ class Module(_Base):
     type: str = "base"
     name: str = ""
     wall: Literal["back", "right", "left", "corner", "island"] = "back"
-    offset: float = Field(0, ge=0, description="wall='island' only (island / peninsula): distance from the back-wall plane to the door face of the run, in mm; fromCorner is measured from the right-wall plane")
-    fromCorner: float = Field(0, ge=0)
-    width: float = Field(0, ge=0)
-    y: float = Field(0, ge=0)
+    offset: float = Field(default=0, ge=0, description="wall='island' only (island / peninsula): distance from the back-wall plane to the door face of the run, in mm; fromCorner is measured from the right-wall plane")
+    fromCorner: float = Field(default=0, ge=0)
+    width: float = Field(default=0, ge=0)
+    y: float = Field(default=0, ge=0)
     height: float = Field(gt=0)
     depth: float = Field(gt=0)
     doors: list[float] = Field(default_factory=list)
-    blindCorner: float = Field(0, ge=0, description="Phần góc khuất không có cánh, tính từ phía góc (mm)")
-    endPanel: float = Field(0, ge=0, description="Tấm hông hoàn thiện ở đầu xa góc (mm)")
+    blindCorner: float = Field(default=0, ge=0, description="Phần góc khuất không có cánh, tính từ phía góc (mm)")
+    endPanel: float = Field(default=0, ge=0, description="Tấm hông hoàn thiện ở đầu xa góc (mm)")
     frontSections: list[FrontSection] = Field(default_factory=list)
-    niche: float | None = Field(None, description="Tủ cao: chiều cao hốc thiết bị tính từ sàn (mm)")
+    niche: float | None = Field(default=None, description="Tủ cao: chiều cao hốc thiết bị tính từ sàn (mm)")
     backLength: float | None = None   # corner-shelf: length of the leg along the back wall
     rightLength: float | None = None  # corner-shelf: length of the leg along the right wall
     shelfCount: int = 3
     hingeSides: list[Literal["left", "right", "upper", "base"]] = Field(default_factory=list,
         description="Bản lề từng cánh theo thứ tự từ trái sang (nhìn từ trước); trống = tự suy")
-    doorStyle: Literal["flat", "frame", "glass"] | None = Field(None, description="Cánh phẳng (slab), cánh khung (shaker) hoặc kính")
-    material: str | None = Field(None, description="Vật liệu mặt trước riêng của module (ghi đè chung.vatLieu theo tầng)")
-    handle: HandleOverride | None = Field(None, description="Handle settings of this module only; overrides the storey and common handle")
+    doorStyle: Literal["flat", "frame", "glass"] | None = Field(default=None, description="Cánh phẳng (slab), cánh khung (shaker) hoặc kính")
+    material: str | None = Field(default=None, description="Vật liệu mặt trước riêng của module (ghi đè chung.vatLieu theo tầng)")
+    handle: HandleOverride | None = Field(default=None, description="Handle settings of this module only; overrides the storey and common handle")
     note: str | None = None
 
     @model_validator(mode="after")
@@ -170,9 +170,9 @@ class Appliance(_Base):
     type: Literal["fridge", "sink", "faucet", "cooktop", "hood", "oven", "light", "other"] = "other"
     dimensions: str | None = None
     position: str | None = None
-    module: str | None = Field(None, description="Module chứa thiết bị")
+    module: str | None = Field(default=None, description="Module chứa thiết bị")
     wall: Literal["back", "right", "left"] | None = None
-    center: float | None = Field(None, description="Tâm thiết bị, khoảng cách từ góc dọc theo tường (mm)")
+    center: float | None = Field(default=None, description="Tâm thiết bị, khoảng cách từ góc dọc theo tường (mm)")
 
     def numeric_dimensions(self) -> list[float]:
         return [float(x.replace(",", ".")) for x in re.findall(r"\d+(?:[.,]\d+)?", self.dimensions or "")]
@@ -235,18 +235,18 @@ class Molding(_Base):
     variant: Literal["crown", "base"] = Field(description="crown = phào nóc theo đỉnh tủ; base = phào chân theo sàn")
     profile: str
     wall: list[Literal["back", "right", "left"]] = Field(default_factory=list, description="Trống = mọi tường có tủ")
-    joinGap: float = Field(50, ge=0, description="Khe giữa hai tủ ≤ giá trị này thì phào chạy liền qua")
-    openEnd: Literal["return-to-wall", "flat-cut"] = Field("return-to-wall", description="Đầu hở: quay về tường hoặc cắt phẳng")
-    material: str | None = Field(None, description="Trống = vật liệu cánh của tầng tủ tương ứng")
+    joinGap: float = Field(default=50, ge=0, description="Khe giữa hai tủ ≤ giá trị này thì phào chạy liền qua")
+    openEnd: Literal["return-to-wall", "flat-cut"] = Field(default="return-to-wall", description="Đầu hở: quay về tường hoặc cắt phẳng")
+    material: str | None = Field(default=None, description="Trống = vật liệu cánh của tầng tủ tương ứng")
     enabled: bool = True
-    ignoreCeiling: bool = Field(False, description="Người dùng chọn 'để nguyên' khi phào vượt trần")
+    ignoreCeiling: bool = Field(default=False, description="Người dùng chọn 'để nguyên' khi phào vượt trần")
 
 
 class ViewAngle(_Base):
     name: str = ""
     position: tuple[float, float, float]
     lookAt: tuple[float, float, float]
-    verticalFov: float = Field(50, gt=1, lt=170)
+    verticalFov: float = Field(default=50, gt=1, lt=170)
 
 
 class KitchenSpec(_Base):
@@ -254,15 +254,15 @@ class KitchenSpec(_Base):
     name: str = "Thiết kế tủ bếp"
     style: Literal["Modern", "Classic", "Neoclassical", "Transitional", "Industrial", "Minimalist"] = "Modern"
     unit: Literal["mm"] = "mm"
-    country: str | None = Field(None, description="Mã ISO alpha-2 nơi lắp đặt (VN, US, AU...) — quyết định tiêu chuẩn ưu tiên khi kiểm tra")
-    region: str | None = Field(None, description="Mã khu vực (SEA, EA, NA, EU, OC, GLOBAL) nếu chưa rõ quốc gia")
+    country: str | None = Field(default=None, description="Mã ISO alpha-2 nơi lắp đặt (VN, US, AU...) — quyết định tiêu chuẩn ưu tiên khi kiểm tra")
+    region: str | None = Field(default=None, description="Mã khu vực (SEA, EA, NA, EU, OC, GLOBAL) nếu chưa rõ quốc gia")
     source: str | None = None
     origin: str | None = None
-    styleTags: list[str] | None = Field(None, description="Style names with no geometry of their own (Scandinavian, Japandi, Farmhouse, Country, Mid-Century Modern, Luxury)")
+    styleTags: list[str] | None = Field(default=None, description="Style names with no geometry of their own (Scandinavian, Japandi, Farmhouse, Country, Mid-Century Modern, Luxury)")
     renderPreferences: list[str] = Field(default_factory=list, description="Photography / lighting / quality phrases from the creation prompt; read by kitchen.realism")
-    aiHints: list[str] | None = Field(None, description="English phrases for the image prompt only (e.g. fluted glass, herringbone tile)")
-    floorplan: dict[str, Any] | None = Field(None, description="Derived room geometry imported from an audited floorplan (mm); the source document is stored once, referenced by floorplan.ref")
-    promptInterpretation: list[dict[str, Any]] | None = Field(None, description="How each term of the creation prompt was understood: term, canonical, scope, target, status, message")
+    aiHints: list[str] | None = Field(default=None, description="English phrases for the image prompt only (e.g. fluted glass, herringbone tile)")
+    floorplan: dict[str, Any] | None = Field(default=None, description="Derived room geometry imported from an audited floorplan (mm); the source document is stored once, referenced by floorplan.ref")
+    promptInterpretation: list[dict[str, Any]] | None = Field(default=None, description="How each term of the creation prompt was understood: term, canonical, scope, target, status, message")
     common: Common = Field(default_factory=Common)
     room: Room | None = None
     module: list[Module] = Field(default_factory=list)

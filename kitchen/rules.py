@@ -9,6 +9,7 @@ from __future__ import annotations
 from itertools import combinations
 
 from . import knowledge_seed, moldings, regions, rules_kb
+from .errors import require
 from .spec import KitchenSpec, Module
 
 TOL = 1.0  # mm
@@ -30,8 +31,8 @@ def _envelopes(spec: KitchenSpec) -> list[tuple[str, tuple, tuple]]:
     for m in spec.module:
         y0, y1 = m.y, m.y + m.height
         if m.type == "corner-shelf":
-            out.append((m.id, (-m.backLength, y0, 0), (0, y1, m.depth)))
-            out.append((m.id, (-m.depth, y0, 0), (0, y1, m.rightLength)))
+            out.append((m.id, (-require(m.backLength, f"{m.id}.backLength"), y0, 0), (0, y1, m.depth)))
+            out.append((m.id, (-m.depth, y0, 0), (0, y1, require(m.rightLength, f"{m.id}.rightLength"))))
         elif m.wall == "back":
             out.append((m.id, (-m.endAt, y0, 0), (-m.fromCorner, y1, m.depth)))
         elif m.wall == "right":
