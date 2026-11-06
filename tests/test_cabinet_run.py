@@ -125,6 +125,26 @@ class TestService(unittest.TestCase):
         self.assertNotEqual(json.dumps(sent, sort_keys=True), json.dumps(r["operation"], sort_keys=True))     # the round trip really changed the text
         self.svc.apply(self.did, sent, r["baseRev"], "web", r["proposal"]["opHash"])
 
+    def test_diagonal_object_gets_an_angled_run_and_confirm_applies_it(self):
+        diamond = elem("diamond_a", "column", "column", [[1500, 2150], [1850, 1800], [2200, 2150], [1850, 2500]], "Cot cheo")
+        did = self.svc.import_floorplan(plan(ROOM, diamond))["id"]
+        self.svc.apply(did, {"op": "add", "module": {"type": "base", "wall": "back", "fromCorner": 0, "width": 600, "y": 0, "height": 840, "depth": 550}}, 1)
+        self.svc.bind_floorplan(did)
+        spec, rev = self.svc.store.get(did)
+        sc = geometry.compile_spec(spec)
+        ctx = roomctx.for_spec(spec, sc.lsau, sc.lphai)
+        struct = next(t for t in ctx.structures if t["id"] == "STRUCT-diamond_a")
+        a, b = struct["outline"][0], struct["outline"][1]
+        r = self.svc.template(did, {"kind": "run-i", "structureId": "STRUCT-diamond_a", "point": {"x": (a["x"] + b["x"]) / 2, "z": (a["z"] + b["z"]) / 2}})
+        self.assertEqual(r["status"], "ok")
+        self.assertIsNone(r["facing"])
+        self.assertTrue(r["proposal"]["applicable"])
+        self.assertFalse(r["proposal"]["validation"]["introducesErrors"], r["proposal"]["validation"])
+        self.svc.apply(did, r["operation"], r["baseRev"], "test", r["proposal"]["opHash"])
+        spec, rev2 = self.svc.store.get(did)
+        self.assertEqual((rev2, [x.id for x in spec.runs]), (rev + 1, ["R1"]))
+        self.assertTrue(any(p.frame is not None for p in geometry.compile_spec(spec).parts))
+
     def test_bad_requests(self):
         with self.assertRaises(NotFound):
             self.svc.template(self.did, {**self.click(-2300.0, 1990.0), "structureId": "STRUCT-nope"})

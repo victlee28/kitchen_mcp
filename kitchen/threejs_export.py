@@ -17,7 +17,7 @@ from collections import defaultdict
 from .numeric import round_half_away, round_int
 from . import runs, floorplan as fpmod, roomctx, hardware, regions, vocab
 from .geometry import Part, backsplash_height, compile_spec, views_of
-from .errors import require
+from .errors import InvalidInput, require
 from .palette import SEGMENT_COLORS, module_color as _module_color
 from .spec import Handle, KitchenSpec, Module, effective_handle
 
@@ -375,6 +375,31 @@ def _module_entry(spec: KitchenSpec, m: Module, parts: list[Part], frame: Frame,
     return entry
 
 
+def _run_docs(spec: KitchenSpec, modules: list[dict]) -> list[dict]:
+    """runs[]: one group per explicit run. Each module of a run gets placement.runId and a localTransform; its ``transform`` stays the world one
+    and is checked to equal run.transform composed with localTransform (a mismatch is a bug in the exporter, so it raises)."""
+    by_ref = {m["sourceRef"]: m for m in modules}
+    out = []
+    for r in spec.runs:
+        fr = runs.RunFrame(r.id, r.x, r.z, r.yaw)
+        members = sorted((m for m in spec.module if m.run == r.id), key=lambda m: (m.fromCorner, m.y))
+        if not members:
+            continue
+        ids = []
+        for m in members:
+            entry = by_ref[m.id]
+            entry["placement"]["runId"] = f"RUN-{r.id}"
+            entry["localTransform"] = _tf((m.fromCorner, m.y, 0.0), 0.0)
+            x, z = fr.to_world(m.fromCorner, 0.0)
+            pos = entry["transform"]["position"]
+            if abs(pos["x"] - round_half_away(x, 2)) > 0.02 or abs(pos["z"] - round_half_away(z, 2)) > 0.02:
+                raise InvalidInput(f"{m.id}: transform differs from run∘localTransform", code="export-run-mismatch")
+            ids.append(entry["id"])
+        nx, nz = fr.normal()
+        out.append({"id": f"RUN-{r.id}", "sourceRef": r.id, "transform": _tf((r.x, 0.0, r.z), r.yaw), "modules": ids, "frontAxis": _v(nx, 0, nz)})
+    return out
+
+
 # ------------------------------------------------------------------ xuất toàn cảnh
 UNSET_TIME = "1970-01-01T00:00:00+00:00"   # what an export made without a clock says; the service always passes the real time
 
@@ -428,6 +453,8 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
         frame, size = _module_frame(m, lsau, runs.frame_of(spec, m))
         modules.append(_module_entry(spec, m, by_mod.get(m.id, []), frame, size, mats, has_led))
 
+    run_docs = _run_docs(spec, modules)
+
     # thiết bị & phụ kiện
     app_type = {"fridge": "Refrigerator", "hood": "Range_Hood_Insert", "oven": "Microwave"}
     appliances, accessories = [], []
@@ -480,7 +507,7 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
         accessories.append({"id": f"ACC-COUNTERTOP-{i + 1}", "type": "Countertop", "assetId": "ASSET-COUNTERTOP", "dimensions": _dims(w, h, d),
                             "transform": _tf(fr.pos, fr.rot), "materialId": mats["countertop"], "edgeProfile": "eased", "overhang": c.countertopOverhang,
                             "cutouts": cutouts, "sourceRef": f"countertop-{p.run or p.wall}",
-                            "partRef": {"kind": "countertop", "wall": p.wall}})
+                            "partRef": {"kind": "countertop", "wall": p.wall, **({"run": p.run} if p.run else {})}})
         height = backsplash_height(spec, require(p.wall, "countertop wall"))  # cùng một hàm với hình học 3D
         if c.material.get("wallTile") and height >= 50:  # ốp tường giữa mặt đá và tủ trên, sát tường
             accessories.append({"id": f"ACC-BACKSPLASH-{i + 1}", "type": "Backsplash_Tile", "assetId": "ASSET-PANEL",
@@ -559,7 +586,7 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
     palette.update({f"module:{m.id}": _hex(_module_color(m.id)) for m in spec.module})
 
     doc = {
-        "schemaVersion": "1.4.0",
+        "schemaVersion": "1.5.0",
         "metadata": {"designId": re.sub(r"[^A-Za-z0-9_.:-]", "-", design_id) or "design", "projectName": spec.name,
                      "description": spec.source or "", "style": spec.style, "revision": max(1, rev), "author": "kitchen-design-mcp",
                      "createdAt": created_at,
@@ -578,6 +605,7 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
                              "notes": "Gốc ở góc trong tường sau/tường phải. Anchor = góc dưới-sau-trái nhìn từ phía trước. Hệ cục bộ module: "
                                       "x dọc bề rộng, y lên, z từ hậu ra trước. part/cánh/ngăn kéo theo hệ module; tay nắm theo hệ cánh."},
         "room": room, "lighting": lighting, "materials": mats_list, "assets": assets, "modules": modules, "appliances": appliances,
+        **({"runs": run_docs} if run_docs else {}),
         "accessories": accessories, "decorations": decorations, "cameras": cameras, "constraints": constraints,
         "renderSettings": {"backgroundColor": "#FFFFFF", "exposure": 1.0, "shadows": True, "antialias": True, "toneMapping": "ACESFilmicToneMapping",
                            "outputWidth": 1920, "outputHeight": 1080, "pixelRatio": 1, "environment": "room",

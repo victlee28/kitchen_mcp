@@ -117,10 +117,20 @@ export function buildKitchen(doc, THREE, opts = {}) {
     }
   }
 
+  // v1.5 runs: a row at any angle is one group at the run origin; its modules are children placed by their localTransform
+  // (module.transform stays the world transform, so a loader that ignores runs[] still places every module correctly)
+  const runGroups = new Map();
+  for (const r of doc.runs || []) {
+    const rg = place(new THREE.Group(), r.transform);
+    rg.name = r.id; rg.userData = { run: r.sourceRef || r.id, runId: r.id };
+    root.add(rg); runGroups.set(r.id, rg);
+  }
+
   // module
   for (const m of doc.modules || []) {
     if (m.visible === false) continue;
-    const g = place(new THREE.Group(), m.transform);
+    const rg = m.placement?.runId && m.localTransform ? runGroups.get(m.placement.runId) : null;
+    const g = place(new THREE.Group(), rg ? m.localTransform : m.transform);
     g.name = m.id; g.userData = { module: m.sourceRef || m.id, moduleId: m.id };
     const info = { module: m.sourceRef || m.id };
     for (const p of m.parts || []) {
@@ -138,7 +148,7 @@ export function buildKitchen(doc, THREE, opts = {}) {
       }
       g.add(group); pickables.push(mesh);
     }
-    root.add(g); byModule.set(info.module, g);
+    (rg || root).add(g); byModule.set(info.module, g);
   }
   // phào: quét mặt cắt (assets[assetId].parameters.profile) dọc path, vát góc ở đỉnh giữa
   const assetById = new Map((doc.assets || []).map((a) => [a.id, a]));
@@ -190,7 +200,7 @@ export function buildKitchen(doc, THREE, opts = {}) {
       position: [c.position.x * s, c.position.y * s, c.position.z * s], target: [c.target.x * s, c.target.y * s, c.target.z * s],
       up: c.up ? [c.up.x, c.up.y, c.up.z] : [0, 1, 0] };
   }
-  return { root, lights, cameras, byModule, pickables, structures, structurePickables: [...structures.values()].flatMap((e) => e.meshes) };
+  return { root, lights, cameras, byModule, runGroups, pickables, structures, structurePickables: [...structures.values()].flatMap((e) => e.meshes) };
 }
 
 // Vòng đỉnh tại mỗi đỉnh đường chạy — cùng thuật toán với kitchen/moldings.py sweep_rings (test so khớp).

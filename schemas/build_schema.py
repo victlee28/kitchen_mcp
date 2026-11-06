@@ -1,4 +1,4 @@
-"""Sinh schema mở rộng v1.4.0 (gồm các bổ sung v1.1) từ schema gốc v1.0.0 của người dùng.
+"""Sinh schema mở rộng v1.5.0 (gồm các bổ sung v1.1) từ schema gốc v1.0.0 của người dùng.
 
 Nguyên tắc: KHÔNG đổi/bớt gì của bản gốc; chỉ thêm thuộc tính TÙY CHỌN vào $defs và các object con
 (những chỗ bản gốc không khóa additionalProperties). Nhờ vậy mọi file xuất ra hợp lệ với CẢ HAI bản.
@@ -22,11 +22,11 @@ def opt(schema: dict, desc: str) -> dict:
 def main():
     base = json.loads((HERE / "kitchen-threejs.v1.0.0.schema.json").read_text(encoding="utf-8"))
     s = copy.deepcopy(base)
-    s["$id"] = "https://example.com/schemas/kitchen-threejs-full.v1.4.0.schema.json"
-    s["title"] = base["title"] + " (v1.4)"
-    s["description"] = base["description"] + " v1.1 thêm trường tùy chọn cho tủ tham số, vùng tiêu chuẩn và ảnh điều khiển AI; v1.2 thêm phong cách phụ, gợi ý ảnh AI và bảng diễn giải mô tả; v1.3 thêm nguồn độ dày tường và thông tin mặt bằng nhập vào; v1.4 thêm partRef (chi tiết nào bị chọn: cánh, ngăn kéo, tay nắm, mặt bàn); tương thích ngược v1.0.0."
+    s["$id"] = "https://example.com/schemas/kitchen-threejs-full.v1.5.0.schema.json"
+    s["title"] = base["title"] + " (v1.5)"
+    s["description"] = base["description"] + " v1.1 thêm trường tùy chọn cho tủ tham số, vùng tiêu chuẩn và ảnh điều khiển AI; v1.2 thêm phong cách phụ, gợi ý ảnh AI và bảng diễn giải mô tả; v1.3 thêm nguồn độ dày tường và thông tin mặt bằng nhập vào; v1.4 thêm partRef (chi tiết nào bị chọn: cánh, ngăn kéo, tay nắm, mặt bàn); v1.5 thêm runs[] (dãy tủ có hướng bất kỳ: gốc + góc xoay), module.placement.runId và module.localTransform (vị trí trong khung dãy); tương thích ngược v1.0.0."
     P, D = s["properties"], s["$defs"]
-    P["schemaVersion"]["default"] = "1.4.0"
+    P["schemaVersion"]["default"] = "1.5.0"
 
     D["vec2"] = {"type": "object", "required": ["u", "v"], "properties": {"u": {"type": "number"}, "v": {"type": "number"}},
                  "description": f"[{ADD}] Véc-tơ 2D cho lặp texture"}
@@ -168,6 +168,19 @@ def main():
     dp["partRef"] = PART_REF
     if "drawers" in md and "items" in md["drawers"] and "properties" in md["drawers"]["items"]:
         md["drawers"]["items"]["properties"]["partRef"] = PART_REF
+
+
+    # v1.5: runs — a row of cabinets at any angle is one group; module.transform stays the WORLD transform and equals run.transform composed with module.localTransform
+    ADD5 = "Bổ sung v1.5 (VicKitchenCabinet)"
+    D["run"] = {"type": "object", "required": ["id", "transform", "modules"], "description": f"[{ADD5}] Một dãy tủ thẳng, hướng bất kỳ: nhóm (THREE.Group) đặt tại gốc dãy, xoay quanh Y; các module của dãy là con của nhóm",
+                "properties": {"id": {"$ref": "#/$defs/id"}, "sourceRef": {"type": "string", "description": "Mã dãy trong KitchenSpec.runs"},
+                               "transform": {"$ref": "#/$defs/transform"},
+                               "modules": {"type": "array", "items": {"$ref": "#/$defs/id"}, "description": "Mã module (MOD-…) thuộc dãy, theo thứ tự dọc dãy"},
+                               "frontAxis": {"$ref": "#/$defs/vec3", "description": "Hướng mặt trước của các cánh trong toạ độ thế giới"}}}
+    P["runs"] = {"type": "array", "items": {"$ref": "#/$defs/run"}, "description": f"[{ADD5}] Các dãy tủ có hướng bất kỳ; trống khi mọi tủ bám tường"}
+    md["placement"]["properties"]["runId"] = opt({"$ref": "#/$defs/id"}, "v1.5: mã dãy (runs[].id) chứa module")
+    md["localTransform"] = {"$ref": "#/$defs/transform", "description": f"[{ADD5}] Vị trí module trong khung dãy (x dọc dãy, z từ hậu ra trước); có khi module thuộc runs[]. `transform` vẫn là toạ độ thế giới"}
+    D["partRef"]["properties"]["run"] = {"type": "string", "description": "Mã dãy (KitchenSpec.runs) của dải mặt bàn; có với countertop trong dãy có hướng bất kỳ"}
 
     # part
     pt = D["part"]["properties"]

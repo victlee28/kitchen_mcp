@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://example.com/schemas/kitchen-threejs-full.v1.4.0.schema.json",
-  "title": "Complete Kitchen Three.js Scene Schema (v1.4)",
-  "description": "Comprehensive parametric schema for rendering fully-detailed kitchen scenes and cabinet systems in Three.js. v1.1 thêm trường tùy chọn cho tủ tham số, vùng tiêu chuẩn và ảnh điều khiển AI; v1.2 thêm phong cách phụ, gợi ý ảnh AI và bảng diễn giải mô tả; v1.3 thêm nguồn độ dày tường và thông tin mặt bằng nhập vào; v1.4 thêm partRef (chi tiết nào bị chọn: cánh, ngăn kéo, tay nắm, mặt bàn); tương thích ngược v1.0.0.",
+  "$id": "https://example.com/schemas/kitchen-threejs-full.v1.5.0.schema.json",
+  "title": "Complete Kitchen Three.js Scene Schema (v1.5)",
+  "description": "Comprehensive parametric schema for rendering fully-detailed kitchen scenes and cabinet systems in Three.js. v1.1 thêm trường tùy chọn cho tủ tham số, vùng tiêu chuẩn và ảnh điều khiển AI; v1.2 thêm phong cách phụ, gợi ý ảnh AI và bảng diễn giải mô tả; v1.3 thêm nguồn độ dày tường và thông tin mặt bằng nhập vào; v1.4 thêm partRef (chi tiết nào bị chọn: cánh, ngăn kéo, tay nắm, mặt bàn); v1.5 thêm runs[] (dãy tủ có hướng bất kỳ: gốc + góc xoay), module.placement.runId và module.localTransform (vị trí trong khung dãy); tương thích ngược v1.0.0.",
   "type": "object",
   "required": [
     "schemaVersion",
@@ -17,7 +17,7 @@
   "properties": {
     "schemaVersion": {
       "type": "string",
-      "default": "1.4.0"
+      "default": "1.5.0"
     },
     "metadata": {
       "type": "object",
@@ -825,6 +825,13 @@
           "description": "[Bổ sung v1.1 (VicKitchenCabinet)] semanticClass -> màu mask"
         }
       }
+    },
+    "runs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/run"
+      },
+      "description": "[Bổ sung v1.5 (VicKitchenCabinet)] Các dãy tủ có hướng bất kỳ; trống khi mọi tủ bám tường"
     }
   },
   "$defs": {
@@ -1187,6 +1194,10 @@
             "elevation": {
               "type": "number",
               "description": "[Bổ sung v1.1 (VicKitchenCabinet)] Cao độ đáy module (mm)"
+            },
+            "runId": {
+              "$ref": "#/$defs/id",
+              "description": "[Bổ sung v1.1 (VicKitchenCabinet)] v1.5: mã dãy (runs[].id) chứa module"
             }
           }
         },
@@ -1465,6 +1476,10 @@
         "led": {
           "type": "boolean",
           "description": "[Bổ sung v1.1 (VicKitchenCabinet)] Có đèn LED hắt"
+        },
+        "localTransform": {
+          "$ref": "#/$defs/transform",
+          "description": "[Bổ sung v1.5 (VicKitchenCabinet)] Vị trí module trong khung dãy (x dọc dãy, z từ hậu ra trước); có khi module thuộc runs[]. `transform` vẫn là toạ độ thế giới"
         }
       }
     },
@@ -2015,6 +2030,42 @@
         "wall": {
           "type": "string",
           "description": "Tường của dải mặt bàn; có với countertop"
+        },
+        "run": {
+          "type": "string",
+          "description": "Mã dãy (KitchenSpec.runs) của dải mặt bàn; có với countertop trong dãy có hướng bất kỳ"
+        }
+      }
+    },
+    "run": {
+      "type": "object",
+      "required": [
+        "id",
+        "transform",
+        "modules"
+      ],
+      "description": "[Bổ sung v1.5 (VicKitchenCabinet)] Một dãy tủ thẳng, hướng bất kỳ: nhóm (THREE.Group) đặt tại gốc dãy, xoay quanh Y; các module của dãy là con của nhóm",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "sourceRef": {
+          "type": "string",
+          "description": "Mã dãy trong KitchenSpec.runs"
+        },
+        "transform": {
+          "$ref": "#/$defs/transform"
+        },
+        "modules": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "description": "Mã module (MOD-…) thuộc dãy, theo thứ tự dọc dãy"
+        },
+        "frontAxis": {
+          "$ref": "#/$defs/vec3",
+          "description": "Hướng mặt trước của các cánh trong toạ độ thế giới"
         }
       }
     }

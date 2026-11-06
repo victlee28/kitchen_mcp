@@ -1,4 +1,4 @@
-"""Schema 1.4.0: every door, drawer front, handle and countertop run says which kind of detail it is (partRef), additively."""
+"""Schema 1.4+: every door, drawer front, handle and countertop run says which kind of detail it is (partRef), additively."""
 import json
 import sys
 import unittest
@@ -22,7 +22,7 @@ class TestPartRef(unittest.TestCase):
         self.doc = threejs_export.export(self.spec)
 
     def test_version_and_schema_validate(self):
-        self.assertEqual(self.doc["schemaVersion"], "1.4.0")
+        self.assertEqual(self.doc["schemaVersion"], "1.5.0")
         jsonschema.Draft202012Validator(SCHEMA).validate(self.doc)
 
     def test_fronts_and_handles_name_their_module(self):

@@ -255,9 +255,12 @@ class _Builder:
 
     def countertop(self):
         c = self.c
-        groups: list[tuple[str, object]] = [(w, None) for w in ("back", "right", "left")] + \
-                 [("island", z) for z in sorted({(m.offset, m.facing or "-z") for m in self.spec.module if m.wall == "island" and not m.run and m.storey == "base"})] + \
-                 [("island", r.id) for r in self.spec.runs if any(m.run == r.id and m.storey == "base" for m in self.spec.module)]
+        groups: list[tuple[str, tuple[float, str] | str | None]] = [(w, None) for w in ("back", "right", "left")]
+        for key in sorted({(m.offset, m.facing or "-z") for m in self.spec.module if m.wall == "island" and not m.run and m.storey == "base"}):
+            groups.append(("island", key))
+        for r in self.spec.runs:
+            if any(m.run == r.id and m.storey == "base" for m in self.spec.module):
+                groups.append(("island", r.id))
         for wall, z in groups:
             if isinstance(z, str):          # an explicit run: one countertop per continuous stretch, in the run frame
                 ms = sorted((m for m in self.spec.module if m.run == z and m.storey == "base"), key=lambda m: m.fromCorner)
