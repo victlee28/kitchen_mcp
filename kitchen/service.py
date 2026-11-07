@@ -196,8 +196,23 @@ class KitchenService:
         if struct is None:
             raise NotFound(f"No such object: {template.get('structureId')}", code='structure-not-found')
         place = ctx.placement if ctx.placement is not None else IDENTITY
-        outline = [place.to_kitchen(float(p['x']), float(p['z'])) for p in struct['outline']]
-        plan = cabinet_run.plan_i_run(spec, outline, place.to_kitchen(float(point['x']), float(point['z'])))
+        click = (float(point['x']), float(point['z']))
+        # A design without cabinets has no wall binding yet, so its kitchen frame is the room frame; the first cabinet binds the kitchen to a wall and
+        # moves that frame. Plan in the frame the design WILL have once the run is in (repeat until the plan and the frame agree).
+        plan = None
+        for _ in range(3):
+            outline = [place.to_kitchen(float(p['x']), float(p['z'])) for p in struct['outline']]
+            plan = cabinet_run.plan_i_run(spec, outline, place.to_kitchen(*click))
+            try:
+                after = edit.apply_op(spec.model_copy(deep=True), plan['operation'])
+                scene_after = geometry.compile_spec(after)
+                ctx_after = roomctx.for_spec(after, scene_after.lsau, scene_after.lphai)
+            except Exception:       # the preview below reports an operation that cannot be applied
+                break
+            place_after = ctx_after.placement if ctx_after is not None else IDENTITY
+            if place_after == place:
+                break
+            place = place_after
         preview = self.propose(design_id, plan['operation'], current, None, country)
         return {'id': design_id, 'baseRev': current, 'status': 'ok', 'structureId': struct['id'], 'facing': plan['facing'], 'length': plan['length'],
                 'summary': plan['summary'], 'operation': plan['operation'], 'proposal': preview}

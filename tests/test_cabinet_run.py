@@ -171,6 +171,29 @@ class TestService(unittest.TestCase):
         self.assertAlmostEqual(top["transform"]["position"]["x"], rp["x"], delta=0.02)
         self.assertAlmostEqual(top["transform"]["position"]["z"], rp["z"], delta=0.02)
 
+    def test_first_run_in_a_design_without_cabinets_stands_against_the_object(self):
+        """With no cabinets the kitchen frame is the room frame; the first cabinet binds the kitchen to a wall and moves it. The run must be planned
+        for the frame the design has AFTERWARDS, or the first template lands away from the object (the second one used to be right)."""
+        col = elem("column_a", "column", "column", rect(1500, 2000, 1900, 2400), "Cot")
+        did = self.svc.import_floorplan(plan(ROOM, col))["id"]
+        spec, rev = self.svc.store.get(did)
+        self.assertEqual(len(spec.module), 0)
+        sc = geometry.compile_spec(spec)
+        ctx = roomctx.for_spec(spec, sc.lsau, sc.lphai)
+        struct = next(t for t in ctx.structures if t["id"] == "STRUCT-column_a")
+        click = {"x": (struct["outline"][0]["x"] + struct["outline"][1]["x"]) / 2, "z": (struct["outline"][0]["z"] + struct["outline"][1]["z"]) / 2}
+        r = self.svc.template(did, {"kind": "run-i", "structureId": "STRUCT-column_a", "point": click})
+        self.svc.apply(did, r["operation"], r["baseRev"], "test", r["proposal"]["opHash"])
+        after, _ = self.svc.store.get(did)
+        sc2 = geometry.compile_spec(after)
+        place = roomctx.for_spec(after, sc2.lsau, sc2.lphai).placement
+        pts = [place.to_kitchen(p["x"], p["z"]) for p in struct["outline"]]
+        ox0, ox1, oz0, oz1 = min(p[0] for p in pts), max(p[0] for p in pts), min(p[1] for p in pts), max(p[1] for p in pts)
+        x0, x1, z0, z1 = _carcass(after, {m.id for m in after.module})
+        gap_x, gap_z = max(x0 - ox1, ox0 - x1), max(z0 - oz1, oz0 - z1)
+        self.assertLessEqual(max(gap_x, gap_z), 2.0, "the run touches the object (no gap)")
+        self.assertGreaterEqual(max(gap_x, gap_z), -2.0, "the run does not enter the object")
+
     def test_bad_requests(self):
         with self.assertRaises(NotFound):
             self.svc.template(self.did, {**self.click(-2300.0, 1990.0), "structureId": "STRUCT-nope"})
