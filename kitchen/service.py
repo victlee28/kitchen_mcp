@@ -177,8 +177,13 @@ class KitchenService:
         spec, current = self.store.get(design_id)
         if base_revision is not None and base_revision != current:
             raise ConflictError(f'base_rev={base_revision}, but the latest revision is {current}; reload before editing')
+        if template.get('kind') == 'corner':     # {"kind": "corner", "runA": "R1", "runB": "R2", "width"?: mm}: special corner cabinet between two runs
+            plan = cabinet_run.plan_corner(spec, str(template.get('runA')), str(template.get('runB')), float(template.get('width') or 900.0))
+            preview = self.propose(design_id, plan['operation'], current, None, country)
+            return {'id': design_id, 'baseRev': current, 'status': 'ok', 'facing': None, 'angle': plan['angle'], 'clearance': plan['clearance'], 'length': template.get('width') or 900.0,
+                    'summary': plan['summary'], 'operation': plan['operation'], 'proposal': preview}
         if template.get('kind') != 'run-i':
-            raise InvalidInput("template.kind must be 'run-i'", code='bad-template-kind')
+            raise InvalidInput("template.kind must be 'run-i' or 'corner'", code='bad-template-kind')
         point = template.get('point')
         if not isinstance(point, dict) or not all(isinstance(point.get(k), (int, float)) for k in ('x', 'z')):
             raise InvalidInput('template.point needs numeric x and z (mm, room frame)', code='bad-template-point')

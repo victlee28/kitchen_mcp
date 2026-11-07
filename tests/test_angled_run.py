@@ -143,3 +143,69 @@ class TestAngledRules(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestCornerCabinet(unittest.TestCase):
+    """The special corner cabinet where two runs meet at any angle."""
+
+    def _spec(self, degrees, a_end=2000.0, b_start=1000.0):
+        import math
+        ub = (-math.cos(math.radians(degrees)), math.sin(math.radians(degrees)))    # run B leaves the corner at (3000, 0) at this angle from run A
+        yaw_b = math.degrees(math.atan2(-ub[1], ub[0]))
+        data = json.loads(json.dumps(FIX))
+        data["appliances"] = []
+        base = {"type": "base", "wall": "island", "y": 0, "height": 840, "depth": 550}
+        data["runs"] = [{"id": "R1", "x": 0, "z": 0, "yaw": 0}, {"id": "R2", "x": 3000, "z": 0, "yaw": yaw_b}]
+        data["module"] = [{**base, "id": "A1", "run": "R1", "fromCorner": a_end - 1000, "width": 1000},
+                          {**base, "id": "B1", "run": "R2", "fromCorner": b_start, "width": 1000}]
+        return from_data(KitchenSpec, data)
+
+    def _clashes(self, spec):
+        return [i for i in rules.check_geometry(spec) if i["rule"] == "GEO-COLLISION"]
+
+    def test_clear_runs_leave_no_collision_at_any_angle(self):
+        for degrees in (60, 90, 120, 150):
+            with self.subTest(degrees=degrees):
+                spec = self._spec(degrees)
+                plan = cabinet_run.plan_corner(spec, "R1", "R2")
+                self.assertAlmostEqual(plan["angle"], degrees, delta=0.1)
+                a_max, b_min = plan["clearance"]["aMaxEnd"], plan["clearance"]["bMinStart"]
+                tight = self._spec(degrees, a_end=a_max - 2, b_start=b_min + 2)
+                out = edit.apply_op(tight, cabinet_run.plan_corner(tight, "R1", "R2")["operation"])
+                self.assertEqual(self._clashes(out), [])
+                self.assertTrue(any(m.run == "R3" for m in out.module))
+
+    def test_overlapping_runs_are_reported(self):
+        spec = self._spec(120, a_end=2900.0, b_start=100.0)
+        plan = cabinet_run.plan_corner(spec, "R1", "R2")
+        self.assertEqual(len(plan["summary"]), 3)                       # headline + one note per run that is too long
+        self.assertTrue(self._clashes(edit.apply_op(spec, plan["operation"])))
+
+    def test_bad_input(self):
+        spec = self._spec(90)
+        with self.assertRaises(InvalidInput):
+            cabinet_run.plan_corner(spec, "R1", "R9")
+        data = to_data(spec)
+        data["runs"][1].update(yaw=0)
+        with self.assertRaises(InvalidInput) as ctx:
+            cabinet_run.plan_corner(from_data(KitchenSpec, data), "R1", "R2")
+        self.assertEqual(ctx.exception.code, "runs-parallel")
+
+
+class TestCornerTemplateService(unittest.TestCase):
+    def test_service_previews_and_applies_the_corner(self):
+        import shutil
+        import tempfile
+        from kitchen.service import KitchenService
+        tmp = Path(tempfile.mkdtemp(prefix="corner-"))
+        try:
+            svc = KitchenService(tmp / "k.db", tmp / "renders")
+            did = svc.create_from_spec(to_data(TestCornerCabinet()._spec(120, a_end=1900.0, b_start=1100.0)))["id"]
+            r = svc.template(did, {"kind": "corner", "runA": "R1", "runB": "R2"})
+            self.assertEqual((r["status"], r["facing"]), ("ok", None))
+            self.assertTrue(r["proposal"]["applicable"])
+            svc.apply(did, r["operation"], r["baseRev"], "test", r["proposal"]["opHash"])
+            spec, _ = svc.store.get(did)
+            self.assertEqual([x.id for x in spec.runs], ["R1", "R2", "R3"])
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)

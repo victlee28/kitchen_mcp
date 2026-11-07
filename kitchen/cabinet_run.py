@@ -13,6 +13,7 @@ from .edit import combine_ops, next_run_id
 from .errors import InvalidInput
 from .floorplan.geom import point_in_poly
 from .numeric import round_half_away
+from . import runs as runmod
 from .spec import KitchenSpec
 
 MODULE_WIDTH = 600.0         # preferred cabinet width
@@ -155,3 +156,75 @@ def plan_i_run(spec: KitchenSpec, outline: list[Pt], point: Pt, module_type: str
     where = {"-z": "-z (towards the back wall)", "+z": "+z (into the room)", "-x": "-x", "+x": "+x"}[facing]
     return {"operation": combine_ops(ops), "facing": facing, "length": sum(widths), "widths": widths,
             "summary": [f"{len(widths)} base cabinets, {sum(widths):g} mm, doors facing {where}", *notes]}
+
+
+def _meet(fa: runmod.RunFrame, fb: runmod.RunFrame) -> Pt:
+    """Where the back lines (d = 0) of two runs cross."""
+    ax, az = fa.to_world(1.0, 0.0)
+    bx, bz = fb.to_world(1.0, 0.0)
+    ua = (ax - fa.x, az - fa.z)
+    ub = (bx - fb.x, bz - fb.z)
+    den = ua[0] * ub[1] - ua[1] * ub[0]
+    if abs(den) < 1e-6:
+        raise InvalidInput("The two runs are parallel, so they never meet", code="runs-parallel")
+    t = ((fb.x - fa.x) * ub[1] - (fb.z - fa.z) * ub[0]) / den
+    return fa.x + t * ua[0], fa.z + t * ua[1]
+
+
+def plan_corner(spec: KitchenSpec, run_a: str, run_b: str, width: float = 900.0, module_type: str = "base") -> dict[str, Any]:
+    """A special corner cabinet where run ``run_a`` (its s grows towards the corner) meets run ``run_b`` (its s grows away from it), at any angle.
+
+    The cabinet is one box on the bisector of the two back lines, its front square to the bisector, its back corners on the two walls. It is a
+    run of its own. Nothing of the two runs is moved: ``clearance`` says how far run A may extend (``aMaxEnd``) and where run B may start
+    (``bMinStart``) without touching the corner cabinet, and the summary says so when a run is currently longer; the overlap check of
+    ``propose`` reports the same thing as a collision.
+    """
+    frames = runmod.frames(spec)
+    if run_a not in frames or run_b not in frames:
+        raise InvalidInput("Both runs must exist", code="run-not-found")
+    if not MIN_WIDTH <= width <= 1500:
+        raise InvalidInput(f"The corner cabinet width must be {MIN_WIDTH:g}-1500 mm", code="bad-corner-width")
+    fa, fb = frames[run_a], frames[run_b]
+    px, pz = _meet(fa, fb)
+    ax, az = fa.to_world(1.0, 0.0)
+    bx, bz = fb.to_world(1.0, 0.0)
+    ua, ub = (ax - fa.x, az - fa.z), (bx - fb.x, bz - fb.z)
+    mx, mz = ub[0] - ua[0], ub[1] - ua[1]                     # along the wall of B away from the corner + along the wall of A away from it
+    norm = math.hypot(mx, mz)
+    if norm < 1e-6:
+        raise InvalidInput("The runs are collinear, so there is no corner", code="runs-parallel")
+    mx, mz = mx / norm, mz / norm
+    na = fa.normal()
+    if mx * na[0] + mz * na[1] <= 0.05:
+        raise InvalidInput("This is an outside corner; the corner cabinet needs the runs to enclose the room side", code="outside-corner")
+    cos_phi = max(-1.0, min(1.0, -(ua[0] * ub[0] + ua[1] * ub[1])))          # angle between the two wall rays leaving the corner
+    phi = math.acos(cos_phi)
+    if not math.radians(20) < phi < math.radians(170):
+        raise InvalidInput("The angle between the runs must be between 20 and 170 degrees", code="bad-corner-angle")
+    depth = float(spec.common.baseDepth)
+    back = width / (2.0 * math.tan(phi / 2.0))                # distance of the cabinet's back from the corner so its back corners touch both walls
+    yaw = math.degrees(math.atan2(mx, mz))
+    c, sn = runmod.trig(yaw)
+    ox = px + back * mx - (width / 2.0) * c
+    oz = pz + back * mz + (width / 2.0) * sn
+    run = {"id": next_run_id(spec), "x": float(round_half_away(ox, 1)), "z": float(round_half_away(oz, 1)), "yaw": float(round_half_away(yaw, 2))}
+    cf = runmod.RunFrame(run["id"], run["x"], run["z"], run["yaw"])
+    box = cf.footprint(0.0, width, 0.0, depth)
+    depth_a = max((m.depth for m in spec.module if m.run == run_a), default=depth)
+    depth_b = max((m.depth for m in spec.module if m.run == run_b), default=depth)
+    ea, eb = runmod.strip_extent(box, fa, depth_a), runmod.strip_extent(box, fb, depth_b)
+    a_max = ea[0] if ea else None
+    b_min = eb[1] if eb else None
+    notes: list[str] = []
+    a_end = max((m.endAt for m in spec.module if m.run == run_a), default=0.0)
+    b_start = min((m.fromCorner for m in spec.module if m.run == run_b), default=0.0)
+    if a_max is not None and a_end > a_max + 1:
+        notes.append(f"Run {run_a} ends at {a_end:g} mm but must end by {a_max:g} mm to clear the corner cabinet")
+    if b_min is not None and b_start < b_min - 1:
+        notes.append(f"Run {run_b} starts at {b_start:g} mm but must start from {b_min:g} mm to clear the corner cabinet")
+    ops: list[dict[str, Any]] = [{"op": "add-run", "run": run},
+                                 {"op": "add", "closeGap": False, "module": {"type": module_type, "name": "Corner cabinet", "wall": "island", "run": run["id"], "fromCorner": 0.0,
+                                                                              "width": float(width), "y": 0, "height": float(spec.common.baseTop), "depth": depth, "doors": [float(width)]}}]
+    return {"operation": combine_ops(ops), "run": run, "angle": float(round_half_away(math.degrees(phi), 1)),
+            "clearance": {"aMaxEnd": a_max, "bMinStart": b_min},
+            "summary": [f"Corner cabinet {width:g} mm at {math.degrees(phi):.1f}° (run {run['id']})", *notes]}

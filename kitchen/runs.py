@@ -106,3 +106,22 @@ def penetration(a: list[Point], b: list[Point]) -> float:
 
 def module_footprint(frame: RunFrame, m: Module) -> list[Point]:
     return frame.footprint(m.fromCorner, m.endAt, 0.0, m.depth)
+
+
+def strip_extent(poly: list[Point], frame: RunFrame, d_max: float) -> tuple[float, float] | None:
+    """(smallest, largest) s, in ``frame``, of the part of a convex polygon inside the strip 0 <= d <= d_max; None when it misses the strip."""
+    pts = [frame.to_local(x, z) for x, z in poly]
+    for keep in (lambda p: p[1] >= 0.0, lambda p: p[1] <= d_max):
+        edge = 0.0 if keep(( 0.0, 0.0)) and not keep((0.0, -1.0)) else d_max
+        out: list[Point] = []
+        for i, a in enumerate(pts):
+            b = pts[(i + 1) % len(pts)]
+            if keep(a):
+                out.append(a)
+            if keep(a) != keep(b):
+                t = (edge - a[1]) / (b[1] - a[1])
+                out.append((a[0] + t * (b[0] - a[0]), edge))
+        pts = out
+        if not pts:
+            return None
+    return min(p[0] for p in pts), max(p[0] for p in pts)
