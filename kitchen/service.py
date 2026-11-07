@@ -39,7 +39,8 @@ class KitchenService:
         self.clock = clock or utc_now
         self.config = Config.from_env()      # the environment is read here, once; below this line the service uses the value
         self.store = Store(db_path or self.config.db_path)
-        self.recognizers: dict[str, recognition.Recognizer] = {}     # plug-ins; none is wired by default
+        self.recognizers: dict[str, recognition.Recognizer] = {}     # plug-ins; the Gemini reader is wired when a key is available
+        self._wire_recognizers()
         self.render_dir = Path(render_dir or self.config.render_dir)
         legacy_schema.migrate_renders(self.render_dir)
         from .images import ImageJobs
@@ -200,6 +201,14 @@ class KitchenService:
         preview = self.propose(design_id, plan['operation'], current, None, country)
         return {'id': design_id, 'baseRev': current, 'status': 'ok', 'structureId': struct['id'], 'facing': plan['facing'], 'length': plan['length'],
                 'summary': plan['summary'], 'operation': plan['operation'], 'proposal': preview}
+
+    def _wire_recognizers(self) -> None:
+        from .backends import BackendError
+        from .recognizers import GeminiRecognizer
+        try:
+            self.recognizers["gemini"] = GeminiRecognizer(self.config)
+        except BackendError:
+            pass                    # no key: recognition answers "unavailable"
 
     def register_recognizer(self, name: str, recognizer: recognition.Recognizer) -> None:
         """Plug in a photo/drawing recognizer (anything with ``recognize(RecognitionInput) -> dict``)."""

@@ -1,0 +1,55 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { styleFromOptions, styleFromValue, interpretBody, describeInterpret, confirmBody, checkUpload, recognizeBody, describeRecognition } from '../../web/assist-logic.js';
+
+const prop = (over = {}) => ({ id: 'd1', baseRev: 4, opHash: 'h', operation: { op: 'remove', id: 'TD1' }, applicable: true, unchanged: false,
+  diff: { modules: { added: [], removed: ['TD1'], changed: {} }, other: [] }, validation: { introduced: [], resolved: [] }, ...over });
+
+test('styleFrom: options never offer the current view; values fall back to the default', () => {
+  const o = styleFromOptions(['front', 'left', 'right'], 'left');
+  assert.deepEqual(o.map((x) => x.value), ['', 'auto', 'none', 'front', 'right']);
+  assert.equal(styleFromValue('', ['front'], 'left'), undefined);
+  assert.equal(styleFromValue('auto', ['front'], 'left'), 'auto');
+  assert.equal(styleFromValue('none', ['front'], 'left'), 'none');
+  assert.equal(styleFromValue('front', ['front', 'left'], 'left'), 'front');
+  assert.equal(styleFromValue('left', ['front', 'left'], 'left'), undefined);
+  assert.equal(styleFromValue('gone', ['front'], 'left'), undefined);
+});
+
+test('interpret body trims, refuses empty text, and only sends options that are set', () => {
+  assert.deepEqual(interpretBody('  xóa TD1 ', 3), { text: 'xóa TD1', baseRev: 3 });
+  assert.deepEqual(interpretBody('x', 3, { scope: ['TD1'], useLlm: true }), { text: 'x', baseRev: 3, scope: ['TD1'], useLlm: true });
+  assert.throws(() => interpretBody('   ', 1));
+});
+
+test('interpret answers: preview, clarify, unsupported', () => {
+  const ok = describeInterpret({ status: 'ok', summary: ['Xóa TD1'], proposal: prop() });
+  assert.equal(ok.kind, 'preview'); assert.equal(ok.canApply, true); assert.deepEqual(ok.lines[0], { kind: 'info', text: 'Xóa TD1' });
+  assert.equal(describeInterpret({ status: 'ok', proposal: prop({ unchanged: true }) }).canApply, false);
+  assert.equal(describeInterpret({ status: 'ok', proposal: prop({ applicable: false, error: { message: 'x' } }) }).canApply, false);
+  assert.deepEqual(describeInterpret({ status: 'clarify', question: 'Tủ nào?', choices: ['TD1'] }), { kind: 'clarify', question: 'Tủ nào?', choices: ['TD1'] });
+  assert.equal(describeInterpret({ status: 'unsupported', message: 'm', llm: 'no-key' }).llm, 'no-key');
+});
+
+test('confirm sends exactly the previewed operation with its hash', () => {
+  assert.deepEqual(confirmBody(prop()), { op: { op: 'remove', id: 'TD1' }, baseRev: 4, expect: 'h' });
+});
+
+test('upload check: type and size', () => {
+  assert.equal(checkUpload(null) !== null, true);
+  assert.equal(checkUpload({ type: 'image/gif', size: 5 }) !== null, true);
+  assert.equal(checkUpload({ type: 'image/png', size: 13 * 1048576 }) !== null, true);
+  assert.equal(checkUpload({ type: 'image/jpeg', size: 1000 }), null);
+  assert.deepEqual(recognizeBody('photo', 'a.jpg', 'image/jpeg', 'QQ==', 2), { source: { kind: 'photo', name: 'a.jpg', mediaType: 'image/jpeg', imageBase64: 'QQ==' }, baseRev: 2 });
+  assert.throws(() => recognizeBody('video', 'a', 'b', 'c', 1));
+});
+
+test('recognition answers cover every status and flag low-confidence modules', () => {
+  const draft = { modules: [{ type: 'base', wall: 'back', width: 600, confidence: 0.4, needsReview: true, label: 'x' }], rejected: [{ index: 1, reason: 'bad' }], notes: ['n'] };
+  const ok = describeRecognition({ status: 'ok', draft, proposal: prop() });
+  assert.equal(ok.kind, 'preview'); assert.equal(ok.lines[0].kind, 'warn'); assert.match(ok.lines[0].text, /cần kiểm tra/);
+  assert.equal(ok.lines.some((l) => l.kind === 'bad' && /mục 2/.test(l.text)), true);
+  assert.equal(describeRecognition({ status: 'empty', draft }).kind, 'message');
+  assert.match(describeRecognition({ status: 'unavailable' }).text, /GEMINI_API_KEY/);
+  assert.equal(describeRecognition({ status: 'failed', message: 'boom' }).tone, 'bad');
+});

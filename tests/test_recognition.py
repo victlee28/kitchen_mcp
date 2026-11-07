@@ -4,7 +4,10 @@ import json
 import shutil
 import sys
 import tempfile
+import dataclasses
+import threading
 import unittest
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -12,6 +15,9 @@ sys.path.insert(0, str(ROOT))
 
 from kitchen import recognition  # noqa: E402
 from kitchen.errors import InvalidInput  # noqa: E402
+from kitchen.backends import BackendError  # noqa: E402
+from kitchen.config import Config  # noqa: E402
+from kitchen.recognizers import GeminiRecognizer  # noqa: E402
 from kitchen.service import KitchenService  # noqa: E402
 from kitchen.store import ConflictError  # noqa: E402
 
@@ -62,6 +68,7 @@ class TestService(unittest.TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp(prefix="recog-"))
         self.svc = KitchenService(self.tmp / "k.db", self.tmp / "renders")
+        self.svc.recognizers.clear()     # a real key in the environment wires Gemini; these tests plug in fakes
         self.did = self.svc.create_from_spec(json.loads(json.dumps(FIX)))["id"]
         self.rev = self.svc.store.get(self.did)[1]
         self.src = {"kind": "photo", "imageBase64": PNG, "name": "a.png"}
@@ -112,3 +119,83 @@ class TestService(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+REAL_PNG = b"\x89PNG\r\n\x1a\n" + b"\0" * 20
+
+
+class _FakeVision(BaseHTTPRequestHandler):
+    calls: list = []
+    mode = "ok"
+
+    def log_message(self, *a):
+        pass
+
+    def do_POST(self):
+        body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+        _FakeVision.calls.append({"path": self.path, "key": self.headers.get("x-goog-api-key"), "body": body})
+        if _FakeVision.mode == "429":
+            out, code = b"quota", 429
+        elif _FakeVision.mode == "text":
+            out, code = json.dumps({"candidates": [{"content": {"parts": [{"text": "not json"}]}}]}).encode(), 200
+        else:
+            out, code = json.dumps({"candidates": [{"content": {"parts": [{"text": json.dumps(GOOD)}]}}]}).encode(), 200
+        self.send_response(code); self.send_header("Content-Length", str(len(out))); self.end_headers(); self.wfile.write(out)
+
+
+class TestGeminiRecognizer(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.srv = ThreadingHTTPServer(("127.0.0.1", 0), _FakeVision)
+        threading.Thread(target=cls.srv.serve_forever, daemon=True).start()
+        cls.cfg = dataclasses.replace(Config.from_env({}), gemini_api_key="k1", gemini_vision_model="vis-test",
+                                      gemini_base_url=f"http://127.0.0.1:{cls.srv.server_address[1]}/v1beta")
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.srv.shutdown()
+
+    def setUp(self):
+        _FakeVision.mode, _FakeVision.calls = "ok", []
+
+    def test_request_shape_and_draft(self):
+        raw = GeminiRecognizer(self.cfg).recognize(recognition.RecognitionInput("drawing", REAL_PNG, "a.png", "image/png"))
+        call = _FakeVision.calls[0]
+        self.assertEqual(call["key"], "k1")
+        self.assertIn("/models/vis-test:generateContent", call["path"])
+        parts = call["body"]["contents"][0]["parts"]
+        self.assertIn("technical drawing", parts[0]["text"])
+        self.assertEqual(parts[1]["inline_data"]["mime_type"], "image/png")
+        self.assertEqual(base64.b64decode(parts[1]["inline_data"]["data"]), REAL_PNG)
+        self.assertEqual(len(recognition.build_draft(raw).modules), 4)
+
+    def test_not_an_image_and_errors_are_backend_errors(self):
+        rec = GeminiRecognizer(self.cfg)
+        with self.assertRaises(BackendError):
+            rec.recognize(recognition.RecognitionInput("photo", b"not an image"))
+        _FakeVision.mode = "429"
+        with self.assertRaises(BackendError) as c:
+            rec.recognize(recognition.RecognitionInput("photo", REAL_PNG))
+        self.assertEqual(c.exception.code, "overloaded")
+        _FakeVision.mode = "text"
+        with self.assertRaises(BackendError):
+            rec.recognize(recognition.RecognitionInput("photo", REAL_PNG))
+
+    def test_service_reports_failure_not_crash(self):
+        tmp = Path(tempfile.mkdtemp(prefix="recog-g-"))
+        try:
+            svc = KitchenService(tmp / "k.db", tmp / "r")
+            svc.recognizers.clear(); svc.recognizers["gemini"] = GeminiRecognizer(self.cfg)
+            did = svc.create_from_spec(json.loads(json.dumps(FIX)))["id"]
+            _FakeVision.mode = "429"
+            out = svc.recognize(did, {"kind": "photo", "imageBase64": base64.b64encode(REAL_PNG).decode()})
+            self.assertEqual(out["status"], "failed")
+            _FakeVision.mode = "ok"
+            out = svc.recognize(did, {"kind": "photo", "imageBase64": base64.b64encode(REAL_PNG).decode()})
+            self.assertEqual(out["status"], "ok")
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    def test_no_key_means_unavailable(self):
+        with self.assertRaises(BackendError):
+            GeminiRecognizer(dataclasses.replace(self.cfg, gemini_api_key=None, gemini_env_file=None))

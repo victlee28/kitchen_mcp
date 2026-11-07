@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from .instruction import gemini_text, gemini_text_edit, gemini_text_geometry, gemini_text_multi, style_note
 from .layer import NEGATIVE_LAYER, edit_task_prompt, global_prompt, layer_prompt
+from .recognition import SCHEMA as RECOGNITION_SCHEMA, recognition_text
 from .photo import LIGHTING, LIGHTING_VI, NEGATIVE_PHOTO, full, local, tags
 
 

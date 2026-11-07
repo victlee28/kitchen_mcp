@@ -96,3 +96,4 @@ label.kind{display:inline-flex;align-items:center;gap:4px;margin-right:10px;colo
 .ctx button.primary{background:#3b665c}.ctx button.ghost,button.ghost{background:#fff;color:#3b665c}
 .ctx-msg{margin:6px 0;font-size:12px}.ctx-msg.bad,.ctx-preview li.bad{color:#a33b2b}.ctx-msg.warn,.ctx-preview li.warn{color:#9a6a12}.ctx-preview li.ok{color:#2c7a4b}
 .ctx-preview{margin:6px 0;padding-left:16px;max-height:220px;overflow:auto;font-size:12px}
+#cmdText{flex:1;min-width:0}#recFile{max-width:150px;font-size:11px}#assistResult{margin-top:6px}

@@ -7,6 +7,7 @@ import { buildKitchen } from './scene-loader.js';
 import { createStructureSelector } from './structure-select.js';
 import { createModuleMenu } from './module-menu.js';
 import { isClick, pickTarget } from './menu-logic.js';
+import { createAssist } from './assist.js';
 
 const $ = (id) => document.getElementById(id);
 const state = { id: null, rev: null, spec: null, scene: null, selected: null, views: {}, qg: '' };
@@ -134,6 +135,7 @@ const moduleMenu = createModuleMenu({
   structure: { hide: () => structSel.hideSelected(), isolate: () => structSel.isolateSelected(), showAll: () => structSel.showAll() },
   imageEdit: (detail) => window.dispatchEvent(new CustomEvent('image-edit-request', { detail })),
 });
+createAssist({ setStatus, getState: () => ({ id: state.id, rev: state.rev, selected: state.selected }), afterChange: (res) => afterChange(res) });
 $('moduleActions').addEventListener('click', (ev) => { const r = ev.currentTarget.getBoundingClientRect(); if (state.selected) moduleMenu.open({ kind: 'module', id: state.selected }, r.left - 260, r.bottom + 4); });
 
 // ---------------- dữ liệu thiết kế

@@ -88,6 +88,14 @@
         <button id="pApply">Áp dụng phào</button>
       </section>
       <section>
+        <h2>Lệnh tự do &amp; nhận diện ảnh</h2>
+        <div class="row"><input id="cmdText" type="text" placeholder="vd: xóa TD3, đổi cánh TD1 sang kính, thêm tủ rộng 600 sau TD2" aria-label="Câu lệnh"><button id="cmdGo" type="button">Xem trước</button></div>
+        <label class="small"><input id="cmdLlm" type="checkbox"> Hỏi LLM khi luật không hiểu (cần DEEPSEEK_API_KEY)</label>
+        <div class="row"><select id="recKind" aria-label="Loại ảnh"><option value="photo">Ảnh chụp bếp</option><option value="drawing">Bản vẽ</option></select><input id="recFile" type="file" accept="image/png,image/jpeg,image/webp" aria-label="Ảnh để nhận diện"><button id="recGo" type="button">Nhận diện</button></div>
+        <p class="muted small">Cả hai chỉ cho bản xem trước; bấm Áp dụng mới lưu. Đang chọn một module thì lệnh chỉ nhắm vào module đó.</p>
+        <div id="assistResult" class="interp"></div>
+      </section>
+      <section>
         <h2>Kiểm tra quy tắc</h2>
         <ul id="issues" class="issues"></ul>
       </section>
@@ -146,6 +154,7 @@
               <label>Ảnh gốc<select id="jRef"><option value="auto">Ảnh đã duyệt gần nhất</option><option value="beauty">Render three.js</option><option value="imported">Ảnh nhập từ ChatGPT</option><option value="albedo">Albedo (render)</option></select></label>
               <label>Workflow<select id="jWf"></select></label>
               <label class="span2">Ánh sáng ảnh đầy đủ (gen-0)<select id="jLight" title="Sửa vùng luôn bám ánh sáng ảnh gốc"><option value="daylight">Ban ngày, sáng tự nhiên</option><option value="late-afternoon">Nắng chiều ấm</option><option value="dim-evening">Buổi tối, đèn ấm</option></select></label>
+              <label class="span2">Phong cách theo góc khác (styleFrom)<select id="jStyleFrom" title="Lấy phong cách (vật liệu, ánh sáng) từ ảnh đã duyệt của góc khác để các góc đồng nhất"></select></label>
               <label class="span2">Cấu hình AI theo thao tác<select id="jOperation" title="Workflow + trọng số ControlNet chọn sẵn theo loại việc"></select></label>
             </div>
             <button id="tAdd" type="button" title="Thêm layer đang chọn + vật liệu/yêu cầu vào danh sách việc">＋ Thêm vào danh sách việc</button>

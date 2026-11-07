@@ -28,6 +28,7 @@ class Config:
     gemini_api_key: str | None = None
     gemini_env_file: str | None = None      # a .env whose GEMINI_API_KEY / GEMINI_IMAGE_MODEL fill what the environment leaves empty
     gemini_model: str | None = None
+    gemini_vision_model: str | None = None   # reads photos/drawings for recognition (text out); defaults in recognizers.py
     gemini_base_url: str = "https://generativelanguage.googleapis.com/v1beta"
     gemini_timeout: float = 300.0
     gemini_image_size: str = ""
@@ -43,6 +44,6 @@ class Config:
                    comfyui_cn_lineart=env.get("COMFYUI_CN_LINEART") or "controlnet-lineart-sdxl.safetensors",
                    comfyui_cn_depth=env.get("COMFYUI_CN_DEPTH") or "controlnet-depth-sdxl.safetensors",
                    gemini_api_key=env.get("GEMINI_API_KEY") or None, gemini_env_file=env.get("GEMINI_ENV_FILE") or None,
-                   gemini_model=env.get("GEMINI_IMAGE_MODEL") or None,
+                   gemini_model=env.get("GEMINI_IMAGE_MODEL") or None, gemini_vision_model=env.get("GEMINI_VISION_MODEL") or None,
                    gemini_base_url=(env.get("GEMINI_BASE_URL") or "https://generativelanguage.googleapis.com/v1beta").rstrip("/"),
                    gemini_timeout=float(env.get("GEMINI_TIMEOUT") or 300), gemini_image_size=env.get("GEMINI_IMAGE_SIZE") or "")

@@ -1,6 +1,7 @@
 // Tab "Sửa ảnh theo lớp": chọn chi tiết trên ảnh (instance mask phía máy chủ), tạo job, so sánh trước/sau, duyệt.
 // Không phụ thuộc three.js: vẫn chạy khi CDN three.js lỗi. Mọi chữ hiển thị qua textContent.
 import { partIndex, shiftGroupId, ctrlIds, toggleIds, layerIdFor, partitionByType, targetFor, partsOf, targetLabel, roleName } from './selection.js';
+import { styleFromOptions, styleFromValue } from './assist-logic.js';
 const $ = (id) => document.getElementById(id);
 const S = { id: null, view: null, data: null, layer: null, job: null, jobs: [], poll: null, maskImg: null, tasks: [], maskCache: {}, sel: [], key: '' };
 const PALETTE = [[255, 0, 0], [0, 200, 0], [0, 80, 255], [255, 220, 0], [255, 0, 255], [0, 230, 230], [255, 140, 0], [140, 60, 200]];
@@ -47,7 +48,7 @@ async function load() {
   if (S.key !== `${S.id}|${S.view}`) { S.key = `${S.id}|${S.view}`; S.sel = []; S.tasks = []; S.layer = null; renderTasks(); }  // chọn/việc chỉ có nghĩa trong đúng thiết kế + góc
   const d = await api(`/api/designs/${S.id}/layers?view=${encodeURIComponent(S.view)}`);
   S.data = d;
-  geometryForm();
+  geometryForm(); fillStyleFrom();
   const bt = d.baseImage.type;
   const lineBad = bt === 'imported' && d.baseImage.lineMatch && d.baseImage.lineMatch.khop === false;
   $('imgInfo').textContent = `rev ${d.rev} · ${d.width}×${d.height} · renderKey ${d.renderKey} · ảnh gốc: ${bt === 'job' ? d.baseImage.jobId : bt === 'imported' ? 'ảnh nhập từ ChatGPT' : bt}` +
@@ -263,11 +264,18 @@ $('hCreate').addEventListener('click', () => S.data && run('tạo job sửa hìn
   if (!S.geometry_edit.length) S.geometry_edit.push(geometryItem());
   await create('geometry_edit');
 }));
+function fillStyleFrom() {
+  const sel = $('jStyleFrom'); const keep = sel.value;
+  sel.replaceChildren(...styleFromOptions([...$('viewSelect').options].map((o) => o.value), S.view).map((o) => el('option', { value: o.value, textContent: o.label })));
+  if ([...sel.options].some((o) => o.value === keep)) sel.value = keep;
+}
 async function create(kind) {
   const body = { view: S.view, kind, backend: $('jBackend').value, mode: $('jMode').value, material: $('jItem').value.trim() || null,
     instruction: $('jInstr').value.trim(), reference: $('jRef').value, baseRev: S.data.rev, workflow: $('jWf').value || null,
     preview: $('jPreview').checked };
   body.operation = operationFor(kind);
+  const views = [...$('viewSelect').options].map((o) => o.value);
+  const sf = styleFromValue($('jStyleFrom').value, views, S.view); if (sf) body.styleFrom = sf;
   body.lighting = $('jLight').value;
   if (kind === 'geometry_edit') { body.geometry_edit = S.geometry_edit; body.material = null; body.mode = 'design'; }
   else if (kind === 'edit' && S.tasks.length) {  // nhiều việc: ô vật liệu/yêu cầu lúc này là yêu cầu chung
