@@ -1,33 +1,14 @@
 // Tab "Sửa ảnh theo lớp": chọn chi tiết trên ảnh (instance mask phía máy chủ), tạo job, so sánh trước/sau, duyệt.
 // Không phụ thuộc three.js: vẫn chạy khi CDN three.js lỗi. Mọi chữ hiển thị qua textContent.
 import { partIndex, shiftGroupId, ctrlIds, toggleIds, layerIdFor, partitionByType, targetFor, partsOf, targetLabel, roleName } from './selection.js';
+import { $, el } from './dom.js';
+import { api, createStatus } from './api-client.js';
 import { styleFromOptions, styleFromValue } from './assist-logic.js';
-const $ = (id) => document.getElementById(id);
 const S = { id: null, view: null, data: null, layer: null, job: null, jobs: [], poll: null, maskImg: null, tasks: [], maskCache: {}, sel: [], key: '' };
 const PALETTE = [[255, 0, 0], [0, 200, 0], [0, 80, 255], [255, 220, 0], [255, 0, 255], [0, 230, 230], [255, 140, 0], [140, 60, 200]];
 const MAX_TASKS = 8;
 
-async function api(path, method = 'GET', body) {
-  const opt = { method, headers: {} };
-  if (body !== undefined) { opt.headers['Content-Type'] = 'application/json'; opt.body = JSON.stringify(body); }
-  const r = await fetch(path, opt);
-  const data = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
-  return data;
-}
-function el(tag, props = {}, ...children) {
-  const n = document.createElement(tag);
-  for (const [k, v] of Object.entries(props)) {
-    if (k === 'class') n.className = v; else if (k.startsWith('on')) n.addEventListener(k.slice(2), v); else if (v !== undefined) n[k] = v;
-  }
-  for (const c of children) n.append(c instanceof Node ? c : document.createTextNode(String(c)));
-  return n;
-}
-function status(msg, kind = '') { const s = $('status'); s.textContent = msg; s.className = 'status ' + kind; }
-async function run(label, fn) {
-  status(label + '…');
-  try { await fn(); status('Xong: ' + label, 'ok'); } catch (e) { console.error(e); status(e.message, 'warn'); }
-}
+const { setStatus: status, run } = createStatus($('status'));
 const bust = (u) => u && `${u}${u.includes('?') ? '&' : '?'}t=${Date.now()}`;
 
 // ---------------- tab

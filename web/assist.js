@@ -1,13 +1,8 @@
 // Free-command box and photo/drawing recognition: both end in a PREVIEW; nothing is saved until the user presses Áp dụng.
+import { $, el } from './dom.js';
+import { request } from './api-client.js';
 import { interpretBody, describeInterpret, confirmBody, checkUpload, recognizeBody, describeRecognition } from './assist-logic.js';
 
-const $ = (id) => document.getElementById(id);
-function el(tag, attrs = {}, ...kids) {
-  const n = document.createElement(tag);
-  for (const [k, v] of Object.entries(attrs)) { if (k === 'onclick') n.onclick = v; else n.setAttribute(k, v); }
-  n.append(...kids.filter((x) => x !== null && x !== undefined));
-  return n;
-}
 function toBase64(file) {
   return new Promise((resolve, reject) => {
     const r = new FileReader();
@@ -21,12 +16,7 @@ export function createAssist(ctx) {
   const out = $('assistResult');
   let busy = false;
   const clear = () => out.replaceChildren();
-  async function post(path, body) {
-    const { id } = ctx.getState();
-    const r = await fetch(`/api/designs/${id}/${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    const data = await r.json().catch(() => ({}));
-    return { status: r.status, data };
-  }
+  const post = (path, body) => request(`/api/designs/${ctx.getState().id}/${path}`, 'POST', body);
   const guard = async (label, fn) => {
     if (busy) return; busy = true; ctx.setStatus(label + '…');
     try { await fn(); } catch (e) { ctx.setStatus(e.message, 'warn'); } finally { busy = false; }

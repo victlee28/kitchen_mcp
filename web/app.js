@@ -8,36 +8,12 @@ import { createStructureSelector } from './structure-select.js';
 import { createModuleMenu } from './module-menu.js';
 import { isClick, pickTarget } from './menu-logic.js';
 import { createAssist } from './assist.js';
+import { $, el } from './dom.js';
+import { api, createStatus } from './api-client.js';
 import { FIELDS, moduleOrder, moduleLabel, formChanges, moldingsOp, styleHasMoldings, aiExportUrls } from './design-logic.js';
 
-const $ = (id) => document.getElementById(id);
+const { setStatus, run } = createStatus($('status'));
 const state = { id: null, rev: null, spec: null, scene: null, selected: null, views: {}, qg: '' };
-
-// ---------------- API
-async function api(path, method = 'GET', body) {
-  const opt = { method, headers: {} };
-  if (body !== undefined) { opt.headers['Content-Type'] = 'application/json'; opt.body = JSON.stringify(body); }
-  const r = await fetch(path, opt);
-  const data = await r.json().catch(() => ({}));
-  if (!r.ok) {
-    const detail = data.part ? ' — ' + data.part.map((x) => `${x.position}: ${x.errors}`).join('; ') : '';
-    throw new Error((data.error || `HTTP ${r.status}`) + detail);
-  }
-  return data;
-}
-function setStatus(msg, kind = '') { const s = $('status'); s.textContent = msg; s.className = 'status ' + kind; }
-async function run(label, fn) {
-  setStatus(label + '…');
-  try { await fn(); setStatus('Xong: ' + label, 'ok'); } catch (e) { console.error(e); setStatus(e.message, 'warn'); }
-}
-function el(tag, props = {}, ...children) {
-  const n = document.createElement(tag);
-  for (const [k, v] of Object.entries(props)) {
-    if (k === 'class') n.className = v; else if (k.startsWith('on')) n.addEventListener(k.slice(2), v); else n[k] = v;
-  }
-  for (const c of children) n.append(c instanceof Node ? c : document.createTextNode(String(c)));
-  return n;
-}
 
 // ---------------- 3D
 const viewport = $('viewport');

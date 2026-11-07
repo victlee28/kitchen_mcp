@@ -123,6 +123,7 @@ def main() -> int:
             check("right click on the 3D view opens the context menu", opened)
             if opened:
                 check("context menu has the command box", page.locator("#ctxMenu .ctx-cmd input[type=text]").count() == 1)
+                check("context menu inputs carry their aria-label attribute", bool(page.get_attribute("#ctxMenu .ctx-cmd input[type=text]", "aria-label")))
                 page.keyboard.press("Escape")
                 page.wait_for_timeout(150)
                 check("Escape closes the context menu", not page.is_visible("#ctxMenu"))
@@ -153,6 +154,16 @@ def main() -> int:
             page.click("#tab3d")
 
             check("no page errors or console errors", not errors, "; ".join(errors[:3]))
+
+            # the stand-alone render page shares dom.js / api-client.js
+            page2 = browser.new_page(viewport={"width": 1200, "height": 800})
+            errors2: list[str] = []
+            page2.on("pageerror", lambda e: errors2.append(str(e)))
+            page2.on("console", lambda m: errors2.append(m.text) if m.type == "error" else None)
+            page2.goto(base + "/web/render.html?design=" + design)
+            page2.wait_for_timeout(2500)
+            check("render page loads without errors", not errors2, "; ".join(errors2[:3]))
+            check("render page lists the designs", page2.locator("select option").count() >= 1)
             browser.close()
         return 1 if failures else 0
     finally:

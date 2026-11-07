@@ -1,20 +1,11 @@
 // Context menu on a cabinet module in the 3D view: pick an action, fill a small form, preview what it would change, confirm.
 // The server decides what a change means (POST .../propose previews, POST .../ops saves); nothing here edits data directly.
+import { el } from './dom.js';
+import { request } from './api-client.js';
 import { interpretBody, describeInterpret, templateIntent, checkUpload, recognizeBody, describeRecognition, recognitionLines } from './assist-logic.js';
 import { actionsFor, buildOp, describeProposal, layerFor, menuPosition, DOOR_STYLES, HANDLE_VARIANTS, MATERIAL_PRESETS } from './menu-logic.js';
 
-const el = (tag, props = {}, ...kids) => {
-  const n = document.createElement(tag);
-  for (const [k, v] of Object.entries(props)) { if (k === 'class') n.className = v; else if (k.startsWith('on')) n.addEventListener(k.slice(2), v); else if (v !== undefined) n[k] = v; }
-  for (const c of kids) n.append(c instanceof Node ? c : document.createTextNode(String(c)));
-  return n;
-};
-
-async function call(path, body) {
-  const r = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-  const data = await r.json().catch(() => ({}));
-  return { status: r.status, ok: r.ok, data };
-}
+const call = (path, body) => request(path, 'POST', body);
 
 /**
  * ctx: { box, getState() -> {id, rev, spec}, afterChange(result), reload(), imageEdit({layer, material}), structure: {hide, isolate, showAll}, setStatus }

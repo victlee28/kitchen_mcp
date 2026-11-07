@@ -1,16 +1,7 @@
 // Ô xem JSON dạng cây (dùng chung cho "Xuất cho AI tạo ảnh" và request của job sửa ảnh).
 // Chuỗi ảnh base64 (data:image/...) hiện thành hình thu nhỏ + dung lượng thay vì hàng trăm nghìn ký tự.
 // Mọi chữ hiển thị qua textContent.
-const $ = (id) => document.getElementById(id);
-
-function el(tag, props = {}, ...kids) {
-  const n = document.createElement(tag);
-  for (const [k, v] of Object.entries(props)) {
-    if (k === 'class') n.className = v; else if (k.startsWith('on')) n.addEventListener(k.slice(2), v); else if (v !== undefined) n[k] = v;
-  }
-  for (const c of kids) n.append(c instanceof Node ? c : document.createTextNode(String(c)));
-  return n;
-}
+import { $, el } from './dom.js';
 
 const kb = (s) => `${Math.round((s.length * 3) / 4 / 1024)} KB`;
 

@@ -1,22 +1,11 @@
 // Trang render ảnh: chọn thiết kế (lấy JSON three.js mới nhất) hoặc mở file JSON, render mọi góc camera, tải PNG.
 // Khi nguồn là thiết kế: lưu ảnh vào renders/<id>/rev<N>/<góc>/beauty.png để dùng làm ảnh gốc cho tab "Sửa ảnh theo lớp".
 import { renderDoc } from './photo-render.js';
+import { $, el } from './dom.js';
+import { api } from './api-client.js';
 
-const $ = (id) => document.getElementById(id);
 const S = { doc: null, designId: null, rev: null, results: [] };
-function el(tag, props = {}, ...kids) {
-  const n = document.createElement(tag);
-  for (const [k, v] of Object.entries(props)) { if (k === 'class') n.className = v; else if (k.startsWith('on')) n.addEventListener(k.slice(2), v); else n[k] = v; }
-  for (const c of kids) n.append(c instanceof Node ? c : document.createTextNode(String(c)));
-  return n;
-}
 function status(msg, kind = '') { const s = $('status'); s.textContent = msg; s.className = 'status ' + kind; }
-async function api(path, method = 'GET', body) {
-  const r = await fetch(path, { method, headers: body ? { 'Content-Type': 'application/json' } : {}, body: body && JSON.stringify(body) });
-  const d = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
-  return d;
-}
 
 function useDoc(doc, label) {
   if (!doc || !Array.isArray(doc.cameras) || !doc.cameras.length) throw new Error('JSON không có cameras — cần file theo Complete Kitchen Three.js Scene Schema');

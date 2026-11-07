@@ -14,6 +14,16 @@ const deps = (f) => [...src[f].matchAll(IMPORT)].map((m) => (m[1] || m[2]).repla
 // Browser-side bridges that exist today. Each list may only shrink.
 const WINDOW_KITCHEN_USERS = ['imgedit.js'];          // legacy consumers of window.kitchen (until imgedit receives a ctx)
 
+// Files that may still call fetch() themselves (blob/text fetches, not JSON API calls). The list may only shrink.
+const RAW_FETCH_USERS = ['api-client.js', 'imgedit.js', 'json-view.js'];
+
+test('$ and el are defined only in dom.js; JSON API calls go through api-client.js', () => {
+  for (const f of files) {
+    if (f !== 'dom.js') assert.ok(!/(?:^|\n)\s*(?:export\s+)?(?:const\s+\$\s*=|function\s+el\s*\(|const\s+el\s*=)/.test(src[f]), `${f} defines its own $ or el: import it from dom.js`);
+    if (/\bfetch\(/.test(src[f])) assert.ok(RAW_FETCH_USERS.includes(f), `${f} calls fetch() directly: use api-client.js`);
+  }
+});
+
 test('every relative import points at a file that exists', () => {
   for (const f of files) for (const d of deps(f)) assert.ok(files.includes(d), `${f} imports ${d}, which does not exist`);
 });
