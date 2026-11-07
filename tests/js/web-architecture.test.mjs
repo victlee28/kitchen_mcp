@@ -11,9 +11,6 @@ const src = Object.fromEntries(files.map((f) => [f, readFileSync(path.join(WEB, 
 const IMPORT = /(?:^|\n)\s*(?:import|export)\s[^'";]*?from\s+['"](\.\/[^'"]+)['"]|(?:^|\n)\s*import\s+['"](\.\/[^'"]+)['"]/g;
 const deps = (f) => [...src[f].matchAll(IMPORT)].map((m) => (m[1] || m[2]).replace(/^\.\//, ''));
 
-// Browser-side bridges that exist today. Each list may only shrink.
-const WINDOW_KITCHEN_USERS = ['imgedit.js'];          // legacy consumers of window.kitchen (until imgedit receives a ctx)
-
 // Files that may still call fetch() themselves (blob/text fetches, not JSON API calls). The list may only shrink.
 const RAW_FETCH_USERS = ['api-client.js', 'imgedit.js', 'json-view.js'];
 
@@ -44,11 +41,8 @@ test('no import cycles', () => {
   for (const f of files) visit(f, []);
 });
 
-test('window.kitchen is assigned only by app.js and read only by the listed legacy consumers', () => {
-  for (const f of files) {
-    if (/window\.kitchen\s*=[^=]/.test(src[f])) assert.equal(f, 'app.js', `${f} assigns window.kitchen`);
-    if (f !== 'app.js' && /window\.kitchen\b(?!Json)/.test(src[f])) assert.ok(WINDOW_KITCHEN_USERS.includes(f), `${f} reads window.kitchen`);
-  }
+test('there is no window.kitchen bridge: modules talk through factories arguments and window events', () => {
+  for (const f of files) assert.ok(!/window\.kitchen\b(?!Json)/.test(src[f].replace(/\/\/.*$/gm, '')), `${f} uses window.kitchen`);
 });
 
 test('window.kitchenJson is assigned only by json-view.js', () => {
@@ -67,4 +61,22 @@ test('kitchen-viewer.js knows nothing of the design state, the API or the popup'
   const code = src['kitchen-viewer.js'].replace(/\/\/.*$/gm, '');
   assert.ok(!/\bfetch\(|document\.getElementById|\bstate\b|\$\(/.test(code), 'kitchen-viewer.js reaches into the page');
   assert.deepEqual(deps('kitchen-viewer.js').sort(), ['menu-logic.js', 'scene-loader.js']);
+});
+
+test('design-editor.js depends only on dom/design-logic and receives everything else', () => {
+  assert.deepEqual(deps('design-editor.js').sort(), ['design-logic.js', 'dom.js']);
+  const code = src['design-editor.js'].replace(/\/\/.*$/gm, '');
+  assert.ok(!/window\.kitchen|\bfetch\(/.test(code));
+});
+
+test('panels and header controls take their dependencies as arguments (no app.js, no window.kitchen)', () => {
+  for (const f of ['design-create-panel.js', 'floorplan-panel.js', 'molding-panel.js', 'output-panel.js', 'header-controls.js']) {
+    assert.ok(deps(f).every((d) => ['dom.js', 'design-logic.js'].includes(d)), `${f} imports ${deps(f).join(', ')}`);
+    assert.ok(!/window\.kitchen\b(?!Json)/.test(src[f].replace(/\/\/.*$/gm, '')), `${f} uses window.kitchen`);
+  }
+});
+
+test('app.js stays a composition root', () => {
+  const lines = src['app.js'].split('\n').length;
+  assert.ok(lines <= 100, `app.js has ${lines} lines: move logic into a module`);
 });

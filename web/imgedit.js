@@ -315,7 +315,7 @@ function showJob(j) {
     const res = await api(`/api/image-jobs/${j.id}/${path}`, 'POST', body || {}); if (path === 'regenerate') S.job = res.id;
     await loadJobs(); if (after) await after(res);
   }) }));
-  const reloadDesign = async (res) => { if (res.result?.design && window.kitchen) await window.kitchen.reload(S.id); };
+  const reloadDesign = async (res) => { if (res.result?.design) window.dispatchEvent(new CustomEvent('design-reload-request', { detail: { id: S.id } })); };
   if (j.status === 'awaiting-send') {
     box.append(el('p', { class: 'st awaiting-send' }, `Chưa gửi: kiểm tra mask và chỉ dẫn (Xem JSON) rồi bấm Gửi.`));
     act(`Gửi ${j.backend}`, 'send');
