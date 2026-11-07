@@ -55,8 +55,10 @@ test('window.kitchenJson is assigned only by json-view.js', () => {
   for (const f of files) if (/window\.kitchenJson\s*=[^=]/.test(src[f])) assert.equal(f, 'json-view.js');
 });
 
-test('pure logic modules (*-logic.js, scene-loader.js) touch neither the DOM nor the network', () => {
-  for (const f of files.filter((x) => x.endsWith('-logic.js'))) {
+const NO_DOM_FILES = ['design-controller.js'];   // the controller talks to the page only through callbacks
+
+test('pure logic modules (*-logic.js, design-controller.js) touch neither the DOM nor the network', () => {
+  for (const f of files.filter((x) => x.endsWith('-logic.js') || NO_DOM_FILES.includes(x))) {
     assert.ok(!/\bdocument\b|\bwindow\b|\bfetch\(|localStorage/.test(src[f].replace(/\/\/.*$/gm, '')), `${f} uses a browser API`);
   }
 });

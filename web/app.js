@@ -10,10 +10,13 @@ import { isClick, pickTarget } from './menu-logic.js';
 import { createAssist } from './assist.js';
 import { $, el } from './dom.js';
 import { api, createStatus } from './api-client.js';
+import { createDesignController } from './design-controller.js';
 import { FIELDS, moduleOrder, moduleLabel, formChanges, moldingsOp, styleHasMoldings, aiExportUrls } from './design-logic.js';
 
 const { setStatus, run } = createStatus($('status'));
-const state = { id: null, rev: null, spec: null, scene: null, selected: null, views: {}, qg: '' };
+const controller = createDesignController({ api, renderList: renderDesignList, onOpened: showDesign });
+const { state, loadDesigns, afterChange } = controller;
+const openDesign = (id, keepView = false) => controller.open(id, { keepView });
 
 // ---------------- 3D
 const viewport = $('viewport');
@@ -116,30 +119,26 @@ createAssist({ setStatus, getState: () => ({ id: state.id, rev: state.rev, selec
 $('moduleActions').addEventListener('click', (ev) => { const r = ev.currentTarget.getBoundingClientRect(); if (state.selected) moduleMenu.open({ kind: 'module', id: state.selected }, r.left - 260, r.bottom + 4); });
 
 // ---------------- dữ liệu thiết kế
-async function loadDesigns(selectId) {
-  const list = await api('/api/designs');
+function renderDesignList(list, selectedId) {
   const sel = $('designSelect'); sel.replaceChildren();
   for (const d of list) sel.append(el('option', { value: d.id, textContent: `${d.name} · rev ${d.rev}` }));
   if (!list.length) sel.append(el('option', { value: '', textContent: '(chưa có thiết kế)' }));
-  const id = selectId || (list[0] && list[0].id);
-  if (id) { sel.value = id; await openDesign(id); }
+  if (selectedId) sel.value = selectedId;
 }
-async function openDesign(id, keepView = false) {
-  const [d, sc, v, doc] = await Promise.all([api(`/api/designs/${id}`), api(`/api/designs/${id}/scene`), api(`/api/designs/${id}/validate${state.qg ? `?country=${state.qg}` : ''}`),
-    api(`/api/designs/${id}/threejs${state.qg ? `?country=${state.qg}` : ''}`)]);
-  Object.assign(state, { id, rev: d.rev, spec: d.spec, scene: sc, views: sc.views });
-  $('revInfo').textContent = `rev ${d.rev}`;
-  buildScene(doc); state.doc = doc;
+// Show a freshly loaded design (the controller has already updated `state`).
+function showDesign({ id, rev, spec, scene: sc, validation: v, doc, keepView }) {
+  $('revInfo').textContent = `rev ${rev}`;
+  buildScene(doc);
   const vs = $('viewSelect'); const prev = vs.value; vs.replaceChildren();
   for (const [k, g] of Object.entries(sc.views)) vs.append(el('option', { value: k, textContent: g.name || k }));
   if (keepView && sc.views[prev]) vs.value = prev; else applyView(vs.value);
   renderIssues(v); renderModuleList(); syncMoldingPanel();
-  if (state.selected && !d.spec.module.some((m) => m.id === state.selected)) state.selected = null;
+  if (state.selected && !spec.module.some((m) => m.id === state.selected)) state.selected = null;
   if (state.selected) selectModule(state.selected); else $('moduleForm').hidden = true;
   $('openRender').href = `render.html?design=${encodeURIComponent(id)}`;
   refreshViewSync().catch((e) => console.warn('view-status', e));
   syncAiExport().catch((e) => setStatus('Xuất JSON cho AI lỗi: ' + e.message, 'warn'));
-  window.dispatchEvent(new CustomEvent('design-opened', { detail: { id, rev: d.rev } }));
+  window.dispatchEvent(new CustomEvent('design-opened', { detail: { id, rev } }));
 }
 const SYNC_TEXT = { current: 'approved image up to date', 'stale-appearance': 'approved image out of date (material changed)', 'stale-geometry': 'approved image belongs to older geometry', unknown: 'approved image: cannot tell (no snapshot)' };
 async function refreshViewSync() {
@@ -160,10 +159,6 @@ $('regenStale').addEventListener('click', () => state.id && run('prepare images 
   setStatus(`${r.jobs.length} review job(s) prepared (not sent)${r.skipped.length ? `, ${r.skipped.length} skipped` : ''}`);
   await refreshViewSync();
 }));
-async function afterChange(res) {
-  await loadDesigns(res.id);
-  await openDesign(res.id, true);
-}
 function renderIssues(v) {
   const ul = $('issues'); ul.replaceChildren();
   ul.append(el('li', { class: 'muted' }, `Áp tiêu chuẩn: ${v.country || v.region || 'toàn cầu (chưa chọn quốc gia)'}`));
@@ -394,8 +389,10 @@ async function syncAiExport(force = false) {
     if (aiDone[state.id] !== state.rev) $('aiInfo').textContent = `Thiết kế đang ở rev ${state.rev} — chưa xuất bản này`;
     return;
   }
-  const res = await api(`/api/designs/${state.id}/ai-export`, 'POST', { rev: state.rev, lighting: light });
-  aiDone[state.id] = res.rev; aiInfo(res);
+  const id = state.id;
+  const res = await api(`/api/designs/${id}/ai-export`, 'POST', { rev: state.rev, lighting: light });
+  aiDone[id] = res.rev;
+  if (state.id === id) aiInfo(res);   // the user may have switched design while the export ran
 }
 $('aiLight').addEventListener('change', () => run('xuất lại cho AI', () => syncAiExport(true)));
 $('aiZip').addEventListener('click', () => state.id && run('xuất gói kèm ảnh cho AI', async () => {
