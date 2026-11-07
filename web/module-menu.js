@@ -1,5 +1,6 @@
 // Context menu on a cabinet module in the 3D view: pick an action, fill a small form, preview what it would change, confirm.
 // The server decides what a change means (POST .../propose previews, POST .../ops saves); nothing here edits data directly.
+import { interpretBody, describeInterpret } from './assist-logic.js';
 import { actionsFor, buildOp, describeProposal, layerFor, menuPosition, DOOR_STYLES, HANDLE_VARIANTS, MATERIAL_PRESETS } from './menu-logic.js';
 
 const el = (tag, props = {}, ...kids) => {
@@ -38,8 +39,43 @@ export function createModuleMenu(ctx) {
     const partName = { door: 'Cánh', drawer: 'Mặt ngăn kéo', handle: 'Tay nắm', countertop: 'Mặt bàn' }[target.part];
     const title = target.kind === 'part' ? (target.part === 'countertop' ? 'Mặt bàn' : `${partName} · ${target.id}`)
       : target.kind === 'module' ? `Module ${target.id}` : `Thành phần mặt bằng ${target.id.replace(/^STRUCT-/, '')}`;
-    box.replaceChildren(header(title), el('ul', { class: 'ctx-list' }, ...actionsFor(target, spec).map((a) =>
+    box.onkeydown = null;
+    const cmd = target.kind === 'structure' ? null : commandBox();
+    box.replaceChildren(header(title), ...(cmd ? [cmd] : []), el('ul', { class: 'ctx-list' }, ...actionsFor(target, spec).map((a) =>
       el('li', {}, el('button', { type: 'button', onclick: () => choose(a.id) }, a.label)))));
+  }
+
+  // A free sentence about THIS module ("đổi sang màu trắng", "rộng 800"): the server reads it, the preview shows the result, nothing is saved before Áp dụng.
+  function commandBox(text = '', message = '', choices = []) {
+    const input = el('input', { type: 'text', value: text, placeholder: `Ra lệnh cho ${target.id}… (Enter)`, autocomplete: 'off', 'aria-label': 'Câu lệnh cho module này' });
+    const run = () => command(input.value);
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); run(); } });
+    return el('div', { class: 'ctx-cmd' }, input, el('button', { type: 'button', class: 'primary', onclick: run }, 'Xem trước'),
+      ...(message ? [el('p', { class: 'ctx-msg warn' }, message)] : []),
+      ...(choices.length ? [el('div', { class: 'chips' }, ...choices.map((c) => el('button', { type: 'button', class: 'ghost small', onclick: () => command(`${input.value.trim()} ${c}`) }, c)))] : []));
+  }
+
+  async function command(text) {
+    if (busy) return; const { id, rev } = ctx.getState();
+    let body;
+    try { body = interpretBody(text, rev, { scope: [target.id] }); } catch (e) { return ctx.setStatus(e.message, 'warn'); }
+    busy = true; ctx.setStatus('Đọc câu lệnh…');
+    try {
+      const { status, data } = await call(`/api/designs/${id}/interpret`, body);
+      busy = false;
+      if (status === 409) return stale('cmd');
+      if (!data || data.error) return redraw(text, data?.error || `Lỗi ${status}`);
+      const d = describeInterpret(data);
+      if (d.kind === 'preview') return showPreview('cmd', d.proposal, null, d.summary);
+      redraw(text, d.kind === 'clarify' ? d.question : d.message, d.kind === 'clarify' ? d.choices : []);
+    } catch (e) { busy = false; redraw(text, e.message); }
+  }
+
+  function redraw(text, message, choices = []) {
+    const old = box.querySelector('.ctx-cmd');
+    const fresh = commandBox(text, message, choices);
+    if (old) old.replaceWith(fresh); else list();
+    fresh.querySelector('input')?.focus();
   }
 
   function choose(action) {
@@ -136,7 +172,7 @@ export function createModuleMenu(ctx) {
     const confirm = el('button', { type: 'button', class: p.validation?.introducesErrors ? 'danger' : 'primary', disabled: !p.applicable || p.unchanged,
       onclick: () => apply(action, p) }, p.validation?.introducesErrors ? 'Vẫn áp dụng' : 'Áp dụng');
     box.replaceChildren(header(`Xem trước · ${target.id}`), el('ul', { class: 'ctx-preview' }, ...lines.map((l) => el('li', { class: l.kind }, l.text))),
-      el('div', { class: 'row' }, confirm, el('button', { type: 'button', class: 'ghost', onclick: () => (action === 'run-i' ? list() : form(action)) }, action === 'run-i' ? 'Quay lại' : 'Sửa lại'), el('button', { type: 'button', class: 'ghost', onclick: close }, 'Hủy')));
+      el('div', { class: 'row' }, confirm, el('button', { type: 'button', class: 'ghost', onclick: () => (action === 'run-i' || action === 'cmd' ? list() : form(action)) }, action === 'run-i' || action === 'cmd' ? 'Quay lại' : 'Sửa lại'), el('button', { type: 'button', class: 'ghost', onclick: close }, 'Hủy')));
     confirm.focus();
   }
 
@@ -146,14 +182,14 @@ export function createModuleMenu(ctx) {
       const { status, data } = await call(`/api/designs/${p.id}/ops`, { op: p.operation, baseRev: p.baseRev, expect: p.opHash });
       busy = false;
       if (status === 409) return stale(action);
-      if (!data || data.error) { ctx.setStatus(data?.error || `Lỗi ${status}`, 'warn'); return form(action, data?.error || `Lỗi ${status}`); }
+      if (!data || data.error) { ctx.setStatus(data?.error || `Lỗi ${status}`, 'warn'); return action === 'cmd' ? list() : form(action, data?.error || `Lỗi ${status}`); }
       close(); await ctx.afterChange(data); ctx.setStatus(`Đã áp dụng: rev ${data.rev}`, 'ok');
-    } catch (e) { busy = false; form(action, e.message); }
+    } catch (e) { busy = false; if (action === 'cmd') ctx.setStatus(e.message, 'warn'); else form(action, e.message); }
   }
 
   function stale(action) {
     box.replaceChildren(header('Thiết kế đã thay đổi'), el('p', { class: 'ctx-msg warn' }, 'Có bản sửa mới hơn (ở tab khác hoặc do job ảnh). Tải lại rồi xem trước lại để không ghi đè.'),
-      el('div', { class: 'row' }, el('button', { type: 'button', class: 'primary', onclick: async () => { const id = target.id; await ctx.reload(); if (ctx.getState().spec.module.some((x) => x.id === id)) form(action); else close(); } }, 'Tải lại'),
+      el('div', { class: 'row' }, el('button', { type: 'button', class: 'primary', onclick: async () => { const id = target.id; await ctx.reload(); if (ctx.getState().spec.module.some((x) => x.id === id)) (action === 'cmd' ? list() : form(action)); else close(); } }, 'Tải lại'),
         el('button', { type: 'button', class: 'ghost', onclick: close }, 'Hủy')));
   }
 

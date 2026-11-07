@@ -97,3 +97,4 @@ label.kind{display:inline-flex;align-items:center;gap:4px;margin-right:10px;colo
 .ctx-msg{margin:6px 0;font-size:12px}.ctx-msg.bad,.ctx-preview li.bad{color:#a33b2b}.ctx-msg.warn,.ctx-preview li.warn{color:#9a6a12}.ctx-preview li.ok{color:#2c7a4b}
 .ctx-preview{margin:6px 0;padding-left:16px;max-height:220px;overflow:auto;font-size:12px}
 #cmdText{flex:1;min-width:0}#recFile{max-width:150px;font-size:11px}#assistResult{margin-top:6px}
+.ctx-cmd{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0}.ctx-cmd input{flex:1;min-width:150px}.ctx-cmd .ctx-msg,.ctx-cmd .chips{width:100%}
