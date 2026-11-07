@@ -166,6 +166,50 @@ def main() -> int:
             check("image tab: styleFrom select filled", True)
             page.click("#tab3d")
 
+            # create from a description: the table "what was understood" appears and a new design is opened
+            n_designs = page.locator("#designSelect option").count()
+            page.fill("#prompt", "Bếp chữ I dài 2,4m, mặt đá trắng")
+            page.click("#fromPrompt")
+            page.wait_for_function(f"document.querySelectorAll('#designSelect option').length === {n_designs + 1}", timeout=30000)
+            page.wait_for_function("!document.getElementById('promptResult').hidden", timeout=30000)
+            page.wait_for_function("document.querySelectorAll('#moduleList li').length > 0", timeout=20000)
+            check("create from a description: new design opened, selection cleared", page.locator("#moduleList li.sel").count() == 0 and not page.is_visible("#moduleForm"))
+            check("create from a description: interpretation table shown", page.locator("#promptResult table tr").count() >= 2 and page.is_visible("#promptResult"))
+
+            # create from the template form
+            n_designs += 1
+            page.click("summary:has-text('Tạo từ mẫu')")
+            page.select_option("#mShape", "L")
+            page.click("#fromTemplate")
+            page.wait_for_function(f"document.querySelectorAll('#designSelect option').length === {n_designs + 1}", timeout=30000)
+            page.wait_for_function("document.querySelectorAll('#moduleList li').length > 0", timeout=20000)
+            check("create from the template: new L design opened", "L" in page.eval_on_selector("#designSelect", "s => s.options[s.selectedIndex].textContent"))
+
+            # floor-plan import (+ choose a room when the plan offers several) and place the kitchen on a wall
+            n_designs += 1
+            page.set_input_files("#floorplanFile", str(ROOT / "input-floorplan" / "floorplan.json"))
+            page.wait_for_function("document.getElementById('fpImport') && (!document.getElementById('fpImport').hidden || document.querySelectorAll('#fpInfo li').length > 0)", timeout=30000)
+            if page.is_visible("#fpImport"):
+                check("floor plan offers several rooms: room picker filled", page.locator("#fpRoom option").count() >= 2)
+                page.click("#fpImport")
+            page.wait_for_function(f"document.querySelectorAll('#designSelect option').length === {n_designs + 1}", timeout=30000)
+            page.wait_for_function("document.querySelectorAll('#fpInfo li').length > 0", timeout=20000)
+            check("floor plan import: new design opened and info listed", page.locator("#fpInfo li").count() >= 1)
+            rev_fp = int(page.inner_text("#revInfo").split()[-1])
+            errors_before = len(errors)
+            page.click("#fpBind")
+            # an imported room has no cabinets yet, so the server refuses and the page reports it in the status line
+            page.wait_for_function("document.getElementById('status').textContent.includes('no cabinets')", timeout=30000)
+            check("place the kitchen on a wall: the server's refusal is reported in the status line", True)
+            del errors[errors_before:]      # the 400 and its ApiError log are the expected refusal, not a page fault
+            check("place the kitchen on a wall: design still open", int(page.inner_text("#revInfo").split()[-1]) == rev_fp)
+
+            # packaged export for the AI image generator (renders what is missing, then offers a zip)
+            with page.expect_download(timeout=180000) as dl:
+                page.click("#aiZip")
+            check("AI package: a .zip is downloaded", dl.value.suggested_filename.endswith(".zip"))
+            check("AI package: info line says images are included", "kèm ảnh" in page.inner_text("#aiInfo"))
+
             check("no page errors or console errors", not errors, "; ".join(errors[:3]))
 
             # the stand-alone render page shares dom.js / api-client.js
