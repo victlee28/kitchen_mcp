@@ -1,0 +1,43 @@
+{
+ "function": "recognition.gemini_wire.parse_draft",
+ "cases": [
+  {
+   "name": "object",
+   "input": {
+    "text": "{\"modules\":[]}"
+   },
+   "expected": {
+    "draft": {
+     "modules": []
+    }
+   }
+  },
+  {
+   "name": "not json",
+   "input": {
+    "text": "sorry"
+   },
+   "expected": {
+    "draft": null
+   }
+  },
+  {
+   "name": "array is not a draft",
+   "input": {
+    "text": "[1]"
+   },
+   "expected": {
+    "draft": null
+   }
+  },
+  {
+   "name": "empty text",
+   "input": {
+    "text": ""
+   },
+   "expected": {
+    "draft": null
+   }
+  }
+ ]
+}

@@ -1,0 +1,58 @@
+{
+ "function": "recognition.gemini_wire.request_body",
+ "cases": [
+  {
+   "name": "photo of a kitchen",
+   "input": {
+    "kind": "photo",
+    "dataBase64": "iVBORw0KGgo=",
+    "mediaType": "image/png",
+    "mustMention": [
+     "base",
+     "upper",
+     "tall-fridge",
+     "base-sink"
+    ]
+   },
+   "expected": {
+    "role": "user",
+    "textStart": "You are reading a photograph of a kitchen. List the cabinet ",
+    "mentionsTypes": true,
+    "image": {
+     "mime_type": "image/png",
+     "data": "iVBORw0KGgo="
+    },
+    "responseMimeType": "application/json",
+    "temperature": 0.1,
+    "schemaRequired": [
+     "modules"
+    ]
+   }
+  },
+  {
+   "name": "drawing says technical drawing",
+   "input": {
+    "kind": "drawing",
+    "dataBase64": "/9j/4AA=",
+    "mediaType": "image/jpeg",
+    "mustMention": [
+     "base"
+    ]
+   },
+   "expected": {
+    "role": "user",
+    "textStart": "You are reading a technical drawing (plan or elevation) of a",
+    "mentionsTypes": true,
+    "image": {
+     "mime_type": "image/jpeg",
+     "data": "/9j/4AA="
+    },
+    "responseMimeType": "application/json",
+    "temperature": 0.1,
+    "schemaRequired": [
+     "modules"
+    ]
+   }
+  }
+ ]
+}

@@ -9,8 +9,9 @@ so a recognised kitchen is only a preview until the user confirms it.
 """
 from __future__ import annotations
 
+from . import gemini_wire
 from .contract import RecognitionInput, Recognizer
 from .draft import Draft, build_draft
 from .operation import draft_operation
 
-__all__ = ["Draft", "RecognitionInput", "Recognizer", "build_draft", "draft_operation"]
+__all__ = ["gemini_wire", "Draft", "RecognitionInput", "Recognizer", "build_draft", "draft_operation"]

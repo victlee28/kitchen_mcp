@@ -1,0 +1,62 @@
+{
+ "function": "recognition.gemini_wire.sniff_media_type",
+ "cases": [
+  {
+   "name": "png magic wins over a wrong declared type",
+   "input": {
+    "hex": "89504e470d0a1a0a00",
+    "declared": "image/jpeg"
+   },
+   "expected": {
+    "mediaType": "image/png"
+   }
+  },
+  {
+   "name": "jpeg magic",
+   "input": {
+    "hex": "ffd8ffe000104a46"
+   },
+   "expected": {
+    "mediaType": "image/jpeg"
+   }
+  },
+  {
+   "name": "webp magic",
+   "input": {
+    "hex": "52494646240000005745425056503820"
+   },
+   "expected": {
+    "mediaType": "image/webp"
+   }
+  },
+  {
+   "name": "unknown bytes with a supported declared type",
+   "input": {
+    "hex": "0001020304",
+    "declared": "image/webp"
+   },
+   "expected": {
+    "mediaType": "image/webp"
+   }
+  },
+  {
+   "name": "unknown bytes with an unsupported declared type",
+   "input": {
+    "hex": "0001020304",
+    "declared": "image/gif"
+   },
+   "expected": {
+    "mediaType": ""
+   }
+  },
+  {
+   "name": "empty",
+   "input": {
+    "hex": ""
+   },
+   "expected": {
+    "mediaType": ""
+   }
+  }
+ ]
+}

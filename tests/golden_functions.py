@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from kitchen import edit, floorplan, geometry, layers, moldings, numeric, proposal, rules, structure_mesh  # noqa: E402
+from kitchen.recognition import gemini_wire  # noqa: E402
 from kitchen.placement import Placement  # noqa: E402
 from kitchen.spec import load_spec, to_data  # noqa: E402
 
@@ -102,6 +103,30 @@ def floorplan_apply_binding(i):
     return floorplan.apply_binding(i["doc"], i.get("fp", {}), i["binding"])
 
 
+def gemini_wire_sniff_media_type(i):
+    return {"mediaType": gemini_wire.sniff_media_type(bytes.fromhex(i["hex"]), i.get("declared", ""))}
+
+
+def gemini_wire_request_body(i):
+    """Projection: the prompt's opening and closing words, the image part verbatim, and the generation config."""
+    import base64
+    body = gemini_wire.request_body(i["kind"], base64.b64decode(i["dataBase64"]), i["mediaType"])
+    parts = body["contents"][0]["parts"]
+    text = parts[0]["text"]
+    cfg = body["generationConfig"]
+    return {"role": body["contents"][0]["role"], "textStart": text[:60], "mentionsTypes": all(t in text for t in i["mustMention"]),
+            "image": parts[1]["inline_data"], "responseMimeType": cfg["responseMimeType"], "temperature": cfg["temperature"],
+            "schemaRequired": cfg["responseSchema"]["required"]}
+
+
+def gemini_wire_answer_text(i):
+    return {"text": gemini_wire.answer_text(i["response"])}
+
+
+def gemini_wire_parse_draft(i):
+    return {"draft": gemini_wire.parse_draft(i["text"])}
+
+
 FUNCTIONS = {
     "placement.to_room": placement_to_room,
     "placement.to_kitchen": placement_to_kitchen,
@@ -114,4 +139,8 @@ FUNCTIONS = {
     "moldings.compute_runs": moldings_compute_runs,
     "layers.design_op": layers_design_op,
     "floorplan.apply_binding": floorplan_apply_binding,
+    "recognition.gemini_wire.sniff_media_type": gemini_wire_sniff_media_type,
+    "recognition.gemini_wire.request_body": gemini_wire_request_body,
+    "recognition.gemini_wire.answer_text": gemini_wire_answer_text,
+    "recognition.gemini_wire.parse_draft": gemini_wire_parse_draft,
 }

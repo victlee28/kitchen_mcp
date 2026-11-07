@@ -1,0 +1,89 @@
+{
+ "function": "recognition.gemini_wire.answer_text",
+ "cases": [
+  {
+   "name": "parts are joined",
+   "input": {
+    "response": {
+     "candidates": [
+      {
+       "content": {
+        "parts": [
+         {
+          "text": "{\"a\":"
+         },
+         {
+          "text": "1}"
+         }
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "expected": {
+    "text": "{\"a\":1}"
+   }
+  },
+  {
+   "name": "no candidates",
+   "input": {
+    "response": {
+     "candidates": []
+    }
+   },
+   "expected": {
+    "text": ""
+   }
+  },
+  {
+   "name": "blocked prompt",
+   "input": {
+    "response": {
+     "promptFeedback": {
+      "blockReason": "SAFETY"
+     }
+    }
+   },
+   "expected": {
+    "text": ""
+   }
+  },
+  {
+   "name": "garbage",
+   "input": {
+    "response": [
+     1,
+     2
+    ]
+   },
+   "expected": {
+    "text": ""
+   }
+  },
+  {
+   "name": "non-text parts are skipped",
+   "input": {
+    "response": {
+     "candidates": [
+      {
+       "content": {
+        "parts": [
+         {
+          "inlineData": {}
+         },
+         {
+          "text": "x"
+         }
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "expected": {
+    "text": "x"
+   }
+  }
+ ]
+}
