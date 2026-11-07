@@ -1,0 +1,16 @@
+[project]
+name = "cabinet-recognizer"
+version = "0.2.0"
+description = "Ảnh tủ bếp chụp chính diện -> JSON module có kích thước (đo pixel + model thị giác)"
+requires-python = ">=3.11"
+dependencies = ["numpy>=1.24", "Pillow>=10.1"]
+
+[project.scripts]
+cabinet-recognize = "cabinet_recognizer.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["cabinet_recognizer"]

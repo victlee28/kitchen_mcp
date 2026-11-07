@@ -1,0 +1,522 @@
+{
+ "scene": {
+  "layout": "u-shape",
+  "view": "perspective",
+  "runs": [
+   {
+    "wall": "back",
+    "end": "wall",
+    "box": {
+     "left": 0.332,
+     "right": 0.7016,
+     "top": 0.3726,
+     "bottom": 0.741
+    },
+    "lines": {
+     "upperTop": [
+      [
+       0.3389,
+       0.3747
+      ],
+      [
+       0.6599,
+       0.3711
+      ]
+     ],
+     "upperBottom": [
+      [
+       0.3432,
+       0.4917
+      ],
+      [
+       0.6586,
+       0.4938
+      ]
+     ],
+     "worktopFront": [
+      [
+       0.3666,
+       0.5952
+      ],
+      [
+       0.6326,
+       0.5976
+      ]
+     ],
+     "frontsBottom": [
+      [
+       0.3747,
+       0.7213
+      ],
+      [
+       0.6278,
+       0.7256
+      ]
+     ],
+     "plinthBottom": [
+      [
+       0.3698,
+       0.7407
+      ],
+      [
+       0.6318,
+       0.7353
+      ]
+     ]
+    }
+   },
+   {
+    "wall": "left",
+    "end": "open",
+    "box": {
+     "left": 0.2851,
+     "right": 0.366,
+     "top": 0.3186,
+     "bottom": 0.8526
+    },
+    "lines": {
+     "upperTop": [
+      [
+       0.3318,
+       0.3711
+      ],
+      [
+       0.295,
+       0.3322
+      ]
+     ],
+     "upperBottom": [
+      [
+       0.3341,
+       0.4915
+      ],
+      [
+       0.2841,
+       0.4879
+      ]
+     ],
+     "worktopFront": [
+      [
+       0.3594,
+       0.5994
+      ],
+      [
+       0.3,
+       0.6383
+      ]
+     ],
+     "frontsBottom": [
+      [
+       0.3566,
+       0.7272
+      ],
+      [
+       0.3004,
+       0.8173
+      ]
+     ],
+     "plinthBottom": [
+      [
+       0.3559,
+       0.7447
+      ],
+      [
+       0.2933,
+       0.842
+      ]
+     ]
+    }
+   },
+   {
+    "wall": "right",
+    "end": "open",
+    "box": {
+     "left": 0.6374,
+     "right": 0.6897,
+     "top": 0.3592,
+     "bottom": 0.8316
+    },
+    "lines": {
+     "worktopFront": [
+      [
+       0.6598,
+       0.6129
+      ],
+      [
+       0.686,
+       0.633
+      ]
+     ],
+     "frontsBottom": [
+      [
+       0.659,
+       0.7572
+      ],
+      [
+       0.6896,
+       0.8049
+      ]
+     ],
+     "plinthBottom": [
+      [
+       0.6685,
+       0.7761
+      ],
+      [
+       0.6978,
+       0.8279
+      ]
+     ]
+    }
+   }
+  ],
+  "materials": {
+   "fronts": "white matte"
+  }
+ },
+ "run-back": {
+  "storeys": {
+   "base": {
+    "boundaries": [
+     "BD3",
+     "BD4",
+     "BD5",
+     "BD6",
+     "BD7",
+     "BD8"
+    ],
+    "modules": [
+     {
+      "type": "base-corner",
+      "doors": 1,
+      "doorSplits": [],
+      "drawers": 0,
+      "open": false,
+      "applianceBelow": null,
+      "confidence": 0.85,
+      "note": ""
+     },
+     {
+      "type": "base-sink",
+      "doors": 2,
+      "doorSplits": [],
+      "drawers": 0,
+      "open": false,
+      "applianceBelow": null,
+      "confidence": 0.85,
+      "note": ""
+     },
+     {
+      "type": "base-dishwasher",
+      "doors": 0,
+      "doorSplits": [],
+      "drawers": 0,
+      "open": false,
+      "applianceBelow": null,
+      "confidence": 0.85,
+      "note": ""
+     },
+     {
+      "type": "base",
+      "doors": 1,
+      "doorSplits": [],
+      "drawers": 0,
+      "open": false,
+      "applianceBelow": null,
+      "confidence": 0.85,
+      "note": ""
+     },
+     {
+      "type": "base-corner",
+      "doors": 1,
+      "doorSplits": [],
+      "drawers": 0,
+      "open": false,
+      "applianceBelow": null,
+      "confidence": 0.85,
+      "note": "partly hidden by the fridge"
+     }
+    ]
+   },
+   "upper": {
+    "boundaries": [
+     "BU2",
+     "BU4",
+     "BU5",
+     "BU6",
+     "BU8",
+     "BU9"
+    ],
+    "modules": [
+     {
+      "type": "upper-corner",
+      "doors": 2,
+      "doorSplits": [],
+      "drawers": 0,
+      "open": false,
+      "applianceBelow": null,
+      "confidence": 0.85,
+      "note": ""
+     },
+     {
+      "type": "upper",
+      "doors": 2,
+      "doorSplits": [],
+      "drawers": 0,
+      "open": false,
+      "applianceBelow": null,
+      "confidence": 0.85,
+      "note": ""
+     },
+     {
+      "type": "upper-hood",
+      "doors": 2,
+      "doorSplits": [],
+      "drawers": 0,
+      "open": false,
+      "applianceBelow": "hood",
+      "confidence": 0.85,
+      "note": ""
+     },
+     {
+      "type": "upper",
+      "doors": 2,
+      "doorSplits": [],
+      "drawers": 0,
+      "open": false,
+      "applianceBelow": null,
+      "confidence": 0.85,
+      "note": ""
+     },
+     {
+      "type": "upper-corner",
+      "doors": 1,
+      "doorSplits": [],
+      "drawers": 0,
+      "open": false,
+      "applianceBelow": null,
+      "confidence": 0.85,
+      "note": "mostly hidden by the fridge"
+     }
+    ]
+   }
+  },
+  "widthRefs": [
+   {
+    "storey": "base",
+    "from": "BD5",
+    "to": "BD6",
+    "mm": 600,
+    "what": "dishwasher"
+   }
+  ],
+  "heightRefs": [],
+  "appliances": [
+   {
+    "kind": "sink",
+    "storey": "base",
+    "module": 1,
+    "note": ""
+   },
+   {
+    "kind": "dishwasher",
+    "storey": "base",
+    "module": 2,
+    "note": ""
+   },
+   {
+    "kind": "hood",
+    "storey": "upper",
+    "module": 2,
+    "note": ""
+   }
+  ]
+ },
+ "run-left": {
+  "storeys": {
+   "base": {
+    "boundaries": [
+     "LD1",
+     "LD3",
+     "LD4",
+     "LD5"
+    ],
+    "modules": [
+     {
+      "type": "base",
+      "doors": 2,
+      "doorSplits": [
+       "LD2"
+      ],
+      "drawers": 0,
+      "open": false,
+      "applianceBelow": null,
+      "confidence": 0.85,
+      "note": ""
+     },
+     {
+      "type": "base-oven",
+      "doors": 0,
+      "doorSplits": [],
+      "drawers": 0,
+      "open": false,
+      "applianceBelow": null,
+      "confidence": 0.85,
+      "note": "built-in oven"
+     },
+     {
+      "type": "base-drawer",
+      "doors": 0,
+      "doorSplits": [],
+      "drawers": 3,
+      "open": false,
+      "applianceBelow": null,
+      "confidence": 0.85,
+      "note": ""
+     }
+    ]
+   },
+   "upper": {
+    "boundaries": [
+     "LU1",
+     "LU3",
+     "LU5"
+    ],
+    "modules": [
+     {
+      "type": "upper",
+      "doors": 2,
+      "doorSplits": [],
+      "drawers": 0,
+      "open": false,
+      "applianceBelow": null,
+      "confidence": 0.85,
+      "note": ""
+     },
+     {
+      "type": "upper",
+      "doors": 2,
+      "doorSplits": [],
+      "drawers": 0,
+      "open": false,
+      "applianceBelow": null,
+      "confidence": 0.85,
+      "note": ""
+     }
+    ]
+   }
+  },
+  "widthRefs": [
+   {
+    "storey": "base",
+    "from": "LD3",
+    "to": "LD4",
+    "mm": 600,
+    "what": "built-in oven"
+   }
+  ],
+  "heightRefs": [],
+  "appliances": [
+   {
+    "kind": "oven",
+    "storey": "base",
+    "module": 1,
+    "note": ""
+   }
+  ]
+ },
+ "run-right": {
+  "storeys": {
+   "base": {
+    "boundaries": [
+     "RD1",
+     "RD3",
+     "RD5"
+    ],
+    "modules": [
+     {
+      "type": "tall-fridge",
+      "doors": 0,
+      "doorSplits": [],
+      "drawers": 0,
+      "open": false,
+      "applianceBelow": null,
+      "confidence": 0.85,
+      "note": "",
+      "sections": [
+       {
+        "kind": "appliance",
+        "start": 0,
+        "end": 0.8,
+        "appliance": "fridge"
+       },
+       {
+        "kind": "doors",
+        "start": 0.8,
+        "end": 1.0,
+        "count": 2
+       }
+      ]
+     },
+     {
+      "type": "base",
+      "doors": 2,
+      "doorSplits": [
+       "RD4"
+      ],
+      "drawers": 0,
+      "open": false,
+      "applianceBelow": null,
+      "confidence": 0.85,
+      "note": ""
+     }
+    ]
+   }
+  },
+  "widthRefs": [],
+  "heightRefs": [],
+  "appliances": [
+   {
+    "kind": "fridge",
+    "storey": "base",
+    "module": 0,
+    "note": ""
+   }
+  ]
+ },
+ "policy": {
+  "region": "VN",
+  "plinthRecessMm": 50,
+  "baseDepthMm": 600,
+  "upperDepthMm": 350,
+  "tallDepthMm": 600,
+  "worktopThicknessMm": 40,
+  "widthRoundingMm": 10,
+  "heightRoundingMm": 10,
+  "alignToleranceMm": 30,
+  "snapToleranceMm": 40,
+  "worktopOptionsMm": [
+   850,
+   860,
+   870,
+   880,
+   890,
+   900
+  ],
+  "gapOptionsMm": [
+   600,
+   650,
+   700,
+   750
+  ],
+  "upperHeightOptionsMm": [
+   700,
+   750,
+   800,
+   900
+  ],
+  "verticalCorrection": "auto",
+  "fovDeg": 60,
+  "reasoning": "VN standards"
+ }
+}

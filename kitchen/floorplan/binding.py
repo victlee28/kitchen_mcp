@@ -115,13 +115,15 @@ def apply_binding(doc: dict[str, Any], fp: dict[str, Any], binding: dict[str, An
         a = round_half_away(a % 360, 6)
         return a - 360 if a > 180 else a
 
-    for sect in ("modules", "appliances", "accessories", "decorations"):
+    for sect in ("modules", "runs", "appliances", "accessories", "decorations"):
         for e in doc.get(sect, []):
             tf = e.get("transform")
             if tf:
                 tf["position"] = pos(tf["position"])
                 rot = tf.setdefault("rotation", {"x": 0, "y": 0, "z": 0, "unit": "deg"})
                 rot["y"] = wrap(rot.get("y", 0) + t["yaw"])
+            if sect == "runs" and e.get("frontAxis"):
+                e["frontAxis"] = vec(e["frontAxis"])
     for cam in doc.get("cameras", []):
         for key in ("position", "target"):
             if cam.get(key):

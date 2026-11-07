@@ -1,5 +1,6 @@
 """Cabinet template: an I-shaped run of base cabinets along the edge of an object, doors facing away from it."""
 import json
+import math
 import shutil
 import sys
 import tempfile
@@ -10,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "tests"))
 
-from kitchen import cabinet_run, edit, geometry, roomctx  # noqa: E402
+from kitchen import cabinet_run, edit, geometry, roomctx, threejs_export  # noqa: E402
 from kitchen.errors import InvalidInput, NotFound  # noqa: E402
 from kitchen.service import KitchenService  # noqa: E402
 from kitchen.spec import KitchenSpec, from_data  # noqa: E402
@@ -153,6 +154,22 @@ class TestService(unittest.TestCase):
         spec, rev2 = self.svc.store.get(did)
         self.assertEqual((rev2, [x.id for x in spec.runs]), (rev + 1, ["R1"]))
         self.assertTrue(any(p.frame is not None for p in geometry.compile_spec(spec).parts))
+        doc = threejs_export.export(spec, did, rev2)
+        run = doc["runs"][0]
+        modules = [m for m in doc["modules"] if m["placement"].get("runId") == run["id"]]
+        self.assertTrue(modules)
+        # A bound run group must stay aligned with the world transforms of its child modules.
+        rp = run["transform"]["position"]
+        mp = modules[0]["transform"]["position"]
+        self.assertAlmostEqual(rp["x"], mp["x"], delta=0.02)
+        self.assertAlmostEqual(rp["z"], mp["z"], delta=0.02)
+        self.assertAlmostEqual(run["transform"]["rotation"]["y"], modules[0]["transform"]["rotation"]["y"], delta=0.02)
+        yaw = math.radians(run["transform"]["rotation"]["y"])
+        self.assertAlmostEqual(run["frontAxis"]["x"], math.sin(yaw), delta=0.01)
+        self.assertAlmostEqual(run["frontAxis"]["z"], math.cos(yaw), delta=0.01)
+        top = next(a for a in doc["accessories"] if a.get("partRef", {}).get("run") == run["sourceRef"])
+        self.assertAlmostEqual(top["transform"]["position"]["x"], rp["x"], delta=0.02)
+        self.assertAlmostEqual(top["transform"]["position"]["z"], rp["z"], delta=0.02)
 
     def test_bad_requests(self):
         with self.assertRaises(NotFound):

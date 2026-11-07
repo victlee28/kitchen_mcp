@@ -16,3 +16,4 @@ _ban_cu_v*/
 
 _backup_before_english_rename.tgz
 _to_delete/
+.pytest_cache/

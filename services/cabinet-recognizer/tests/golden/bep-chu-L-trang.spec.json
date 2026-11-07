@@ -1,0 +1,646 @@
+{
+  "schema": "cabinet-recognizer/0.2",
+  "unit": "mm",
+  "origin": "Góc trong giữa tường sau và tường trái (hoặc đầu trái dãy sau nếu không có tường trái), tại sàn. Module tường sau: x dọc tường sau sang phải. Module tường bên: x dọc tường bên từ tường sau ra phía người nhìn.",
+  "layout": "l-shape",
+  "walls": {
+    "back": {
+      "runLength": 4850,
+      "end": "wall",
+      "heightsMm": {
+        "worktopFront": 821,
+        "frontsBottom": 116,
+        "plinthBottom": 14,
+        "upperBottom": 1460,
+        "upperTop": 2667,
+        "upperSplit": 2198,
+        "tallTop": 2654
+      }
+    },
+    "left": {
+      "runLength": 2130,
+      "end": "open",
+      "heightsMm": {
+        "worktopFront": 877,
+        "frontsBottom": 118,
+        "plinthBottom": 22,
+        "upperBottom": 1433,
+        "upperTop": 2674,
+        "upperSplit": 2201
+      }
+    }
+  },
+  "common": {
+    "plinthHeight": 120,
+    "worktopTop": 850,
+    "worktopThickness": 40,
+    "baseDepth": 600,
+    "upperBottom": 1450,
+    "upperTop": 2670,
+    "upperDepth": 350,
+    "tallTop": 2650,
+    "tallDepth": 600,
+    "materials": {
+      "accent": "dark wood laminate end panels and cornice",
+      "backsplash": "lime green painted glass",
+      "fronts": "white high-gloss acrylic",
+      "plinth": "dark wood laminate",
+      "worktop": "black stone"
+    },
+    "upperSplit": 2200
+  },
+  "modules": [
+    {
+      "type": "base-corner",
+      "storey": "base",
+      "wall": "back",
+      "confidence": 0.85,
+      "id": "TD1",
+      "name": "Tủ dưới góc 1 cánh",
+      "x": 0,
+      "width": 910,
+      "y": 0,
+      "height": 810,
+      "depth": 600,
+      "blindWidth": 590,
+      "blindSide": "start",
+      "doors": [
+        320
+      ],
+      "note": "blind corner behind the left run"
+    },
+    {
+      "type": "base-sink",
+      "storey": "base",
+      "wall": "back",
+      "confidence": 0.85,
+      "id": "TD2",
+      "name": "Tủ chậu rửa 2 cánh",
+      "x": 910,
+      "width": 740,
+      "y": 0,
+      "height": 810,
+      "depth": 600,
+      "doors": [
+        370,
+        370
+      ]
+    },
+    {
+      "type": "base",
+      "storey": "base",
+      "wall": "back",
+      "confidence": 0.85,
+      "id": "TD3",
+      "name": "Tủ dưới 1 cánh",
+      "x": 1650,
+      "width": 320,
+      "y": 0,
+      "height": 810,
+      "depth": 600,
+      "doors": [
+        320
+      ]
+    },
+    {
+      "type": "base-dishwasher",
+      "storey": "base",
+      "wall": "back",
+      "confidence": 0.85,
+      "id": "TD4",
+      "name": "base-dishwasher",
+      "x": 1970,
+      "width": 600,
+      "y": 0,
+      "height": 810,
+      "depth": 600,
+      "note": "freestanding stainless dishwasher"
+    },
+    {
+      "type": "base-drawer",
+      "storey": "base",
+      "wall": "back",
+      "confidence": 0.85,
+      "id": "TD5",
+      "name": "Tủ ngăn kéo 2 ngăn kéo",
+      "x": 2570,
+      "width": 710,
+      "y": 0,
+      "height": 810,
+      "depth": 600,
+      "drawers": [
+        345,
+        345
+      ]
+    },
+    {
+      "type": "tall-display",
+      "storey": "tall",
+      "wall": "back",
+      "confidence": 0.75,
+      "id": "TC1",
+      "name": "tall-display",
+      "x": 3280,
+      "width": 640,
+      "y": 0,
+      "height": 2650,
+      "depth": 600,
+      "sections": [
+        {
+          "kind": "plinth",
+          "y": 0,
+          "height": 110
+        },
+        {
+          "kind": "drawer",
+          "y": 110,
+          "height": 250
+        },
+        {
+          "kind": "appliance",
+          "y": 360,
+          "height": 380,
+          "appliance": "microwave"
+        },
+        {
+          "kind": "open",
+          "y": 740,
+          "height": 150
+        },
+        {
+          "kind": "glass-doors",
+          "y": 890,
+          "height": 1280,
+          "count": 2,
+          "doors": [
+            320,
+            320
+          ]
+        },
+        {
+          "kind": "door",
+          "y": 2170,
+          "height": 480
+        }
+      ]
+    },
+    {
+      "type": "tall-fridge",
+      "storey": "tall",
+      "wall": "back",
+      "confidence": 0.8,
+      "id": "TC2",
+      "name": "Tủ cao tủ lạnh",
+      "x": 3920,
+      "width": 930,
+      "y": 0,
+      "height": 2650,
+      "depth": 600,
+      "sections": [
+        {
+          "kind": "appliance",
+          "y": 0,
+          "height": 1780,
+          "appliance": "fridge"
+        },
+        {
+          "kind": "doors",
+          "y": 1780,
+          "height": 870,
+          "count": 2,
+          "doors": [
+            465,
+            465
+          ]
+        }
+      ]
+    },
+    {
+      "type": "upper-corner-open-shelf",
+      "storey": "upper",
+      "wall": "back",
+      "confidence": 0.7,
+      "id": "KG1",
+      "name": "Kệ góc mở",
+      "x": 0,
+      "width": 590,
+      "y": 1450,
+      "height": 1220,
+      "depth": 350,
+      "legBack": 590,
+      "legSide": 530,
+      "side": "left"
+    },
+    {
+      "type": "upper",
+      "storey": "upper",
+      "wall": "back",
+      "confidence": 0.85,
+      "id": "TT1",
+      "name": "Tủ trên 1 cánh",
+      "x": 590,
+      "width": 320,
+      "y": 1450,
+      "height": 750,
+      "depth": 350,
+      "doors": [
+        320
+      ]
+    },
+    {
+      "type": "upper-dish-rack",
+      "storey": "upper",
+      "wall": "back",
+      "confidence": 0.7,
+      "id": "TT2",
+      "name": "Tủ giá bát nâng hạ",
+      "x": 910,
+      "width": 740,
+      "y": 1450,
+      "height": 750,
+      "depth": 350,
+      "note": "two stacked lift-up glass flaps with dish racks"
+    },
+    {
+      "type": "upper",
+      "storey": "upper",
+      "wall": "back",
+      "confidence": 0.85,
+      "id": "TT3",
+      "name": "Tủ trên 1 cánh",
+      "x": 1650,
+      "width": 320,
+      "y": 1450,
+      "height": 750,
+      "depth": 350,
+      "doors": [
+        320
+      ]
+    },
+    {
+      "type": "upper",
+      "storey": "upper",
+      "wall": "back",
+      "confidence": 0.85,
+      "id": "TT4",
+      "name": "Tủ trên 1 cánh",
+      "x": 1970,
+      "width": 270,
+      "y": 1450,
+      "height": 750,
+      "depth": 350,
+      "doors": [
+        270
+      ]
+    },
+    {
+      "type": "upper",
+      "storey": "upper",
+      "wall": "back",
+      "confidence": 0.85,
+      "id": "TT5",
+      "name": "Tủ trên 1 cánh",
+      "x": 2240,
+      "width": 290,
+      "y": 1450,
+      "height": 750,
+      "depth": 350,
+      "doors": [
+        290
+      ]
+    },
+    {
+      "type": "upper-lift-up",
+      "storey": "upper",
+      "wall": "back",
+      "confidence": 0.6,
+      "id": "TT6",
+      "name": "Tủ trên cánh nâng",
+      "x": 2530,
+      "width": 700,
+      "y": 1450,
+      "height": 750,
+      "depth": 350,
+      "note": "lift-up flap above a dark-glass box (built-in oven or glass door)"
+    },
+    {
+      "type": "upper-top",
+      "storey": "upper-top",
+      "wall": "back",
+      "confidence": 0.85,
+      "id": "TN1",
+      "name": "upper-top 1 cánh",
+      "x": 590,
+      "width": 320,
+      "y": 2200,
+      "height": 470,
+      "depth": 350,
+      "doors": [
+        320
+      ]
+    },
+    {
+      "type": "upper-top",
+      "storey": "upper-top",
+      "wall": "back",
+      "confidence": 0.85,
+      "id": "TN2",
+      "name": "upper-top 1 cánh",
+      "x": 910,
+      "width": 740,
+      "y": 2200,
+      "height": 470,
+      "depth": 350,
+      "doors": [
+        740
+      ]
+    },
+    {
+      "type": "upper-top",
+      "storey": "upper-top",
+      "wall": "back",
+      "confidence": 0.85,
+      "id": "TN3",
+      "name": "upper-top 1 cánh",
+      "x": 1650,
+      "width": 880,
+      "y": 2200,
+      "height": 470,
+      "depth": 350,
+      "doors": [
+        880
+      ]
+    },
+    {
+      "type": "upper-top",
+      "storey": "upper-top",
+      "wall": "back",
+      "confidence": 0.85,
+      "id": "TN4",
+      "name": "upper-top 1 cánh",
+      "x": 2530,
+      "width": 750,
+      "y": 2200,
+      "height": 470,
+      "depth": 350,
+      "doors": [
+        750
+      ]
+    },
+    {
+      "type": "base",
+      "storey": "base",
+      "wall": "left",
+      "confidence": 0.85,
+      "id": "TD6",
+      "name": "Tủ dưới 1 cánh",
+      "x": 620,
+      "width": 320,
+      "y": 0,
+      "height": 810,
+      "depth": 600,
+      "doors": [
+        320
+      ]
+    },
+    {
+      "type": "base-oven",
+      "storey": "base",
+      "wall": "left",
+      "confidence": 0.85,
+      "id": "TD7",
+      "name": "Tủ lò nướng 2 ngăn kéo",
+      "x": 940,
+      "width": 570,
+      "y": 0,
+      "height": 810,
+      "depth": 600,
+      "drawers": [
+        345,
+        345
+      ],
+      "note": "compact oven above two drawers, under the hob"
+    },
+    {
+      "type": "base",
+      "storey": "base",
+      "wall": "left",
+      "confidence": 0.85,
+      "id": "TD8",
+      "name": "Tủ dưới 2 cánh",
+      "x": 1510,
+      "width": 620,
+      "y": 0,
+      "height": 810,
+      "depth": 600,
+      "doors": [
+        310,
+        310
+      ],
+      "note": "end of run, thick dark wood end panel"
+    },
+    {
+      "type": "upper",
+      "storey": "upper",
+      "wall": "left",
+      "confidence": 0.85,
+      "id": "TT7",
+      "name": "Tủ trên 1 cánh",
+      "x": 530,
+      "width": 290,
+      "y": 1450,
+      "height": 750,
+      "depth": 350,
+      "doors": [
+        290
+      ]
+    },
+    {
+      "type": "upper-hood",
+      "storey": "upper",
+      "wall": "left",
+      "confidence": 0.85,
+      "id": "TT8",
+      "name": "Tủ trên máy hút mùi 2 cánh",
+      "x": 820,
+      "width": 690,
+      "y": 1450,
+      "height": 750,
+      "depth": 350,
+      "doors": [
+        345,
+        345
+      ],
+      "applianceBelow": "hood"
+    },
+    {
+      "type": "upper",
+      "storey": "upper",
+      "wall": "left",
+      "confidence": 0.85,
+      "id": "TT9",
+      "name": "Tủ trên 1 cánh",
+      "x": 1510,
+      "width": 270,
+      "y": 1450,
+      "height": 750,
+      "depth": 350,
+      "doors": [
+        270
+      ]
+    },
+    {
+      "type": "upper",
+      "storey": "upper",
+      "wall": "left",
+      "confidence": 0.85,
+      "id": "TT10",
+      "name": "Tủ trên 1 cánh",
+      "x": 1780,
+      "width": 300,
+      "y": 1450,
+      "height": 750,
+      "depth": 350,
+      "doors": [
+        300
+      ],
+      "note": "dark wood end panel"
+    },
+    {
+      "type": "upper-top",
+      "storey": "upper-top",
+      "wall": "left",
+      "confidence": 0.85,
+      "id": "TN5",
+      "name": "upper-top 1 cánh",
+      "x": 530,
+      "width": 280,
+      "y": 2200,
+      "height": 470,
+      "depth": 350,
+      "doors": [
+        280
+      ]
+    },
+    {
+      "type": "upper-top",
+      "storey": "upper-top",
+      "wall": "left",
+      "confidence": 0.85,
+      "id": "TN6",
+      "name": "upper-top 1 cánh",
+      "x": 810,
+      "width": 700,
+      "y": 2200,
+      "height": 470,
+      "depth": 350,
+      "doors": [
+        700
+      ]
+    },
+    {
+      "type": "upper-top",
+      "storey": "upper-top",
+      "wall": "left",
+      "confidence": 0.85,
+      "id": "TN7",
+      "name": "upper-top 1 cánh",
+      "x": 1510,
+      "width": 570,
+      "y": 2200,
+      "height": 470,
+      "depth": 350,
+      "doors": [
+        570
+      ]
+    }
+  ],
+  "appliances": [
+    {
+      "id": "AP1",
+      "kind": "sink",
+      "name": "Chậu rửa",
+      "module": "TD2",
+      "note": "double bowl"
+    },
+    {
+      "id": "AP2",
+      "kind": "dishwasher",
+      "name": "Máy rửa bát",
+      "module": "TD4",
+      "note": "Bosch"
+    },
+    {
+      "id": "AP3",
+      "kind": "microwave",
+      "name": "Lò vi sóng",
+      "module": "TC1"
+    },
+    {
+      "id": "AP4",
+      "kind": "fridge",
+      "name": "Tủ lạnh",
+      "module": "TC2",
+      "note": "Bosch side-by-side"
+    },
+    {
+      "id": "AP5",
+      "kind": "hob",
+      "name": "Bếp nấu âm",
+      "module": "TD7"
+    },
+    {
+      "id": "AP6",
+      "kind": "oven",
+      "name": "Lò nướng",
+      "module": "TD7",
+      "note": "compact"
+    },
+    {
+      "id": "AP7",
+      "kind": "hood",
+      "name": "Máy hút mùi",
+      "module": "TT8"
+    }
+  ],
+  "evidence": {
+    "region": "VN",
+    "camera": {
+      "vpBack": [
+        -2656.4,
+        433.20000000000005
+      ],
+      "vpSide": [
+        929.4000000000001,
+        432.20000000000005
+      ],
+      "focalPx": 1018.5,
+      "focalSource": "vanishing-points"
+    },
+    "cameraHeightMm": 1436,
+    "mmPerUnit": 1346.8000000000002,
+    "verticalCorrection": 1.066,
+    "verticalRefs": [
+      1.066
+    ],
+    "scaleRefs": [
+      {
+        "wall": "back",
+        "what": "dishwasher",
+        "mm": 600,
+        "impliedCameraHeightMm": 1347
+      }
+    ],
+    "measuredHeightsMm": {
+      "frontsBottom": 117,
+      "plinthBottom": 18,
+      "tallTop": 2654,
+      "upperBottom": 1447,
+      "upperSplit": 2199,
+      "upperTop": 2670,
+      "worktopFront": 849
+    },
+    "policyReasoning": "Vietnamese kitchens: 850-900 worktop, 100-120 plinth, 600 base depth, 350 wall cabinets; stacked wall rows common."
+  },
+  "warnings": []
+}

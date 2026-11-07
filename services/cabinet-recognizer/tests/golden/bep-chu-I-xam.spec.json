@@ -1,0 +1,326 @@
+{
+  "schema": "cabinet-recognizer/0.1",
+  "unit": "mm",
+  "origin": "x từ đầu trái dãy sang phải, y từ sàn lên",
+  "layout": "straight",
+  "wall": "back",
+  "leftEnd": "open",
+  "rightEnd": "wall",
+  "common": {
+    "runLength": 2900,
+    "plinthHeight": 100,
+    "worktopTop": 860,
+    "worktopThickness": 40,
+    "baseDepth": 600,
+    "baseFrontHeight": 690,
+    "baseFrontTopGap": 30,
+    "upperBottom": 1510,
+    "upperTop": 2310,
+    "upperDepth": 350,
+    "materials": {
+      "backsplash": "pale blue painted glass",
+      "base": "matte light grey",
+      "plinth": "grey",
+      "upper": "matte light grey",
+      "worktop": "white quartz"
+    }
+  },
+  "modules": [
+    {
+      "id": "TT1",
+      "type": "upper",
+      "name": "Tủ trên 1 cánh",
+      "storey": "upper",
+      "x": 0,
+      "width": 270,
+      "depth": 350,
+      "confidence": 0.85,
+      "doors": [
+        270
+      ],
+      "y": 1510,
+      "height": 800
+    },
+    {
+      "id": "TT2",
+      "type": "upper-dish-rack",
+      "name": "Tủ giá bát nâng hạ 1 cánh",
+      "storey": "upper",
+      "x": 270,
+      "width": 810,
+      "depth": 350,
+      "confidence": 0.8,
+      "doors": [
+        810
+      ],
+      "y": 1510,
+      "height": 800,
+      "note": "lift-up door shown open, 2-tier pull-down dish rack, LED"
+    },
+    {
+      "id": "TT3",
+      "type": "upper",
+      "name": "Tủ trên 1 cánh",
+      "storey": "upper",
+      "x": 1080,
+      "width": 280,
+      "depth": 350,
+      "confidence": 0.85,
+      "doors": [
+        280
+      ],
+      "y": 1510,
+      "height": 800
+    },
+    {
+      "id": "TT4",
+      "type": "upper-hood",
+      "name": "Tủ trên máy hút mùi 2 cánh",
+      "storey": "upper",
+      "x": 1360,
+      "width": 820,
+      "depth": 350,
+      "confidence": 0.9,
+      "doors": [
+        410,
+        410
+      ],
+      "y": 1710,
+      "height": 600,
+      "applianceBelowHeight": 200,
+      "note": "integrated hood with curved glass"
+    },
+    {
+      "id": "TT5",
+      "type": "upper",
+      "name": "Tủ trên 1 cánh",
+      "storey": "upper",
+      "x": 2180,
+      "width": 270,
+      "depth": 350,
+      "confidence": 0.85,
+      "doors": [
+        270
+      ],
+      "y": 1510,
+      "height": 800
+    },
+    {
+      "id": "TT6",
+      "type": "upper-open-shelf",
+      "name": "Kệ mở",
+      "storey": "upper",
+      "x": 2450,
+      "width": 450,
+      "depth": 350,
+      "confidence": 0.6,
+      "y": 1510,
+      "height": 800,
+      "note": "3 tiers with LED; may be an opened glass door"
+    },
+    {
+      "id": "TD1",
+      "type": "base",
+      "name": "Tủ dưới 1 cánh",
+      "storey": "base",
+      "x": 0,
+      "width": 270,
+      "depth": 600,
+      "confidence": 0.9,
+      "doors": [
+        270
+      ],
+      "y": 0,
+      "height": 820,
+      "note": "open end of run"
+    },
+    {
+      "id": "TD2",
+      "type": "base-sink",
+      "name": "Tủ chậu rửa 2 cánh",
+      "storey": "base",
+      "x": 270,
+      "width": 810,
+      "depth": 600,
+      "confidence": 0.9,
+      "doors": [
+        405,
+        405
+      ],
+      "y": 0,
+      "height": 820
+    },
+    {
+      "id": "TD3",
+      "type": "base",
+      "name": "Tủ dưới 1 cánh",
+      "storey": "base",
+      "x": 1080,
+      "width": 280,
+      "depth": 600,
+      "confidence": 0.9,
+      "doors": [
+        280
+      ],
+      "y": 0,
+      "height": 820
+    },
+    {
+      "id": "TD4",
+      "type": "base-drawer",
+      "name": "Tủ ngăn kéo 2 ngăn kéo",
+      "storey": "base",
+      "x": 1360,
+      "width": 820,
+      "depth": 600,
+      "confidence": 0.9,
+      "y": 0,
+      "height": 820,
+      "drawers": [
+        345,
+        345
+      ],
+      "note": "under the hob"
+    },
+    {
+      "id": "TD5",
+      "type": "base",
+      "name": "Tủ dưới 1 cánh",
+      "storey": "base",
+      "x": 2180,
+      "width": 270,
+      "depth": 600,
+      "confidence": 0.9,
+      "doors": [
+        270
+      ],
+      "y": 0,
+      "height": 820
+    },
+    {
+      "id": "TD6",
+      "type": "base",
+      "name": "Tủ dưới 1 cánh",
+      "storey": "base",
+      "x": 2450,
+      "width": 450,
+      "depth": 600,
+      "confidence": 0.9,
+      "doors": [
+        450
+      ],
+      "y": 0,
+      "height": 820,
+      "note": "against right wall"
+    }
+  ],
+  "appliances": [
+    {
+      "id": "AP1",
+      "kind": "sink",
+      "name": "Chậu rửa",
+      "module": "TD2",
+      "note": "double bowl, top-mounted"
+    },
+    {
+      "id": "AP2",
+      "kind": "faucet",
+      "name": "Vòi rửa",
+      "module": "TD2"
+    },
+    {
+      "id": "AP3",
+      "kind": "hob",
+      "name": "Bếp nấu âm",
+      "module": "TD4",
+      "note": "2-zone black glass"
+    },
+    {
+      "id": "AP4",
+      "kind": "hood",
+      "name": "Máy hút mùi",
+      "module": "TT4"
+    },
+    {
+      "id": "AP5",
+      "kind": "led",
+      "name": "Đèn LED",
+      "module": "TT2",
+      "note": "inside dish-rack cabinet"
+    }
+  ],
+  "evidence": {
+    "region": "VN",
+    "baseMmPerPx": 7.227,
+    "upperMmPerPx": 7.526,
+    "upperFactor": 1.0415,
+    "measuredMm": {
+      "runLength": 2905,
+      "upperHeight": 828,
+      "gap": 640,
+      "plinth": 87
+    },
+    "boundariesPx": {
+      "upper": [
+        43,
+        80,
+        188,
+        223,
+        332,
+        368,
+        429
+      ],
+      "base": [
+        37,
+        74,
+        187,
+        225,
+        339,
+        376,
+        439
+      ]
+    },
+    "rowsPx": {
+      "upperTop": 74,
+      "upperBottom": 184,
+      "worktopBack": 269,
+      "worktopFront": 282,
+      "frontsTop": 293,
+      "plinthTop": 389,
+      "floor": 401
+    },
+    "policyReasoning": "Vietnamese kitchens typically use 850-860 mm worktop height, 100 mm plinth, 650-700 mm gap and 700-800 mm wall cabinets."
+  },
+  "warnings": [
+    {
+      "code": "upper-aligned-to-base",
+      "lines": [
+        {
+          "line": "U2",
+          "fromMm": 278,
+          "toMm": 267
+        },
+        {
+          "line": "U8",
+          "fromMm": 1089,
+          "toMm": 1082
+        },
+        {
+          "line": "U9",
+          "fromMm": 1352,
+          "toMm": 1356
+        },
+        {
+          "line": "U11",
+          "fromMm": 2171,
+          "toMm": 2179
+        },
+        {
+          "line": "U12",
+          "fromMm": 2442,
+          "toMm": 2446
+        }
+      ]
+    }
+  ]
+}

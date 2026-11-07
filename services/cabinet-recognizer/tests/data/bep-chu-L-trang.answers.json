@@ -1,0 +1,690 @@
+{
+ "scene": {
+  "layout": "l-shape",
+  "view": "perspective",
+  "runs": [
+   {
+    "wall": "back",
+    "end": "wall",
+    "box": {
+     "left": 0.2353,
+     "right": 0.9788,
+     "top": 0.1613,
+     "bottom": 0.8583
+    },
+    "lines": {
+     "upperTop": [
+      [
+       0.2982,
+       0.265
+      ],
+      [
+       0.6577,
+       0.235
+      ]
+     ],
+     "upperSplit": [
+      [
+       0.2941,
+       0.3537
+      ],
+      [
+       0.6618,
+       0.3376
+      ]
+     ],
+     "upperBottom": [
+      [
+       0.2941,
+       0.4977
+      ],
+      [
+       0.6618,
+       0.4977
+      ]
+     ],
+     "worktopFront": [
+      [
+       0.2778,
+       0.6071
+      ],
+      [
+       0.6618,
+       0.6336
+      ]
+     ],
+     "frontsBottom": [
+      [
+       0.2778,
+       0.7569
+      ],
+      [
+       0.6618,
+       0.7984
+      ]
+     ],
+     "plinthBottom": [
+      [
+       0.3268,
+       0.7823
+      ],
+      [
+       0.6536,
+       0.8191
+      ]
+     ],
+     "tallTop": [
+      [
+       0.7966,
+       0.2039
+      ],
+      [
+       0.9722,
+       0.1959
+      ]
+     ]
+    }
+   },
+   {
+    "wall": "left",
+    "end": "open",
+    "box": {
+     "left": 0.018,
+     "right": 0.2712,
+     "top": 0.1613,
+     "bottom": 0.8756
+    },
+    "lines": {
+     "upperTop": [
+      [
+       0.0735,
+       0.1843
+      ],
+      [
+       0.2369,
+       0.2581
+      ]
+     ],
+     "upperSplit": [
+      [
+       0.0735,
+       0.3065
+      ],
+      [
+       0.2369,
+       0.3525
+      ]
+     ],
+     "upperBottom": [
+      [
+       0.0735,
+       0.4977
+      ],
+      [
+       0.2369,
+       0.4977
+      ]
+     ],
+     "worktopFront": [
+      [
+       0.0327,
+       0.6429
+      ],
+      [
+       0.2614,
+       0.6221
+      ]
+     ],
+     "frontsBottom": [
+      [
+       0.1062,
+       0.8422
+      ],
+      [
+       0.2614,
+       0.7604
+      ]
+     ],
+     "plinthBottom": [
+      [
+       0.1225,
+       0.8583
+      ],
+      [
+       0.2533,
+       0.7834
+      ]
+     ]
+    }
+   }
+  ],
+  "materials": {
+   "fronts": "white high-gloss acrylic",
+   "worktop": "black stone",
+   "backsplash": "lime green painted glass",
+   "plinth": "dark wood laminate",
+   "accent": "dark wood laminate end panels and cornice"
+  }
+ },
+ "run-back": {
+  "storeys": {
+   "base": {
+    "boundaries": [
+     "BD2",
+     "BD3",
+     "BD5",
+     "BD6",
+     "BD7",
+     "BD8",
+     "BD18",
+     "BD24"
+    ],
+    "modules": [
+     {
+      "type": "base-corner",
+      "doors": 1,
+      "doorSplits": [],
+      "drawers": 0,
+      "open": false,
+      "applianceBelow": null,
+      "confidence": 0.85,
+      "note": "blind corner behind the left run"
+     },
+     {
+      "type": "base-sink",
+      "doors": 2,
+      "doorSplits": [
+       "BD4"
+      ],
+      "drawers": 0,
+      "open": false,
+      "applianceBelow": null,
+      "confidence": 0.85,
+      "note": ""
+     },
+     {
+      "type": "base",
+      "doors": 1,
+      "doorSplits": [],
+      "drawers": 0,
+      "open": false,
+      "applianceBelow": null,
+      "confidence": 0.85,
+      "note": ""
+     },
+     {
+      "type": "base-dishwasher",
+      "doors": 0,
+      "doorSplits": [],
+      "drawers": 0,
+      "open": false,
+      "applianceBelow": null,
+      "confidence": 0.85,
+      "note": "freestanding stainless dishwasher"
+     },
+     {
+      "type": "base-drawer",
+      "doors": 0,
+      "doorSplits": [],
+      "drawers": 2,
+      "open": false,
+      "applianceBelow": null,
+      "confidence": 0.85,
+      "note": ""
+     },
+     {
+      "type": "tall-display",
+      "doors": 0,
+      "doorSplits": [],
+      "drawers": 0,
+      "open": false,
+      "applianceBelow": null,
+      "confidence": 0.75,
+      "note": "",
+      "sections": [
+       {
+        "kind": "plinth",
+        "start": 0,
+        "end": 0.04
+       },
+       {
+        "kind": "drawer",
+        "start": 0.04,
+        "end": 0.135
+       },
+       {
+        "kind": "appliance",
+        "start": 0.135,
+        "end": 0.28,
+        "appliance": "microwave"
+       },
+       {
+        "kind": "open",
+        "start": 0.28,
+        "end": 0.335
+       },
+       {
+        "kind": "glass-doors",
+        "start": 0.335,
+        "end": 0.82,
+        "count": 2
+       },
+       {
+        "kind": "door",
+        "start": 0.82,
+        "end": 1.0
+       }
+      ]
+     },
+     {
+      "type": "tall-fridge",
+      "doors": 0,
+      "doorSplits": [],
+      "drawers": 0,
+      "open": false,
+      "applianceBelow": null,
+      "confidence": 0.8,
+      "note": "",
+      "sections": [
+       {
+        "kind": "appliance",
+        "start": 0,
+        "end": 0.67,
+        "appliance": "fridge"
+       },
+       {
+        "kind": "doors",
+        "start": 0.67,
+        "end": 1.0,
+        "count": 2
+       }
+      ]
+     }
+    ]
+   },
+   "upper": {
+    "boundaries": [
+     "BU1",
+     "BU2",
+     "BU3",
+     "BU7",
+     "BU8",
+     "BU9",
+     "BU10",
+     "BU12"
+    ],
+    "modules": [
+     {
+      "type": "upper-corner-open-shelf",
+      "doors": 0,
+      "doorSplits": [],
+      "drawers": 0,
+      "open": true,
+      "applianceBelow": null,
+      "confidence": 0.7,
+      "note": "dark wood L-shaped open shelves"
+     },
+     {
+      "type": "upper",
+      "doors": 1,
+      "doorSplits": [],
+      "drawers": 0,
+      "open": false,
+      "applianceBelow": null,
+      "confidence": 0.85,
+      "note": ""
+     },
+     {
+      "type": "upper-dish-rack",
+      "doors": 0,
+      "doorSplits": [],
+      "drawers": 0,
+      "open": false,
+      "applianceBelow": null,
+      "confidence": 0.7,
+      "note": "two stacked lift-up glass flaps with dish racks"
+     },
+     {
+      "type": "upper",
+      "doors": 1,
+      "doorSplits": [],
+      "drawers": 0,
+      "open": false,
+      "applianceBelow": null,
+      "confidence": 0.85,
+      "note": ""
+     },
+     {
+      "type": "upper",
+      "doors": 1,
+      "doorSplits": [],
+      "drawers": 0,
+      "open": false,
+      "applianceBelow": null,
+      "confidence": 0.85,
+      "note": ""
+     },
+     {
+      "type": "upper",
+      "doors": 1,
+      "doorSplits": [],
+      "drawers": 0,
+      "open": false,
+      "applianceBelow": null,
+      "confidence": 0.85,
+      "note": ""
+     },
+     {
+      "type": "upper-lift-up",
+      "doors": 0,
+      "doorSplits": [],
+      "drawers": 0,
+      "open": false,
+      "applianceBelow": null,
+      "confidence": 0.6,
+      "note": "lift-up flap above a dark-glass box (built-in oven or glass door)"
+     }
+    ]
+   },
+   "upper-top": {
+    "boundaries": [
+     "BT2",
+     "BT3",
+     "BT4",
+     "BT5",
+     "BT6"
+    ],
+    "modules": [
+     {
+      "type": "upper-top",
+      "doors": 1,
+      "doorSplits": [],
+      "drawers": 0,
+      "open": false,
+      "applianceBelow": null,
+      "confidence": 0.85,
+      "note": ""
+     },
+     {
+      "type": "upper-top",
+      "doors": 1,
+      "doorSplits": [],
+      "drawers": 0,
+      "open": false,
+      "applianceBelow": null,
+      "confidence": 0.85,
+      "note": ""
+     },
+     {
+      "type": "upper-top",
+      "doors": 1,
+      "doorSplits": [],
+      "drawers": 0,
+      "open": false,
+      "applianceBelow": null,
+      "confidence": 0.85,
+      "note": ""
+     },
+     {
+      "type": "upper-top",
+      "doors": 1,
+      "doorSplits": [],
+      "drawers": 0,
+      "open": false,
+      "applianceBelow": null,
+      "confidence": 0.85,
+      "note": ""
+     }
+    ]
+   }
+  },
+  "widthRefs": [
+   {
+    "storey": "base",
+    "from": "BD6",
+    "to": "BD7",
+    "mm": 600,
+    "what": "dishwasher"
+   }
+  ],
+  "heightRefs": [
+   {
+    "top": [
+     0.8824,
+     0.424
+    ],
+    "bottom": [
+     0.8824,
+     0.8525
+    ],
+    "mm": 1780,
+    "plane": "base",
+    "what": "side-by-side fridge"
+   }
+  ],
+  "appliances": [
+   {
+    "kind": "sink",
+    "storey": "base",
+    "module": 1,
+    "note": "double bowl"
+   },
+   {
+    "kind": "dishwasher",
+    "storey": "base",
+    "module": 3,
+    "note": "Bosch"
+   },
+   {
+    "kind": "microwave",
+    "storey": "base",
+    "module": 5,
+    "note": ""
+   },
+   {
+    "kind": "fridge",
+    "storey": "base",
+    "module": 6,
+    "note": "Bosch side-by-side"
+   }
+  ]
+ },
+ "run-left": {
+  "storeys": {
+   "base": {
+    "boundaries": [
+     "LD2",
+     "LD4",
+     "LD11",
+     "LD12"
+    ],
+    "modules": [
+     {
+      "type": "base",
+      "doors": 2,
+      "doorSplits": [
+       "LD3"
+      ],
+      "drawers": 0,
+      "open": false,
+      "applianceBelow": null,
+      "confidence": 0.85,
+      "note": "end of run, thick dark wood end panel"
+     },
+     {
+      "type": "base-oven",
+      "doors": 0,
+      "doorSplits": [],
+      "drawers": 2,
+      "open": false,
+      "applianceBelow": null,
+      "confidence": 0.85,
+      "note": "compact oven above two drawers, under the hob"
+     },
+     {
+      "type": "base",
+      "doors": 1,
+      "doorSplits": [],
+      "drawers": 0,
+      "open": false,
+      "applianceBelow": null,
+      "confidence": 0.85,
+      "note": ""
+     }
+    ]
+   },
+   "upper": {
+    "boundaries": [
+     "LU4",
+     "LU5",
+     "LU6",
+     "LU8",
+     "LU10"
+    ],
+    "modules": [
+     {
+      "type": "upper",
+      "doors": 1,
+      "doorSplits": [],
+      "drawers": 0,
+      "open": false,
+      "applianceBelow": null,
+      "confidence": 0.85,
+      "note": "dark wood end panel"
+     },
+     {
+      "type": "upper",
+      "doors": 1,
+      "doorSplits": [],
+      "drawers": 0,
+      "open": false,
+      "applianceBelow": null,
+      "confidence": 0.85,
+      "note": ""
+     },
+     {
+      "type": "upper-hood",
+      "doors": 2,
+      "doorSplits": [
+       "LU7"
+      ],
+      "drawers": 0,
+      "open": false,
+      "applianceBelow": "hood",
+      "confidence": 0.85,
+      "note": ""
+     },
+     {
+      "type": "upper",
+      "doors": 1,
+      "doorSplits": [],
+      "drawers": 0,
+      "open": false,
+      "applianceBelow": null,
+      "confidence": 0.85,
+      "note": ""
+     }
+    ]
+   },
+   "upper-top": {
+    "boundaries": [
+     "LT4",
+     "LT5",
+     "LT6",
+     "LT8"
+    ],
+    "modules": [
+     {
+      "type": "upper-top",
+      "doors": 1,
+      "doorSplits": [],
+      "drawers": 0,
+      "open": false,
+      "applianceBelow": null,
+      "confidence": 0.85,
+      "note": ""
+     },
+     {
+      "type": "upper-top",
+      "doors": 1,
+      "doorSplits": [],
+      "drawers": 0,
+      "open": false,
+      "applianceBelow": null,
+      "confidence": 0.85,
+      "note": ""
+     },
+     {
+      "type": "upper-top",
+      "doors": 1,
+      "doorSplits": [],
+      "drawers": 0,
+      "open": false,
+      "applianceBelow": null,
+      "confidence": 0.85,
+      "note": ""
+     }
+    ]
+   }
+  },
+  "widthRefs": [],
+  "heightRefs": [],
+  "appliances": [
+   {
+    "kind": "hob",
+    "storey": "base",
+    "module": 1,
+    "note": ""
+   },
+   {
+    "kind": "oven",
+    "storey": "base",
+    "module": 1,
+    "note": "compact"
+   },
+   {
+    "kind": "hood",
+    "storey": "upper",
+    "module": 2,
+    "note": ""
+   }
+  ]
+ },
+ "policy": {
+  "region": "VN",
+  "plinthRecessMm": 50,
+  "baseDepthMm": 600,
+  "upperDepthMm": 350,
+  "tallDepthMm": 600,
+  "worktopThicknessMm": 40,
+  "widthRoundingMm": 10,
+  "heightRoundingMm": 10,
+  "alignToleranceMm": 30,
+  "snapToleranceMm": 40,
+  "worktopOptionsMm": [
+   850,
+   860,
+   870,
+   880,
+   890,
+   900
+  ],
+  "gapOptionsMm": [
+   550,
+   600,
+   650,
+   700,
+   750
+  ],
+  "upperHeightOptionsMm": [
+   700,
+   750,
+   760,
+   800,
+   900
+  ],
+  "verticalCorrection": "auto",
+  "fovDeg": 60,
+  "reasoning": "Vietnamese kitchens: 850-900 worktop, 100-120 plinth, 600 base depth, 350 wall cabinets; stacked wall rows common."
+ }
+}

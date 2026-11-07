@@ -1,0 +1,247 @@
+{
+ "layout": {
+  "layout": "straight",
+  "upper": {
+   "left": 0.09,
+   "right": 0.893,
+   "top": 0.155,
+   "bottom": 0.383
+  },
+  "base": {
+   "left": 0.077,
+   "right": 0.915,
+   "top": 0.558,
+   "bottom": 0.835
+  },
+  "leftEnd": "open",
+  "rightEnd": "wall",
+  "upperSameExtent": true,
+  "materials": {
+   "base": "matte light grey",
+   "upper": "matte light grey",
+   "worktop": "white quartz",
+   "backsplash": "pale blue painted glass",
+   "plinth": "grey"
+  }
+ },
+ "segmentation": {
+  "rows": {
+   "upperTop": "H1",
+   "upperBottom": "H10",
+   "worktopBack": "H11",
+   "worktopFront": "H13",
+   "frontsTop": "H14",
+   "plinthTop": "H16",
+   "floor": "H17"
+  },
+  "upper": {
+   "boundaries": [
+    "U1",
+    "U2",
+    "U8",
+    "U9",
+    "U11",
+    "U12",
+    "U18"
+   ],
+   "modules": [
+    {
+     "type": "upper",
+     "doors": 1,
+     "doorSplits": [],
+     "drawers": 0,
+     "open": false,
+     "applianceBelow": null,
+     "confidence": 0.85,
+     "note": ""
+    },
+    {
+     "type": "upper-dish-rack",
+     "doors": 1,
+     "doorSplits": [],
+     "drawers": 0,
+     "open": false,
+     "applianceBelow": null,
+     "confidence": 0.8,
+     "note": "lift-up door shown open, 2-tier pull-down dish rack, LED"
+    },
+    {
+     "type": "upper",
+     "doors": 1,
+     "doorSplits": [],
+     "drawers": 0,
+     "open": false,
+     "applianceBelow": null,
+     "confidence": 0.85,
+     "note": ""
+    },
+    {
+     "type": "upper-hood",
+     "doors": 2,
+     "doorSplits": [
+      "U10"
+     ],
+     "drawers": 0,
+     "open": false,
+     "applianceBelow": "hood",
+     "confidence": 0.9,
+     "note": "integrated hood with curved glass"
+    },
+    {
+     "type": "upper",
+     "doors": 1,
+     "doorSplits": [],
+     "drawers": 0,
+     "open": false,
+     "applianceBelow": null,
+     "confidence": 0.85,
+     "note": ""
+    },
+    {
+     "type": "upper-open-shelf",
+     "doors": 0,
+     "doorSplits": [],
+     "drawers": 0,
+     "open": true,
+     "applianceBelow": null,
+     "confidence": 0.6,
+     "note": "3 tiers with LED; may be an opened glass door"
+    }
+   ]
+  },
+  "base": {
+   "boundaries": [
+    "B1",
+    "B2",
+    "B4",
+    "B5",
+    "B6",
+    "B7",
+    "B8"
+   ],
+   "modules": [
+    {
+     "type": "base",
+     "doors": 1,
+     "doorSplits": [],
+     "drawers": 0,
+     "open": false,
+     "applianceBelow": null,
+     "confidence": 0.9,
+     "note": "open end of run"
+    },
+    {
+     "type": "base-sink",
+     "doors": 2,
+     "doorSplits": [
+      "B3"
+     ],
+     "drawers": 0,
+     "open": false,
+     "applianceBelow": null,
+     "confidence": 0.9,
+     "note": ""
+    },
+    {
+     "type": "base",
+     "doors": 1,
+     "doorSplits": [],
+     "drawers": 0,
+     "open": false,
+     "applianceBelow": null,
+     "confidence": 0.9,
+     "note": ""
+    },
+    {
+     "type": "base-drawer",
+     "doors": 0,
+     "doorSplits": [],
+     "drawers": 2,
+     "open": false,
+     "applianceBelow": null,
+     "confidence": 0.9,
+     "note": "under the hob"
+    },
+    {
+     "type": "base",
+     "doors": 1,
+     "doorSplits": [],
+     "drawers": 0,
+     "open": false,
+     "applianceBelow": null,
+     "confidence": 0.9,
+     "note": ""
+    },
+    {
+     "type": "base",
+     "doors": 1,
+     "doorSplits": [],
+     "drawers": 0,
+     "open": false,
+     "applianceBelow": null,
+     "confidence": 0.9,
+     "note": "against right wall"
+    }
+   ]
+  },
+  "appliances": [
+   {
+    "kind": "sink",
+    "band": "base",
+    "module": 1,
+    "note": "double bowl, top-mounted"
+   },
+   {
+    "kind": "faucet",
+    "band": "base",
+    "module": 1,
+    "note": ""
+   },
+   {
+    "kind": "hob",
+    "band": "base",
+    "module": 3,
+    "note": "2-zone black glass"
+   },
+   {
+    "kind": "hood",
+    "band": "upper",
+    "module": 3,
+    "note": ""
+   },
+   {
+    "kind": "led",
+    "band": "upper",
+    "module": 1,
+    "note": "inside dish-rack cabinet"
+   }
+  ]
+ },
+ "policy": {
+  "region": "VN",
+  "referenceMm": 860,
+  "plinthMm": 100,
+  "worktopThicknessMm": 40,
+  "baseDepthMm": 600,
+  "upperDepthMm": 350,
+  "upperScaleFactor": 1.04,
+  "runRoundingMm": 50,
+  "widthRoundingMm": 10,
+  "heightRoundingMm": 50,
+  "alignToleranceMm": 30,
+  "snapToleranceMm": 60,
+  "gapOptionsMm": [
+   600,
+   650,
+   700,
+   750
+  ],
+  "upperHeightOptionsMm": [
+   700,
+   750,
+   800,
+   900
+  ],
+  "reasoning": "Vietnamese kitchens typically use 850-860 mm worktop height, 100 mm plinth, 650-700 mm gap and 700-800 mm wall cabinets."
+ }
+}

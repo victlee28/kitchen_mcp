@@ -1,0 +1,453 @@
+{
+  "schema": "cabinet-recognizer/0.2",
+  "unit": "mm",
+  "origin": "Góc trong giữa tường sau và tường trái (hoặc đầu trái dãy sau nếu không có tường trái), tại sàn. Module tường sau: x dọc tường sau sang phải. Module tường bên: x dọc tường bên từ tường sau ra phía người nhìn.",
+  "layout": "u-shape",
+  "walls": {
+    "back": {
+      "runLength": 3700,
+      "end": "wall",
+      "heightsMm": {
+        "worktopFront": 877,
+        "frontsBottom": 122,
+        "plinthBottom": 13,
+        "upperBottom": 1553,
+        "upperTop": 2335
+      }
+    },
+    "left": {
+      "runLength": 2370,
+      "end": "open",
+      "heightsMm": {
+        "worktopFront": 841,
+        "frontsBottom": 67,
+        "plinthBottom": 58,
+        "upperBottom": 1545,
+        "upperTop": 2341
+      }
+    },
+    "right": {
+      "runLength": 2130,
+      "end": "open",
+      "heightsMm": {
+        "worktopFront": 838,
+        "frontsBottom": 63,
+        "plinthBottom": 58
+      }
+    }
+  },
+  "common": {
+    "plinthHeight": 70,
+    "worktopTop": 850,
+    "worktopThickness": 40,
+    "baseDepth": 600,
+    "upperBottom": 1550,
+    "upperTop": 2350,
+    "upperDepth": 350,
+    "tallTop": 2350,
+    "tallDepth": 600,
+    "materials": {
+      "fronts": "white matte"
+    }
+  },
+  "modules": [
+    {
+      "type": "base-corner",
+      "storey": "base",
+      "wall": "back",
+      "confidence": 0.85,
+      "id": "TD1",
+      "name": "Tủ dưới góc 1 cánh",
+      "x": 0,
+      "width": 910,
+      "y": 0,
+      "height": 810,
+      "depth": 600,
+      "blindWidth": 610,
+      "blindSide": "start",
+      "doors": [
+        300
+      ]
+    },
+    {
+      "type": "base-sink",
+      "storey": "base",
+      "wall": "back",
+      "confidence": 0.85,
+      "id": "TD2",
+      "name": "Tủ chậu rửa 2 cánh",
+      "x": 910,
+      "width": 840,
+      "y": 0,
+      "height": 810,
+      "depth": 600,
+      "doors": [
+        420,
+        420
+      ]
+    },
+    {
+      "type": "base-dishwasher",
+      "storey": "base",
+      "wall": "back",
+      "confidence": 0.85,
+      "id": "TD3",
+      "name": "base-dishwasher",
+      "x": 1750,
+      "width": 600,
+      "y": 0,
+      "height": 810,
+      "depth": 600
+    },
+    {
+      "type": "base",
+      "storey": "base",
+      "wall": "back",
+      "confidence": 0.85,
+      "id": "TD4",
+      "name": "Tủ dưới 1 cánh",
+      "x": 2350,
+      "width": 430,
+      "y": 0,
+      "height": 810,
+      "depth": 600,
+      "doors": [
+        430
+      ]
+    },
+    {
+      "type": "base-corner",
+      "storey": "base",
+      "wall": "back",
+      "confidence": 0.85,
+      "id": "TD5",
+      "name": "Tủ dưới góc 1 cánh",
+      "x": 2780,
+      "width": 920,
+      "y": 0,
+      "height": 810,
+      "depth": 600,
+      "blindWidth": 740,
+      "blindSide": "end",
+      "doors": [
+        180
+      ],
+      "note": "partly hidden by the fridge"
+    },
+    {
+      "type": "upper-corner",
+      "storey": "upper",
+      "wall": "back",
+      "confidence": 0.85,
+      "id": "TT1",
+      "name": "Tủ trên góc 2 cánh",
+      "x": 0,
+      "width": 800,
+      "y": 1550,
+      "height": 800,
+      "depth": 350,
+      "blindWidth": 360,
+      "blindSide": "start",
+      "doors": [
+        220,
+        220
+      ]
+    },
+    {
+      "type": "upper",
+      "storey": "upper",
+      "wall": "back",
+      "confidence": 0.85,
+      "id": "TT2",
+      "name": "Tủ trên 2 cánh",
+      "x": 800,
+      "width": 950,
+      "y": 1550,
+      "height": 800,
+      "depth": 350,
+      "doors": [
+        475,
+        475
+      ]
+    },
+    {
+      "type": "upper-hood",
+      "storey": "upper",
+      "wall": "back",
+      "confidence": 0.85,
+      "id": "TT3",
+      "name": "Tủ trên máy hút mùi 2 cánh",
+      "x": 1750,
+      "width": 600,
+      "y": 1550,
+      "height": 800,
+      "depth": 350,
+      "doors": [
+        300,
+        300
+      ],
+      "applianceBelow": "hood"
+    },
+    {
+      "type": "upper",
+      "storey": "upper",
+      "wall": "back",
+      "confidence": 0.85,
+      "id": "TT4",
+      "name": "Tủ trên 2 cánh",
+      "x": 2350,
+      "width": 740,
+      "y": 1550,
+      "height": 800,
+      "depth": 350,
+      "doors": [
+        370,
+        370
+      ]
+    },
+    {
+      "type": "upper-corner",
+      "storey": "upper",
+      "wall": "back",
+      "confidence": 0.85,
+      "id": "TT5",
+      "name": "Tủ trên góc 1 cánh",
+      "x": 3090,
+      "width": 610,
+      "y": 1550,
+      "height": 800,
+      "depth": 350,
+      "blindWidth": 580,
+      "blindSide": "end",
+      "doors": [
+        30
+      ],
+      "note": "mostly hidden by the fridge"
+    },
+    {
+      "type": "base-drawer",
+      "storey": "base",
+      "wall": "left",
+      "confidence": 0.85,
+      "id": "TD6",
+      "name": "Tủ ngăn kéo 3 ngăn kéo",
+      "x": 600,
+      "width": 540,
+      "y": 0,
+      "height": 810,
+      "depth": 600,
+      "drawers": [
+        250,
+        250,
+        240
+      ]
+    },
+    {
+      "type": "base-oven",
+      "storey": "base",
+      "wall": "left",
+      "confidence": 0.85,
+      "id": "TD7",
+      "name": "Tủ lò nướng",
+      "x": 1140,
+      "width": 600,
+      "y": 0,
+      "height": 810,
+      "depth": 600,
+      "note": "built-in oven"
+    },
+    {
+      "type": "base",
+      "storey": "base",
+      "wall": "left",
+      "confidence": 0.85,
+      "id": "TD8",
+      "name": "Tủ dưới 2 cánh",
+      "x": 1740,
+      "width": 630,
+      "y": 0,
+      "height": 810,
+      "depth": 600,
+      "doors": [
+        315,
+        315
+      ]
+    },
+    {
+      "type": "upper",
+      "storey": "upper",
+      "wall": "left",
+      "confidence": 0.85,
+      "id": "TT6",
+      "name": "Tủ trên 2 cánh",
+      "x": 350,
+      "width": 790,
+      "y": 1550,
+      "height": 800,
+      "depth": 350,
+      "doors": [
+        395,
+        395
+      ]
+    },
+    {
+      "type": "upper",
+      "storey": "upper",
+      "wall": "left",
+      "confidence": 0.85,
+      "id": "TT7",
+      "name": "Tủ trên 2 cánh",
+      "x": 1140,
+      "width": 690,
+      "y": 1550,
+      "height": 800,
+      "depth": 350,
+      "doors": [
+        345,
+        345
+      ]
+    },
+    {
+      "type": "tall-fridge",
+      "storey": "tall",
+      "wall": "right",
+      "confidence": 0.85,
+      "id": "TC1",
+      "name": "Tủ cao tủ lạnh",
+      "x": 600,
+      "width": 690,
+      "y": 0,
+      "height": 2350,
+      "depth": 600,
+      "sections": [
+        {
+          "kind": "appliance",
+          "y": 0,
+          "height": 1880,
+          "appliance": "fridge"
+        },
+        {
+          "kind": "doors",
+          "y": 1880,
+          "height": 470,
+          "count": 2,
+          "doors": [
+            345,
+            345
+          ]
+        }
+      ]
+    },
+    {
+      "type": "base",
+      "storey": "base",
+      "wall": "right",
+      "confidence": 0.85,
+      "id": "TD9",
+      "name": "Tủ dưới 2 cánh",
+      "x": 1290,
+      "width": 840,
+      "y": 0,
+      "height": 810,
+      "depth": 600,
+      "doors": [
+        360,
+        480
+      ]
+    }
+  ],
+  "appliances": [
+    {
+      "id": "AP1",
+      "kind": "sink",
+      "name": "Chậu rửa",
+      "module": "TD2"
+    },
+    {
+      "id": "AP2",
+      "kind": "dishwasher",
+      "name": "Máy rửa bát",
+      "module": "TD3"
+    },
+    {
+      "id": "AP3",
+      "kind": "hood",
+      "name": "Máy hút mùi",
+      "module": "TT3"
+    },
+    {
+      "id": "AP4",
+      "kind": "oven",
+      "name": "Lò nướng",
+      "module": "TD7"
+    },
+    {
+      "id": "AP5",
+      "kind": "fridge",
+      "name": "Tủ lạnh",
+      "module": "TC1"
+    }
+  ],
+  "evidence": {
+    "region": "VN",
+    "camera": {
+      "vpBack": "infinite",
+      "vpSide": [
+        644.1,
+        449.20000000000005
+      ],
+      "focalPx": 849.2,
+      "focalSource": "reference-consistency"
+    },
+    "cameraHeightMm": 1507,
+    "mmPerUnit": 1506.8000000000002,
+    "verticalCorrection": 1.0,
+    "verticalRefs": [],
+    "scaleRefs": [
+      {
+        "wall": "back",
+        "what": "dishwasher",
+        "mm": 600,
+        "impliedCameraHeightMm": 1511
+      },
+      {
+        "wall": "left",
+        "what": "built-in oven",
+        "mm": 600,
+        "impliedCameraHeightMm": 1502
+      }
+    ],
+    "measuredHeightsMm": {
+      "frontsBottom": 67,
+      "plinthBottom": 58,
+      "upperBottom": 1549,
+      "upperTop": 2338,
+      "worktopFront": 841
+    },
+    "policyReasoning": "VN standards"
+  },
+  "warnings": [
+    {
+      "code": "back-vp-treated-infinite",
+      "focalFromVp": 152.70000000000002
+    },
+    {
+      "code": "side-start-clamped",
+      "wall": "left",
+      "fromMm": 540,
+      "toMm": 600
+    },
+    {
+      "code": "side-start-clamped",
+      "wall": "left",
+      "fromMm": 320,
+      "toMm": 350
+    },
+    {
+      "code": "side-start-clamped",
+      "wall": "right",
+      "fromMm": 250,
+      "toMm": 600
+    }
+  ]
+}

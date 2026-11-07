@@ -1,0 +1,102 @@
+<!DOCTYPE html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Xem 3D – job __JOB__</title>
+<style>
+html,body{margin:0;height:100%;font-family:system-ui,Arial,sans-serif;background:#1d1f22;color:#eee;overflow:hidden}
+#app{position:fixed;inset:0}
+#bar{position:fixed;top:10px;left:10px;display:flex;flex-wrap:wrap;gap:6px;z-index:5;max-width:calc(100% - 370px)}
+button,a.btn{background:#2c2f34;color:#eee;border:1px solid #4a4f57;border-radius:6px;padding:6px 10px;font-size:13px;cursor:pointer;text-decoration:none}
+button.on{background:#3d6fd1;border-color:#3d6fd1}
+#panel{position:fixed;top:10px;right:10px;width:340px;max-height:calc(100% - 20px);overflow:auto;background:rgba(30,32,36,.94);border:1px solid #444;border-radius:8px;padding:12px;z-index:5;font-size:13px}
+#panel h3{margin:0 0 6px;font-size:15px}#panel pre{white-space:pre-wrap;font-size:11.5px;background:#15171a;padding:8px;border-radius:6px;max-height:40vh;overflow:auto}
+.lbl{font:600 11px system-ui;color:#c0392b;background:rgba(255,255,255,.9);border:1px solid #c0392b;border-radius:4px;padding:1px 4px;pointer-events:none}
+table{width:100%;border-collapse:collapse}td{padding:2px 4px;border-bottom:1px solid #333}td:first-child{color:#aaa}
+#err{position:fixed;inset:0;display:none;align-items:center;justify-content:center;font-size:15px;padding:40px;text-align:center}
+.warn{color:#f0c36d;font-size:12px;margin-top:6px}
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head><body><div id="app"></div><div id="err"></div>
+<div id="bar">
+ <button data-view="iso" class="on">Toàn cảnh</button><button data-view="back">Tường sau</button><button data-view="left">Tường trái</button><button data-view="right">Tường phải</button><button data-view="top">Mặt bằng</button>
+ <button id="lbl" class="on">Nhãn</button><button id="room" class="on">Tường/sàn</button><button id="xr">Xuyên thấu</button>
+ <a class="btn" href="/">← Danh sách job</a>
+</div>
+<div id="panel"><h3 id="ttl">Job __JOB__</h3><div id="sub"></div><div id="warn" class="warn"></div><div id="info" style="margin-top:8px">Bấm vào một module để xem thông số.</div></div>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+import { buildKitchen } from '/static/kitchen3d.js';
+
+const fail = (t) => { const e = document.getElementById('err'); e.style.display = 'flex'; e.textContent = t; };
+let spec;
+try { const r = await fetch('/jobs/__JOB__/result.json'); if (!r.ok) throw new Error('Job chưa có kết quả'); spec = await r.json(); }
+catch (e) { fail('Không tải được kết quả: ' + e.message); throw e; }
+
+const app = document.getElementById('app');
+const renderer = new THREE.WebGLRenderer({ antialias: true }); renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.outputColorSpace = THREE.SRGBColorSpace;
+app.appendChild(renderer.domElement);
+const lr = new CSS2DRenderer(); Object.assign(lr.domElement.style, { position: 'absolute', top: '0', pointerEvents: 'none' }); app.appendChild(lr.domElement);
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x2a2d31);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x888888, 1.1));
+const sun = new THREE.DirectionalLight(0xffffff, 1.3); sun.position.set(4, 6, 6); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -6, right: 6, top: 6, bottom: -6 }); scene.add(sun);
+const camera = new THREE.PerspectiveCamera(50, 1, 0.05, 100);
+const controls = new OrbitControls(camera, renderer.domElement); controls.enableDamping = true;
+
+const { root, modules } = buildKitchen(THREE, spec); scene.add(root);
+const labels = [];
+for (const g of modules) {
+  const b = new THREE.Box3().setFromObject(g), c = b.getCenter(new THREE.Vector3()), u = g.userData;
+  if (u.wall === 'back') c.z = b.max.z; else if (u.wall === 'left') c.x = b.max.x; else if (u.wall === 'right') c.x = b.min.x;
+  if (u.blindWidth && u.wall === 'back') {            // nhãn tủ góc khuất đặt giữa phần cánh nhìn thấy
+    const a = u.blindSide === 'end' ? u.x : u.x + u.blindWidth, e = u.blindSide === 'end' ? u.x + u.width - u.blindWidth : u.x + u.width;
+    c.x = (a + e) / 2000;
+  }
+  const d = document.createElement('div'); d.className = 'lbl'; d.textContent = g.name;
+  const o = new CSS2DObject(d); o.position.copy(c); scene.add(o); labels.push(o);
+}
+const C = spec.common || {};
+document.getElementById('sub').textContent = `${spec.layout || ''} · ${spec.modules.length} module · mặt bếp ${C.worktopTop} · đỉnh tủ trên ${C.upperTop}`;
+if ((spec.warnings || []).length) document.getElementById('warn').textContent = 'Cảnh báo: ' + spec.warnings.map(w => w.code).join(', ');
+
+const kb = new THREE.Box3().setFromObject(modules.length ? (() => { const g = new THREE.Group(); modules.forEach(m => g.add(m.clone())); return g; })() : root);
+const ctr = kb.getCenter(new THREE.Vector3()), size = kb.getSize(new THREE.Vector3());
+const span = Math.max(size.x, size.z, 2.5);
+const views = {
+  iso: { p: [ctr.x + span * 0.3, 1.7, kb.max.z + span * 1.1], t: [ctr.x - span * 0.05, 1.15, ctr.z - span * 0.15] },
+  back: { p: [ctr.x, 1.4, span * 1.3 + 1], t: [ctr.x, 1.3, 0] },
+  left: { p: [span * 1.2 + 1, 1.4, ctr.z], t: [0, 1.3, ctr.z] },
+  right: { p: [kb.max.x - span * 1.2 - 1, 1.4, ctr.z], t: [kb.max.x, 1.3, ctr.z] },
+  top: { p: [ctr.x, span * 2 + 2, ctr.z + 0.01], t: [ctr.x, 0, ctr.z] },
+};
+function setView(k) {
+  const v = views[k]; camera.position.set(...v.p); controls.target.set(...v.t); controls.update();
+  document.querySelectorAll('[data-view]').forEach(b => b.classList.toggle('on', b.dataset.view === k));
+}
+document.querySelectorAll('[data-view]').forEach(b => b.onclick = () => setView(b.dataset.view));
+if (!spec.modules.some(m => m.wall === 'left')) document.querySelector('[data-view=left]').hidden = true;
+if (!spec.modules.some(m => m.wall === 'right')) document.querySelector('[data-view=right]').hidden = true;
+
+let lblOn = true; document.getElementById('lbl').onclick = e => { lblOn = !lblOn; labels.forEach(l => l.visible = lblOn); e.target.classList.toggle('on', lblOn); };
+document.getElementById('room').onclick = e => { const r = root.getObjectByName('room'); r.visible = !r.visible; e.target.classList.toggle('on', r.visible); };
+let xr = false; document.getElementById('xr').onclick = e => { xr = !xr; root.traverse(o => { if (o.isMesh && o.material.name === 'acrylic-white-gloss') { o.material.transparent = xr; o.material.opacity = xr ? 0.25 : 1; o.material.needsUpdate = true; } }); e.target.classList.toggle('on', xr); };
+
+const ray = new THREE.Raycaster(), mp = new THREE.Vector2(); let down = null, selBox = null;
+renderer.domElement.addEventListener('pointerdown', e => down = [e.clientX, e.clientY]);
+renderer.domElement.addEventListener('pointerup', e => {
+  if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 4) return;
+  const r = renderer.domElement.getBoundingClientRect(); mp.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1); ray.setFromCamera(mp, camera);
+  const hit = ray.intersectObjects(modules, true)[0];
+  const g = hit ? modules.find(m => { let o = hit.object; while (o) { if (o === m) return true; o = o.parent; } return false; }) : null;
+  if (selBox) { scene.remove(selBox); selBox = null; }
+  const info = document.getElementById('info');
+  if (!g) { info.textContent = 'Bấm vào một module để xem thông số.'; return; }
+  selBox = new THREE.Box3Helper(new THREE.Box3().setFromObject(g), 0xff3b30); scene.add(selBox);
+  const m = g.userData, rows = ['type', 'storey', 'wall', 'x', 'width', 'y', 'height', 'depth', 'confidence'].filter(k => m[k] !== undefined).map(k => `<tr><td>${k}</td><td>${m[k]}</td></tr>`).join('');
+  info.innerHTML = `<h3>${m.id} – ${String(m.name || '').replace(/</g, '&lt;')}</h3><table>${rows}</table><pre>${JSON.stringify(m, null, 1).replace(/</g, '&lt;')}</pre>`;
+});
+function resize() { const w = innerWidth, h = innerHeight; renderer.setSize(w, h); lr.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+addEventListener('resize', resize); resize(); setView('iso');
+renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); lr.render(scene, camera); });
+</script></body></html>
