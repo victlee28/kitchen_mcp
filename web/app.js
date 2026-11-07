@@ -8,6 +8,7 @@ import { createStructureSelector } from './structure-select.js';
 import { createModuleMenu } from './module-menu.js';
 import { isClick, pickTarget } from './menu-logic.js';
 import { createAssist } from './assist.js';
+import { FIELDS, moduleOrder, moduleLabel, formChanges, moldingsOp, styleHasMoldings, aiExportUrls } from './design-logic.js';
 
 const $ = (id) => document.getElementById(id);
 const state = { id: null, rev: null, spec: null, scene: null, selected: null, views: {}, qg: '' };
@@ -208,15 +209,13 @@ function renderIssues(v) {
 }
 function renderModuleList() {
   const ul = $('moduleList'); ul.replaceChildren();
-  const order = { back: 0, corner: 1, right: 2, left: 3, island: 4 };
-  const mods = [...state.spec.module].sort((a, b) => (order[a.wall] - order[b.wall]) || (a.y - b.y) || ((a.fromCorner || 0) - (b.fromCorner || 0)));
+  const mods = moduleOrder(state.spec.module);
   for (const m of mods) {
     const li = el('li', { class: m.id === state.selected ? 'sel' : '', onclick: () => selectModule(m.id) },
-      el('b', {}, m.id), ` ${m.type} · ${m.wall} · ${m.fromCorner ?? 0}+${m.width ?? m.backLength}`);
+      el('b', {}, m.id), ` ${moduleLabel(m)}`);
     ul.append(li);
   }
 }
-const FIELDS = [['type', 'text'], ['wall', 'text'], ['fromCorner', 'number'], ['width', 'number'], ['y', 'number'], ['tall', 'number'], ['back', 'number'], ['blindCorner', 'number'], ['endPanel', 'number']];
 function selectModule(id) {
   state.selected = id; highlight(); renderModuleList();
   const m = state.spec.module.find((x) => x.id === id); if (!m) return;
@@ -231,14 +230,7 @@ function selectModule(id) {
 $('moduleForm').addEventListener('submit', (ev) => {
   ev.preventDefault();
   const f = ev.target; const m = state.spec.module.find((x) => x.id === state.selected);
-  const changes = {};
-  for (const [k, type] of FIELDS) {
-    const raw = f.elements[k].value;
-    const val = type === 'number' ? (raw === '' ? undefined : Number(raw)) : raw;
-    if (val !== undefined && val !== (m[k] ?? (type === 'number' ? 0 : ''))) changes[k] = val;
-  }
-  const doors = f.elements.doors.value.split(',').map((s) => s.trim()).filter(Boolean).map(Number);
-  if (doors.join() !== (m.doors || []).join()) changes.doors = doors;
+  const changes = formChanges(m, Object.fromEntries(FIELDS.map(([k]) => [k, f.elements[k].value])), f.elements.doors.value);
   if (!Object.keys(changes).length) return setStatus('Không có thay đổi');
   run(`sửa ${m.id}`, async () => afterChange(await api(`/api/designs/${state.id}/ops`, 'POST',
     { baseRev: state.rev, op: { op: 'update', id: m.id, changes, closeGap: f.elements.closeGap.checked } })));
@@ -398,15 +390,12 @@ function syncMoldingPanel() {
   if (crown) $('pCrownProf').value = crown.profile; if (base) $('pBaseProf').value = base.profile;
   if (crown || base) $('pEnd').value = (crown || base).openEnd; drawProfile();
 }
-$('pStyle').addEventListener('change', () => { const c = ['Classic', 'Neoclassical', 'Transitional'].includes($('pStyle').value); $('pCrown').checked = c; $('pBase').checked = c; });
+$('pStyle').addEventListener('change', () => { const c = styleHasMoldings($('pStyle').value); $('pCrown').checked = c; $('pBase').checked = c; });
 $('pApply').addEventListener('click', () => {
   if (!state.id) return;
-  const old = Object.fromEntries((state.spec.moldings || []).map((m) => [m.id, m]));
-  const moldings = [];
-  if ($('pCrown').checked) moldings.push({ ...(old['crown-molding'] || {}), id: 'crown-molding', variant: 'crown', profile: $('pCrownProf').value, openEnd: $('pEnd').value, enabled: true });
-  if ($('pBase').checked) moldings.push({ ...(old['base-molding'] || {}), id: 'base-molding', variant: 'base', profile: $('pBaseProf').value, openEnd: $('pEnd').value, enabled: true });
+  const op = moldingsOp(state.spec, { crown: $('pCrown').checked, base: $('pBase').checked, crownProfile: $('pCrownProf').value, baseProfile: $('pBaseProf').value, openEnd: $('pEnd').value, style: $('pStyle').value });
   run('áp dụng phào', async () => afterChange(await api(`/api/designs/${state.id}/ops`, 'POST',
-    { baseRev: state.rev, op: { op: 'set-moldings', moldings, style: $('pStyle').value } })));
+    { baseRev: state.rev, op })));
 });
 
 // ---------------- xuất JSON cuối cùng cho AI tạo ảnh
@@ -422,8 +411,9 @@ function aiInfo(res) {
 async function syncAiExport(force = false) {
   if (!state.id) return;
   const light = $('aiLight').value;
-  $('aiJson').href = `/api/designs/${state.id}/ai-export?embedImages=1&lighting=${light}`;  // một file: nhúng sẵn ảnh nên gửi của từng góc
-  $('aiJson').setAttribute('download', `${state.id}-rev${state.rev}-ai-request-short.json`);
+  const urls = aiExportUrls(state.id, state.rev, light);
+  $('aiJson').href = urls.shortUrl;  // một file: nhúng sẵn ảnh nên gửi của từng góc
+  $('aiJson').setAttribute('download', urls.shortName);
   if (!$('aiAuto').checked || (!force && aiDone[state.id] === state.rev)) {
     if (aiDone[state.id] !== state.rev) $('aiInfo').textContent = `Thiết kế đang ở rev ${state.rev} — chưa xuất bản này`;
     return;
@@ -435,15 +425,15 @@ $('aiLight').addEventListener('change', () => run('xuất lại cho AI', () => s
 $('aiZip').addEventListener('click', () => state.id && run('xuất gói kèm ảnh cho AI', async () => {
   const res = await api(`/api/designs/${state.id}/ai-export`, 'POST', { rev: state.rev, withImage: true, lighting: $('aiLight').value });
   aiDone[state.id] = res.rev; aiInfo(res);
-  if (res.url?.zip) el('a', { href: res.url.zip, download: `${state.id}-rev${res.rev}-ai-package.zip` }).click();
+  if (res.url?.zip) el('a', { href: res.url.zip, download: aiExportUrls(state.id, state.rev, '').zipName(res.rev) }).click();
 }));
 
 $('aiView').addEventListener('click', () => {
   if (!state.id) return;
-  const base = `/api/designs/${state.id}/ai-export`, tag = `${state.id} · rev ${state.rev}`, L = `anhSang=${$('aiLight').value}`;
+  const u = aiExportUrls(state.id, state.rev, $('aiLight').value);
   const variants = [
-    { label: 'Rút gọn', hint: 'Bản gửi AI: chỉ dẫn + ảnh đính kèm', url: `${base}?embedImages=1&${L}`, name: `${state.id}-rev${state.rev}-ai-request-short.json`, title: `JSON gửi AI (rút gọn, kèm ảnh) · ${tag}` },
-    { label: 'Đầy đủ', hint: 'Bản kiểm tra, không gửi AI', url: `${base}?format=day-du&${L}`, name: `${state.id}-rev${state.rev}-ai-request.json`, title: `JSON đầy đủ (cảnh three.js, vật liệu, camera) · ${tag}` },
+    { label: 'Rút gọn', hint: 'Bản gửi AI: chỉ dẫn + ảnh đính kèm', url: u.shortUrl, name: u.shortName, title: u.shortTitle },
+    { label: 'Đầy đủ', hint: 'Bản kiểm tra, không gửi AI', url: u.fullUrl, name: u.fullName, title: u.fullTitle },
   ];
   run('mở JSON cuối cùng', () => window.kitchenJson.showJsonUrl(variants[0].title, variants[0].url, variants[0].name, variants));
 });
