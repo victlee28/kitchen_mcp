@@ -62,3 +62,9 @@ test('pure logic modules (*-logic.js, design-controller.js) touch neither the DO
     assert.ok(!/\bdocument\b|\bwindow\b|\bfetch\(|localStorage/.test(src[f].replace(/\/\/.*$/gm, '')), `${f} uses a browser API`);
   }
 });
+
+test('kitchen-viewer.js knows nothing of the design state, the API or the popup', () => {
+  const code = src['kitchen-viewer.js'].replace(/\/\/.*$/gm, '');
+  assert.ok(!/\bfetch\(|document\.getElementById|\bstate\b|\$\(/.test(code), 'kitchen-viewer.js reaches into the page');
+  assert.deepEqual(deps('kitchen-viewer.js').sort(), ['menu-logic.js', 'scene-loader.js']);
+});

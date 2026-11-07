@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { isClick, pickTarget, actionsFor, buildOp, layerFor, describeProposal, menuPosition } from '../../web/menu-logic.js';
+import { isClick, pickTarget, actionsFor, buildOp, layerFor, describeProposal, menuPosition, selectionEffect, sceneToMm } from '../../web/menu-logic.js';
 
 const spec = { module: [{ id: 'TD1', type: 'base', wall: 'back', y: 0, height: 720, depth: 560, fromCorner: 0, width: 600, material: 'Trắng mờ' }, { id: 'KG1', type: 'corner-shelf', wall: 'corner' }] };
 const hit = (userData, visible = true) => ({ object: { userData, visible } });
@@ -95,4 +95,19 @@ test('part actions and their operations', () => {
 test('a structure hit carries the ray point so the server can pick the edge', () => {
   const t = pickTarget([{ object: { userData: { structureId: 'STRUCT-c1' }, visible: true }, point: { x: 1.5, y: 1, z: 2.5 } }], []);
   assert.deepEqual(t, { kind: 'structure', id: 'STRUCT-c1', point: { x: 1.5, z: 2.5 } });
+});
+
+test('picking: a module or a part selects the module; a countertop and empty space only clear the structure selection; a structure selects it', () => {
+  assert.deepEqual(selectionEffect({ kind: 'module', id: 'TD1' }), { clearStructure: true, selectModule: 'TD1' });
+  assert.deepEqual(selectionEffect({ kind: 'part', part: 'door', id: 'TD2' }), { clearStructure: true, selectModule: 'TD2' });
+  assert.deepEqual(selectionEffect({ kind: 'part', part: 'countertop', id: 'x' }), { clearStructure: true });
+  assert.deepEqual(selectionEffect({ kind: 'structure', id: 'STRUCT-w1' }), { selectStructure: 'STRUCT-w1' });
+  assert.deepEqual(selectionEffect(null), { clearStructure: true });
+});
+
+test('scene units to millimetres: the factor table of the scene file (mm 0.001, cm 0.01, m 1; no unit = mm)', () => {
+  assert.deepEqual(sceneToMm({ x: 1.5, z: -2 }, 'mm'), { x: 1500, z: -2000 });
+  assert.deepEqual(sceneToMm({ x: 1.5, z: 0.2 }, 'cm'), { x: 150, z: 20 });
+  assert.deepEqual(sceneToMm({ x: 1.5, z: 7 }, 'm'), { x: 1.5, z: 7 });
+  assert.deepEqual(sceneToMm({ x: 1.5, z: 7 }, undefined), { x: 1500, z: 7000 });
 });

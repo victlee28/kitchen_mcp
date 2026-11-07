@@ -1,12 +1,8 @@
 // Kitchen Editor — viewer three.js + panel sửa module. Mọi dữ liệu hiển thị qua textContent (không innerHTML).
-import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { buildKitchen } from './scene-loader.js';
+import { createViewer } from './kitchen-viewer.js';
 import { createStructureSelector } from './structure-select.js';
 import { createModuleMenu } from './module-menu.js';
-import { isClick, pickTarget } from './menu-logic.js';
+import { selectionEffect } from './menu-logic.js';
 import { createAssist } from './assist.js';
 import { $, el } from './dom.js';
 import { api, createStatus } from './api-client.js';
@@ -18,96 +14,30 @@ const controller = createDesignController({ api, renderList: renderDesignList, o
 const { state, loadDesigns, afterChange } = controller;
 const openDesign = (id, keepView = false) => controller.open(id, { keepView });
 
-// ---------------- 3D
-const viewport = $('viewport');
-const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
-renderer.setPixelRatio(devicePixelRatio);
-viewport.append(renderer.domElement);
-const scene3 = new THREE.Scene();
-scene3.background = new THREE.Color(0xf4f1eb);
-// môi trường phòng cho phản xạ: vật liệu kim loại (inox tủ lạnh, tay nắm) không bị đen
-scene3.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
-if ('environmentIntensity' in scene3) scene3.environmentIntensity = 0.5;
-// đèn lấy từ tài liệu three.js (doc.lighting)
-renderer.shadowMap.enabled = true;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-const camera = new THREE.PerspectiveCamera(50, 1, 0.05, 100);
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-const root = new THREE.Group(); scene3.add(root);
-const edgeMat = new THREE.LineBasicMaterial({ color: 0x3a3630 });
-const raycaster = new THREE.Raycaster(); const pointer = new THREE.Vector2();
-let meshes = [];
-const structSel = createStructureSelector({ THREE, els: { section: $('fpElements'), kinds: $('fpKinds'), list: $('fpList'), detail: $('fpDetail'), actions: $('fpActions'),
+// ---------------- 3D + chọn
+const viewer = createViewer({
+  container: $('viewport'),
+  moduleIds: () => (state.spec ? state.spec.module.map((m) => m.id) : null),
+  extraPickables: () => structSel.pickables(),
+  onSceneBuilt: (k) => structSel.setScene(k.structures, k.structurePickables),
+  onPick: (target) => applyTarget(target),
+  onContext: (target, at) => {
+    if (!target) { moduleMenu.close(); return; }
+    applyTarget(target);
+    moduleMenu.open(target, at.x, at.y);
+  },
+});
+const structSel = createStructureSelector({ THREE: viewer.THREE, els: { section: $('fpElements'), kinds: $('fpKinds'), list: $('fpList'), detail: $('fpDetail'), actions: $('fpActions'),
   hide: $('fpHide'), isolate: $('fpIsolate'), showAll: $('fpShowAll') },
-  onSelect: () => { if (state.selected) { state.selected = null; highlight(); renderModuleList(); } $('moduleForm').hidden = true; } });
-
-function resize() {
-  const w = viewport.clientWidth, h = viewport.clientHeight;
-  renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+  onSelect: () => { if (state.selected) { state.selected = null; viewer.setSelected(null); renderModuleList(); } $('moduleForm').hidden = true; } });
+// The one place that turns "something was picked" into a selection (click, right click and the structure list all end here).
+function applyTarget(target) {
+  const effect = selectionEffect(target);
+  if (effect.selectStructure) structSel.select(effect.selectStructure);
+  if (effect.clearStructure) structSel.clear();
+  if (effect.selectModule) selectModule(effect.selectModule);
 }
-new ResizeObserver(resize).observe(viewport);
-(function loop() { requestAnimationFrame(loop); controls.update(); renderer.render(scene3, camera); })();
-
-function buildScene(doc) {
-  // dựng từ tài liệu theo "Complete Kitchen Three.js Scene Schema" (/api/designs/<id>/threejs)
-  root.clear();
-  const k = buildKitchen(doc, THREE, { RectAreaLightUniformsLib });
-  root.add(k.root);
-  meshes = k.pickables;
-  structSel.setScene(k.structures, k.structurePickables);
-  highlight();
-}
-const selMats = new WeakMap();
-function highlight() {
-  for (const m of meshes) {
-    const sel = state.selected && m.userData.module === state.selected;
-    if (!m.userData.baseMat) m.userData.baseMat = m.material;
-    if (sel) {
-      if (!selMats.has(m.userData.baseMat)) {
-        const c = m.userData.baseMat.clone(); c.emissive = new THREE.Color(0x2f6bff); c.emissiveIntensity = 0.35; selMats.set(m.userData.baseMat, c);
-      }
-      m.material = selMats.get(m.userData.baseMat);
-    } else m.material = m.userData.baseMat;
-  }
-}
-function applyView(key) {
-  const v = state.views[key]; if (!v) return;
-  camera.position.set(...v.position); camera.fov = v.verticalFov; camera.updateProjectionMatrix();
-  controls.target.set(...v.lookAt); controls.update();
-}
-renderer.domElement.addEventListener('click', (ev) => {
-  const r = renderer.domElement.getBoundingClientRect();
-  pointer.set(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1);
-  raycaster.setFromCamera(pointer, camera);
-  // nearest thing under the pointer wins: a cabinet module or a visible floorplan element
-  const hit = raycaster.intersectObjects([...meshes, ...structSel.pickables()], false)
-    .find((h) => h.object.userData.structureId || (h.object.userData.module && state.spec.module.some((m) => m.id === h.object.userData.module)));
-  if (hit?.object.userData.structureId) structSel.select(hit.object.userData.structureId);
-  else if (hit) { structSel.clear(); selectModule(hit.object.userData.module); }
-  else structSel.clear();
-});
 window.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && !moduleMenu.isOpen && !/INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName || '')) structSel.clear(); });
-
-// context menu: opens on the release of a right click (or Ctrl+click) that did not move. Windows fires `contextmenu` on release but
-// Linux/macOS on press, so the event itself cannot tell a click from the start of a camera drag (right-drag pans).
-let lastDown = null;
-renderer.domElement.addEventListener('pointerdown', (ev) => { lastDown = { x: ev.clientX, y: ev.clientY, t: performance.now(), button: ev.button, ctrl: ev.ctrlKey }; });
-renderer.domElement.addEventListener('contextmenu', (ev) => ev.preventDefault());
-renderer.domElement.addEventListener('pointerup', (ev) => {
-  const d = lastDown; lastDown = null;
-  if (!d || !(d.button === 2 || (d.button === 0 && d.ctrl)) || !isClick(d, { x: ev.clientX, y: ev.clientY, t: performance.now() }) || !state.spec) return;
-  const r = renderer.domElement.getBoundingClientRect();
-  pointer.set(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1);
-  raycaster.setFromCamera(pointer, camera);
-  const target = pickTarget(raycaster.intersectObjects([...meshes, ...structSel.pickables()], false), state.spec.module.map((m) => m.id));
-  if (!target) { moduleMenu.close(); return; }
-  if (target.point) { const k = { mm: 0.001, cm: 0.01, m: 1 }[state.doc?.units || 'mm']; target.point = { x: target.point.x / k, z: target.point.z / k }; }   // scene units -> mm
-  if (target.kind === 'module' || (target.kind === 'part' && target.part !== 'countertop')) { structSel.clear(); selectModule(target.id); }
-  else if (target.kind === 'part') structSel.clear();
-  else structSel.select(target.id);
-  moduleMenu.open(target, ev.clientX, ev.clientY);
-});
 const moduleMenu = createModuleMenu({
   box: $('ctxMenu'), setStatus,
   getState: () => ({ id: state.id, rev: state.rev, spec: state.spec }),
@@ -128,10 +58,12 @@ function renderDesignList(list, selectedId) {
 // Show a freshly loaded design (the controller has already updated `state`).
 function showDesign({ id, rev, spec, scene: sc, validation: v, doc, keepView }) {
   $('revInfo').textContent = `rev ${rev}`;
-  buildScene(doc);
+  viewer.setSelected(state.selected);
+  viewer.setViews(sc.views);
+  viewer.setDocument(doc);
   const vs = $('viewSelect'); const prev = vs.value; vs.replaceChildren();
   for (const [k, g] of Object.entries(sc.views)) vs.append(el('option', { value: k, textContent: g.name || k }));
-  if (keepView && sc.views[prev]) vs.value = prev; else applyView(vs.value);
+  if (keepView && sc.views[prev]) vs.value = prev; else viewer.setView(vs.value);
   renderIssues(v); renderModuleList(); syncMoldingPanel();
   if (state.selected && !spec.module.some((m) => m.id === state.selected)) state.selected = null;
   if (state.selected) selectModule(state.selected); else $('moduleForm').hidden = true;
@@ -188,7 +120,7 @@ function renderModuleList() {
   }
 }
 function selectModule(id) {
-  state.selected = id; highlight(); renderModuleList();
+  state.selected = id; viewer.setSelected(id); renderModuleList();
   const m = state.spec.module.find((x) => x.id === id); if (!m) return;
   const f = $('moduleForm'); f.hidden = false;
   $('formTitle').textContent = `${m.id} — ${m.name || m.type}`;
@@ -311,7 +243,7 @@ $('exportThree').addEventListener('click', () => {
   a.click();
 });
 $('designSelect').addEventListener('change', (e) => e.target.value && run('mở thiết kế', () => { state.selected = null; return openDesign(e.target.value); }));
-$('viewSelect').addEventListener('change', (e) => applyView(e.target.value));
+$('viewSelect').addEventListener('change', (e) => viewer.setView(e.target.value));
 
 // ---------------- render ảnh điều khiển
 async function runRender(views) {

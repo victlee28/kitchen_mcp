@@ -118,3 +118,20 @@ export function describeProposal(p) {
 export function menuPosition(x, y, w, h, vw, vh, margin = 8) {
   return { left: Math.max(margin, Math.min(x, vw - w - margin)), top: Math.max(margin, Math.min(y, vh - h - margin)) };
 }
+
+/**
+ * What picking `target` (a click or a right click) does to the selection. null = empty space.
+ * -> {clearStructure?: true, selectStructure?: id, selectModule?: id}. A countertop is not a module: it only clears the structure selection.
+ */
+export function selectionEffect(target) {
+  if (!target) return { clearStructure: true };
+  if (target.kind === 'structure') return { selectStructure: target.id };
+  if (target.kind === 'module' || (target.kind === 'part' && target.part !== 'countertop')) return { clearStructure: true, selectModule: target.id };
+  return { clearStructure: true };
+}
+
+/** Scene units -> millimetres for a picked point; `units` is the unit name of the scene file (mm, cm or m). */
+export function sceneToMm(point, units) {
+  const k = { mm: 0.001, cm: 0.01, m: 1 }[units || 'mm'];
+  return { x: point.x / k, z: point.z / k };
+}
