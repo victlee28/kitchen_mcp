@@ -2,7 +2,7 @@
 
   python tests/browser/smoke_web.py            exit 0 = all flows work; prints one line per check
 
-Needs: pip install playwright (+ a Chromium that Playwright can launch). Skipped with exit 0 and a note when Playwright is missing.
+Needs: pip install playwright (+ a Chromium that Playwright can launch). Skipped (exit 0, a note is printed) when Playwright or a launchable Chromium is missing.
 Starts web_server.py on a temporary database and port; nothing of the real database is touched.
 """
 import json
@@ -59,7 +59,11 @@ def main() -> int:
             return 1
         design = post(base, "/api/designs", {"prompt": "Bếp chữ L cạnh dài 2,8m và 3,2m"})["id"]
         with sync_playwright() as p:
-            browser = p.chromium.launch(args=["--use-gl=swiftshader", "--enable-unsafe-swiftshader"])
+            try:
+                browser = p.chromium.launch(args=["--use-gl=swiftshader", "--enable-unsafe-swiftshader"])
+            except Exception as error:      # no Chromium that Playwright can start here
+                print(f"SKIP: cannot launch Chromium ({str(error).splitlines()[0][:120]})")
+                return 0
             page = browser.new_page(viewport={"width": 1500, "height": 900})
             errors: list[str] = []
             page.on("pageerror", lambda e: errors.append(str(e)))
