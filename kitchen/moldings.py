@@ -11,6 +11,7 @@ import math
 from dataclasses import dataclass, field
 
 from .spec import KitchenSpec, Molding, MoldingProfile, Module, from_data, to_data
+from . import runs as runmod
 from .errors import InvalidInput
 
 PRESETS: dict[str, MoldingProfile] = {p.id: p for p in [
@@ -123,6 +124,37 @@ def _end_depth(seg, neighbor, ho: str) -> float | None:
     return 0.0 if ho == "return-to-wall" else None
 
 
+def _angled_runs(spec: KitchenSpec, mol: Molding, prof: MoldingProfile, y: float) -> list[Run]:
+    """Moldings along the explicit runs (any angle). Each run is its own chain: the joint of two angled runs is the corner cabinet, a run of its own,
+    so no mitre between runs is built. Points are walked against s (the run frame is mirror-wise like the right wall)."""
+    out: list[Run] = []
+    for r in spec.runs:
+        if mol.wall and r.id not in mol.wall:
+            continue
+        fr = runmod.RunFrame(r.id, r.x, r.z, r.yaw)
+        items: list[tuple[float, float, float, str]] = []
+        if mol.variant == "crown":
+            items = [(m.fromCorner, m.endAt, m.depth, m.id) for m in spec.module
+                     if m.run == r.id and m.storey in ("upper", "loft", "tall", "corner") and abs(_top(m) - y) <= 1]
+        else:
+            items = [(m.fromCorner, m.endAt, m.depth, m.id) for m in spec.module
+                     if m.run == r.id and m.y == 0 and (m.storey == "base" or (m.storey == "tall" and not m.niche))]
+        segs = _segments(items, mol.joinGap)
+        for i, sg in enumerate(segs):
+            prev_n = segs[i - 1] if i > 0 and sg["s0"] - segs[i - 1]["s1"] <= mol.joinGap else None
+            next_n = segs[i + 1] if i + 1 < len(segs) and segs[i + 1]["s0"] - sg["s1"] <= mol.joinGap else None
+            d = sg["d"]
+            dr = _end_depth(sg, prev_n, mol.openEnd)
+            start = [(sg["s0"], d)] if dr is None or abs(dr - d) < 1 else [(sg["s0"], dr), (sg["s0"], d)]
+            dr = _end_depth(sg, next_n, mol.openEnd)
+            end = [(sg["s1"], d)] if dr is None or abs(dr - d) < 1 else [(sg["s1"], d), (sg["s1"], dr)]
+            pts = [fr.to_world(s0, d0) for s0, d0 in (start + end)[::-1]]
+            pts = [p for k, p in enumerate(pts) if k == 0 or math.dist(p, pts[k - 1]) > 0.5]
+            if len(pts) >= 2:
+                out.append(Run(mol, prof, y, pts, sg["mods"], [r.id]))
+    return out
+
+
 def compute_runs(spec: KitchenSpec) -> list[Run]:
     lsau = _lsau(spec)
     runs: list[Run] = []
@@ -193,6 +225,8 @@ def compute_runs(spec: KitchenSpec) -> list[Run]:
             pts = [p for i, p in enumerate(ch["pts"]) if i == 0 or math.dist(p, ch["pts"][i - 1]) > 0.5]
             if len(pts) >= 2:
                 runs.append(Run(mol, prof, y, pts, ch["mods"], ch["w"]))
+        if spec.runs:
+            runs.extend(_angled_runs(spec, mol, prof, y if mol.variant == "crown" else 0.0))
     return runs
 
 

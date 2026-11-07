@@ -209,3 +209,43 @@ class TestCornerTemplateService(unittest.TestCase):
             self.assertEqual([x.id for x in spec.runs], ["R1", "R2", "R3"])
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
+
+
+class TestAngledMoldings(unittest.TestCase):
+    """A run with yaw -90 at the origin is the right wall; its moldings must be the same curves, and a turned run must carry them with it."""
+
+    def _spec(self, as_run, yaw=-90.0, x=0.0, z=0.0):
+        from kitchen import moldings
+        data = json.loads(json.dumps(FIX))
+        data["appliances"] = []
+        base = {"y": 0, "height": 840, "depth": 550}
+        upper = {"y": 1400, "height": 700, "depth": 320}
+        place = {"wall": "island", "run": "R1"} if as_run else {"wall": "right"}
+        data["module"] = [{**base, **place, "id": "B1", "type": "base", "fromCorner": 100, "width": 900},
+                          {**upper, **place, "id": "U1", "type": "upper", "fromCorner": 100, "width": 900}]
+        if as_run:
+            data["runs"] = [{"id": "R1", "x": x, "z": z, "yaw": yaw}]
+        data["moldings"] = [to_data(m) for m in moldings.default_moldings()]
+        return from_data(KitchenSpec, data)
+
+    def test_run_equal_to_the_right_wall_gives_the_same_moldings(self):
+        from kitchen import moldings
+        wall = {(r.molding.variant): r.points for r in moldings.compute_runs(self._spec(False)) if r.wall == ["right"]}
+        run = {(r.molding.variant): r.points for r in moldings.compute_runs(self._spec(True)) if r.wall == ["R1"]}
+        self.assertEqual(sorted(wall), ["base", "crown"])
+        for variant, pts in wall.items():
+            self.assertEqual(len(pts), len(run[variant]), variant)
+            for a, b in zip(pts, run[variant]):
+                self.assertAlmostEqual(a[0], b[0], delta=1e-6)
+                self.assertAlmostEqual(a[1], b[1], delta=1e-6)
+
+    def test_turned_run_moves_the_moldings_rigidly(self):
+        from kitchen import moldings
+        a = {r.molding.variant: r.points for r in moldings.compute_runs(self._spec(True, yaw=0.0)) if r.wall == ["R1"]}
+        b = {r.molding.variant: r.points for r in moldings.compute_runs(self._spec(True, yaw=37.0, x=1000.0, z=500.0)) if r.wall == ["R1"]}
+        for variant in a:
+            da = [math.dist(p, q) for p, q in zip(a[variant], a[variant][1:])]
+            db = [math.dist(p, q) for p, q in zip(b[variant], b[variant][1:])]
+            for u, v in zip(da, db):
+                self.assertAlmostEqual(u, v, delta=1e-6)
+        self.assertEqual(len(moldings.meshes(self._spec(True, yaw=37.0))), len(moldings.compute_runs(self._spec(True, yaw=37.0))))
