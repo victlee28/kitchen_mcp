@@ -58,6 +58,7 @@ def main() -> int:
             print("FAIL server did not start")
             return 1
         design = post(base, "/api/designs", {"prompt": "Bếp chữ L cạnh dài 2,8m và 3,2m"})["id"]
+        design2 = post(base, "/api/designs", {"prompt": "Bếp chữ I dài 3m"})["id"]
         with sync_playwright() as p:
             try:
                 browser = p.chromium.launch(args=["--use-gl=swiftshader", "--enable-unsafe-swiftshader"])
@@ -91,6 +92,7 @@ def main() -> int:
             page.click("#moduleForm button[type=submit]")
             page.wait_for_function(f"document.getElementById('revInfo').textContent.endsWith(' {rev0 + 1}')", timeout=20000)
             check("edit a cabinet: new revision", True)
+            check("edit refreshes the revision label in the design list", page.eval_on_selector("#designSelect", "s => s.options[s.selectedIndex].textContent").endswith(f"rev {rev0 + 1}"))
             check("edit keeps the cabinet selected", page.locator("#moduleList li.sel").count() == 1)
             check("edit: the form shows the new width", page.locator("#formFields input[name=width]").input_value() == new_width)
 
@@ -107,6 +109,17 @@ def main() -> int:
             page.click("#removeModule")
             page.wait_for_function(f"document.querySelectorAll('#moduleList li').length === {before}", timeout=20000)
             check("remove the selected cabinet", True)
+
+            # switching design twice in a row: the page ends on the LAST one (a slow earlier load must not win)
+            page.select_option("#designSelect", design)
+            page.select_option("#designSelect", design2)
+            page.wait_for_function(f"document.getElementById('openRender').href.includes('{design2}')", timeout=20000)
+            page.wait_for_timeout(1500)
+            check("quick design switch ends on the last design", design2 in (page.get_attribute("#openRender", "href") or "") and page.input_value("#designSelect") == design2)
+            page.select_option("#designSelect", design)
+            page.wait_for_function(f"document.getElementById('openRender').href.includes('{design}')", timeout=20000)
+            page.wait_for_function("document.querySelectorAll('#moduleList li').length > 0", timeout=20000)
+            page.locator("#moduleList li").first.click()
 
             # context menu: right click on the 3D canvas somewhere a cabinet is
             box = page.locator("#viewport canvas").bounding_box()

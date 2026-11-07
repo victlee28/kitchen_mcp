@@ -58,10 +58,20 @@ test('an empty list opens nothing', async () => {
   assert.deepEqual(lists[0], { ids: [], sel: undefined }); assert.equal(opened.length, 0);
 });
 
-test('afterChange refreshes the list and the design, keeping the view', async () => {
-  const { c, lists, opened } = setup();
+test('afterChange opens the design ONCE, keeping the view, then refreshes the list labels', async () => {
+  const { c, lists, opened, calls } = setup();
   await c.afterChange({ id: 'b' });
-  assert.equal(lists.at(-1).sel, 'b'); assert.equal(opened.at(-1).id, 'b'); assert.equal(opened.at(-1).keepView, true);
+  assert.equal(opened.length, 1); assert.deepEqual([opened[0].id, opened[0].keepView], ['b', true]);
+  assert.equal(calls.filter((p) => p === '/api/designs/b').length, 1, 'the design is fetched once');
+  assert.deepEqual(lists.at(-1), { ids: ['a', 'b'], sel: 'b' });
+});
+
+test('afterChange does not move the list selection back when the user switched design meanwhile', async () => {
+  const { c, lists } = setup({ delay: { a: 40 } });
+  const change = c.afterChange({ id: 'a' });         // a change of design a is being shown ...
+  await c.open('b');                                 // ... and the user opens b
+  await change;
+  assert.equal(c.state.id, 'b'); assert.equal(lists.at(-1).sel, 'b');
 });
 
 test('refreshList only refreshes the list', async () => {

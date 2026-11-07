@@ -35,10 +35,10 @@ export function createDesignController({ api, renderList, onOpened }) {
     if (id) await open(id);
   }
 
-  /** After a saved change (res.id): refresh the list and the design. */
+  /** After a saved change (res.id): show the new revision with the camera left where the user put it, then refresh the list labels. */
   async function afterChange(res) {
-    await loadDesigns(res.id);
     await open(res.id, { keepView: true });
+    await refreshList(state.id);       // state.id, not res.id: the user may have switched design meanwhile
   }
 
   return { state, open, refreshList, loadDesigns, afterChange };
