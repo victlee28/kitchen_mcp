@@ -1,6 +1,6 @@
 // Context menu on a cabinet module in the 3D view: pick an action, fill a small form, preview what it would change, confirm.
 // The server decides what a change means (POST .../propose previews, POST .../ops saves); nothing here edits data directly.
-import { interpretBody, describeInterpret } from './assist-logic.js';
+import { interpretBody, describeInterpret, templateIntent, checkUpload, recognizeBody, describeRecognition, recognitionLines } from './assist-logic.js';
 import { actionsFor, buildOp, describeProposal, layerFor, menuPosition, DOOR_STYLES, HANDLE_VARIANTS, MATERIAL_PRESETS } from './menu-logic.js';
 
 const el = (tag, props = {}, ...kids) => {
@@ -21,10 +21,10 @@ async function call(path, body) {
  */
 export function createModuleMenu(ctx) {
   const box = ctx.box;
-  let target = null; let step = null; let busy = false;
+  let target = null; let step = null; let busy = false; let picking = false;   // picking: the native file dialog is open (the window blurs, the menu must stay)
   box.setAttribute('role', 'dialog'); box.hidden = true;
 
-  const close = () => { box.hidden = true; box.replaceChildren(); target = null; step = null; busy = false; };
+  const close = () => { box.hidden = true; box.replaceChildren(); target = null; step = null; busy = false; picking = false; };
   const header = (text) => el('div', { class: 'ctx-head' }, text, el('button', { type: 'button', class: 'ctx-x', title: 'Đóng (Esc)', onclick: close }, '×'));
   const err = (text) => el('p', { class: 'ctx-msg bad', role: 'alert' }, text);
 
@@ -50,13 +50,23 @@ export function createModuleMenu(ctx) {
     const input = el('input', { type: 'text', value: text, placeholder: target.kind === 'structure' ? 'Ra lệnh cho cả thiết kế… (Enter)' : `Ra lệnh cho ${target.id}… (Enter)`, autocomplete: 'off', 'aria-label': 'Câu lệnh cho module này' });
     const run = () => command(input.value);
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); run(); } });
-    return el('div', { class: 'ctx-cmd' }, input, el('button', { type: 'button', class: 'primary', onclick: run }, 'Xem trước'),
+    const kind = el('select', { 'aria-label': 'Loại ảnh tham chiếu', title: 'Loại ảnh tham chiếu' }, el('option', { value: 'photo' }, 'Ảnh chụp'), el('option', { value: 'drawing' }, 'Bản vẽ'));
+    const file = el('input', { type: 'file', accept: 'image/png,image/jpeg,image/webp', hidden: true });
+    file.addEventListener('change', () => { picking = false; if (file.files[0]) recognizeImage(file.files[0], kind.value, input.value); });
+    const attach = el('button', { type: 'button', class: 'ghost', title: 'Nhập ảnh chụp bếp hoặc bản vẽ làm tham chiếu: nhận diện ra các tủ rồi xem trước (thay cả thiết kế khi áp dụng)', onclick: () => { picking = true; file.click(); } }, '📎 Ảnh tham chiếu');
+    return el('div', { class: 'ctx-cmd' }, input, el('button', { type: 'button', class: 'primary', onclick: run }, 'Xem trước'), attach, kind, file,
       ...(message ? [el('p', { class: 'ctx-msg warn' }, message)] : []),
       ...(choices.length ? [el('div', { class: 'chips' }, ...choices.map((c) => el('button', { type: 'button', class: 'ghost small', onclick: () => command(`${input.value.trim()} ${c}`) }, c)))] : []));
   }
 
   async function command(text) {
     if (busy) return; const { id, rev } = ctx.getState();
+    const intent = templateIntent(text);
+    if (intent?.kind === 'shape') return redraw(text, `Chưa tạo được tủ chữ ${intent.shape} bằng lệnh. Hãy dùng "Tạo từ mẫu" ở cột trái, hoặc nói "tủ chữ I" để tạo một dãy dọc cạnh vật thể.`);
+    if (intent?.kind === 'run-i') {
+      if (target.kind === 'structure') return runI();
+      return redraw(text, 'Muốn tạo dãy tủ dọc một cạnh: bấm chuột phải vào vật thể của mặt bằng (tường, cột, đồ) rồi ra lệnh.');
+    }
     let body;
     try { body = interpretBody(text, rev, { scope: target.kind === 'structure' ? undefined : [target.id] }); } catch (e) { return ctx.setStatus(e.message, 'warn'); }
     busy = true; ctx.setStatus('Đọc câu lệnh…');
@@ -68,6 +78,30 @@ export function createModuleMenu(ctx) {
       const d = describeInterpret(data);
       if (d.kind === 'preview') return showPreview('cmd', d.proposal, null, d.summary);
       redraw(text, d.kind === 'clarify' ? d.question : d.message, d.kind === 'clarify' ? d.choices : []);
+    } catch (e) { busy = false; redraw(text, e.message); }
+  }
+
+  function fileBase64(file) {
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(String(r.result).split(',')[1] || '');
+      r.onerror = () => reject(new Error('Không đọc được tệp'));
+      r.readAsDataURL(file);
+    });
+  }
+
+  async function recognizeImage(file, kind, text) {
+    if (busy) return; const { id, rev } = ctx.getState();
+    const bad = checkUpload(file); if (bad) return redraw(text, bad);
+    busy = true; ctx.setStatus('Nhận diện ảnh tham chiếu…');
+    try {
+      const { status, data } = await call(`/api/designs/${id}/recognize`, recognizeBody(kind, file.name, file.type, await fileBase64(file), rev));
+      busy = false;
+      if (status === 409) return stale('cmd');
+      if (!data || data.error) return redraw(text, data?.error || `Lỗi ${status}`);
+      const d = describeRecognition(data);
+      if (d.kind !== 'preview') return redraw(text, d.text);
+      showPreview('cmd', d.proposal, null, [{ kind: 'warn', text: 'Ảnh tham chiếu thay cả thiết kế hiện tại (có thể hoàn tác).' }, ...recognitionLines(data)]);
     } catch (e) { busy = false; redraw(text, e.message); }
   }
 
@@ -168,7 +202,7 @@ export function createModuleMenu(ctx) {
   }
 
   function showPreview(action, p, read, extra = []) {
-    const lines = [...extra.map((text) => ({ kind: 'info', text })), ...describeProposal(p)];
+    const lines = [...extra.map((x) => (typeof x === 'string' ? { kind: 'info', text: x } : x)), ...describeProposal(p)];
     const confirm = el('button', { type: 'button', class: p.validation?.introducesErrors ? 'danger' : 'primary', disabled: !p.applicable || p.unchanged,
       onclick: () => apply(action, p) }, p.validation?.introducesErrors ? 'Vẫn áp dụng' : 'Áp dụng');
     box.replaceChildren(header(`Xem trước · ${target.id}`), el('ul', { class: 'ctx-preview' }, ...lines.map((l) => el('li', { class: l.kind }, l.text))),
@@ -195,7 +229,8 @@ export function createModuleMenu(ctx) {
 
   document.addEventListener('pointerdown', (e) => { if (!box.hidden && !box.contains(e.target)) close(); }, true);
   window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !box.hidden) { e.stopPropagation(); close(); } }, true);
-  window.addEventListener('blur', () => { if (!busy) close(); });
+  window.addEventListener('blur', () => { if (!busy && !picking) close(); });
+  window.addEventListener('focus', () => setTimeout(() => { picking = false; }, 400));
   window.addEventListener('design-opened', () => { if (!busy) close(); });
 
   return {

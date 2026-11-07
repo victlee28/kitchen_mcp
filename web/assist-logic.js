@@ -73,3 +73,24 @@ export function describeRecognition(r) {
     default: return { kind: 'message', tone: 'warn', text: `Trạng thái lạ: ${r.status}`, lines: [] };
   }
 }
+
+const plain = (t) => String(t ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase();
+
+/**
+ * Does the sentence ask for a cabinet template ("tạo cho tôi tủ chữ I ở đây", "làm dãy tủ dọc cạnh này")?
+ * -> {kind: 'run-i'} | {kind: 'shape', shape: 'L'|'U'} (not built from a sentence yet) | null.
+ */
+export function templateIntent(text) {
+  const f = plain(text);
+  if (!/\b(tao|lam|dung|ve|dat|them|xep|cho|can)\b/.test(f)) return null;
+  const shape = /\btu\s+chu\s+([lu])\b/.exec(f);
+  if (shape) return { kind: 'shape', shape: shape[1].toUpperCase() };
+  if (/\btu\s+chu\s+i\b|\bday\s+tu\b|\btu\s+doc\b/.test(f)) return { kind: 'run-i' };
+  return null;
+}
+
+/** Lines for a preview from a recognition answer, as [{kind, text}] (draft first). Empty when there is no draft. */
+export function recognitionLines(r) {
+  const d = describeRecognition(r);
+  return d.kind === 'preview' ? d.lines.slice(0, d.lines.length - describeProposal(r.proposal).length) : d.lines;
+}

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { styleFromOptions, styleFromValue, interpretBody, describeInterpret, confirmBody, checkUpload, recognizeBody, describeRecognition } from '../../web/assist-logic.js';
+import { styleFromOptions, styleFromValue, interpretBody, describeInterpret, confirmBody, checkUpload, recognizeBody, describeRecognition, templateIntent, recognitionLines } from '../../web/assist-logic.js';
 
 const prop = (over = {}) => ({ id: 'd1', baseRev: 4, opHash: 'h', operation: { op: 'remove', id: 'TD1' }, applicable: true, unchanged: false,
   diff: { modules: { added: [], removed: ['TD1'], changed: {} }, other: [] }, validation: { introduced: [], resolved: [] }, ...over });
@@ -52,4 +52,21 @@ test('recognition answers cover every status and flag low-confidence modules', (
   assert.equal(describeRecognition({ status: 'empty', draft }).kind, 'message');
   assert.match(describeRecognition({ status: 'unavailable' }).text, /GEMINI_API_KEY/);
   assert.equal(describeRecognition({ status: 'failed', message: 'boom' }).tone, 'bad');
+});
+
+test('template intent: a request for a run-I cabinet, with or without accents; other shapes are named; edits are not templates', () => {
+  assert.deepEqual(templateIntent('tạo cho tôi tủ chữ I ở đây'), { kind: 'run-i' });
+  assert.deepEqual(templateIntent('lam day tu doc canh nay'), { kind: 'run-i' });
+  assert.deepEqual(templateIntent('Dựng TỦ CHỮ L quanh cột'), { kind: 'shape', shape: 'L' });
+  assert.deepEqual(templateIntent('tạo tủ chữ U'), { kind: 'shape', shape: 'U' });
+  assert.equal(templateIntent('xóa TD3'), null);
+  assert.equal(templateIntent('TD2 rộng 800'), null);
+  assert.equal(templateIntent('tủ chữ I'), null);   // no verb: not a request
+});
+
+test('recognition lines are the draft part only', () => {
+  const draft = { modules: [{ type: 'base', wall: 'back', width: 600, confidence: 1, needsReview: false, label: '' }], rejected: [], notes: [] };
+  const lines = recognitionLines({ status: 'ok', draft, proposal: prop() });
+  assert.equal(lines.length, 1); assert.match(lines[0].text, /base/);
+  assert.equal(recognitionLines({ status: 'empty', draft: { modules: [], rejected: [], notes: ['n'] } }).length, 1);
 });
