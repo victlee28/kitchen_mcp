@@ -67,11 +67,20 @@ class TestPlan(unittest.TestCase):
             cabinet_run.plan_i_run(_spec(), diamond, (-2200.0, 2100.0))
         self.assertEqual(ctx.exception.code, "run-too-short")
 
-    def test_outside_the_kitchen_area_is_refused(self):
+    def test_outside_the_wall_quadrant_becomes_a_free_run(self):
+        """fromCorner/offset cannot be negative: an object behind the back wall or right of the right-hand corner gets an explicit run, not an error."""
         behind = [(-2500.0, -900.0), (-2100.0, -900.0), (-2100.0, -500.0), (-2500.0, -500.0)]
-        with self.assertRaises(InvalidInput) as ctx:
-            cabinet_run.plan_i_run(_spec(), behind, (-2300.0, -910.0))
-        self.assertEqual(ctx.exception.code, "outside-kitchen")
+        right_of_corner = [(4890.0, 4260.0), (8870.0, 4260.0), (8870.0, 4610.0), (4890.0, 4610.0)]
+        for outline, point in ((behind, (-2300.0, -910.0)), (right_of_corner, (6000.0, 4610.0)), (right_of_corner, (6000.0, 4260.0))):
+            spec = _spec()
+            plan = cabinet_run.plan_i_run(spec, outline, point)
+            ops = plan["operation"]["ops"] if "ops" in plan["operation"] else [plan["operation"]]
+            self.assertEqual(ops[0]["op"], "add-run")
+            run = ops[0]["run"]
+            self.assertTrue(all(o["module"]["run"] == run["id"] for o in ops[1:]))
+            applied = edit.apply_op(spec, plan["operation"])
+            self.assertEqual(len(applied.runs), 1)
+            self.assertGreaterEqual(plan["length"], 300)
 
 
 class TestService(unittest.TestCase):

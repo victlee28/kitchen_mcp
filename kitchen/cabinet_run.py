@@ -141,11 +141,12 @@ def plan_i_run(spec: KitchenSpec, outline: list[Pt], point: Pt, module_type: str
     if start < 0:
         notes.append(f"Trimmed {-start:g} mm that lies behind the kitchen's origin")
         start = 0.0
-    if end - start < MIN_WIDTH:
-        raise InvalidInput("Almost none of this edge lies inside the kitchen area", code="outside-kitchen")
     offset = {"-z": fixed - depth, "+z": fixed + depth, "-x": depth - fixed, "+x": -(fixed + depth)}[facing]
-    if offset < 0:
-        raise InvalidInput("The run would stand outside the kitchen area (behind the back wall or beyond the right wall)", code="outside-kitchen")
+    if end - start < MIN_WIDTH or offset < 0:
+        # fromCorner and offset cannot be negative, so the wall-parallel form only covers the quadrant left of the right-hand corner and in
+        # front of the back wall. Anywhere else (beside the kitchen, behind it) the same cabinets stand in an explicit run at that place.
+        plan = _plan_angled(spec, outline, a, b, module_type)
+        return {**plan, "facing": facing, "summary": [*plan["summary"], "This edge lies outside the area measured from the kitchen's corner, so the cabinets stand in a free run"]}
     widths = split_widths(end - start)
     ops: list[dict[str, Any]] = []
     at = float(round_half_away(start, 0))
