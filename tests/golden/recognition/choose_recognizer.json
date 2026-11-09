@@ -95,6 +95,33 @@
    "expected": {
     "name": null
    }
+  },
+  {
+   "name": "the inbox (Claude Desktop by chat) comes first, then the API readers",
+   "input": {
+    "available": [
+     "gemini",
+     "cabinet",
+     "inbox"
+    ]
+   },
+   "expected": {
+    "name": "inbox"
+   }
+  },
+  {
+   "name": "an API reader is used when the default names it",
+   "input": {
+    "available": [
+     "gemini",
+     "cabinet",
+     "inbox"
+    ],
+    "default": "cabinet"
+   },
+   "expected": {
+    "name": "cabinet"
+   }
   }
  ]
 }

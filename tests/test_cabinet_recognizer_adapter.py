@@ -111,6 +111,7 @@ class TestChoose(unittest.TestCase):
     def test_rules(self):
         pick = recognition.choose_recognizer
         self.assertEqual(pick(["gemini", "cabinet"], None, None), "cabinet")           # the stand-alone reader wins when both exist
+        self.assertEqual(pick(["gemini", "cabinet", "inbox"], None, None), "inbox")    # no choice made: Claude Desktop by chat first
         self.assertEqual(pick(["gemini", "cabinet"], None, "gemini"), "gemini")        # the configured default beats the preference
         self.assertEqual(pick(["gemini", "cabinet"], "gemini", "cabinet"), "gemini")   # a request beats the default
         self.assertIsNone(pick(["gemini"], "cabinet", None))                           # asked for something that is not plugged in

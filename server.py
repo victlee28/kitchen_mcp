@@ -124,7 +124,7 @@ def recognize_design(design_id: str, source: dict[str, Any], recognizer: str | N
     """Recognise a photo or drawing as a DRAFT kitchen and preview it; nothing is saved.
 
     source: {"kind": "photo" | "drawing", "imageBase64": "...", "name"?: "...", "note"?: "hint about the picture, max 500 chars"}.
-    recognizer: "cabinet" (the stand-alone cabinet-recognizer, CABINET_RECOGNIZER_URL) or "gemini"; omitted = KITCHEN_RECOGNIZER, else cabinet, else gemini.
+    recognizer: "cabinet" (the stand-alone cabinet-recognizer, CABINET_RECOGNIZER_URL) , "gemini" or "inbox" (the same service, answered by Claude Desktop by chat; then call recognize-job on the web API); omitted = KITCHEN_RECOGNIZER, else inbox (Claude Desktop by chat), else cabinet, else gemini.
     The draft replaces ALL cabinets of the design (room, floor plan and common settings are kept). status 'ok' returns draft + operation + proposal (same as propose_change):
     confirm with the editing tool and expect=proposal.opHash. 'unavailable' = no recognizer is plugged in; 'empty' = nothing usable recognised.
     """

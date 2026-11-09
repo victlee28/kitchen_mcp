@@ -39,7 +39,7 @@ class Recognizer(Protocol):
     def recognize(self, source: RecognitionInput) -> dict: ...
 
 
-PREFERENCE = ("cabinet", "gemini")       # which plugged-in recognizer answers when nothing is asked for and there are several
+PREFERENCE = ("inbox", "cabinet", "gemini")       # which plugged-in recognizer answers when nothing is asked for: Claude Desktop by chat first (to debug), then a model with an API key
 
 
 def choose_recognizer(available: Sequence[str], requested: str | None, default: str | None) -> str | None:
