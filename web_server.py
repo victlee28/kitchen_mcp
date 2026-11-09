@@ -15,7 +15,7 @@ API:
   GET  /api/designs/<id>/history         lịch sử
   POST /api/designs/<id>/ops             {"baseRev": N, "op": {...}, "expect"?: opHash của /propose: chỉ lưu đúng thao tác đã xem trước}
   POST /api/designs/<id>/interpret       {"text": "xóa TD3", "baseRev"?: N, "scope"?: ["TD1"], "useLlm"?: false} câu lệnh tự do -> thao tác + bản xem trước (không lưu) hoặc câu hỏi làm rõ
-  POST /api/designs/<id>/template        {"template": {"kind": "run-i", "structureId": "STRUCT-..", "point": {"x": mm, "z": mm}}, "baseRev"?: N} tủ chữ I dựa vào cạnh gần điểm bấm nhất của vật thể, cánh quay ra ngoài; xem trước, không lưu
+  POST /api/designs/<id>/template        {"template": {"kind": "run-i", "structureId": "STRUCT-..", "point": {"x": mm, "z": mm}, "prompt"?: "tạo tủ bếp có tủ lạnh, mặt đá đen…"}, "baseRev"?: N} tủ chữ I dựa vào cạnh gần điểm bấm nhất của vật thể, cánh quay ra ngoài; xem trước, không lưu
   POST /api/designs/<id>/recognize-job  {"job": "<mã job>", "anchor"?, "mode"?, "baseRev"?}   hỏi lại kết quả của lần nhận diện trả "pending" (recognizer "inbox")
   POST /api/designs/<id>/recognize       {"source": {"kind": "photo"|"drawing", "imageBase64": "...", "note"?: "gợi ý, tối đa 500 ký tự"}, "recognizer"?: "gemini"|"cabinet"|"inbox", "anchor"?: {"structureId", "point": {"x","z"}}, "mode"?: "add"|"replace", "baseRev"?: N} ảnh/bản vẽ -> bản nháp thay TOÀN BỘ tủ + xem trước (không lưu); bộ nhận diện mặc định: KITCHEN_RECOGNIZER, rồi "cabinet" (CABINET_RECOGNIZER_URL), rồi "gemini"; chưa có thì status "unavailable"
   POST /api/designs/<id>/propose         {"baseRev": N, "op": {...}, "scope"?: ["TD1"]} xem trước, không lưu: diff, validation mới/đã hết, module bị ảnh hưởng

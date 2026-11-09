@@ -81,6 +81,10 @@ test('template intent: a request for a run-I cabinet, with or without accents; o
   assert.ok(!mentionsReference('tạo tủ chữ I ở đây'));
   assert.deepEqual(templateIntent('Dựng TỦ CHỮ L quanh cột'), { kind: 'shape', shape: 'L' });
   assert.deepEqual(templateIntent('tạo tủ chữ U'), { kind: 'shape', shape: 'U' });
+  assert.deepEqual(templateIntent('tạo tủ bếp có tủ lạnh, mặt đá đen, tủ dưới xanh rêu'), { kind: 'run-i', described: true });
+  assert.deepEqual(templateIntent('thiết kế tủ lạnh và tủ nóc ở đây'), { kind: 'run-i', described: true });
+  assert.equal(templateIntent('cánh kính cho tủ trên'), null);
+  assert.equal(templateIntent('thêm tủ trên cho tôi'), null);
   assert.equal(templateIntent('xóa TD3'), null);
   assert.equal(templateIntent('TD2 rộng 800'), null);
   assert.equal(templateIntent('tủ chữ I'), null);   // no verb: not a request

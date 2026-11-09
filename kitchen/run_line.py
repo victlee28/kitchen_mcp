@@ -79,9 +79,13 @@ def run_frame(line: Line) -> dict[str, float]:
             "length": math.hypot(end[0] - start[0], end[1] - start[1])}
 
 
-def plan_on_line(spec: KitchenSpec, line: Line, modules: list[dict[str, Any]], clear: list[str] | None = None) -> dict[str, Any]:
+EXTRA_FIELDS = ("name", "niche", "appliance", "appliances", "doors", "frontSections", "hingeSides", "doorStyle")   # what a module may carry besides its box
+
+
+def plan_on_line(spec: KitchenSpec, line: Line, modules: list[dict[str, Any]], clear: list[str] | None = None,
+                 after: list[dict[str, Any]] | None = None) -> dict[str, Any]:
     """The operation that puts ``modules`` in a new run on ``line``. Each module is ``{"type", "width", "s", "y", "height", "depth", "name"?}`` with
-    ``s`` measured along the run from its start. ``clear``: ids of cabinets to remove first (replace instead of add)."""
+    ``s`` measured along the run from its start. ``clear``: ids of cabinets to remove first (replace instead of add); ``after``: operations to run once the cabinets are in."""
     frame = run_frame(line)
     run = {"id": next_run_id(spec), "x": frame["x"], "z": frame["z"], "yaw": frame["yaw"]}
     ops: list[dict[str, Any]] = [{"op": "remove", "id": module_id, "closeGap": False} for module_id in clear or []]
@@ -90,11 +94,12 @@ def plan_on_line(spec: KitchenSpec, line: Line, modules: list[dict[str, Any]], c
     for m in sorted(modules, key=lambda item: item["s"]):
         entry = {"type": m["type"], "wall": "island", "run": run["id"], "fromCorner": float(m["s"]), "width": float(m["width"]), "y": float(m["y"]),
                  "height": float(m["height"]), "depth": float(m["depth"])}
-        for key in ("name", "niche", "appliance"):
+        for key in EXTRA_FIELDS:
             if m.get(key):
                 entry[key] = m[key]
         ops.append({"op": "add", "closeGap": False, "module": entry})
         reach = max(reach, entry["fromCorner"] + entry["width"])
+    ops.extend(after or [])
     summary = [f"{len(modules)} cabinets, {reach:g} mm, along an edge at {run['yaw']:g}° (run {run['id']})"]
     if reach > frame["length"] + 1.0:
         summary.append(f"The cabinets are {reach - frame['length']:g} mm longer than the edge ({frame['length']:g} mm)")

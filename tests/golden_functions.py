@@ -15,6 +15,7 @@ sys.path.insert(0, str(ROOT))
 
 from kitchen import edit, floorplan, geometry, layers, moldings, numeric, proposal, rules, run_line, structure_mesh  # noqa: E402
 from kitchen.recognition import build_draft, choose_recognizer, gemini_wire, line_modules, recognizer_wire  # noqa: E402
+from kitchen import intent, run_template  # noqa: E402
 from kitchen.placement import Placement  # noqa: E402
 from kitchen.spec import load_spec, to_data  # noqa: E402
 
@@ -173,6 +174,14 @@ def recognition_line_modules(i):
     return {"modules": modules, "dropped": dropped}
 
 
+def run_template_run_from_template(i):
+    """Projection: each cabinet as [type, width, s, y, height, niche, device types] plus the common block the sentence asked for."""
+    color, _ = intent.parse_prompt(i["prompt"])
+    out = run_template.run_from_template(color, i["length"])
+    return {"modules": [[m["type"], m["width"], m["s"], m["y"], m["height"], m.get("niche"), [d["type"] for d in m.get("appliances", [])]] for m in out["modules"]],
+            "common": out["common"]}
+
+
 FUNCTIONS = {
     "placement.to_room": placement_to_room,
     "placement.to_kitchen": placement_to_kitchen,
@@ -195,6 +204,7 @@ FUNCTIONS = {
     "recognition.recognizer_wire.response_error": recognizer_wire_response_error,
     "recognition.recognizer_wire.draft_from_kitchen_spec": recognizer_wire_draft_from_kitchen_spec,
     "run_line.run_frame": run_line_run_frame,
+    "run_template.run_from_template": run_template_run_from_template,
     "run_line.edge_line": run_line_edge_line,
     "recognition.line_modules": recognition_line_modules,
     "recognition.recognizer_wire.clean_job_id": recognizer_wire_clean_job_id,

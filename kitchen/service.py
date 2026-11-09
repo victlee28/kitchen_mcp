@@ -7,7 +7,7 @@ import json
 import os
 from pathlib import Path
 from typing import Any, Callable
-from . import cabinet_run, run_line, edit, edit_intent, geometry, intent, llm, recognition, regions, roomctx, render, rules, threejs_export
+from . import cabinet_run, run_line, run_template, edit, edit_intent, geometry, intent, llm, recognition, regions, roomctx, render, rules, threejs_export
 from .intent import KitchenTemplate as KitchenTemplate
 from .spec import Common, KitchenSpec, Room, Wall, dump_spec, load_spec, to_data
 from .store import ConflictError, Store
@@ -187,11 +187,39 @@ class KitchenService:
         point = template.get('point')
         if not isinstance(point, dict) or not all(isinstance(point.get(k), (int, float)) for k in ('x', 'z')):
             raise InvalidInput('template.point needs numeric x and z (mm, room frame)', code='bad-template-point')
-        struct, plan = self._plan_at_object(spec, str(template.get('structureId')), point,
-                                            lambda outline, click: cabinet_run.plan_i_run(spec, outline, click))
+        prompt = template.get('prompt')
+        if isinstance(prompt, str) and prompt.strip():      # a described kitchen: fridge, loft row, worktop colour, door colours...
+            color, notes = intent.parse_prompt(prompt)
+            if not color.country and country:
+                color = color.model_copy(update={'country': country})
+            planner = lambda outline, click: self._plan_described(spec, color, notes, outline, click)
+        else:
+            planner = lambda outline, click: cabinet_run.plan_i_run(spec, outline, click)
+        struct, plan = self._plan_at_object(spec, str(template.get('structureId')), point, planner)
         preview = self.propose(design_id, plan['operation'], current, None, country)
         return {'id': design_id, 'baseRev': current, 'status': 'ok', 'structureId': struct['id'], 'facing': plan['facing'], 'length': plan['length'],
                 'summary': plan['summary'], 'operation': plan['operation'], 'proposal': preview}
+
+    @staticmethod
+    def _plan_described(spec: KitchenSpec, color: KitchenTemplate, notes: list[str], outline: list, click: tuple) -> dict:
+        """The cabinets a sentence describes, in a run along the edge of the object nearest to ``click`` (kitchen frame). The run is as long as
+        the edge unless the sentence gives a length; what the sentence says about materials and handles joins the design's own."""
+        line = run_line.edge_line(outline, click)
+        length = float(color.backWallLength) if 'backWallLength' in color.model_fields_set else run_line.run_frame(line)['length'] // 10 * 10
+        if length < 600:
+            raise InvalidInput(f'The edge is only {length:g} mm long; a run needs at least 600 mm', code='edge-too-short')
+        built = run_template.run_from_template(color, length)
+        changes = dict(built['common'])
+        if 'material' in changes:
+            changes['material'] = {**spec.common.material, **changes['material']}
+        after = [{'op': 'common', 'changes': changes}] if changes else []
+        plan = run_line.plan_on_line(spec, line, built['modules'], after=after)
+        made = sorted({m['type'] for m in built['modules']})
+        explicit = 'backWallLength' in color.model_fields_set
+        kept = [n for n in notes if explicit or 'chiều dài' not in n]          # the "no length given, 3000 mm" note does not apply: the edge sets it
+        plan['summary'] = [*plan['summary'], f"From the description: {', '.join(made)}", *kept]
+        plan['facing'] = None
+        return plan
 
     def _plan_at_object(self, spec: Any, structure_id: str, point: dict[str, Any], planner: Callable[[list[tuple[float, float]], tuple[float, float]], dict]) -> tuple[dict, dict]:
         """``(object, plan)``: ``planner(outline, click)`` run with the object's outline and the click in the KITCHEN frame, in the frame the design will

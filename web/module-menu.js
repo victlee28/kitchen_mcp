@@ -77,8 +77,8 @@ export function createModuleMenu(ctx) {
     const intent = templateIntent(text);
     if (intent?.kind === 'shape') return redraw(text, `Chưa tạo được tủ chữ ${intent.shape} bằng lệnh. Hãy dùng "Tạo từ mẫu" ở cột trái, hoặc nói "tủ chữ I" để tạo một dãy dọc cạnh vật thể.`);
     if (intent?.kind === 'run-i') {
-      if (target.kind === 'structure') return runI();
-      return redraw(text, 'Muốn tạo dãy tủ dọc một cạnh: bấm chuột phải vào vật thể của mặt bằng (tường, cột, đồ) rồi ra lệnh.');
+      if (target.kind === 'structure') return runI(text);
+      if (!intent.described) return redraw(text, 'Muốn tạo dãy tủ dọc một cạnh: bấm chuột phải vào vật thể của mặt bằng (tường, cột, đồ) rồi ra lệnh.');
     }
     let body;
     try { body = interpretBody(text, rev, { scope: target.kind === 'structure' ? undefined : [target.id] }); } catch (e) { return ctx.setStatus(e.message, 'warn'); }
@@ -229,11 +229,11 @@ export function createModuleMenu(ctx) {
   }
 
   // A cabinet run against the clicked edge of a floorplan object: the server picks the edge and the facing, the preview shows the result.
-  async function runI() {
+  async function runI(text = '') {
     if (busy) return; const { id, rev } = ctx.getState();
     busy = true; ctx.setStatus('Tính dãy tủ dọc cạnh vật thể…');
     try {
-      const { status, data } = await call(`/api/designs/${id}/template`, { template: { kind: 'run-i', structureId: target.id, point: target.point }, baseRev: rev });
+      const { status, data } = await call(`/api/designs/${id}/template`, { template: { kind: 'run-i', structureId: target.id, point: target.point, ...(text.trim() ? { prompt: text.trim() } : {}) }, baseRev: rev });
       busy = false;
       if (status === 409) return stale('run-i');
       if (!data || data.error || !data.proposal) {

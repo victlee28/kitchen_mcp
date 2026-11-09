@@ -57,7 +57,7 @@ def add_module(spec: KitchenSpec, module: dict[str, Any], after_module: str | No
     """Thêm module. Nếu có `sau_module`, đặt ngay sau module đó (cùng tường, cùng tầng nếu không nói khác)."""
     s = _clone(spec)
     data = dict(module)
-    appliance = data.pop("appliance", None)       # {"type", "name"?, "dimensions"?, "position"?}: a device standing in this module
+    devices = [d for d in [data.pop("appliance", None), *(data.pop("appliances", None) or [])] if isinstance(d, dict)]   # devices standing in/on this module
     if after_module:
         ref = s.find(after_module)
         data.setdefault("wall", ref.wall)
@@ -77,8 +77,8 @@ def add_module(spec: KitchenSpec, module: dict[str, Any], after_module: str | No
     if close_gap:
         _shift(s, new, new.fromCorner, new.width, set())
     s.module.append(new)
-    if isinstance(appliance, dict):
-        s.appliances.append(from_data(Appliance, {**appliance, "id": new_id(s, "TB"), "module": new.id}))
+    for device in devices:                        # {"type", "name"?, "dimensions"?, "wall"?/"center"? for a sink, hob or tap}
+        s.appliances.append(from_data(Appliance, {**device, "id": new_id(s, "TB"), "module": new.id}))
     return from_data(KitchenSpec, to_data(s))
 
 

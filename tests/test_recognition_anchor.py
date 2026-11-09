@@ -126,5 +126,44 @@ class TestAnchored(unittest.TestCase):
             self.svc.recognize(self.did, self.source, "fake", anchor={"structureId": "STRUCT-nope", "point": {"x": 1, "z": 2}})
 
 
+
+
+class TestDescribedKitchen(unittest.TestCase):
+    """A sentence (no picture) becomes cabinets along the clicked edge: fridge, loft row, worktop colour, devices."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="described-"))
+        self.svc = KitchenService(self.tmp / "k.db", self.tmp / "renders")
+        col = elem("column_a", "column", "column", rect(1500, 2000, 1900, 4400), "Cot")
+        self.did = self.svc.import_floorplan(plan(ROOM, col))["id"]
+        self.svc.apply(self.did, {"op": "add", "module": {"type": "base", "wall": "back", "fromCorner": 0, "width": 600, "y": 0, "height": 840, "depth": 550}}, 1)
+        self.svc.bind_floorplan(self.did)
+        spec, self.rev = self.svc.store.get(self.did)
+        sc = geometry.compile_spec(spec)
+        place = roomctx.for_spec(spec, sc.lsau, sc.lphai).placement
+        x, z = place.to_room(-1500.0, 3000.0)
+        self.point = {"x": x, "z": z}
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_a_described_kitchen_has_the_fridge_loft_devices_and_materials(self):
+        r = self.svc.template(self.did, {"kind": "run-i", "structureId": "STRUCT-column_a", "point": self.point,
+                                         "prompt": "tạo tủ bếp có tủ lạnh, mặt đá đen, tủ dưới xanh rêu, có tủ nóc"}, self.rev)
+        self.assertTrue(r["proposal"]["applicable"])
+        self.svc.apply(self.did, r["operation"], r["baseRev"], "test", r["proposal"]["opHash"])
+        after, _ = self.svc.store.get(self.did)
+        types = {m.type for m in after.module if m.run}
+        self.assertTrue({"tall-fridge", "upper-loft", "base-sink", "base-cooktop", "upper-hood"} <= types)
+        self.assertEqual({t.type for t in after.appliances} >= {"fridge", "sink", "cooktop", "hood"}, True)
+        self.assertEqual((after.common.material["countertop"], after.common.material["base"]), ("Đá nhân tạo đen", "Xanh rêu"))
+        parts = {p.type for p in geometry.compile_spec(after).parts}
+        self.assertTrue({"fridge", "sink", "cooktop", "hood"} <= parts)
+
+    def test_without_a_prompt_the_old_plain_run_is_unchanged(self):
+        r = self.svc.template(self.did, {"kind": "run-i", "structureId": "STRUCT-column_a", "point": self.point}, self.rev)
+        ops = r["operation"]["ops"] if "ops" in r["operation"] else [r["operation"]]
+        self.assertTrue(all(o["module"]["type"] == "base" for o in ops if o["op"] == "add"))
+
 if __name__ == "__main__":
     unittest.main()
