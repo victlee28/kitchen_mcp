@@ -11,15 +11,15 @@ function readJob() { try { return localStorage.getItem(JOB_KEY) || null; } catch
 function keepJob(job) { try { if (job) localStorage.setItem(JOB_KEY, job); else localStorage.removeItem(JOB_KEY); } catch { /* no storage: the job lives until the page closes */ } }
 
 /**
- * ctx: { box, getState() -> {id, rev, spec}, afterChange(result), reload(), imageEdit({layer, material}), structure: {hide, isolate, showAll}, setStatus }
+ * ctx: { box, getState() -> {id, rev, spec}, afterChange(result), reload(), imageEdit({layer, material}), structure: {hide, isolate, showAll}, setStatus, keepOpenOn?(node) -> true when a press there must not close the popup (the 3D view decides on click) }
  */
 export function createModuleMenu(ctx) {
   const box = ctx.box;
   let pendingJob = readJob();   // a recognition waiting for Claude (inbox mode): survives closing the menu and reloading the page
-  let target = null; let step = null; let busy = false; let picking = false; let previewOfJob = null; let attached = null;   // attached: the picture chosen with 📎, sent together with the sentence when "Xem trước" is pressed   // picking: the native file dialog is open (the window blurs, the menu must stay)
+  let target = null; let step = null; let busy = false; let previewOfJob = null; let attached = null;   // attached: the picture chosen with 📎, sent together with the sentence when "Xem trước" is pressed   // picking: the native file dialog is open (the window blurs, the menu must stay)
   box.setAttribute('role', 'dialog'); box.hidden = true;
 
-  const close = () => { box.hidden = true; box.replaceChildren(); target = null; step = null; busy = false; picking = false; attached = null; };
+  const close = () => { box.hidden = true; box.replaceChildren(); target = null; step = null; busy = false; attached = null; };
   const header = (text) => el('div', { class: 'ctx-head' }, text, el('button', { type: 'button', class: 'ctx-x', title: 'Đóng (Esc)', onclick: close }, '×'));
   const err = (text) => el('p', { class: 'ctx-msg bad', role: 'alert' }, text);
 
@@ -48,12 +48,11 @@ export function createModuleMenu(ctx) {
     const kind = el('select', { 'aria-label': 'Loại ảnh tham chiếu', title: 'Loại ảnh tham chiếu' }, el('option', { value: 'photo' }, 'Ảnh chụp'), el('option', { value: 'drawing' }, 'Bản vẽ'));
     const file = el('input', { type: 'file', accept: 'image/png,image/jpeg,image/webp', hidden: true });
     file.addEventListener('change', () => {
-      picking = false;
       if (file.files[0]) { attached = { file: file.files[0], kind: kind.value }; redraw(input.value, ''); }
     });
     kind.addEventListener('change', () => { if (attached) attached.kind = kind.value; });
     if (attached) kind.value = attached.kind;
-    const attach = el('button', { type: 'button', class: 'ghost', title: 'Nhập ảnh chụp bếp hoặc bản vẽ làm tham chiếu: nhận diện ra các tủ rồi xem trước (thay cả thiết kế khi áp dụng)', onclick: () => { picking = true; file.click(); } }, '📎 Ảnh tham chiếu');
+    const attach = el('button', { type: 'button', class: 'ghost', title: 'Nhập ảnh chụp bếp hoặc bản vẽ làm tham chiếu: nhận diện ra các tủ rồi xem trước (thay cả thiết kế khi áp dụng)', onclick: () => file.click() }, '📎 Ảnh tham chiếu');
     const chip = attached ? el('div', { class: 'ctx-pending' }, el('span', {}, `📎 ${attached.file.name} — bấm "Xem trước" để nhận diện`),
       el('button', { type: 'button', class: 'ghost small', title: 'Bỏ ảnh', onclick: () => { attached = null; redraw(input.value, ''); } }, 'Bỏ ảnh')) : null;
     const waiting = pendingJob ? el('div', { class: 'ctx-pending' },
@@ -260,10 +259,8 @@ export function createModuleMenu(ctx) {
         el('button', { type: 'button', class: 'ghost', onclick: close }, 'Hủy')));
   }
 
-  document.addEventListener('pointerdown', (e) => { if (!box.hidden && !box.contains(e.target)) close(); }, true);
+  document.addEventListener('pointerdown', (e) => { if (!box.hidden && !box.contains(e.target) && !ctx.keepOpenOn?.(e.target)) close(); }, true);
   window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !box.hidden) { e.stopPropagation(); close(); } }, true);
-  window.addEventListener('blur', () => { if (!busy && !picking) close(); });
-  window.addEventListener('focus', () => setTimeout(() => { picking = false; }, 400));
   window.addEventListener('design-opened', () => { if (!busy) close(); });
 
   return {

@@ -9,7 +9,7 @@ import { isClick, pickTarget, sceneToMm } from './menu-logic.js';
 
 /**
  * opts: { container, moduleIds() -> string[] | null (null: nothing to pick yet), extraPickables() -> Object3D[],
- *         onSceneBuilt({structures, structurePickables}), onPick({kind:'module'|'structure', id} | null),
+ *         onSceneBuilt({structures, structurePickables}), onPick({kind:'module'|'structure', id} | null, {x, y}, menuTarget | null),
  *         onContext(target | null, {x, y}) }   target: see menu-logic.pickTarget; target.point is in millimetres.
  */
 export function createViewer(opts) {
@@ -63,10 +63,20 @@ export function createViewer(opts) {
   renderer.domElement.addEventListener('click', (ev) => {
     const ids = opts.moduleIds() || [];
     const hit = hitsAt(ev).find((h) => h.object.userData.structureId || (h.object.userData.module && ids.includes(h.object.userData.module)));
-    if (hit?.object.userData.structureId) opts.onPick({ kind: 'structure', id: hit.object.userData.structureId });
-    else if (hit) opts.onPick({ kind: 'module', id: hit.object.userData.module });
-    else opts.onPick(null);
+    const at = { x: ev.clientX, y: ev.clientY };
+    const menuTarget = contextTarget(ev);     // what a right click here would open the menu on (null = empty space)
+    if (hit?.object.userData.structureId) opts.onPick({ kind: 'structure', id: hit.object.userData.structureId }, at, menuTarget);
+    else if (hit) opts.onPick({ kind: 'module', id: hit.object.userData.module }, at, menuTarget);
+    else opts.onPick(null, at, null);
   });
+
+  function contextTarget(ev) {
+    const ids = opts.moduleIds();
+    if (!ids) return null;
+    const target = pickTarget(hitsAt(ev), ids);
+    if (target?.point) target.point = sceneToMm(target.point, doc?.units);
+    return target;
+  }
 
   // context menu: opens on the release of a right click (or Ctrl+click) that did not move. Windows fires `contextmenu` on release but
   // Linux/macOS on press, so the event itself cannot tell a click from the start of a camera drag (right-drag pans).
@@ -77,9 +87,7 @@ export function createViewer(opts) {
     const d = lastDown; lastDown = null;
     const ids = opts.moduleIds();
     if (!d || !(d.button === 2 || (d.button === 0 && d.ctrl)) || !isClick(d, { x: ev.clientX, y: ev.clientY, t: performance.now() }) || !ids) return;
-    const target = pickTarget(hitsAt(ev), ids);
-    if (target?.point) target.point = sceneToMm(target.point, doc?.units);
-    opts.onContext(target, { x: ev.clientX, y: ev.clientY });
+    opts.onContext(contextTarget(ev), { x: ev.clientX, y: ev.clientY });
   });
 
   return {

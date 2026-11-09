@@ -126,7 +126,8 @@ def main() -> int:
             opened = False
             for fy in (0.55, 0.65, 0.45, 0.75, 0.35):
                 for fx in (0.5, 0.4, 0.6, 0.3, 0.7, 0.2, 0.8):
-                    page.mouse.click(box["x"] + box["width"] * fx, box["y"] + box["height"] * fy, button="right")
+                    hit_at = (box["x"] + box["width"] * fx, box["y"] + box["height"] * fy)
+                    page.mouse.click(*hit_at, button="right")
                     page.wait_for_timeout(120)
                     if page.is_visible("#ctxMenu"):
                         opened = True
@@ -137,6 +138,17 @@ def main() -> int:
             if opened:
                 check("context menu has the command box", page.locator("#ctxMenu .ctx-cmd input[type=text]").count() == 1)
                 check("context menu inputs carry their aria-label attribute", bool(page.get_attribute("#ctxMenu .ctx-cmd input[type=text]", "aria-label")))
+                page.evaluate("window.dispatchEvent(new Event('blur'))")
+                page.wait_for_timeout(150)
+                check("the window losing focus leaves the context menu open", page.is_visible("#ctxMenu"))
+                page.mouse.click(*hit_at)                                                # left click on a cabinet: the menu follows it
+                page.wait_for_timeout(200)
+                check("left click on an object keeps the menu for that object", page.is_visible("#ctxMenu"))
+                page.mouse.click(box["x"] + 3, box["y"] + 3)                             # empty space
+                page.wait_for_timeout(200)
+                check("left click on empty space closes the menu", not page.is_visible("#ctxMenu"))
+                page.mouse.click(*hit_at, button="right")
+                page.wait_for_timeout(150)
                 page.keyboard.press("Escape")
                 page.wait_for_timeout(150)
                 check("Escape closes the context menu", not page.is_visible("#ctxMenu"))

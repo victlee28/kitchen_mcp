@@ -26,7 +26,12 @@ const viewer = createViewer({
   moduleIds: () => (state.spec ? state.spec.module.map((m) => m.id) : null),
   extraPickables: () => structSel.pickables(),
   onSceneBuilt: (k) => structSel.setScene(k.structures, k.structurePickables),
-  onPick: (target) => applyTarget(target),
+  // a left click while the popup is open: another object -> the popup moves to it; empty space -> it closes
+  onPick: (target, at, menuTarget) => {
+    applyTarget(target);
+    if (!moduleMenu.isOpen) return;
+    if (menuTarget) moduleMenu.open(menuTarget, at.x, at.y); else moduleMenu.close();
+  },
   onContext: (target, at) => {
     if (!target) { moduleMenu.close(); return; }
     applyTarget(target);
@@ -45,7 +50,7 @@ function applyTarget(target) {
 }
 window.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && !moduleMenu.isOpen && !/INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName || '')) structSel.clear(); });
 const moduleMenu = createModuleMenu({
-  box: $('ctxMenu'), setStatus,
+  box: $('ctxMenu'), setStatus, keepOpenOn: (node) => $('viewport').contains(node),   // a press in the 3D view is decided by the click handler above
   getState: () => ({ id: state.id, rev: state.rev, spec: state.spec }),
   afterChange: (res) => afterChange(res), reload: () => openDesign(state.id, true),
   structure: { hide: () => structSel.hideSelected(), isolate: () => structSel.isolateSelected(), showAll: () => structSel.showAll() },
