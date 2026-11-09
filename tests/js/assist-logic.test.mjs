@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { styleFromOptions, styleFromValue, interpretBody, describeInterpret, confirmBody, checkUpload, recognizeBody, recognizeJobBody, describeRecognition, templateIntent, recognitionLines } from '../../web/assist-logic.js';
+import { styleFromOptions, styleFromValue, interpretBody, describeInterpret, confirmBody, checkUpload, recognizeBody, recognizeJobBody, describeRecognition, templateIntent, mentionsReference, recognitionLines } from '../../web/assist-logic.js';
 
 const prop = (over = {}) => ({ id: 'd1', baseRev: 4, opHash: 'h', operation: { op: 'remove', id: 'TD1' }, applicable: true, unchanged: false,
   diff: { modules: { added: [], removed: ['TD1'], changed: {} }, other: [] }, validation: { introduced: [], resolved: [] }, ...over });
@@ -66,6 +66,12 @@ test('recognition answers cover every status and flag low-confidence modules', (
 test('template intent: a request for a run-I cabinet, with or without accents; other shapes are named; edits are not templates', () => {
   assert.deepEqual(templateIntent('tạo cho tôi tủ chữ I ở đây'), { kind: 'run-i' });
   assert.deepEqual(templateIntent('lam day tu doc canh nay'), { kind: 'run-i' });
+  assert.deepEqual(templateIntent('tao tu bep chu i giong voi hinh anh tham chieu cho vi tri nay'), { kind: 'run-i' });
+  assert.deepEqual(templateIntent('Tạo bếp chữ L'), { kind: 'shape', shape: 'L' });
+  assert.equal(templateIntent('xoá tủ bếp chữ I'), null);
+  assert.ok(mentionsReference('tao tu bep chu i giong voi hinh anh tham chieu'));
+  assert.ok(mentionsReference('làm theo ảnh'));
+  assert.ok(!mentionsReference('tạo tủ chữ I ở đây'));
   assert.deepEqual(templateIntent('Dựng TỦ CHỮ L quanh cột'), { kind: 'shape', shape: 'L' });
   assert.deepEqual(templateIntent('tạo tủ chữ U'), { kind: 'shape', shape: 'U' });
   assert.equal(templateIntent('xóa TD3'), null);

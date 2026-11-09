@@ -93,10 +93,16 @@ const plain = (t) => String(t ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g
 export function templateIntent(text) {
   const f = plain(text);
   if (!/\b(tao|lam|dung|ve|dat|them|xep|cho|can)\b/.test(f)) return null;
-  const shape = /\btu\s+chu\s+([lu])\b/.exec(f);
+  const shape = /\b(?:tu\s+)?(?:bep\s+)?chu\s+([lu])\b/.exec(f);
   if (shape) return { kind: 'shape', shape: shape[1].toUpperCase() };
-  if (/\btu\s+chu\s+i\b|\bday\s+tu\b|\btu\s+doc\b/.test(f)) return { kind: 'run-i' };
+  if (/\b(?:tu\s+)?(?:bep\s+)?chu\s+i\b|\bday\s+tu\b|\btu\s+doc\b/.test(f)) return { kind: 'run-i' };
   return null;
+}
+
+/** Does the sentence point at a reference picture ("giống hình ảnh tham chiếu", "theo ảnh mẫu")? Such a sentence needs an attached image. */
+export function mentionsReference(text) {
+  const f = plain(text);
+  return /\b(anh|hinh|hinh anh|ban ve)\s+(tham\s+chieu|mau|goc|nay|da\s+chon)\b|\bgiong\s+(voi\s+)?(anh|hinh|ban ve)\b|\btheo\s+(anh|hinh|ban ve)\b/.test(f);
 }
 
 /** Lines for a preview from a recognition answer, as [{kind, text}] (draft first). Empty when there is no draft. */

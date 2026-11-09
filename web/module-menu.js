@@ -2,7 +2,7 @@
 // The server decides what a change means (POST .../propose previews, POST .../ops saves); nothing here edits data directly.
 import { el } from './dom.js';
 import { request } from './api-client.js';
-import { interpretBody, describeInterpret, templateIntent, checkUpload, recognizeBody, recognizeJobBody, describeRecognition, recognitionLines } from './assist-logic.js';
+import { interpretBody, describeInterpret, templateIntent, mentionsReference, checkUpload, recognizeBody, recognizeJobBody, describeRecognition, recognitionLines } from './assist-logic.js';
 import { actionsFor, buildOp, describeProposal, layerFor, menuPosition, DOOR_STYLES, HANDLE_VARIANTS, MATERIAL_PRESETS } from './menu-logic.js';
 
 const call = (path, body) => request(path, 'POST', body);
@@ -16,10 +16,10 @@ function keepJob(job) { try { if (job) localStorage.setItem(JOB_KEY, job); else 
 export function createModuleMenu(ctx) {
   const box = ctx.box;
   let pendingJob = readJob();   // a recognition waiting for Claude (inbox mode): survives closing the menu and reloading the page
-  let target = null; let step = null; let busy = false; let picking = false; let previewOfJob = null;   // picking: the native file dialog is open (the window blurs, the menu must stay)
+  let target = null; let step = null; let busy = false; let picking = false; let previewOfJob = null; let attached = null;   // attached: the picture chosen with 📎, sent together with the sentence when "Xem trước" is pressed   // picking: the native file dialog is open (the window blurs, the menu must stay)
   box.setAttribute('role', 'dialog'); box.hidden = true;
 
-  const close = () => { box.hidden = true; box.replaceChildren(); target = null; step = null; busy = false; picking = false; };
+  const close = () => { box.hidden = true; box.replaceChildren(); target = null; step = null; busy = false; picking = false; attached = null; };
   const header = (text) => el('div', { class: 'ctx-head' }, text, el('button', { type: 'button', class: 'ctx-x', title: 'Đóng (Esc)', onclick: close }, '×'));
   const err = (text) => el('p', { class: 'ctx-msg bad', role: 'alert' }, text);
 
@@ -43,24 +43,32 @@ export function createModuleMenu(ctx) {
   // A free sentence about THIS module (a floorplan object has no module: the sentence then covers the whole design) ("đổi sang màu trắng", "rộng 800"): the server reads it, the preview shows the result, nothing is saved before Áp dụng.
   function commandBox(text = '', message = '', choices = []) {
     const input = el('input', { type: 'text', value: text, placeholder: target.kind === 'structure' ? 'Ra lệnh cho cả thiết kế… (Enter)' : `Ra lệnh cho ${target.id}… (Enter)`, autocomplete: 'off', 'aria-label': 'Câu lệnh cho module này' });
-    const run = () => command(input.value);
+    const run = () => (attached ? recognizeImage(attached.file, attached.kind, input.value) : command(input.value));
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); run(); } });
     const kind = el('select', { 'aria-label': 'Loại ảnh tham chiếu', title: 'Loại ảnh tham chiếu' }, el('option', { value: 'photo' }, 'Ảnh chụp'), el('option', { value: 'drawing' }, 'Bản vẽ'));
     const file = el('input', { type: 'file', accept: 'image/png,image/jpeg,image/webp', hidden: true });
-    file.addEventListener('change', () => { picking = false; if (file.files[0]) recognizeImage(file.files[0], kind.value, input.value); });
+    file.addEventListener('change', () => {
+      picking = false;
+      if (file.files[0]) { attached = { file: file.files[0], kind: kind.value }; redraw(input.value, ''); }
+    });
+    kind.addEventListener('change', () => { if (attached) attached.kind = kind.value; });
+    if (attached) kind.value = attached.kind;
     const attach = el('button', { type: 'button', class: 'ghost', title: 'Nhập ảnh chụp bếp hoặc bản vẽ làm tham chiếu: nhận diện ra các tủ rồi xem trước (thay cả thiết kế khi áp dụng)', onclick: () => { picking = true; file.click(); } }, '📎 Ảnh tham chiếu');
+    const chip = attached ? el('div', { class: 'ctx-pending' }, el('span', {}, `📎 ${attached.file.name} — bấm "Xem trước" để nhận diện`),
+      el('button', { type: 'button', class: 'ghost small', title: 'Bỏ ảnh', onclick: () => { attached = null; redraw(input.value, ''); } }, 'Bỏ ảnh')) : null;
     const waiting = pendingJob ? el('div', { class: 'ctx-pending' },
       el('span', {}, `Job ${pendingJob} đang chờ Claude. `),
       el('button', { type: 'button', class: 'primary', title: 'Lấy kết quả Claude đã trả lời và xem trước các tủ nhận diện được', onclick: () => updateJob(input.value) }, 'Cập nhật'),
       el('button', { type: 'button', class: 'ghost small', title: 'Bỏ job này', onclick: () => { setJob(null); redraw(input.value, ''); } }, 'Bỏ')) : null;
     return el('div', { class: 'ctx-cmd' }, input, el('button', { type: 'button', class: 'primary', onclick: run }, 'Xem trước'), attach, kind, file,
-      ...(waiting ? [waiting] : []),
+      ...(chip ? [chip] : []), ...(waiting ? [waiting] : []),
       ...(message ? [el('p', { class: 'ctx-msg warn' }, message)] : []),
       ...(choices.length ? [el('div', { class: 'chips' }, ...choices.map((c) => el('button', { type: 'button', class: 'ghost small', onclick: () => command(`${input.value.trim()} ${c}`) }, c)))] : []));
   }
 
   async function command(text) {
     if (busy) return; const { id, rev } = ctx.getState();
+    if (mentionsReference(text)) return redraw(text, 'Câu lệnh nhắc tới ảnh tham chiếu: hãy bấm "📎 Ảnh tham chiếu" để chọn ảnh trước, rồi bấm "Xem trước".');
     const intent = templateIntent(text);
     if (intent?.kind === 'shape') return redraw(text, `Chưa tạo được tủ chữ ${intent.shape} bằng lệnh. Hãy dùng "Tạo từ mẫu" ở cột trái, hoặc nói "tủ chữ I" để tạo một dãy dọc cạnh vật thể.`);
     if (intent?.kind === 'run-i') {
@@ -111,6 +119,7 @@ export function createModuleMenu(ctx) {
       busy = false;
       if (status === 409) return stale('cmd');
       if (!data || data.error) return redraw(text, data?.error || `Lỗi ${status}`);
+      attached = null;
       showRecognition(data, text);
     } catch (e) { busy = false; redraw(text, e.message); }
   }
