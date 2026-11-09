@@ -492,7 +492,8 @@ def default_views(spec: KitchenSpec, scene: Scene | None = None) -> dict[str, Vi
         planned = camera_plan.plan_views(faces, room, solids)
         views.update({key: ViewAngle(**v) for key, v in planned.items()})
         biggest = max(faces, key=lambda f: f.length)
-        views["perspective"] = ViewAngle(**{**planned[f"{biggest.key}-oblique"], "name": "Phối cảnh chéo"})
+        if not any(m.wall == "left" for m in spec.module):  # a U sees all three runs only from the open side: keep its own overview
+            views["perspective"] = ViewAngle(**{**planned[f"{biggest.key}-oblique"], "name": "Phối cảnh chéo"})
     if solids and faces:
         for key in ("overhead", "plan"):
             v = views[key]
