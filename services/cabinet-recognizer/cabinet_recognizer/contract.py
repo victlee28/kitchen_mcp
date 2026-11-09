@@ -9,9 +9,11 @@ Câu trả lời sai hợp đồng -> RecognizerError(validation); vỏ sẽ h�
 """
 from __future__ import annotations
 
+import re
 from typing import Any, TypedDict
 
 from .errors import invalid
+from .numeric import round_half_away
 
 MODULE_TYPES: tuple[str, ...] = (
     "upper", "upper-dish-rack", "upper-hood", "upper-open-shelf", "upper-glass", "upper-lift-up",
@@ -251,8 +253,32 @@ def _band(data: Any, band: str, lines: list[Line]) -> BandAnswer:
     }
 
 
+MANUAL_LINE = re.compile(r"^x(0|1|0?\.\d{1,4})$")     # "x0.412": a boundary the model places itself, as a fraction of the image width
+
+
+def add_manual_lines(data: dict[str, Any], measure: dict[str, Any]) -> None:
+    """Edge detection misses boundaries between same-coloured doors. A boundary or door split written ``x<fraction>`` is added to the
+    candidate lines of its band (in place), so every later step finds it by id like any detected line."""
+    for band in BANDS:
+        d = data.get(band)
+        if not isinstance(d, dict):
+            continue
+        refs = [b for b in d.get("boundaries", []) if isinstance(b, str)]
+        for m in d.get("modules", []):
+            if isinstance(m, dict):
+                refs += [x for x in m.get("doorSplits", []) if isinstance(x, str)]
+        lines = measure["vlines"][band]
+        have = {ln["id"] for ln in lines}
+        for ref in refs:
+            if MANUAL_LINE.match(ref) and ref not in have:
+                lines.append({"id": ref, "pos": int(round_half_away(float(ref[1:]) * measure["imageSize"][0])), "strength": 0.0})
+                have.add(ref)
+        lines.sort(key=lambda ln: ln["pos"])
+
+
 def parse_segmentation(data: Any, measure: dict[str, Any]) -> Segmentation:
     d = _obj(data, "segmentation")
+    add_manual_lines(d, measure)
     hpos = _ids(measure["hlines"])
     rows_raw = _obj(d.get("rows"), "rows")
     rows: dict[str, str] = {}

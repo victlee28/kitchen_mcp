@@ -47,6 +47,7 @@ Tasks:
 2. For each band list "boundaries": the lines that separate MODULES (carcasses), left end and right end included,
    ordered left to right. A double-door module has its middle gap as a doorSplit, NOT as a boundary.
    Decide by symmetry and function: doors above/below an appliance usually form one module.
+   If a real boundary or door split has NO candidate line (same-coloured doors), write it yourself as "x<fraction of image width>", e.g. "x0.412" (3-4 decimals), in boundaries / doorSplits.
 3. For each module (between consecutive boundaries) give:
    {{"type": one of {list(MODULE_TYPES)}, "doors": int, "doorSplits": [line ids inside the module],
      "drawers": int, "open": bool, "applianceBelow": null or "hood", "confidence": 0..1, "note": "short text"}}
