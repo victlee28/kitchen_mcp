@@ -8,7 +8,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from .numeric import round_half_away
-from . import roomctx, runs as runmod, structure_mesh
+from . import camera_plan, roomctx, runs as runmod, structure_mesh
 from .spec import ORIENT_OF_FACING, ViewAngle, KitchenSpec, Module, effective_handle, to_data
 from .errors import InvalidInput, require
 
@@ -412,8 +412,54 @@ def compile_spec(spec: KitchenSpec) -> Scene:
     return _Builder(spec).build()
 
 
+def cabinet_faces(spec: KitchenSpec, scene: Scene) -> list[camera_plan.Face]:
+    """The front of every run of cabinets (wall runs and explicit runs) in the kitchen frame, for the camera planner."""
+    faces: list[camera_plan.Face] = []
+
+    def face(key: str, name: str, mods: list, center, normal) -> None:
+        lo, hi = min(m.fromCorner for m in mods), max(m.endAt for m in mods)
+        faces.append(camera_plan.Face(key, name, center(lo, hi, max(m.depth for m in mods)), normal, hi - lo, max(m.y + m.height for m in mods)))
+
+    back = [m for m in spec.module if m.wall == "back"]
+    if back:
+        face("back-wall", "Chính diện tường sau", back, lambda lo, hi, d: (-(lo + hi) / 2, d), (0.0, 1.0))
+    right = [m for m in spec.module if m.wall == "right"]
+    if right:
+        face("right-wall", "Chính diện tường phải", right, lambda lo, hi, d: (-d, (lo + hi) / 2), (-1.0, 0.0))
+    left = [m for m in spec.module if m.wall == "left"]
+    if left:
+        face("left-wall", "Chính diện tường trái", left, lambda lo, hi, d: (-scene.lsau + d, (lo + hi) / 2), (1.0, 0.0))
+    for run in spec.runs:
+        mods = [m for m in spec.module if m.run == run.id]
+        if mods:
+            fr = runmod.RunFrame(run.id, run.x, run.z, run.yaw)
+            (ox, oz), (nx, nz) = fr.to_world(0, 0), fr.to_world(0, 1)
+            face(f"run-{run.id}", f"Chính diện dãy tủ {run.id}", mods, lambda lo, hi, d, fr=fr: fr.to_world((lo + hi) / 2, d), (nx - ox, nz - oz))
+    return faces
+
+
+def room_solids(spec: KitchenSpec, scene: Scene) -> tuple[list[tuple[float, float]] | None, list[camera_plan.Obstacle]]:
+    """The room's floor outline and the solids of the imported floorplan that are not cabinets, in the kitchen frame; ``(None, [])`` without a floorplan."""
+    try:
+        ctx = roomctx.for_spec(spec, scene.lsau, scene.lphai)
+    except ValueError:
+        return None, []
+    if ctx is None:
+        return None, []
+    to_kitchen = ctx.placement.to_kitchen
+    room = [to_kitchen(float(q["x"]), float(q["z"])) for q in ctx.floorplan.get("outline", [])]
+    solids = []
+    for st in ctx.structures:
+        outline = tuple(to_kitchen(float(p["x"]), float(p["z"])) for p in st["outline"])
+        if len(outline) >= 3 and float(st.get("height") or 0) > 0:
+            base = float(st.get("base") or 0.0)
+            solids.append(camera_plan.Obstacle(st["id"], st["kind"], outline, base, base + float(st["height"])))
+    return (room if len(room) >= 3 else None), solids
+
+
 def default_views(spec: KitchenSpec, scene: Scene | None = None) -> dict[str, ViewAngle]:
-    """Bộ góc nhìn chuẩn khi spec chưa khai báo gocNhin (m)."""
+    """Bộ góc nhìn chuẩn khi spec chưa khai báo gocNhin (m). Camera ở độ cao mắt 1,6 m; khi có mặt bằng hoặc dãy tủ tự do thì mỗi dãy có góc chính
+    diện + góc chéo đặt trong phòng, và những vật thể không phải tủ (tường, cột, đồ) chắn giữa camera và tủ nằm trong ``hide`` của góc đó."""
     scene = scene or compile_spec(spec)
     openings, hi = scene.bounds()
     cx, cz = (openings[0] + hi[0]) / 2000, (openings[2] + hi[2]) / 2000
@@ -431,15 +477,27 @@ def default_views(spec: KitchenSpec, scene: Scene | None = None) -> dict[str, Vi
     if any(m.wall == "back" for m in spec.module):
         xs = [-(m.endAt) / 1000 for m in spec.module if m.wall == "back"] + [0]
         mx = (min(xs) + max(xs)) / 2
-        views["back-wall"] = ViewAngle(name="Chính diện tường sau", position=(mx, 1.35, span * 1.4 + 0.6), lookAt=(mx, 1.25, 0.2), verticalFov=48)
+        views["back-wall"] = ViewAngle(name="Chính diện tường sau", position=(mx, camera_plan.EYE / 1000, span * 1.4 + 0.6), lookAt=(mx, 1.25, 0.2), verticalFov=48)
     if any(m.wall == "right" for m in spec.module):
         zs = [m.endAt / 1000 for m in spec.module if m.wall == "right"] + [0]
         mz = (min(zs) + max(zs)) / 2
-        views["right-wall"] = ViewAngle(name="Chính diện tường phải", position=(-(span * 1.4 + 0.6), 1.35, mz), lookAt=(0, 1.25, mz), verticalFov=48)
+        views["right-wall"] = ViewAngle(name="Chính diện tường phải", position=(-(span * 1.4 + 0.6), camera_plan.EYE / 1000, mz), lookAt=(0, 1.25, mz), verticalFov=48)
     if any(m.wall == "left" for m in spec.module):
         zs = [m.endAt / 1000 for m in spec.module if m.wall == "left"] + [0]
         mz = (min(zs) + max(zs)) / 2
-        views["left-wall"] = ViewAngle(name="Chính diện tường trái", position=(-scene.lsau / 1000 + span * 1.4 + 0.6, 1.35, mz), lookAt=(-scene.lsau / 1000, 1.25, mz), verticalFov=48)
+        views["left-wall"] = ViewAngle(name="Chính diện tường trái", position=(-scene.lsau / 1000 + span * 1.4 + 0.6, camera_plan.EYE / 1000, mz), lookAt=(-scene.lsau / 1000, 1.25, mz), verticalFov=48)
+    room, solids = room_solids(spec, scene)
+    faces = cabinet_faces(spec, scene)
+    if faces and (room is not None or spec.runs):
+        planned = camera_plan.plan_views(faces, room, solids)
+        views.update({key: ViewAngle(**v) for key, v in planned.items()})
+        biggest = max(faces, key=lambda f: f.length)
+        views["perspective"] = ViewAngle(**{**planned[f"{biggest.key}-oblique"], "name": "Phối cảnh chéo"})
+    if solids and faces:
+        for key in ("overhead", "plan"):
+            v = views[key]
+            views[key] = ViewAngle(name=v.name, position=v.position, lookAt=v.lookAt, verticalFov=v.verticalFov,
+                                   hide=camera_plan.hidden_for(v.position, faces, solids))
     return views
 
 

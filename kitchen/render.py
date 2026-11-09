@@ -17,6 +17,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+from dataclasses import replace
 from pathlib import Path
 
 import numpy as np
@@ -251,6 +252,8 @@ _DARK = np.array([0.35, 0.85, 0.40]) / np.linalg.norm([0.35, 0.85, 0.40])
 def render_view(scene: Scene, view: ViewAngle, out_dir: Path, width: int = 1280, height: int = 960,
                 legend: dict | None = None, colors: list | None = None, meta: dict | None = None) -> dict:
     out_dir.mkdir(parents=True, exist_ok=True)
+    if view.hide:  # structures that would stand between this camera and the cabinets
+        scene = replace(scene, meshes=[m for m in scene.meshes if m.module not in view.hide])
     camera = Camera(view, width, height)
     zbuf, pid, nid, mesh_n = rasterize(scene, camera)
     nparts = len(scene.parts)

@@ -29,7 +29,7 @@ export function createViewer(opts) {
   controls.enableDamping = true;
   const root = new THREE.Group(); scene3.add(root);
   const raycaster = new THREE.Raycaster(); const pointer = new THREE.Vector2();
-  let meshes = []; let doc = null; let views = {}; let selected = null;
+  let meshes = []; let doc = null; let views = {}; let hiddenByView = []; let selected = null;
 
   function resize() {
     const w = container.clientWidth, h = container.clientHeight;
@@ -95,7 +95,7 @@ export function createViewer(opts) {
     /** Build the scene from a three.js scene document (/api/designs/<id>/threejs). */
     setDocument(next) {
       doc = next;
-      root.clear();
+      root.clear(); hiddenByView = [];
       const k = buildKitchen(doc, THREE, { RectAreaLightUniformsLib });
       root.add(k.root);
       meshes = k.pickables;
@@ -107,6 +107,11 @@ export function createViewer(opts) {
     /** Move the camera to the named view (ignored when there is none). */
     setView(key) {
       const v = views[key]; if (!v) return;
+      // structures standing between this camera and the cabinets (walls, columns, furniture) are hidden for this view only
+      const hide = new Set(v.hide || []);
+      for (const o of hiddenByView) o.visible = true;
+      hiddenByView = [];
+      if (hide.size) root.traverse((o) => { if (o.userData && hide.has(o.userData.structureId) && o.visible) { o.visible = false; hiddenByView.push(o); } });
       camera.position.set(...v.position); camera.fov = v.verticalFov; camera.updateProjectionMatrix();
       controls.target.set(...v.lookAt); controls.update();
     },

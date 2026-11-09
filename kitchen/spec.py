@@ -274,6 +274,7 @@ class ViewAngle(_Base):
     position: tuple[float, float, float]
     lookAt: tuple[float, float, float]
     verticalFov: float = Field(default=50, gt=1, lt=170)
+    hide: list[str] = Field(default_factory=list, description="Ids of floorplan structures (STRUCT-...) left out of this view because they stand between the camera and the cabinets")
 
 
 class KitchenSpec(_Base):
