@@ -61,6 +61,27 @@ def _job_payload(job: Path, status: dict[str, Any]) -> dict[str, Any]:
     return out
 
 
+class NoModelClient:
+    """Stands in when no model client can be built (no API key): ``/recognize`` answers with that error, while ``/jobs`` (the inbox, which
+    never calls a model) keeps working."""
+
+    def __init__(self, error: RecognizerError) -> None:
+        self.error = error
+
+    def complete(self, step: str, prompt: str, images: list[bytes]) -> str:
+        raise self.error
+
+
+def client_or_none(config: Config) -> VisionClient:
+    try:
+        return make_client(config)
+    except RecognizerError as e:
+        if e.code != "missing-api-key":
+            raise
+        print(f"Chua co khoa API ({e.message}): /recognize se bao loi, /jobs (hop thu) van chay.")
+        return NoModelClient(e)
+
+
 def make_handler(config: Config, client: VisionClient, jobs_root: Path | None = None) -> type[BaseHTTPRequestHandler]:
     root = jobs_root or Path("jobs")
 
@@ -140,7 +161,7 @@ def main() -> None:
     ap.add_argument("--jobs", default="jobs", help="thư mục chứa job của chế độ hộp thư (POST /jobs)")
     a = ap.parse_args()
     config = Config.from_env()
-    server = ThreadingHTTPServer((a.host, a.port), make_handler(config, make_client(config), Path(a.jobs)))
+    server = ThreadingHTTPServer((a.host, a.port), make_handler(config, client_or_none(config), Path(a.jobs)))
     print(f"cabinet_recognizer on http://{a.host}:{a.port}  ({config.provider}/{config.model})")
     server.serve_forever()
 

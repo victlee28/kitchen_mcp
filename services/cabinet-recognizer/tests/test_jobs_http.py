@@ -10,7 +10,8 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 
 from cabinet_recognizer.config import Config
-from cabinet_recognizer.http_server import make_handler
+from cabinet_recognizer.errors import RecognizerError
+from cabinet_recognizer.http_server import NoModelClient, client_or_none, make_handler
 from cabinet_recognizer.vision import ReplayClient
 
 HERE = Path(__file__).parent
@@ -68,6 +69,29 @@ class JobsTest(unittest.TestCase):
         status, body = self.call("/jobs", {"imageBase64": base64.b64encode(b"nope").decode()})
         self.assertEqual((status, body["error"]["code"]), (422, "bad-image"))
         self.assertEqual(set(self.root.iterdir()), before)
+
+
+class NoKeyTest(unittest.TestCase):
+    def test_service_starts_without_an_api_key_and_still_opens_jobs(self):
+        env = {"RECOG_PROVIDER": "openai", "RECOG_API_KEY": "", "OPENAI_API_KEY": ""}
+        import os
+        from unittest import mock
+        with mock.patch.dict(os.environ, env):
+            config = Config.from_env()
+            client = client_or_none(config)
+        self.assertIsInstance(client, NoModelClient)
+        with self.assertRaises(RecognizerError):
+            client.complete("scene", "q", [])
+        with tempfile.TemporaryDirectory() as tmp:
+            server = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(config, client, Path(tmp)))
+            threading.Thread(target=server.serve_forever, daemon=True).start()
+            try:
+                req = urllib.request.Request(f"http://127.0.0.1:{server.server_address[1]}/jobs", json.dumps({"imageBase64": base64.b64encode(IMAGE).decode()}).encode(),
+                                             {"content-type": "application/json"})
+                with urllib.request.urlopen(req, timeout=60) as r:
+                    self.assertEqual((r.status, json.load(r)["state"]), (202, "waiting"))
+            finally:
+                server.shutdown(); server.server_close()
 
 
 if __name__ == "__main__":

@@ -64,7 +64,7 @@ def start_recognizer(python: str, port: int, dotenv: dict[str, str], log_dir: Pa
         return None, url
     env = {**dotenv, **os.environ, "PYTHONUTF8": "1", "PYTHONPATH": str(RECOGNIZER_DIR) + os.pathsep + os.environ.get("PYTHONPATH", "")}
     if not any(env.get(k) for k in KEY_VARS) and env.get("RECOG_PROVIDER", "anthropic") != "ollama":
-        say("Canh bao: chua co RECOG_API_KEY / ANTHROPIC_API_KEY / OPENAI_API_KEY trong .env: nhan dien anh se bao loi khoa.")
+        say("Canh bao: chua co RECOG_API_KEY / ANTHROPIC_API_KEY / OPENAI_API_KEY trong .env: nhan dien bang API se bao loi khoa (che do hop thu KITCHEN_RECOGNIZER=inbox van dung duoc).")
     log_path = log_dir / "recognizer.log"
     log = log_path.open("a", encoding="utf-8")
     proc = subprocess.Popen([python, "-m", "cabinet_recognizer.http_server", "--port", str(port)], cwd=RECOGNIZER_DIR, env=env,
