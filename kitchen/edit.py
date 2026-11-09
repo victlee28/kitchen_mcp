@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import Any
 
 from .numeric import round_half_away
-from .spec import KitchenSpec, Module, Run, from_data, to_data
+from .spec import Appliance, KitchenSpec, Module, Run, from_data, to_data
 from .errors import InvalidInput, NotFound
 
 
@@ -57,6 +57,7 @@ def add_module(spec: KitchenSpec, module: dict[str, Any], after_module: str | No
     """Thêm module. Nếu có `sau_module`, đặt ngay sau module đó (cùng tường, cùng tầng nếu không nói khác)."""
     s = _clone(spec)
     data = dict(module)
+    appliance = data.pop("appliance", None)       # {"type", "name"?, "dimensions"?, "position"?}: a device standing in this module
     if after_module:
         ref = s.find(after_module)
         data.setdefault("wall", ref.wall)
@@ -76,6 +77,8 @@ def add_module(spec: KitchenSpec, module: dict[str, Any], after_module: str | No
     if close_gap:
         _shift(s, new, new.fromCorner, new.width, set())
     s.module.append(new)
+    if isinstance(appliance, dict):
+        s.appliances.append(from_data(Appliance, {**appliance, "id": new_id(s, "TB"), "module": new.id}))
     return from_data(KitchenSpec, to_data(s))
 
 

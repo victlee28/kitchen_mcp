@@ -164,8 +164,14 @@
       "s": 0.0,
       "y": 0.0,
       "height": 2100.0,
-      "depth": 560,
-      "name": "Tu lanh"
+      "depth": 640.0,
+      "name": "Tu lanh",
+      "niche": 1850.0,
+      "appliance": {
+       "type": "fridge",
+       "name": "Tủ lạnh",
+       "dimensions": "800 × 1800 × 620"
+      }
      }
     ],
     "dropped": 0
@@ -288,7 +294,13 @@
       "s": 0.0,
       "y": 0.0,
       "height": 2680,
-      "depth": 550
+      "depth": 640.0,
+      "niche": 1850.0,
+      "appliance": {
+       "type": "fridge",
+       "name": "Tủ lạnh",
+       "dimensions": "620 × 1800 × 620"
+      }
      }
     ],
     "dropped": 0

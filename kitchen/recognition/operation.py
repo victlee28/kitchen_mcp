@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from ..numeric import round_half_away
 from ..spec import KitchenSpec, to_data
 from .draft import Draft, DraftModule
 
@@ -29,6 +30,22 @@ def _geometry(m: DraftModule, common: dict[str, Any]) -> tuple[float, float, flo
     return (y if m.y is None else m.y), own or height, m.depth or depth
 
 
+FRIDGE_NICHE = 1850.0        # clear height of a fridge bay (a 1800 mm fridge plus its gap); the doors above it are the cabinet over the fridge
+FRIDGE_HEIGHT = 1800.0
+FRIDGE_DEPTH = 620.0
+FRIDGE_MODULE_DEPTH = 640.0  # a fridge bay is deeper than the base cabinets beside it
+FRIDGE_SIDE_GAP = 100.0      # side panels + clearance taken off the bay's width
+FRIDGE_MAX_WIDTH = 920.0     # a side-by-side fridge; a recognised bay is often wider because it includes the panels around the fridge
+
+
+def fridge_bay(m: DraftModule, height: float, depth: float) -> tuple[dict[str, Any], dict[str, Any]]:
+    """The extra fields of a ``tall-fridge`` cabinet and the fridge standing in it: ``({"niche", "depth"}, appliance)``."""
+    niche = min(m.niche or FRIDGE_NICHE, height - 200.0)
+    width = round_half_away(min(max(m.width - FRIDGE_SIDE_GAP, 500.0), FRIDGE_MAX_WIDTH), -1)
+    appliance = {"type": "fridge", "name": "Tủ lạnh", "dimensions": f"{width:g} × {min(FRIDGE_HEIGHT, niche - 50.0):g} × {FRIDGE_DEPTH:g}"}
+    return {"niche": niche, "depth": max(depth, FRIDGE_MODULE_DEPTH)}, appliance
+
+
 def draft_operation(spec: KitchenSpec, draft: Draft) -> dict[str, Any]:
     """The design with its cabinets replaced by the draft's; room, appliances and the rest of ``common`` stay. Modules without a position
     follow the previous one on the same wall and storey (in the order given)."""
@@ -37,6 +54,7 @@ def draft_operation(spec: KitchenSpec, draft: Draft) -> dict[str, Any]:
     cursor: dict[tuple[str, str], float] = {}
     count: dict[str, int] = {}
     modules: list[dict[str, Any]] = []
+    appliances: list[dict[str, Any]] = []
     for m in draft.modules:
         storey = _storey(m)
         key = (m.wall, storey)
@@ -48,9 +66,13 @@ def draft_operation(spec: KitchenSpec, draft: Draft) -> dict[str, Any]:
                                  "y": y, "height": height, "depth": depth}
         if m.label:
             entry["name"] = m.label
+        if m.type == "tall-fridge":
+            extra, fridge = fridge_bay(m, height, depth)
+            entry.update(extra)
+            appliances.append({**fridge, "id": f"TB{len(appliances) + 1}", "module": entry["id"]})
         modules.append(entry)
     data["module"] = modules
-    data["appliances"] = []                       # they pointed at the old module ids
+    data["appliances"] = appliances               # the old ones pointed at the old module ids
     if draft.ceiling is not None:
         common["ceiling"] = draft.ceiling
     if draft.materials:
@@ -81,5 +103,9 @@ def line_modules(draft: Draft, common: dict[str, Any], wall: str = "back") -> tu
         entry: dict[str, Any] = {"type": m.type, "width": m.width, "s": length - start - m.width, "y": y, "height": height, "depth": depth}
         if m.label:
             entry["name"] = m.label
+        if m.type == "tall-fridge":
+            extra, fridge = fridge_bay(m, height, depth)
+            entry.update(extra)
+            entry["appliance"] = fridge
         out.append(entry)
     return out, len(draft.modules) - len(placed)

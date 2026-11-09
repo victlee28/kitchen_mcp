@@ -90,8 +90,9 @@ def plan_on_line(spec: KitchenSpec, line: Line, modules: list[dict[str, Any]], c
     for m in sorted(modules, key=lambda item: item["s"]):
         entry = {"type": m["type"], "wall": "island", "run": run["id"], "fromCorner": float(m["s"]), "width": float(m["width"]), "y": float(m["y"]),
                  "height": float(m["height"]), "depth": float(m["depth"])}
-        if m.get("name"):
-            entry["name"] = m["name"]
+        for key in ("name", "niche", "appliance"):
+            if m.get(key):
+                entry[key] = m[key]
         ops.append({"op": "add", "closeGap": False, "module": entry})
         reach = max(reach, entry["fromCorner"] + entry["width"])
     summary = [f"{len(modules)} cabinets, {reach:g} mm, along an edge at {run['yaw']:g}° (run {run['id']})"]
