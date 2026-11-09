@@ -62,13 +62,24 @@ def _horizontal(gray: np.ndarray, box: dict[str, float]) -> list[tuple[int, floa
     return _peaks(gy.mean(axis=1), y0)
 
 
+END_TOLERANCE = 0.012      # an edge detected within this fraction of the width of a run end is that end
+
+
+def _with_ends(found: list[tuple[int, float]], box: dict[str, float], width: int) -> list[tuple[int, float]]:
+    """The run's own left and right ends as extra candidates (strength 0, numbered after the detected lines) when no edge was detected there:
+    a white door against a white wall has no edge, yet the run still starts there and a module boundary must be able to name it."""
+    tol = END_TOLERANCE * width
+    extra = [(x, 0.0) for x in (int(box["left"] * width), int(box["right"] * width)) if all(abs(p - x) > tol for p, _ in found)]
+    return found + extra
+
+
 def measure(image: bytes, layout: dict[str, Any]) -> dict[str, Any]:
     """Tìm đường ứng viên trong hai dải tủ. Tủ trên đo ở 20-65% chiều cao dải
     (tránh máy hút mùi ở đáy), tủ dưới ở 25-85% (vùng cánh, tránh mặt đá và chân)."""
     gray = load_gray(image)
     h, w = gray.shape
-    up = _vertical(gray, layout["upper"], (0.20, 0.65))
-    base = _vertical(gray, layout["base"], (0.25, 0.85))
+    up = _with_ends(_vertical(gray, layout["upper"], (0.20, 0.65)), layout["upper"], w)
+    base = _with_ends(_vertical(gray, layout["base"], (0.25, 0.85)), layout["base"], w)
     rows = sorted(_horizontal(gray, layout["upper"]) + _horizontal(gray, layout["base"]))
     merged: list[tuple[int, float]] = []
     for y, s in rows:
