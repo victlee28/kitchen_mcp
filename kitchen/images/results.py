@@ -157,13 +157,13 @@ class Results(Component):
         if j["kind"] == "geometry_edit":
             first = (r.get("tasks") or [None])[0]
             return self.owner.submit(NewJob(j["design_id"], j["view"], instruction=(first or {}).get("instruction") or "", mode="design",
-                                      backend=j["backend"], reference=reference, kind="geometry_edit", workflow=r.get("workflow"), seed=seed,
+                                      backend=j["backend"], reference=reference, kind="geometry_edit", seed=seed,
                                       params=r.get("params"), preview=preview, geometry_items=r.get("originalGeometry"),
                                       operation=r.get("operation"), lighting=r.get("lighting")))
         tasks = [dict(t) for t in task_inputs(r.get("tasks") or [])] or None
         return self.owner.submit(NewJob(j["design_id"], j["view"], target=None if tasks else r.get("targetLayer"), instruction=r.get("instruction", ""),
                                   mode=j["mode"], material=None if tasks else r.get("material"), backend=j["backend"], reference=reference,
-                                  kind=j["kind"], workflow=r.get("workflow"), seed=seed, params=r.get("params"), tasks=tasks,
+                                  kind=j["kind"], seed=seed, params=r.get("params"), tasks=tasks,
                                   preview=preview, lighting=r.get("lighting")))
 
     def get(self, jid: str) -> dict:

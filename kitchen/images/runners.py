@@ -1,4 +1,4 @@
-"""Running a job on a backend (recolor, job-package, ComfyUI, Gemini). Workers run in a thread and never leave a job stuck on "running"."""
+"""Run image jobs. Workers run in a thread and never leave a job in the running state."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -13,7 +13,7 @@ from ..errors import InvalidInput
 from .packages import Packages
 from .results import Results
 from .request import JobRequest, size_of
-from .common import Component, JobEnv, FEATHER_PX
+from .common import Component, JobEnv
 
 
 class Runners(Component):
@@ -44,8 +44,8 @@ class Runners(Component):
                 return self.results.finish(jid, {"backend": {"name": "recolor", "color": used}})
             if b == "job-package":
                 return self.packages.export_package(jid, jdir, req)
-            if b in ("comfyui", "gemini"):
-                fn = self._run_comfy if b == "comfyui" else self._run_gemini
+            if b == "gemini":
+                fn = self._run_gemini
                 t = threading.Thread(target=self._run_guarded, args=(fn, jid, jdir, req), daemon=True, name=jid)
                 self.env.threads[jid] = t
                 t.start()
@@ -63,31 +63,6 @@ class Runners(Component):
             self.store.update_job(jid, result={"geminiPrompt": text})
             info = cli.generate(text, images, jdir / "raw.png", size_of(req))
             self.results.finish(jid, {"backend": {"name": "gemini", **info}})
-        except BackendError as e:
-            self.store.update_job(jid, f"error:{e.code}", error=str(e))
-
-    def _run_comfy(self, jid: str, jdir: Path, req: JobRequest):
-        try:
-            wf = backends.load_workflow(req["workflow"])
-            cli = backends.ComfyUI(self.config)
-            tasks = req.get("tasks") or []
-            if req["kind"] == "edit" and len(tasks) > 1:  # nhiều việc: chạy nối tiếp, ảnh ghép của việc trước làm ảnh vào việc sau
-                cur = imaging.read(jdir / "reference.png", "RGB")
-                infos = []
-                for i, t in enumerate(tasks, 1):
-                    Image.fromarray(cur).save(jdir / f"vao_{i}.png")
-                    src = {"reference": f"vao_{i}.png", "mask": f"mask_{i}.png", "lines": "lines_inv.png", "depth": "depth.png"}
-                    imgs = {k: cli.upload(jdir / src[k], f"{jid}_{i}_{k}.png") for k in wf["kitchen"].get("image", [])}
-                    vals = {**self.packages.values(req, wf), "prompt": t.get("prompt", ""), "seed": req["seed"] + i - 1}
-                    infos.append(cli.run(backends.build_prompt(wf, imgs, vals, backends.model_defaults(self.config)), jdir / f"raw_{i}.png"))
-                    raw_i, _ = imaging.load_rgb(jdir / f"raw_{i}.png", size_of(req))
-                    cur = imaging.composite(cur, raw_i, imaging.alpha(imaging.read(jdir / f"target_{i}.png", "L") > 127, FEATHER_PX))
-                Image.fromarray(cur).save(jdir / "raw.png")
-                return self.results.finish(jid, {"backend": {"name": "comfyui", "url": cli.url, "workflow": req["workflow"], "step": infos}})
-            files = {"reference": "reference.png", "mask": "mask.png", "lines": "lines_inv.png", "depth": "depth.png"}
-            imgs = {k: cli.upload(jdir / files[k], f"{jid}_{k}.png") for k in wf["kitchen"].get("image", [])}
-            info = cli.run(backends.build_prompt(wf, imgs, self.packages.values(req, wf), backends.model_defaults(self.config)), jdir / "raw.png")
-            self.results.finish(jid, {"backend": {"name": "comfyui", "url": cli.url, "workflow": req["workflow"], **info}})
         except BackendError as e:
             self.store.update_job(jid, f"error:{e.code}", error=str(e))
 

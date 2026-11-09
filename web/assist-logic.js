@@ -49,9 +49,10 @@ export function checkUpload(file) {
   return null;
 }
 
-export function recognizeBody(kind, name, mediaType, base64, baseRev) {
+export function recognizeBody(kind, name, mediaType, base64, baseRev, note = '') {
   if (kind !== 'photo' && kind !== 'drawing') throw new Error('kind phải là photo hoặc drawing');
-  return { source: { kind, name, mediaType, imageBase64: base64 }, baseRev };
+  const hint = String(note ?? '').replace(/\s+/g, ' ').trim().slice(0, 500);   // same limit as the server; empty = not sent
+  return { source: { kind, name, mediaType, imageBase64: base64, ...(hint ? { note: hint } : {}) }, baseRev };
 }
 
 const pct = (c) => `${Math.round((c ?? 1) * 100)}%`;

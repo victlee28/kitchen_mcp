@@ -1,16 +1,16 @@
-"""Render ảnh điều khiển (control maps) cho AI: nét, depth, normal, mask — không cần GPU/trình duyệt.
+"""Render AI control maps: edges, depth, normals and masks without a GPU or browser.
 
-Rasterizer phần mềm bằng numpy trên các khối hộp do compiler sinh ra:
-- lines.png      : nét đen trên nền trắng (biên chi tiết + cạnh gãy khối)
-- depth.png      : 8-bit, gần = sáng (quy ước ControlNet depth); depth16.png: 16-bit, mm
-- normal.png     : normal trong hệ camera, RGB = n*0.5+0.5 (x phải, y lên, z hướng về camera)
-- seg.png        : mask theo loại chi tiết (màu cố định, xem legend.json)
-- seg_module.png : mask theo module (mỗi module một màu, xem legend.json)
-- seg_structure.png : mask riêng cho phần tử của mặt bằng đã nhập (tường, cột, cửa, thang… theo loại; còn lại đen)
-- camera.json    : nội/ngoại tham số camera để chiếu ngược sau này
-- instance.png   : 16-bit, giá trị = chỉ số chi tiết + 1 (0 = nền); bảng tra trong instances.json (ID chi tiết = layer ID)
-- albedo.png     : màu vật liệu × đổ bóng đơn giản, cùng rasterizer nên khớp mask từng pixel (ảnh khởi tạo / xem trước)
-- manifest.json  : designId, rev, renderKey (băm hình học + camera + kích thước), danh sách file
+- Software rasterizer using compiler-generated boxes:
+- lines.png      : black outlines on white (part boundaries and box edges)
+- depth.png      : 8-bit, nearer surfaces are brighter; depth16.png: 16-bit depth in millimetres
+- normal.png     : camera-space normals, RGB = n*0.5+0.5 (x right, y up, z toward camera)
+- seg.png        : mask by part type (fixed colors; see legend.json)
+- seg_module.png : mask by module (one color per module; see legend.json)
+- seg_structure.png : mask for imported floorplan objects (walls, columns, doors, stairs, etc.)
+- camera.json    : camera intrinsics and extrinsics for back-projection
+- instance.png   : 16-bit part index + 1 (0 = background); lookup in instances.json (part IDs are layer IDs)
+- albedo.png     : material colors with simple shading, pixel-aligned with masks (initial image / preview)
+- manifest.json  : designId, revision, renderKey (geometry + camera + dimensions hash), and file list
 """
 from __future__ import annotations
 

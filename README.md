@@ -20,6 +20,7 @@ copy .env.example .env      # tùy chọn: DEEPSEEK_API_KEY... (.env được n�
 ```
 
 - Web editor: chạy `run.bat` rồi mở http://localhost:8080/web/ (log ở `logs\web.log`).
+- Chạy nhanh (Windows, dùng `.venv`): `python run.py` = web editor + dịch vụ nhận diện `cabinet-recognizer` (cổng 8765, nhật ký `logs/recognizer.log`); `python run.py mcp` = MCP server (stdio) + dịch vụ nhận diện chạy nền; thêm `--no-recognizer` để bỏ dịch vụ nhận diện, `--no-browser` để không mở trình duyệt. Khóa `RECOG_*` nằm trong `.env` và chỉ dịch vụ nhận diện đọc. Cấu hình Claude Desktop có thể trỏ `args` tới `run.py mcp` thay cho `server.py`.
 - MCP (stdio): `python server.py` hoặc `kitchen-design-mcp`. Ví dụ cấu hình Claude Desktop:
 
 ```json
@@ -53,7 +54,7 @@ copy .env.example .env      # tùy chọn: DEEPSEEK_API_KEY... (.env được n�
 | `kitchen/moldings.py` | Phào cổ điển: preset mặt cắt, đường chạy tự tính theo dãy tủ (góc chữ L vát 45°, đầu hở quay về tường, tủ sâu hơn tách đoạn), quét thành lưới, kiểm tra trần/cánh lật/phào chân |
 | `kitchen/hardware.py` | Bản lề từng cánh, vị trí/kích thước tay nắm — một nguồn cho hình học (render/mask) và JSON three.js |
 | `kitchen/layers.py`, `kitchen/vocab.py` | Danh mục layer (layer ID = ID chi tiết), vật liệu từng chi tiết, thao tác sửa thiết kế tương ứng, prompt |
-| `kitchen/imaging.py`, `kitchen/images/`, `kitchen/backends.py`, `workflows/` | Sửa ảnh theo lớp: mask từ instance, job, ghép strict, kiểm tra, backend `recolor` / `job-package` / `comfyui` |
+| `kitchen/imaging.py`, `kitchen/images/`, `kitchen/backends.py` | Layer-based image editing: instance masks, jobs, strict compositing, validation, and `recolor`, `job-package`, or `gemini` backends |
 | `kitchen/ai_export.py` | Gói JSON cuối cùng gửi AI tạo ảnh (prompt từng góc, vật liệu, cảnh three.js, ảnh điều khiển) |
 | `server.py` | 29 tool MCP; lỗi trả về `ToolError` có lý do rõ ràng |
 | `web_server.py` | HTTP API + web; chỉ phục vụ `/web` và `/renders`, không CORS, bắt buộc JSON |
@@ -83,9 +84,9 @@ copy .env.example .env      # tùy chọn: DEEPSEEK_API_KEY... (.env được n�
 
 | File | Nội dung | Dùng cho |
 |---|---|---|
-| `lines.png` | nét đen nền trắng: biên chi tiết, khe cánh, cạnh khối | ControlNet lineart/canny/scribble (đảo màu nếu model cần nét trắng) |
-| `depth.png` / `depth16.png` | 8-bit gần = sáng / 16-bit theo mm | ControlNet depth |
-| `normal.png` | normal hệ camera, RGB = n·0,5+0,5 | ControlNet normal |
+| `lines.png` | black outlines on a white background: part boundaries, door gaps, and box edges | Optional edge guidance for models that support it |
+| `depth.png` / `depth16.png` | 8-bit depth map / 16-bit depth in millimetres | Spatial reference for image tools |
+| `normal.png` | camera-space normal map, RGB = n·0.5+0.5 | Surface-orientation reference |
 | `seg.png` | mask theo loại chi tiết (`legend.json`) | inpaint theo vùng, segmentation control |
 | `seg_module.png` | mask theo từng module | đổi vật liệu từng tủ |
 | `camera.json` | fx, fy, cx, cy, R, t (OpenCV) | chiếu ngược, ghép nhiều góc |
@@ -123,15 +124,11 @@ Mọi góc render từ cùng một rev nên hình học khớp nhau giữa các 
   `recolor` dán hình mẫu vào vùng đổi để xem nhanh không cần AI. Chấp nhận ảnh = ghi rev mới; ảnh đó thành ảnh gốc của rev mới.
   Đổi kiểu cánh: render nhanh chưa dựng khung, nên mặt trước module được vẽ lại bắt buộc và hình mẫu có nét khung shaker.
 - **Ảnh tham chiếu phong cách** — ảnh góc đã duyệt (còn khớp bản thiết kế) làm tham chiếu *vật liệu / màu / ánh sáng* cho góc khác: tự động khi tạo gen0, tạo lại ảnh lỗi thời; chọn tay bằng `styleFrom` (`auto`, tên góc, `none`) ở `POST .../image-jobs` / tool `create_image_job`. Tham chiếu chỉ để khớp phong cách, không chép bố cục (`prompts.style_note`). Chưa có ô chọn trong giao diện web.
-- **Yêu cầu ảnh thật (v0.4.1)** — `kitchen/prompts/photo.py`, dùng chung cho Gemini (câu văn), ComfyUI (cụm từ khoá) và negative:
-  máy ảnh kiến trúc (24–35 mm rectilinear, ngang mắt, f/8, đường đứng thẳng), ánh sáng theo thiết kế (cửa sổ, LED hắt dưới tủ trên),
-  bề mặt theo vật liệu (vân gỗ, laminate, sơn mờ/bóng, đá, kim loại xước mịn, kính, gạch), bóng tiếp xúc / AO, khe cánh 2–3 mm,
-  cạnh vát bắt sáng, màu và dải sáng tự nhiên, hạt nhiễu mịn. Ảnh đầy đủ chọn ánh sáng `lighting`: `daylight` (mặc định),
-  `late-afternoon`, `dim-evening` (web: ô "Ánh sáng" ở Xuất cho AI và tab Sửa ảnh; MCP `lighting`). Sửa vùng không đổi ánh sáng mà yêu cầu
-  phần mới khớp ảnh gốc (hướng sáng, nhiệt độ màu, độ nét, nhiễu hạt, không lộ đường ghép) và chỉ mô tả bề mặt của vật liệu mới.
-- **Bảng thao tác** (`operation`): `change-material`, `replace-item`, `remove-item`, `add-item` (cho edit/geometry_edit), `change-style` (gen0) —
-  chọn sẵn workflow ComfyUI + trọng số ControlNet (`cn_strength`, `depth_strength`), params người dùng vẫn ghi đè.
-  Job sửa hình tự suy thao tác từ danh sách việc. Danh sách: `GET /api/image-backends` → `operation`.
+- **Photographic prompt requirements** — `kitchen/prompts/photo.py` provides shared natural-language instructions for Gemini and external chat models:
+  architectural-camera perspective, lighting, material appearance, contact shadows, reveal gaps, and image realism.
+  Full-image generation supports `daylight`, `late-afternoon`, and `dim-evening`; edits match the source image's lighting and texture.
+- **Operation presets** (`operation`): `change-material`, `replace-item`, `remove-item`, `add-item`, and `change-style`.
+  Geometry-edit jobs infer an operation from their task list. Available presets are returned by `GET /api/image-backends`.
 - **Kiểm tra trước khi gửi**: `request.json` có `validation {ok, error, warning, image}` (ảnh giải mã được, đúng kích thước, có mask,
   mask màu đủ màu, chỉ dẫn nhắc mọi việc). Gửi qua `gemini` / `job-package` bị chặn khi chưa đạt. Trên giao diện có nút
   **Kiểm tra một file request…** (`POST /api/check-request`) phát hiện file bị cắt, base64 hỏng, thiếu ảnh, ký tự NBSP do chép qua chat.
@@ -160,10 +157,10 @@ MCP: `list_layers`, `create_image_job`, `get_image_job`, `list_image_jobs`, `sub
 - **Layer ID = ID chi tiết** của bộ biên dịch (`TD1-canh-1`, `TD1-tay-nam-1`); nhóm `frontSections:TD1`, `handle:TD1`, `module:TD1`, `loai:countertop`, `loai:handle`.
 - **Tay nắm** là chi tiết thật trong hình học (`kitchen/hardware.py`, dùng chung với JSON three.js): có trong nét, depth, mask.
   Đổi vật liệu tay nắm là thao tác thiết kế `chung.handle.material` (áp cho mọi tay nắm); đổi kiểu/chiều dài tay nắm là đổi hình học (sửa thiết kế, không qua sửa ảnh).
-- **Một job nhiều việc**: `tasks: [{targetLayer, material, instruction}, ...]` (tối đa 8). Các việc không được chạm cùng chi tiết.
-  `recolor` tô từng vùng; `gemini` gọi MỘT lần với mask màu (mỗi việc một màu, `color_mask.png`); `comfyui` chạy nối tiếp từng việc;
-  `job-package` xuất `workflow_api_<i>.json` nối tiếp + `color_mask.png`, nộp ảnh cuối. Báo cáo có kết quả từng việc (`report.task`);
-  chấp nhận thì mọi thao tác thiết kế ghi thành một rev (op `multi`). Web: **＋ Thêm vào danh sách việc**.
+- **Multiple tasks per job**: `tasks: [{targetLayer, material, instruction}, ...]` (up to 8), with no overlapping target parts.
+  `recolor` processes each target locally; `gemini` makes one request with a color-coded mask; `job-package` exports the marked reference,
+  mask, and prompt for use with ChatGPT, Claude, Gemini web, or another external chat model. The final image is submitted once;
+  accepting it writes all design changes as one revision. Web: **＋ Thêm vào danh sách việc**.
   JSON three.js mang `sourceRef` tới đúng ID này ở cánh, ngăn kéo và tấm.
 - **Ảnh gốc** = ảnh đã chấp nhận gần nhất cùng (thiết kế, góc nhìn, `renderKey`), chưa có thì `albedo.png`.
   Đổi vật liệu không đổi `renderKey` nên ảnh gốc và mask vẫn dùng được sau khi thiết kế lên rev mới.
@@ -172,12 +169,10 @@ MCP: `list_layers`, `create_image_job`, `get_image_job`, `list_image_jobs`, `sub
   "Chấp nhận & áp vào thiết kế" được.
 - **Ghép strict**: ngoài mask luôn là pixel ảnh gốc; viền mềm chỉ vào trong mask. `report.json` gồm ngoài mask
   (phải 0 px khác), trong mask có đổi không, biên so với `lines.png`, và độ lệch của ảnh AI thô ngoài vùng sửa (chẩn đoán model).
-- **Backend**: `recolor` (đổi màu giữ sáng tối, không AI, cần màu trong tên vật liệu), `job-package` (xuất gói gồm ảnh, mask,
-  nét đảo, depth, `workflow_api.json` cho ComfyUI và `HUONG-DAN.txt`; nộp ảnh về sau), `comfyui` (HTTP, cấu hình `COMFYUI_*` trong `.env`),
-  `gemini` (Gemini API: gen-0 gửi `albedo.png` + chỉ dẫn giữ nguyên hình học; sửa gửi ảnh gốc + mask + chỉ dẫn, rồi ghép strict.
-  Khóa: `GEMINI_API_KEY`, hoặc `GEMINI_ENV_FILE` trỏ tới `.env` của mcp-image. Gen-0 có điểm `lineMatch` cho biết ảnh AI còn khớp nét bản vẽ không).
-- Workflow mẫu trong `workflows/`: `inpaint` (node lõi), `inpaint-lineart` (thêm ControlNet lineart), `gen0-lineart-depth` (ảnh đầu tiên từ nét + depth).
-  Tên model lấy từ `COMFYUI_CKPT`, `COMFYUI_CN_LINEART`, `COMFYUI_CN_DEPTH`.
+- **Image backends**: `recolor` changes color while preserving shading and requires no AI; `job-package` exports prompts and images for an external model
+  and accepts its result later; `gemini` calls the Gemini image API directly. Gemini receives the source image and edit mask, and strict compositing
+  preserves all pixels outside the edit region. Configure it with `GEMINI_API_KEY` or `GEMINI_ENV_FILE`; use `GEMINI_IMAGE_MODEL` to select the model.
+  Gen-0 results include a `lineMatch` score showing how closely the image follows the design lines.
 - File job: `renders/<id>/rev<N>/<góc>/jobs/<job>/` (`reference`, `target`, `mask`, `raw`, `composite`, `report.json`, `job.json`).
 - **Xem trước khi gửi** (web: ô tick, bật sẵn; HTTP `preview: true`; MCP `xem_truoc=True`): job chỉ chuẩn bị mask + `request.json`, dừng ở `awaiting-send`
   và mở ngay ô Xem JSON; bấm **Gửi <backend>** (`POST /api/image-jobs/<job>/send`, MCP `send_image_job`) hoặc **Hủy**. Nếu thiết kế đổi hình học sau khi tạo job thì không cho gửi.

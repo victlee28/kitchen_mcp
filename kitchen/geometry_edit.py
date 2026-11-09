@@ -17,18 +17,13 @@ from .spec import KitchenSpec
 from .errors import InvalidInput
 
 # ------------------------------------------------------------------ bảng thao tác
-# workflow + trọng số ControlNet (ComfyUI) và kiểu chỉ dẫn (Gemini) theo loại thao tác. params người dùng truyền vẫn ghi đè.
+# Default prompt intent by operation. Provider-specific options are not stored here.
 OPERATIONS = {
-    "change-material": {"name": "Đổi vật liệu / màu", "kind": "edit", "workflow": "inpaint-lineart",
-                     "params": {"cn_strength": 0.45}, "description": "Giữ biên, cho đổi màu và chất liệu"},
-    "replace-item": {"name": "Thay kiểu vật (giữ chỗ)", "kind": "geometry_edit", "workflow": "inpaint-lineart",
-                 "params": {"cn_strength": 0.7}, "description": "Nét mới bám chặt để ra đúng hình mới"},
-    "remove-item": {"name": "Xóa vật", "kind": "geometry_edit", "workflow": "inpaint-lineart",
-                "params": {"cn_strength": 0.55}, "description": "Vẽ phần nền sau vật (tường, sàn, hông tủ bên cạnh)"},
-    "add-item": {"name": "Thêm vật", "kind": "geometry_edit", "workflow": "inpaint-lineart",
-                 "params": {"cn_strength": 0.7}, "description": "Vẽ vật mới theo nét của thiết kế mới"},
-    "change-style": {"name": "Đổi phong cách toàn ảnh", "kind": "gen0", "workflow": "gen0-lineart-depth",
-                       "params": {"cn_strength": 0.4, "depth_strength": 0.55}, "description": "Giữ bố cục, cho đổi vật liệu/trang trí nhiều"},
+    "change-material": {"name": "Đổi vật liệu / màu", "kind": "edit", "description": "Giữ biên, cho đổi màu và chất liệu"},
+    "replace-item": {"name": "Thay kiểu vật (giữ chỗ)", "kind": "geometry_edit", "description": "Nét mới bám chặt để ra đúng hình mới"},
+    "remove-item": {"name": "Xóa vật", "kind": "geometry_edit", "description": "Vẽ phần nền sau vật (tường, sàn, hông tủ bên cạnh)"},
+    "add-item": {"name": "Thêm vật", "kind": "geometry_edit", "description": "Vẽ vật mới theo nét của thiết kế mới"},
+    "change-style": {"name": "Đổi phong cách toàn ảnh", "kind": "gen0", "description": "Giữ bố cục, cho đổi vật liệu/trang trí nhiều"},
 }
 
 _TYPE_EN = {"base": "base cabinet", "base-sink": "sink base cabinet", "base-corner-sink": "corner sink base cabinet",

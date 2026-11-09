@@ -238,7 +238,7 @@ class TestReachesTheOutputs(unittest.TestCase):
 class TestUi(unittest.TestCase):
     def test_interpretation_table_and_option(self):
         html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
-        js = (ROOT / "web" / "app.js").read_text(encoding="utf-8")
+        js = (ROOT / "web" / "design-create-panel.js").read_text(encoding="utf-8")
         self.assertIn('id="promptResult"', html)
         self.assertIn('value="to-ceiling"', html)
         self.assertIn("showInterpretation(r.analysis?.interpretation", js)

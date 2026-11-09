@@ -1,9 +1,8 @@
-"""Yêu cầu ẢNH THẬT cho câu lệnh gửi AI (Gemini: câu văn; ComfyUI: cụm từ khoá + negative).
+"""Natural-photo requirements shared by image-generation prompts.
 
 Một nguồn cho mọi loại job để ảnh nhất quán:
 - full(spec, anh_sang)  : ảnh đầy đủ (gen-0, xuất cho AI) — ánh sáng, máy ảnh, vật liệu, bóng đổ, hậu kỳ.
 - local(spec, ...)      : sửa một vùng (edit / sửa hình) — vùng sửa phải hoà vào ảnh gốc: cùng hướng sáng, nhiễu hạt, độ nét…
-- tags(spec, anh_sang)  : cụm từ cho prompt ComfyUI.
 - NEGATIVE_PHOTO        : những dấu hiệu "ảnh dựng 3D / ảnh AI" cần tránh.
 Nội dung suy từ thiết kế: có cửa sổ thì có nắng chiếu qua cửa sổ, có tủ trên thì có đèn LED hắt dưới tủ, vật liệu vân gỗ /
 đá / inox / kính / sơn bóng thì mô tả bề mặt tương ứng.
@@ -111,14 +110,3 @@ def local(spec: KitchenSpec | None, extra_materials: list[str] | None = None) ->
             "ambient-occlusion shadows where the edited parts meet neighbouring surfaces; thin dark reveal gaps between doors "
             "and drawers; no visible seam, halo or blur along the region boundary."
             + (" Surface detail: " + "; ".join(mats) + "." if mats else ""))
-
-
-def tags(spec: KitchenSpec, lighting: str = "daylight") -> str:
-    """Cụm từ khoá ảnh thật cho prompt ComfyUI (SD/SDXL/Flux hiểu dạng tag tốt hơn câu dài)."""
-    light = {"daylight": "soft natural daylight, 5000K", "late-afternoon": "warm late afternoon sunlight, long soft shadows",
-             "dim-evening": "warm evening downlights, under-cabinet LED, 2700K"}.get(lighting, "soft natural daylight")
-    preferences = ", ".join(spec.renderPreferences)
-    return ("RAW photo, professional architectural interior photography, 24mm rectilinear lens, eye level, f/8, "
-            f"{light}, global illumination, soft contact shadows, ambient occlusion in corners, realistic material textures, "
-            "fine wood grain, subtle reflections, straight vertical lines, natural color grading, fine film grain, 8k detail"
-            + (", " + preferences if preferences else ""))

@@ -123,7 +123,9 @@ def interpret_edit(design_id: str, text: str, base_rev: int | None=None, scope_m
 def recognize_design(design_id: str, source: dict[str, Any], recognizer: str | None=None, base_rev: int | None=None) -> dict[str, Any]:
     """Recognise a photo or drawing as a DRAFT kitchen and preview it; nothing is saved.
 
-    source: {"kind": "photo" | "drawing", "imageBase64": "...", "name"?: "..."}. status 'ok' returns draft + operation + proposal (same as propose_change):
+    source: {"kind": "photo" | "drawing", "imageBase64": "...", "name"?: "...", "note"?: "hint about the picture, max 500 chars"}.
+    recognizer: "cabinet" (the stand-alone cabinet-recognizer, CABINET_RECOGNIZER_URL) or "gemini"; omitted = KITCHEN_RECOGNIZER, else cabinet, else gemini.
+    The draft replaces ALL cabinets of the design (room, floor plan and common settings are kept). status 'ok' returns draft + operation + proposal (same as propose_change):
     confirm with the editing tool and expect=proposal.opHash. 'unavailable' = no recognizer is plugged in; 'empty' = nothing usable recognised.
     """
     return _call(svc().recognize, design_id, source, recognizer, base_rev)
@@ -196,13 +198,13 @@ def get_view_status(design_id: str, rev: int | None=None) -> dict[str, Any]:
     """Per view: does the approved image still match the design (current / stale-appearance / stale-geometry / unknown / none)?"""
     return _call(lambda: {'views': svc().images.view_status(design_id, rev)})
 
-def regenerate_stale_views(design_id: str, views: list[str] | None=None, backend: Literal['recolor', 'job-package', 'comfyui', 'gemini']='recolor', base_rev: int | None=None) -> dict[str, Any]:
+def regenerate_stale_views(design_id: str, views: list[str] | None=None, backend: Literal['recolor', 'job-package', 'gemini']='recolor', base_rev: int | None=None) -> dict[str, Any]:
     """Prepare review jobs (not sent) that re-apply changed materials onto the approved images of the stale views."""
     return _call(svc().images.regenerate_stale, design_id, views, backend, base_rev)
 
-def create_image_job(design_id: str, view: str, target_layer: str | None=None, instruction: str='', mode: Literal['quick', 'design']='quick', material: str | None=None, backend: Literal['recolor', 'job-package', 'comfyui', 'gemini']='recolor', kind: Literal['edit', 'gen0', 'geometry_edit']='edit', reference: str | None=None, base_rev: int | None=None, workflow: str | None=None, seed: int | None=None, tasks: list[dict[str, Any]] | None=None, preview_only: bool=False, image_changes: list[dict[str, Any]] | None=None, operation: Literal['change-material', 'replace-item', 'remove-item', 'add-item', 'change-style'] | None=None, lighting: Literal['daylight', 'late-afternoon', 'dim-evening'] | None=None, style_from: str | None=None) -> dict[str, Any]:
+def create_image_job(design_id: str, view: str, target_layer: str | None=None, instruction: str='', mode: Literal['quick', 'design']='quick', material: str | None=None, backend: Literal['recolor', 'job-package', 'gemini']='recolor', kind: Literal['edit', 'gen0', 'geometry_edit']='edit', reference: str | None=None, base_rev: int | None=None, seed: int | None=None, tasks: list[dict[str, Any]] | None=None, preview_only: bool=False, image_changes: list[dict[str, Any]] | None=None, operation: Literal['change-material', 'replace-item', 'remove-item', 'add-item', 'change-style'] | None=None, lighting: Literal['daylight', 'late-afternoon', 'dim-evening'] | None=None, style_from: str | None=None) -> dict[str, Any]:
     """Create an image-generation or image-editing job. style_from: 'auto' or a view name whose approved image guides materials and light (automatic for a first image; 'none' turns it off)."""
-    return _slim_job(_call(svc().images.create, design_id, view, target_layer, instruction=instruction, mode=mode, material=material, backend=backend, reference=reference, base_rev=base_rev, kind=kind, workflow=workflow, seed=seed, tasks=tasks, preview=preview_only, geometry_items=image_changes, operation=operation, lighting=lighting, style_from=style_from))
+    return _slim_job(_call(svc().images.create, design_id, view, target_layer, instruction=instruction, mode=mode, material=material, backend=backend, reference=reference, base_rev=base_rev, kind=kind, seed=seed, tasks=tasks, preview=preview_only, geometry_items=image_changes, operation=operation, lighting=lighting, style_from=style_from))
 
 def send_image_job(job_id: str) -> dict[str, Any]:
     """Send a prepared image job to its configured backend."""

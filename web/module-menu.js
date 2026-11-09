@@ -86,13 +86,13 @@ export function createModuleMenu(ctx) {
     const bad = checkUpload(file); if (bad) return redraw(text, bad);
     busy = true; ctx.setStatus('Nhận diện ảnh tham chiếu…');
     try {
-      const { status, data } = await call(`/api/designs/${id}/recognize`, recognizeBody(kind, file.name, file.type, await fileBase64(file), rev));
+      const { status, data } = await call(`/api/designs/${id}/recognize`, recognizeBody(kind, file.name, file.type, await fileBase64(file), rev, text));
       busy = false;
       if (status === 409) return stale('cmd');
       if (!data || data.error) return redraw(text, data?.error || `Lỗi ${status}`);
       const d = describeRecognition(data);
       if (d.kind !== 'preview') return redraw(text, d.text);
-      showPreview('cmd', d.proposal, null, [{ kind: 'warn', text: 'Ảnh tham chiếu thay cả thiết kế hiện tại (có thể hoàn tác).' }, ...recognitionLines(data)]);
+      showPreview('cmd', d.proposal, null, [{ kind: 'warn', text: 'Kết quả nhận diện sẽ thay toàn bộ tủ của thiết kế hiện tại (phòng và mặt bằng giữ nguyên; có thể hoàn tác).' }, ...recognitionLines(data)]);
     } catch (e) { busy = false; redraw(text, e.message); }
   }
 

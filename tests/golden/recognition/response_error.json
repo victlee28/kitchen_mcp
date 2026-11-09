@@ -1,0 +1,59 @@
+{
+ "function": "recognition.recognizer_wire.response_error",
+ "cases": [
+  {
+   "name": "error object",
+   "input": {
+    "payload": {
+     "error": {
+      "kind": "validation",
+      "code": "bad-image",
+      "message": "cannot identify image file"
+     }
+    }
+   },
+   "expected": {
+    "error": "bad-image: cannot identify image file"
+   }
+  },
+  {
+   "name": "error without a code uses the kind",
+   "input": {
+    "payload": {
+     "error": {
+      "kind": "upstream",
+      "message": "model overloaded"
+     }
+    }
+   },
+   "expected": {
+    "error": "upstream: model overloaded"
+   }
+  },
+  {
+   "name": "success has no error",
+   "input": {
+    "payload": {
+     "kitchen": {
+      "spec": {}
+     }
+    }
+   },
+   "expected": {
+    "error": ""
+   }
+  },
+  {
+   "name": "garbage",
+   "input": {
+    "payload": [
+     1,
+     2
+    ]
+   },
+   "expected": {
+    "error": ""
+   }
+  }
+ ]
+}

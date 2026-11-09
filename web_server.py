@@ -16,7 +16,7 @@ API:
   POST /api/designs/<id>/ops             {"baseRev": N, "op": {...}, "expect"?: opHash của /propose: chỉ lưu đúng thao tác đã xem trước}
   POST /api/designs/<id>/interpret       {"text": "xóa TD3", "baseRev"?: N, "scope"?: ["TD1"], "useLlm"?: false} câu lệnh tự do -> thao tác + bản xem trước (không lưu) hoặc câu hỏi làm rõ
   POST /api/designs/<id>/template        {"template": {"kind": "run-i", "structureId": "STRUCT-..", "point": {"x": mm, "z": mm}}, "baseRev"?: N} tủ chữ I dựa vào cạnh gần điểm bấm nhất của vật thể, cánh quay ra ngoài; xem trước, không lưu
-  POST /api/designs/<id>/recognize       {"source": {"kind": "photo"|"drawing", "imageBase64": "..."}, "recognizer"?: "tên", "baseRev"?: N} ảnh/bản vẽ -> bản nháp + xem trước (không lưu); chưa có bộ nhận diện thì status "unavailable"
+  POST /api/designs/<id>/recognize       {"source": {"kind": "photo"|"drawing", "imageBase64": "...", "note"?: "gợi ý, tối đa 500 ký tự"}, "recognizer"?: "gemini"|"cabinet", "baseRev"?: N} ảnh/bản vẽ -> bản nháp thay TOÀN BỘ tủ + xem trước (không lưu); bộ nhận diện mặc định: KITCHEN_RECOGNIZER, rồi "cabinet" (CABINET_RECOGNIZER_URL), rồi "gemini"; chưa có thì status "unavailable"
   POST /api/designs/<id>/propose         {"baseRev": N, "op": {...}, "scope"?: ["TD1"]} xem trước, không lưu: diff, validation mới/đã hết, module bị ảnh hưởng
   POST /api/designs/<id>/revert          {"baseRev": N, "rev": M}
   POST /api/designs/<id>/render          {"rev"?, "views"?, "width"?, "height"?}
@@ -26,7 +26,7 @@ Sửa ảnh theo lớp:
   GET  /api/designs/<id>/layers?view=&rev=&all=1      layer thấy được ở góc nhìn (+ renderKey, ảnh gốc hiện dùng)
   GET  /api/designs/<id>/mask?view=&layer=&rev=       mask PNG (trắng = layer)
   GET  /api/designs/<id>/pick?view=&x=&y=&rev=&radius= chi tiết tại pixel (radius: ưu tiên tay nắm trong bán kính px) + các layer chứa nó
-  POST /api/designs/<id>/image-jobs                   {view, targetLayer, instruction, mode, vatLieu, backend, reference, baseRev, kind, workflow, seed, params}
+  POST /api/designs/<id>/image-jobs                   {view, targetLayer, instruction, mode, vatLieu, backend, reference, baseRev, kind, seed, params}
                                                       hoặc nhiều việc: {view, tasks: [{targetLayer, vatLieu, instruction}, ...], mode, backend, ...}
   GET  /api/image-jobs?design=&view=&status=          danh sách job
   GET  /api/image-jobs/<job>                          chi tiết + url file
@@ -35,7 +35,7 @@ Sửa ảnh theo lớp:
   POST /api/image-jobs/<job>/accept                   {"applyToDesign": bool, "baseRev": N}
   POST /api/image-jobs/<job>/reject | /regenerate     {}
   POST /api/image-jobs/<job>/send                     gửi job tạo với xemTruoc=true (đang 'cho-gui') sang backend
-  GET  /api/image-backends                            backend + workflow ComfyUI có sẵn
+  GET  /api/image-backends                            supported image backends and operation presets
   POST /api/check-request                             {"text": "<nội dung file request>"} kiểm tra file bị cắt / thiếu ảnh / base64 hỏng
   GET  /api/designs/<id>/ai-export[?rev=&views=&nhungAnh=1|dang=day-du]  JSON gửi AI (rút gọn, nhúng ảnh) / bản đầy đủ
   POST /api/designs/<id>/ai-export                    {rev?, views?, kemAnh?} ghi renders/<id>/rev<N>/ai/ (+ ai-package.zip)
@@ -178,10 +178,10 @@ class Handler(BaseHTTPRequestHandler):
         m = re.fullmatch(r"/api/image-jobs/(job-[a-f0-9]+)(?:/(result|accept|reject|regenerate|request|send))?", p)
         if m:
             jid, sub = m.groups()
-            if method == "GET" and sub == "request":  # ?dang=ai (mặc định, đã lọc) | day-du (kiểm tra) | gemini (thân API) | web (hướng dẫn chat)
+            if method == "GET" and sub == "request":  # ai (filtered), full (diagnostics), gemini (API body), or web (chat instructions)
                 format = q.get("format", "ai")
                 f = s.images.export_full(jid) if format == "full" else s.images.export_request(jid)
-                f = {"gemini": f.with_name("gemini-request.json"), "web": f.with_name("GEMINI-WEB-GUIDE.txt")}.get(format, f)
+                f = {"gemini": f.with_name("gemini-request.json"), "web": f.with_name("AI-CHAT-GUIDE.txt")}.get(format, f)
                 body = f.read_bytes()
                 self.send_response(200)
                 self.send_header("Content-Type", "text/plain; charset=utf-8" if format == "web" else "application/json; charset=utf-8")
@@ -320,7 +320,7 @@ class Handler(BaseHTTPRequestHandler):
             if sub == "image-jobs":
                 job = s.images.create(did, str(b.get("view") or ""), b.get("targetLayer"), instruction=str(b.get("instruction") or ""),
                                       mode=b.get("mode") or "quick", material=b.get("material") or None, backend=b.get("backend") or "recolor",
-                                      reference=b.get("reference"), base_rev=b.get("baseRev"), kind=b.get("kind") or "edit", workflow=b.get("workflow"),
+                                      reference=b.get("reference"), base_rev=b.get("baseRev"), kind=b.get("kind") or "edit",
                                       seed=b.get("seed"), params=b.get("params") if isinstance(b.get("params"), dict) else None,
                                       tasks=b.get("tasks") if isinstance(b.get("tasks"), list) and b.get("tasks") else None,
                                       preview=bool(b.get("preview")), geometry_items=b.get("geometry_edit") if isinstance(b.get("geometry_edit"), list) else None,
@@ -360,9 +360,9 @@ class Handler(BaseHTTPRequestHandler):
         u = self._url(d) if d else None
         if u:
             image = sorted(x.name for x in Path(d).glob("image-[0-9]-*.png"))  # ảnh đính kèm gửi AI, đánh số theo thứ tự
-            files = [f for f in ("request.json", "request.full.json", "gemini-request.json", "GEMINI-WEB-GUIDE.txt", *image,
+            files = [f for f in ("request.json", "request.full.json", "gemini-request.json", "AI-CHAT-GUIDE.txt", *image,
                                  "reference.png", "reference_marked.png", "new_geometry.png", "target.png", "mask.png", "mask_color.png", "raw.png", "composite.png",
-                                 "workflow_api.json", "INSTRUCTIONS.txt", "report.json") if (Path(d) / f).exists()]
+                                 "report.json") if (Path(d) / f).exists()]
             j = {**j, "url": u, "files": {f: u + f for f in files}}
         return j
 

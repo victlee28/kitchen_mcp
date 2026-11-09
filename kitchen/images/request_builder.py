@@ -9,7 +9,7 @@ import shutil
 from PIL import Image
 import numpy as np
 
-from .. import view_sync, backends, edit, geometry, geometry_edit, imaging, layers, prompts, render, vocab
+from .. import view_sync, edit, geometry, geometry_edit, imaging, layers, prompts, render, vocab
 from ..errors import InvalidInput
 if TYPE_CHECKING:
     from .jobs import ImageJobs
@@ -44,20 +44,16 @@ class RequestBuilder(Component):
 
     def prepare(self, jid: str, jdir: Path, d: Path, spec: Any, rev: int, scene: Any, man: dict[str, Any], new: NewJob,
                  tasks: list[TaskInput]) -> JobRequest:
-        """``new`` carries the already-resolved mode, workflow, params and lighting; ``tasks`` the normalised task inputs."""
+        """``new`` carries the already-resolved mode, params and lighting; ``tasks`` the normalised task inputs."""
         did, view, instruction, mode, backend, reference, kind = new.did, new.view, new.instruction, new.mode, new.backend, new.reference, new.kind
-        workflow, seed, params, geometry_items, operation, lighting = new.workflow, new.seed, new.params, new.geometry_items, new.operation, new.lighting or "daylight"
+        seed, params, geometry_items, operation, lighting = new.seed, new.params, new.geometry_items, new.operation, new.lighting or "daylight"
         W, H = man["width"], man["height"]
         req: JobRequest = {"designId": did, "baseRevision": rev, "view": view, "renderKey": man["renderKey"], "kind": kind, "mode": mode,
                "instruction": instruction, "backend": backend,
-               "workflow": workflow or {"gen0": "gen0-lineart-depth", "geometry_edit": "inpaint-lineart"}.get(kind, "inpaint"),
                "seed": int(seed if seed is not None else self.runtime.new_seed()), "params": params or {},
                "size": [W, H], "preserve": "strict", "negativePrompt": ", ".join(prompts.NEGATIVE_LAYER + prompts.NEGATIVE_PHOTO),
                "lighting": lighting,  # ánh sáng cho ảnh đầy đủ (gen-0); sửa vùng thì bám ánh sáng ảnh gốc
                "prompt": "", "globalPrompt": ""}  # both filled by the branch of the kind below
-        lines = imaging.read(d / "lines.png", "L")
-        Image.fromarray(255 - lines).save(jdir / "lines_inv.png")  # ControlNet lineart: nét trắng nền đen
-        shutil.copyfile(d / "depth.png", jdir / "depth.png")
         if operation:
             req["operation"] = operation
         if kind == "geometry_edit":
@@ -141,7 +137,7 @@ class RequestBuilder(Component):
             req["maskPixels"] = int(union.sum())
             req["globalPrompt"] = prompts.global_prompt(cur)
             req["targetLayer"] = first["targetLayer"] + (f" +{len(recs) - 1}" if len(recs) > 1 else "")
-            # trường cũ (1 việc) giữ để workflow/công cụ cũ đọc được
+            # Keep the single-task prompt field for request consumers.
             req["prompt"] = first.get("prompt", "") if len(recs) == 1 else "; ".join(f"[{k + 1}] {r.get('prompt', '')}" for k, r in enumerate(recs))
             req["material"] = first["material"] if len(recs) == 1 else None
             req["targetParts"] = [p for r in recs for p in r.get("targetParts", [])]
@@ -149,9 +145,7 @@ class RequestBuilder(Component):
         else:
             req["globalPrompt"] = prompts.global_prompt(spec)
             req["photoImage"] = prompts.full(spec, lighting)
-            req["prompt"] = ", ".join(x for x in (prompts.global_prompt(spec), prompts.tags(spec, lighting), instruction.strip()) if x)
-        if backend in ("job-package", "comfyui"):
-            backends.load_workflow(req["workflow"])  # tên workflow sai -> báo ngay
+            req["prompt"] = " ".join(x for x in (prompts.global_prompt(spec), prompts.full(spec, lighting), instruction.strip()) if x)
         self._attach_style(jdir, req, new, (W, H))
         (jdir / "job.json").write_text(json.dumps({"id": jid, **req}, ensure_ascii=False, indent=2), encoding="utf-8")
         return req
@@ -220,8 +214,6 @@ class RequestBuilder(Component):
         imaging.save_mask(region, jdir / "mask.png")
         self._color_mask(jdir, 1)
         Image.fromarray(lines_new).save(jdir / "lines_moi.png")
-        Image.fromarray(255 - lines_new).save(jdir / "lines_inv.png")  # ControlNet: nét của thiết kế MỚI
-        shutil.copyfile(nd / "depth.png", jdir / "depth.png")
         Image.fromarray(geometry_edit.preview(nd, lines_new)).save(jdir / "new_geometry.png")
         ref_path, ref_info = self.base.pick_reference(did, view, man["renderKey"], d, reference)
         ref, _ = imaging.load_rgb(ref_path, (W, H))
@@ -232,9 +224,7 @@ class RequestBuilder(Component):
         common = prompts.global_prompt(nxt)
         task: Task = {"targetLayer": "geometry_edit", "name": vi, "roleEn": en, "position": describe_position(m), "instruction": instruction, "material": None,
                       "operation": tt, "targetParts": info["part"], "maskPixels": int(m.sum()),
-                      "prompt": ", ".join(x for x in (en, instruction, common, prompts.tags(nxt, req.get("lighting") or "daylight")) if x)}
-        if "operation" not in req:  # trọng số mặc định theo thao tác suy ra (params người dùng vẫn ghi đè)
-            req["params"] = {**geometry_edit.OPERATIONS[tt]["params"], **req["params"]}
+                      "prompt": ", ".join(x for x in (en, instruction, common) if x)}
         req["originalGeometry"] = items or []
         req["tasks"] = [task]
         req["designOp"] = design_op

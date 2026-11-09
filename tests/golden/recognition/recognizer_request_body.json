@@ -1,0 +1,47 @@
+{
+ "function": "recognition.recognizer_wire.request_body",
+ "cases": [
+  {
+   "name": "image only",
+   "input": {
+    "kind": "photo",
+    "dataBase64": "iVBORw0KGgo="
+   },
+   "expected": {
+    "body": {
+     "kind": "photo",
+     "imageBase64": "iVBORw0KGgo="
+    }
+   }
+  },
+  {
+   "name": "with a note",
+   "input": {
+    "kind": "drawing",
+    "dataBase64": "/9j/4AA=",
+    "note": "  dãy tủ chữ L  "
+   },
+   "expected": {
+    "body": {
+     "kind": "drawing",
+     "imageBase64": "/9j/4AA=",
+     "note": "dãy tủ chữ L"
+    }
+   }
+  },
+  {
+   "name": "a blank note is not sent",
+   "input": {
+    "kind": "photo",
+    "dataBase64": "iVBORw0KGgo=",
+    "note": "   "
+   },
+   "expected": {
+    "body": {
+     "kind": "photo",
+     "imageBase64": "iVBORw0KGgo="
+    }
+   }
+  }
+ ]
+}

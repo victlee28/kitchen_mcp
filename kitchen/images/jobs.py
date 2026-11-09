@@ -43,7 +43,7 @@ class ImageJobs:
 
     ``apply(design_id, operation, base_revision, source)`` is how an accepted job changes the design (one revision).
 
-    ``config`` carries the backend settings (ComfyUI url, Gemini key...); ``runtime`` the clock, id and seed sources.
+    ``config`` carries backend settings such as the Gemini key; ``runtime`` carries the clock, id and seed sources.
 
     It is assembled from parts that call each other through attributes, not through inheritance: ``base`` (renders, masks, base images),
     ``builder`` (building a request), ``packages`` (request files and instructions for a model), ``results`` (check, accept, regenerate),
@@ -91,31 +91,32 @@ class ImageJobs:
 
     def create(self, did: str, view: str, target: str | None = None, *, instruction: str = "", mode: str = "quick",
                material: str | None = None, backend: str = "recolor", reference: str | None = None, base_rev: int | None = None,
-               kind: str = "edit", workflow: str | None = None, seed: int | None = None, params: dict[str, Any] | None = None,
+               kind: str = "edit", seed: int | None = None, params: dict[str, Any] | None = None,
                tasks: list[dict[str, Any]] | None = None, preview: bool = False, geometry_items: list[dict[str, Any]] | None = None,
                operation: str | None = None, lighting: str | None = None, style_from: str | None = None) -> dict[str, Any]:
         """Keyword form of ``submit(NewJob(...))``. tasks: [{"targetLayer": "TD1-door-1", "material": "...", "instruction": "..."}, ...];
         without tasks, target/material/instruction are one task. preview=True prepares only (mask, request.json) and stops at
         'awaiting-send' so the person can look first; send() sends it, reject() drops it."""
-        return self.submit(NewJob(did, view, target, instruction, mode, material, backend, reference, base_rev, kind, workflow, seed,
-                                  params, tasks, preview, geometry_items, operation, lighting, style_from))
+        return self.submit(NewJob(did=did, view=view, target=target, instruction=instruction, mode=mode, material=material,
+                                  backend=backend, reference=reference, base_rev=base_rev, kind=kind, seed=seed, params=params,
+                                  tasks=tasks, preview=preview, geometry_items=geometry_items, operation=operation,
+                                  lighting=lighting, style_from=style_from))
 
     def submit(self, new: NewJob) -> dict[str, Any]:
         did, view, target, instruction, mode, material, backend = new.did, new.view, new.target, new.instruction, new.mode, new.material, new.backend
-        reference, base_rev, kind, workflow, seed, params = new.reference, new.base_rev, new.kind, new.workflow, new.seed, new.params
+        reference, base_rev, kind, seed, params = new.reference, new.base_rev, new.kind, new.seed, new.params
         tasks, preview, geometry_items, operation, lighting = new.tasks, new.preview, new.geometry_items, new.operation, new.lighting
         if kind not in KINDS:
             raise InvalidInput("kind phải là edit, gen0 hoặc geometry_edit")
         if lighting not in (None, "", *prompts.LIGHTING):
             raise InvalidInput(f"anhSang phải là một trong: {', '.join(prompts.LIGHTING)}")
-        if operation is not None:  # bảng thao tác: workflow + trọng số ControlNet mặc định theo loại việc
+        if operation is not None:
             if operation not in geometry_edit.OPERATIONS:
                 raise InvalidInput(f"thaoTac phải là một trong: {', '.join(geometry_edit.OPERATIONS)}")
             pre = geometry_edit.OPERATIONS[operation]
             if pre["kind"] != kind:
                 raise InvalidInput(f"thaoTac '{operation}' dùng cho kind={pre['kind']} (đang là {kind})")
-            workflow = workflow or pre["workflow"]
-            params = {**pre["params"], **(params or {})}
+            params = params or {}
         if kind == "geometry_edit":
             if not geometry_items:
                 raise InvalidInput("kind=hinh cần danh sách thao tác hình học (hinh)")
@@ -143,7 +144,7 @@ class ImageJobs:
         prepared = False
         try:
             req = self.builder.prepare(jid, jdir, d, spec, rev, scene, man,
-                                replace(new, mode=mode, instruction=instruction, workflow=workflow, params=params, lighting=lighting or "daylight"), task_list)
+                                replace(new, mode=mode, instruction=instruction, params=params, lighting=lighting or "daylight"), task_list)
             prepared = True
         finally:
             if not prepared:  # nothing half-written is left behind when the request cannot be built

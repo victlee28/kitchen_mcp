@@ -1,0 +1,163 @@
+"""CabinetRecognizerHttp: the HTTP adapter to the stand-alone cabinet-recognizer, its errors, the default-recognizer rule and an end-to-end
+run (the real service in replay mode -> adapter -> KitchenService.recognize -> preview of ONE replace that keeps the room)."""
+import base64
+import dataclasses
+import json
+import shutil
+import sys
+import tempfile
+import threading
+import unittest
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+SERVICE = ROOT / "services" / "cabinet-recognizer"
+sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(SERVICE))
+
+from kitchen import recognition  # noqa: E402
+from kitchen.backends import BackendError  # noqa: E402
+from kitchen.config import Config  # noqa: E402
+from kitchen.recognizers import CabinetRecognizerHttp  # noqa: E402
+from kitchen.service import KitchenService  # noqa: E402
+
+FIX = json.loads((ROOT / "fixtures" / "l-shaped-kitchen.json").read_text(encoding="utf-8"))
+DATA = SERVICE / "tests" / "data"
+NAME = "bep-chu-L-trang"
+IMAGE = (DATA / f"{NAME}.png").read_bytes()
+ANSWERS = json.loads((DATA / f"{NAME}.answers.json").read_text(encoding="utf-8"))
+
+
+def serve(handler) -> tuple[ThreadingHTTPServer, str]:
+    server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    return server, f"http://127.0.0.1:{server.server_address[1]}"
+
+
+def canned(status, body: bytes, seen: list | None = None):
+    class H(BaseHTTPRequestHandler):
+        def do_POST(self):  # noqa: N802
+            n = int(self.headers.get("content-length", "0"))
+            if seen is not None:
+                seen.append(json.loads(self.rfile.read(n)))
+            self.send_response(status)
+            self.send_header("content-length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, *a):
+            pass
+    return H
+
+
+def cfg(url, **kw) -> Config:
+    return dataclasses.replace(Config.from_env({}), cabinet_recognizer_url=url, **kw)
+
+
+class TestAdapter(unittest.TestCase):
+    def tearDown(self):
+        for s in getattr(self, "servers", []):
+            s.shutdown(); s.server_close()
+
+    def up(self, handler):
+        server, url = serve(handler)
+        self.servers = getattr(self, "servers", []) + [server]
+        return url
+
+    def test_sends_the_picture_and_the_cleaned_note_and_reads_the_modules(self):
+        seen: list = []
+        answer = {"kitchen": {"spec": {"common": {"ceiling": 2700}, "module": [{"id": "B1", "type": "base", "wall": "back", "fromCorner": 0, "width": 600}]},
+                              "issues": []}}
+        rec = CabinetRecognizerHttp(cfg(self.up(canned(200, json.dumps(answer).encode(), seen))))
+        raw = rec.recognize(recognition.RecognitionInput("photo", b"\x89PNG data", "a.png", "image/png", "  white   doors "))
+        self.assertEqual(seen[0], {"kind": "photo", "imageBase64": base64.b64encode(b"\x89PNG data").decode(), "note": "white doors"})
+        self.assertEqual(raw["modules"][0]["width"], 600)
+
+    def test_errors_become_backend_errors_with_the_service_reason(self):
+        err = json.dumps({"error": {"kind": "validation", "code": "bad-image", "message": "cannot identify"}}).encode()
+        with self.assertRaises(BackendError) as ctx:
+            CabinetRecognizerHttp(cfg(self.up(canned(422, err)))).recognize(recognition.RecognitionInput("photo", b"x"))
+        self.assertEqual(ctx.exception.code, "generation-failed")
+        self.assertIn("bad-image", str(ctx.exception))
+        with self.assertRaises(BackendError) as ctx:
+            CabinetRecognizerHttp(cfg(self.up(canned(502, b"<html>bad gateway</html>")))).recognize(recognition.RecognitionInput("photo", b"x"))
+        self.assertEqual(ctx.exception.code, "overloaded")
+        with self.assertRaises(BackendError) as ctx:
+            CabinetRecognizerHttp(cfg(self.up(canned(200, b"not json")))).recognize(recognition.RecognitionInput("photo", b"x"))
+        self.assertEqual(ctx.exception.code, "generation-failed")
+        with self.assertRaises(BackendError) as ctx:
+            CabinetRecognizerHttp(cfg(self.up(canned(200, b'{"spec": {}}')))).recognize(recognition.RecognitionInput("photo", b"x"))
+        self.assertIn("no kitchen", str(ctx.exception))
+
+    def test_unreachable_service_and_bad_url(self):
+        server, url = serve(canned(200, b"{}"))
+        server.shutdown(); server.server_close()                           # the port is now closed
+        with self.assertRaises(BackendError) as ctx:
+            CabinetRecognizerHttp(cfg(url, cabinet_recognizer_timeout=5)).recognize(recognition.RecognitionInput("photo", b"x"))
+        self.assertEqual(ctx.exception.code, "overloaded")
+        for bad in (None, "ftp://x", "localhost:8765"):
+            with self.assertRaises(BackendError):
+                CabinetRecognizerHttp(cfg(bad))
+
+    def test_config_reads_the_environment_once(self):
+        c = Config.from_env({"CABINET_RECOGNIZER_URL": " http://127.0.0.1:8765/ ", "CABINET_RECOGNIZER_TIMEOUT": "90", "KITCHEN_RECOGNIZER": "cabinet"})
+        self.assertEqual((c.cabinet_recognizer_url, c.cabinet_recognizer_timeout, c.default_recognizer), ("http://127.0.0.1:8765", 90.0, "cabinet"))
+        c = Config.from_env({})
+        self.assertEqual((c.cabinet_recognizer_url, c.default_recognizer), (None, None))
+
+
+class TestChoose(unittest.TestCase):
+    def test_rules(self):
+        pick = recognition.choose_recognizer
+        self.assertEqual(pick(["gemini", "cabinet"], None, None), "cabinet")           # the stand-alone reader wins when both exist
+        self.assertEqual(pick(["gemini", "cabinet"], None, "gemini"), "gemini")        # the configured default beats the preference
+        self.assertEqual(pick(["gemini", "cabinet"], "gemini", "cabinet"), "gemini")   # a request beats the default
+        self.assertIsNone(pick(["gemini"], "cabinet", None))                           # asked for something that is not plugged in
+        self.assertEqual(pick(["gemini"], None, "cabinet"), "gemini")                  # a default that is not plugged in is ignored
+        self.assertEqual(pick(["mine"], None, None), "mine")                           # the only one
+        self.assertIsNone(pick(["a", "b"], None, None))
+        self.assertIsNone(pick([], None, None))
+
+
+class TestEndToEnd(unittest.TestCase):
+    """The real cabinet-recognizer HTTP service (replay mode: recorded model answers, no key) behind the adapter."""
+
+    def setUp(self):
+        from cabinet_recognizer.config import Config as RecogConfig
+        from cabinet_recognizer.http_server import make_handler
+        from cabinet_recognizer.vision import ReplayClient
+        self.server, url = serve(make_handler(RecogConfig.from_env(), ReplayClient(ANSWERS)))
+        self.tmp = Path(tempfile.mkdtemp(prefix="recog-e2e-"))
+        self.svc = KitchenService(self.tmp / "k.db", self.tmp / "renders")
+        self.svc.recognizers.clear()
+        self.svc.recognizers["cabinet"] = CabinetRecognizerHttp(cfg(url))
+        self.did = self.svc.create_from_spec(json.loads(json.dumps(FIX)))["id"]
+
+    def tearDown(self):
+        self.server.shutdown(); self.server.server_close()
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_photo_to_preview_keeps_the_room_and_saves_nothing(self):
+        before, rev = self.svc.store.get(self.did)
+        r = self.svc.recognize(self.did, {"kind": "photo", "imageBase64": base64.b64encode(IMAGE).decode(), "name": "kitchen.png", "note": "white doors"})
+        self.assertEqual((r["status"], r["recognizer"]), ("ok", "cabinet"))
+        self.assertEqual(r["operation"]["op"], "replace")
+        new = r["operation"]["spec"]
+        self.assertTrue(r["draft"]["modules"])
+        self.assertTrue(r["proposal"]["applicable"])
+        self.assertEqual(new["room"], json.loads(json.dumps(before.model_dump(mode="json")["room"])), "the design's own room is kept")
+        self.assertEqual(len(self.svc.history(self.did)), rev)                             # nothing was written
+        self.svc.apply(self.did, r["operation"], r["baseRev"], "test", r["proposal"]["opHash"])
+        after, rev2 = self.svc.store.get(self.did)
+        self.assertEqual((rev2, len(after.module)), (rev + 1, len(r["operation"]["spec"]["module"])))
+
+    def test_service_down_is_a_failed_status(self):
+        self.server.shutdown(); self.server.server_close()
+        r = self.svc.recognize(self.did, {"kind": "photo", "imageBase64": base64.b64encode(IMAGE).decode()})
+        self.assertEqual(r["status"], "failed")
+        self.assertIn("cabinet-recognizer", r["message"])
+
+
+if __name__ == "__main__":
+    unittest.main()

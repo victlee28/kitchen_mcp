@@ -32,7 +32,6 @@ Both interfaces should delegate application behavior to `kitchen.service.Kitchen
 - `kitchen/ai_export.py`: assembles design and render data into AI image-generation requests.
 - `web/`: browser editor, scene loader, and bundled front-end assets.
 - `schemas/`: published scene schemas and related documentation.
-- `workflows/`: ComfyUI workflow templates.
 - `fixtures/` and `tests/`: sample designs and automated tests.
 
 ## Portable core (read before touching `kitchen/`)

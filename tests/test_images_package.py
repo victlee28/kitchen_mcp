@@ -72,6 +72,9 @@ class TestImagesPackage(unittest.TestCase):
             im.config = self.svc.config
         self.assertEqual(j["status"], "error:unsupported", "no key in the Config means no key, whatever the process environment holds")
 
+    def test_only_supported_image_backends_are_exposed(self):
+        self.assertEqual(set(self.svc.image_backends()["backends"]), {"recolor", "job-package", "gemini"})
+
     def test_every_stored_request_has_the_core_keys_of_job_request(self):
         im = self.svc.images
         core = set(JobRequest.__required_keys__)
@@ -94,7 +97,7 @@ class TestImagesPackage(unittest.TestCase):
             new.view = "x"  # type: ignore[misc]
         a = im.submit(new)
         b = im.create(self.did, VIEW, "TD1-door-1", material="Walnut", backend="recolor")
-        for key in ("tasks", "kind", "mode", "backend", "workflow"):
+        for key in ("tasks", "kind", "mode", "backend"):
             self.assertEqual(a["request"].get(key), b["request"].get(key), key)
         with self.assertRaises(TypeError):  # more than (did, view, target) by position is refused: the 19-argument form is gone
             im.create(self.did, VIEW, "TD1-door-1", "Walnut")
@@ -119,8 +122,8 @@ class TestImagesPackage(unittest.TestCase):
             self.assertIs(part.env, im.env)
         old = im.config
         try:
-            im.config = dataclasses.replace(old, comfyui_url="http://example.invalid:1")
-            self.assertTrue(all(part.config.comfyui_url == "http://example.invalid:1" for part in parts), "a replaced config reaches every part")
+            im.config = dataclasses.replace(old, gemini_timeout=17)
+            self.assertTrue(all(part.config.gemini_timeout == 17 for part in parts), "a replaced config reaches every part")
         finally:
             im.config = old
 

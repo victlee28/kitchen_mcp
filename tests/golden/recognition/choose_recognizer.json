@@ -1,0 +1,100 @@
+{
+ "function": "recognition.choose_recognizer",
+ "cases": [
+  {
+   "name": "both plugged in: the stand-alone reader is preferred",
+   "input": {
+    "available": [
+     "gemini",
+     "cabinet"
+    ]
+   },
+   "expected": {
+    "name": "cabinet"
+   }
+  },
+  {
+   "name": "the configured default beats the preference",
+   "input": {
+    "available": [
+     "gemini",
+     "cabinet"
+    ],
+    "default": "gemini"
+   },
+   "expected": {
+    "name": "gemini"
+   }
+  },
+  {
+   "name": "a request beats the default",
+   "input": {
+    "available": [
+     "gemini",
+     "cabinet"
+    ],
+    "requested": "gemini",
+    "default": "cabinet"
+   },
+   "expected": {
+    "name": "gemini"
+   }
+  },
+  {
+   "name": "asked for something that is not plugged in",
+   "input": {
+    "available": [
+     "gemini"
+    ],
+    "requested": "cabinet"
+   },
+   "expected": {
+    "name": null
+   }
+  },
+  {
+   "name": "a default that is not plugged in is ignored",
+   "input": {
+    "available": [
+     "gemini"
+    ],
+    "default": "cabinet"
+   },
+   "expected": {
+    "name": "gemini"
+   }
+  },
+  {
+   "name": "the only one is used whatever its name",
+   "input": {
+    "available": [
+     "mine"
+    ]
+   },
+   "expected": {
+    "name": "mine"
+   }
+  },
+  {
+   "name": "several unknown names: no choice",
+   "input": {
+    "available": [
+     "a",
+     "b"
+    ]
+   },
+   "expected": {
+    "name": null
+   }
+  },
+  {
+   "name": "none plugged in",
+   "input": {
+    "available": []
+   },
+   "expected": {
+    "name": null
+   }
+  }
+ ]
+}

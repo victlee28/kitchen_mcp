@@ -1,4 +1,4 @@
-"""Sửa ảnh theo lớp: instance/mask, layer, job, ghép strict, kiểm tra, duyệt, adapter ComfyUI (máy chủ giả)."""
+"""Image editing jobs: layers, masks, strict compositing, validation and review."""
 from __future__ import annotations
 
 import base64
@@ -184,9 +184,10 @@ class TestImageJobs(_Base):
         j = im.create(self.did, VIEW, "type:countertop", mode="quick", material="Đá trắng vân mây", backend="job-package")
         self.assertEqual(j["status"], "awaiting-result")
         d = Path(j["result"]["dir"])
-        wf = json.loads((d / "workflow_api.json").read_text(encoding="utf-8"))
-        self.assertNotIn("{{", json.dumps(wf))
-        self.assertEqual(wf["2"]["inputs"]["image"], f"{j['id']}_reference.png")
+        self.assertTrue((d / "request.json").exists())
+        self.assertTrue((d / "AI-CHAT-GUIDE.txt").exists())
+        self.assertTrue((d / "image-1-marked-base-image.png").exists())
+        self.assertTrue((d / "image-2-mask.png").exists())
         same = (d / "reference.png").read_bytes()
         bad = im.submit_result(j["id"], same)
         self.assertEqual(bad["status"], "error:check-failed", "ảnh không đổi vùng đích bị đánh dấu")
@@ -302,8 +303,10 @@ class TestMultiTask(_Base):
         self.assertEqual([p_["inline_data"]["mime_type"] for p_ in parts[1:]], ["image/png", "image/png"], "ảnh ở inline_data để Gemini tự giải mã")
         self.assertEqual(parts[1]["inline_data"]["data"], r["attachedImages"][0]["dataUrl"].split(",")[1])
         self.assertTrue((d / "image-1-marked-base-image.png").exists() and (d / "image-2-color-mask.png").exists())
-        self.assertIn("KHÔNG dán file JSON", (d / "GEMINI-WEB-GUIDE.txt").read_text(encoding="utf-8"))
-        self.assertIn("image-2-color-mask.png", (d / "GEMINI-WEB-GUIDE.txt").read_text(encoding="utf-8"))
+        guide = (d / "AI-CHAT-GUIDE.txt").read_text(encoding="utf-8")
+        self.assertIn("Do not paste JSON or base64", guide)
+        self.assertIn("image-2-color-mask.png", guide)
+        self.assertIn("ChatGPT, Claude or Gemini", guide)
         full = json.loads(im.export_full(j["id"]).read_text(encoding="utf-8"))
         self.assertEqual(full["schema"], "kitchen-ai-edit-request-full/1.0")
         self.assertEqual(full["job"]["render_key"], j["render_key"], "bản đầy đủ giữ thông tin nội bộ")
@@ -343,10 +346,12 @@ class TestMultiTask(_Base):
         j = im.create(self.did, VIEW, tasks=self.TASKS[:2], backend="job-package", mode="design")
         self.assertEqual(j["status"], "awaiting-result")
         d = Path(j["result"]["dir"])
-        self.assertTrue((d / "workflow_api_1.json").exists() and (d / "workflow_api_2.json").exists())
-        wf2 = json.loads((d / "workflow_api_2.json").read_text(encoding="utf-8"))
-        self.assertEqual(wf2["2"]["inputs"]["image"], f"{j['id']}_ket_qua_1.png", "việc 2 lấy ảnh ra của việc 1")
+        self.assertTrue((d / "image-1-marked-base-image.png").exists())
+        self.assertTrue((d / "image-2-color-mask.png").exists())
         self.assertTrue((d / "mask_color.png").exists())
+        guide = (d / "AI-CHAT-GUIDE.txt").read_text(encoding="utf-8")
+        self.assertIn("Region 1", guide)
+        self.assertIn("Region 2", guide)
         ref = imaging.read(d / "reference.png")
         raw = ref.copy()
         m1 = imaging.read(d / "target_1.png", "L") > 127
@@ -428,7 +433,7 @@ class TestGeometryEdit(_Base):
         r = j["request"]
         self.assertEqual(r["operation"], "remove-item")
         self.assertEqual(r["designOp"], {"op": "remove", "id": "TD3", "closeGap": False})
-        self.assertEqual(r["params"]["cn_strength"], 0.55, "trọng số theo bảng thao tác")
+        self.assertEqual(r["params"], {})
         self.assertIn("TD3-door-1", r["different"]["xoa"])
         d = Path(j["result"]["dir"])
         m = imaging.read(d / "target.png", "L") > 127
@@ -458,9 +463,8 @@ class TestGeometryEdit(_Base):
         j = im.create(self.did, VIEW, backend="job-package", kind="geometry_edit", geometry_items=[{"type": "handle", "variant": "knob"}])
         self.assertEqual(j["status"], "awaiting-result", j["error"])
         self.assertGreater(j["request"]["maskPixels"], 0)
-        self.assertEqual(j["request"]["workflow"], "inpaint-lineart")
         d = Path(j["result"]["dir"])
-        self.assertTrue((d / "workflow_api.json").exists())
+        self.assertTrue((d / "AI-CHAT-GUIDE.txt").exists())
         k = im.create(self.did, VIEW, backend="recolor", kind="geometry_edit", geometry_items=[{"type": "door-style", "id": "TD1", "variant": "frame"}])
         self.assertEqual(k["status"], "needs-review", k["error"])
         self.assertEqual(k["request"]["different"]["pixels"], 0, "render nhanh không dựng khung cánh")
@@ -482,8 +486,7 @@ class TestGeometryEdit(_Base):
         with self.assertRaises(ConflictError):
             im.accept(j["id"])
         e = im.create(self.did, VIEW, backend="job-package", target="type:countertop", material="Đá đen", operation="change-material")
-        self.assertEqual(e["request"]["workflow"], "inpaint-lineart")
-        self.assertEqual(e["request"]["params"]["cn_strength"], 0.45)
+        self.assertEqual(e["request"]["params"], {})
         with self.assertRaises(ValueError):
             im.create(self.did, VIEW, backend="job-package", target="type:countertop", material="Đá đen", operation="remove-item")
 
@@ -511,7 +514,7 @@ class TestRealism(_Base):
         self.assertIn("2700", r["instruction"], "ánh sáng buổi tối")
         self.assertNotIn("natural daylight", r["instruction"], "không lẫn ánh sáng mâu thuẫn")
         self.assertIn("reveal gaps", r["instruction"])
-        self.assertIn("RAW photo", g["request"]["prompt"], "prompt ComfyUI có cụm ảnh thật")
+        self.assertIn("professional architectural interior photograph", g["request"]["prompt"])
         self.assertIn("CGI", g["request"]["negativePrompt"])
         e = im.create(self.did, VIEW, backend="job-package", target="type:countertop", material="Đá marble trắng vân mây")
         t = json.loads((Path(e["result"]["dir"]) / "request.json").read_text(encoding="utf-8"))["instruction"]
@@ -618,117 +621,6 @@ class TestAiExport(_Base):
         self.assertIn("long-run/depth.png", names)
         with self.assertRaises(ValueError):
             self.svc.ai_export(self.did, views=["none"])
-
-
-class _FakeComfy(BaseHTTPRequestHandler):
-    images: dict = {}
-    prompts: dict = {}
-    fail = False
-
-    def log_message(self, *a):
-        pass
-
-    def _json(self, data, code=200):
-        b = json.dumps(data).encode()
-        self.send_response(code); self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Length", str(len(b))); self.end_headers(); self.wfile.write(b)
-
-    def do_POST(self):
-        n = int(self.headers["Content-Length"]); body = self.rfile.read(n)
-        if self.path == "/upload/image":
-            name = body.split(b'filename="')[1].split(b'"')[0].decode()
-            data = body.split(b"\r\n\r\n", 2)[-1].rsplit(b"\r\n--", 1)[0]
-            _FakeComfy.images[name] = data
-            return self._json({"name": name, "subfolder": "", "type": "input"})
-        if self.path == "/prompt":
-            p = json.loads(body)["prompt"]
-            pid = f"p{len(_FakeComfy.prompts)}"
-            _FakeComfy.prompts[pid] = p
-            return self._json({"prompt_id": pid, "number": 1, "node_errors": {}})
-        self._json({"error": "?"}, 404)
-
-    def do_GET(self):
-        if self.path.startswith("/history/"):
-            pid = self.path.split("/")[-1]
-            p = _FakeComfy.prompts[pid]
-            if _FakeComfy.fail:
-                return self._json({pid: {"status": {"status_str": "error", "completed": False, "messages": ["OOM"]}, "outputs": {}}})
-            return self._json({pid: {"status": {"status_str": "success", "completed": True},
-                                     "outputs": {"9": {"images": [{"filename": f"{pid}.png", "subfolder": "", "type": "output"}]}}}})
-        if self.path.startswith("/view"):
-            pid = self.path.split("filename=")[1].split(".png")[0]
-            p = _FakeComfy.prompts[pid]
-            ref = next((v for k, v in _FakeComfy.images.items() if k.endswith("_reference.png")), None)
-            if "2" in p and ref:  # inpaint: tô đỏ vùng mask lên ảnh gốc
-                im = np.array(Image.open(io.BytesIO(_FakeComfy.images[p["2"]["inputs"]["image"]])).convert("RGB"))
-                mk = np.array(Image.open(io.BytesIO(_FakeComfy.images[p["3"]["inputs"]["image"]])).convert("L")) > 127
-                im[mk] = (180, 30, 30)
-            else:
-                im = np.full((480, 640, 3), 128, np.uint8)
-            buf = io.BytesIO(); Image.fromarray(im).save(buf, "PNG"); b = buf.getvalue()
-            self.send_response(200); self.send_header("Content-Type", "image/png")
-            self.send_header("Content-Length", str(len(b))); self.end_headers(); self.wfile.write(b)
-            return
-        self._json({}, 404)
-
-
-class TestComfyUIAdapter(_Base):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        cls.srv = ThreadingHTTPServer(("127.0.0.1", 0), _FakeComfy)
-        threading.Thread(target=cls.srv.serve_forever, daemon=True).start()
-        cls.url = f"http://127.0.0.1:{cls.srv.server_address[1]}"
-        cls.svc.images.config = dataclasses.replace(cls.svc.images.config, comfyui_url=cls.url)  # settings are a value passed in, not the environment
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.srv.shutdown()
-        super().tearDownClass()
-
-    def test_edit_via_comfyui(self):
-        _FakeComfy.fail = False
-        j = self.svc.images.create(self.did, VIEW, "TD1-door-1", instruction="matte sage green", backend="comfyui", seed=42)
-        j = self.svc.images.wait(j["id"], 30)
-        self.assertEqual(j["status"], "needs-review", j["error"])
-        p = list(_FakeComfy.prompts.values())[-1]
-        self.assertEqual(p["7"]["inputs"]["seed"], 42)
-        self.assertIn("matte sage green", p["4"]["inputs"]["text"])
-        self.assertTrue(j["result"]["report"]["outsideMask"]["setPreserve"])
-
-    def test_gen0_and_failure(self):
-        _FakeComfy.fail = False
-        g = self.svc.images.wait(self.svc.images.create(self.did, VIEW, kind="gen0", backend="comfyui")["id"], 30)
-        self.assertEqual(g["status"], "needs-review", g["error"])
-        p = list(_FakeComfy.prompts.values())[-1]
-        self.assertEqual((p["16"]["inputs"]["width"], p["16"]["inputs"]["height"]), (640, 480))
-        self.svc.images.accept(g["id"])
-        self.assertEqual(self.svc.images.layers(self.did, VIEW)["baseImage"]["jobId"], g["id"])
-        _FakeComfy.fail = True
-        f = self.svc.images.wait(self.svc.images.create(self.did, VIEW, "TD1-door-1", instruction="x", backend="comfyui")["id"], 30)
-        self.assertEqual(f["status"], "error:generation-failed")
-        _FakeComfy.fail = False
-
-    def test_multi_sequential(self):
-        _FakeComfy.fail = False
-        n0 = len(_FakeComfy.prompts)
-        j = self.svc.images.create(self.did, VIEW, backend="comfyui", tasks=[{"targetLayer": "TD1-door-1", "instruction": "green"},
-                                                                             {"targetLayer": "TD1-door-2", "instruction": "blue"}])
-        j = self.svc.images.wait(j["id"], 30)
-        self.assertEqual(j["status"], "needs-review", j["error"])
-        self.assertEqual(len(_FakeComfy.prompts) - n0, 2, "mỗi việc một lần chạy")
-        last = list(_FakeComfy.prompts.values())[-1]
-        self.assertTrue(last["2"]["inputs"]["image"].endswith("_2_reference.png"))
-        self.assertIn("blue", last["4"]["inputs"]["text"])
-
-    def test_unreachable(self):
-        old = self.svc.images.config
-        self.svc.images.config = dataclasses.replace(old, comfyui_url="http://127.0.0.1:9")
-        try:
-            f = self.svc.images.wait(self.svc.images.create(self.did, VIEW, "TD1-door-1", instruction="x", backend="comfyui")["id"], 30)
-            self.assertEqual(f["status"], "error:overloaded")
-        finally:
-            self.svc.images.config = old
 
 
 class _FakeGemini(BaseHTTPRequestHandler):

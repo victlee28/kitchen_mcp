@@ -14,7 +14,6 @@ Every identifier in the code and in the data formats is English, and data create
 - R4. `KitchenService` migrates an old `renders/` directory on start: view directories, file names and JSON content, and marks completion with `.english-schema-v1`.
 - R5. Both migrations are idempotent: running them again changes nothing.
 - R6. `convert_spec` turns a specification file saved under the old names into the current schema.
-- R7. Old ComfyUI workflow files whose `kitchen` block uses old keys are converted when read.
 - R8. Converting the original sample specification gives exactly `fixtures/l-shaped-kitchen.json`.
 - R9. Job statuses are `awaiting-send`, `awaiting-result`, `running`, `needs-review`, `accepted`, `rejected` and `error:<code>`; the web editor styles each one.
 - R10. The three.js export uses `storey` (values `base`, `upper`, `loft`, `tall`, `corner`) and `plinthHeight`; the current schema describes both.

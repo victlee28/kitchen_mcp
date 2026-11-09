@@ -32,8 +32,8 @@ async function load() {
   geometryForm(); fillStyleFrom();
   const bt = d.baseImage.type;
   const lineBad = bt === 'imported' && d.baseImage.lineMatch && d.baseImage.lineMatch.khop === false;
-  $('imgInfo').textContent = `rev ${d.rev} · ${d.width}×${d.height} · renderKey ${d.renderKey} · ảnh gốc: ${bt === 'job' ? d.baseImage.jobId : bt === 'imported' ? 'ảnh nhập từ ChatGPT' : bt}` +
-    (lineBad ? ' · ⚠ nét ảnh lệch so với thiết kế (ChatGPT có thể đã vẽ lại hình, mask sửa sẽ không khớp)' : '');
+  $('imgInfo').textContent = `rev ${d.rev} · ${d.width}×${d.height} · renderKey ${d.renderKey} · ảnh gốc: ${bt === 'job' ? d.baseImage.jobId : bt === 'imported' ? 'ảnh nhập từ AI' : bt}` +
+    (lineBad ? ' · ⚠ nét ảnh lệch so với thiết kế (ảnh AI có thể đã vẽ lại hình, mask sửa sẽ không khớp)' : '');
   $('baseClear').hidden = bt !== 'imported';
   $('imgBase').src = bust(d.baseImage.url);
   $('imgAfter').hidden = true; $('cmpWrap').hidden = true;
@@ -186,8 +186,6 @@ async function loadBackends() {
   const b = await api('/api/image-backends');
   $('jBackend').replaceChildren(...Object.entries(b.backends).map(([k, v]) => el('option', { value: k, textContent: `${k} — ${v.name}` })));
   if (b.default && b.backends[b.default]) $('jBackend').value = b.default;
-  $('jWf').replaceChildren(el('option', { value: '', textContent: 'mặc định' }),
-    ...Object.entries(b.workflows).map(([k, v]) => el('option', { value: k, textContent: `${k} (${v.kind})` })));
   S.operation = b.operation || {};
   $('jOperation').replaceChildren(el('option', { value: '', textContent: 'tự động' }),
     ...Object.entries(S.operation).map(([k, v]) => el('option', { value: k, textContent: `${v.name} (${v.kind})`, title: v.description })));
@@ -252,7 +250,7 @@ function fillStyleFrom() {
 }
 async function create(kind) {
   const body = { view: S.view, kind, backend: $('jBackend').value, mode: $('jMode').value, material: $('jItem').value.trim() || null,
-    instruction: $('jInstr').value.trim(), reference: $('jRef').value, baseRev: S.data.rev, workflow: $('jWf').value || null,
+    instruction: $('jInstr').value.trim(), reference: $('jRef').value, baseRev: S.data.rev,
     preview: $('jPreview').checked };
   body.operation = operationFor(kind);
   const views = [...$('viewSelect').options].map((o) => o.value);
@@ -334,7 +332,7 @@ function showJob(j) {
       const b64 = await new Promise((ok, err) => { const fr = new FileReader(); fr.onload = () => ok(fr.result); fr.onerror = err; fr.readAsDataURL(f); });
       await api(`/api/image-jobs/${j.id}/result`, 'POST', { imageBase64: b64 }); await loadJobs();
     }));
-    const importButton = el('button', { type: 'button', textContent: 'Nhập ảnh kết quả từ ChatGPT', onclick: () => inp.click() });
+    const importButton = el('button', { type: 'button', textContent: 'Nhập ảnh kết quả từ AI', onclick: () => inp.click() });
     row.append(importButton, inp);
   }
   box.append(row);
@@ -344,18 +342,18 @@ function showJob(j) {
     el('a', { href: '#', textContent: 'Xem JSON (rút gọn / đầy đủ)', onclick: (ev) => { ev.preventDefault();
       run('mở request', () => window.kitchenJson.showJsonUrl(`Request gửi AI · ${j.id}`, `/api/image-jobs/${j.id}/request`, `${j.id}-request.json`, jobVariants(j.id, j.status === 'awaiting-send'))); } }),
     ' · ', el('a', { href: `/api/image-jobs/${j.id}/request?format=gemini`, download: `${j.id}-gemini-request.json`, textContent: 'JSON cho Gemini API' }));
-  const web = el('div', { class: 'sendai' }, el('b', {}, 'ChatGPT / Gemini thủ công: '),
+  const web = el('div', { class: 'sendai' }, el('b', {}, 'ChatGPT / Claude / Gemini thủ công: '),
     el('a', { href: '#', textContent: 'Chép chỉ dẫn', onclick: (ev) => { ev.preventDefault(); run('chép chỉ dẫn', async () => {
       const r = await (await fetch(`/api/image-jobs/${j.id}/request`)).json();
-      await navigator.clipboard.writeText(r.instruction); status('Đã chép chỉ dẫn — đính kèm ảnh tham chiếu rồi dán vào ChatGPT', 'ok'); }); } }));
+      await navigator.clipboard.writeText(r.instruction); status('Đã chép chỉ dẫn — đính kèm ảnh tham chiếu rồi dán vào công cụ AI', 'ok'); }); } }));
   for (const [k, u] of Object.entries(j.files || {}).filter(([k]) => /^image-\d-/.test(k)).sort()) {
     web.append(' · ', el('a', { href: u, download: `${j.id}-${k}`, textContent: `Ảnh ${k.split('-')[1]}: ${k.replace(/^image-\d-|\.png$/g, '')}` }));
   }
   web.append(el('div', { class: 'warnbox', textContent: canImport
-    ? 'Đính kèm ảnh tham chiếu ở trên vào ChatGPT, dán chỉ dẫn đã chép và tạo ảnh. Sau đó bấm “Nhập ảnh kết quả từ ChatGPT” để đưa ảnh về đây; ảnh sẽ được kiểm tra và chờ bạn duyệt.'
+    ? 'Đính kèm ảnh tham chiếu ở trên vào ChatGPT, Claude hoặc Gemini, dán chỉ dẫn đã chép và tạo ảnh. Sau đó bấm “Nhập ảnh kết quả từ AI” để đưa ảnh về đây; ảnh sẽ được kiểm tra và chờ bạn duyệt.'
     : j.status === 'awaiting-send'
-      ? `Nút “Nhập ảnh kết quả từ ChatGPT” chỉ hiện khi job ở trạng thái chờ kết quả. Job này đang chờ gửi (backend ${j.backend}): để làm thủ công với ChatGPT, hãy dùng job backend job-package rồi bấm Gửi — job chuyển sang “chờ kết quả” và nút sẽ hiện.`
-      : 'Nút “Nhập ảnh kết quả từ ChatGPT” không hiện ở trạng thái này của job.' }));
+      ? `Nút “Nhập ảnh kết quả từ AI” chỉ hiện khi job ở trạng thái chờ kết quả. Job này đang chờ gửi (backend ${j.backend}): để làm thủ công với ChatGPT, Claude hoặc Gemini, hãy dùng job backend job-package rồi bấm Gửi — job chuyển sang “chờ kết quả” và nút sẽ hiện.`
+      : 'Nút “Nhập ảnh kết quả từ AI” không hiện ở trạng thái này của job.' }));
   const kt = el('div', { class: 'sendai kiemtra', textContent: 'Kiểm tra request: đang kiểm tra…' });
   {
     fetch(`/api/image-jobs/${j.id}/request`).then((r) => r.json()).then((r) => showCheck(kt, r.validation, 'Kiểm tra request'))
@@ -426,7 +424,7 @@ window.addEventListener('view-changed', () => { if (active()) run('mở ảnh', 
 $('designSelect').addEventListener('change', () => { S.layer = null; S.sel = []; S.job = null; S.tasks = []; renderTasks(); });
 loadBackends().catch((e) => status(e.message, 'warn'));
 
-// ---------------- nhập ảnh ChatGPT làm ảnh nền (thay ảnh gốc của góc nhìn đang chọn)
+// ---------------- import an AI-generated image as the base image for the selected view
 $('baseImport').addEventListener('click', () => {
   if (!S.id || !S.view) { status('Chọn thiết kế và góc nhìn trước', 'warn'); return; }
   $('baseFile').click();

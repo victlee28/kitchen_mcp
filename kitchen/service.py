@@ -219,11 +219,12 @@ class KitchenService:
 
     def _wire_recognizers(self) -> None:
         from .backends import BackendError
-        from .recognizers import GeminiRecognizer
-        try:
-            self.recognizers["gemini"] = GeminiRecognizer(self.config)
-        except BackendError:
-            pass                    # no key: recognition answers "unavailable"
+        from .recognizers import CabinetRecognizerHttp, GeminiRecognizer
+        for name, make in (("gemini", GeminiRecognizer), ("cabinet", CabinetRecognizerHttp)):
+            try:
+                self.recognizers[name] = make(self.config)
+            except BackendError:
+                pass                # no key / no service URL: that recognizer is simply not offered; with none, recognition answers "unavailable"
 
     def register_recognizer(self, name: str, recognizer: recognition.Recognizer) -> None:
         """Plug in a photo/drawing recognizer (anything with ``recognize(RecognitionInput) -> dict``)."""
@@ -231,7 +232,7 @@ class KitchenService:
 
     def recognize(self, design_id: str, source: dict[str, Any], recognizer: str | None=None, base_revision: int | None=None,
                   country: str | None=None) -> dict:
-        """Photo or drawing -> a DRAFT kitchen, previewed, never saved. ``source``: ``{"kind": "photo"|"drawing", "imageBase64": "...", "name"?, "mediaType"?}``.
+        """Photo or drawing -> a DRAFT kitchen, previewed, never saved. ``source``: ``{"kind": "photo"|"drawing", "imageBase64": "...", "name"?, "mediaType"?, "note"?}`` (``note``: the user's hint, up to 500 characters).
 
         ``status``: ``ok`` (``draft`` + ``operation`` + the :meth:`propose` result under ``proposal``; confirm with :meth:`apply` and its opHash),
         ``empty`` (nothing usable was recognised), ``unavailable`` (no recognizer plugged in) or ``failed`` (the recognizer raised).
@@ -251,10 +252,11 @@ class KitchenService:
         out: dict[str, Any] = {'id': design_id, 'baseRev': current}
         if not self.recognizers:
             return {**out, 'status': 'unavailable', 'message': 'No recognizer is configured'}
-        name = recognizer or (next(iter(self.recognizers)) if len(self.recognizers) == 1 else None)
-        if name not in self.recognizers:
+        name = recognition.choose_recognizer(list(self.recognizers), recognizer, self.config.default_recognizer)
+        if name is None or name not in self.recognizers:
             raise InvalidInput(f"recognizer must be one of: {', '.join(self.recognizers)}", code='unknown-recognizer')
-        inp = recognition.RecognitionInput(kind=kind, data=data, name=str(source.get('name') or ''), media_type=str(source.get('mediaType') or ''))
+        inp = recognition.RecognitionInput(kind=kind, data=data, name=str(source.get('name') or ''), media_type=str(source.get('mediaType') or ''),
+                                      note=recognition.recognizer_wire.clean_note(source.get('note')))
         try:
             raw = self.recognizers[name].recognize(inp)
         except Exception as error:  # a plug-in may raise anything; the caller gets a status, not a crash
@@ -384,11 +386,10 @@ class KitchenService:
         return ai_export.build(self, design_id, revision, views, country, with_images, embed, lighting)
 
     def image_backends(self) -> dict:
-        """Image backends, ComfyUI workflows, geometry-edit operations and lighting presets the UI can offer."""
+        """Image backends, geometry-edit operations and lighting presets the UI can offer."""
         from . import backends, geometry_edit, prompts
-        return {'backends': backends.BACKENDS, 'workflows': backends.workflow_names(), 'operation': geometry_edit.OPERATIONS,
-                'lighting': prompts.LIGHTING_VI, 'default': self.config.default_backend,
-                'comfyuiUrl': self.config.comfyui_url}
+        return {'backends': backends.BACKENDS, 'operation': geometry_edit.OPERATIONS,
+                'lighting': prompts.LIGHTING_VI, 'default': self.config.default_backend}
 
     def check_request(self, text: str) -> dict:
         """Check a pasted customer request for contradictions and gaps before designing."""

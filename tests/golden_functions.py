@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from kitchen import edit, floorplan, geometry, layers, moldings, numeric, proposal, rules, structure_mesh  # noqa: E402
-from kitchen.recognition import gemini_wire  # noqa: E402
+from kitchen.recognition import choose_recognizer, gemini_wire, recognizer_wire  # noqa: E402
 from kitchen.placement import Placement  # noqa: E402
 from kitchen.spec import load_spec, to_data  # noqa: E402
 
@@ -110,13 +110,16 @@ def gemini_wire_sniff_media_type(i):
 def gemini_wire_request_body(i):
     """Projection: the prompt's opening and closing words, the image part verbatim, and the generation config."""
     import base64
-    body = gemini_wire.request_body(i["kind"], base64.b64decode(i["dataBase64"]), i["mediaType"])
+    body = gemini_wire.request_body(i["kind"], base64.b64decode(i["dataBase64"]), i["mediaType"], i.get("note", ""))
     parts = body["contents"][0]["parts"]
     text = parts[0]["text"]
     cfg = body["generationConfig"]
-    return {"role": body["contents"][0]["role"], "textStart": text[:60], "mentionsTypes": all(t in text for t in i["mustMention"]),
-            "image": parts[1]["inline_data"], "responseMimeType": cfg["responseMimeType"], "temperature": cfg["temperature"],
-            "schemaRequired": cfg["responseSchema"]["required"]}
+    out = {"role": body["contents"][0]["role"], "textStart": text[:60], "mentionsTypes": all(t in text for t in i["mustMention"]),
+           "image": parts[1]["inline_data"], "responseMimeType": cfg["responseMimeType"], "temperature": cfg["temperature"],
+           "schemaRequired": cfg["responseSchema"]["required"]}
+    if len(parts) > 2:
+        out["noteText"] = parts[2]["text"]
+    return out
 
 
 def gemini_wire_answer_text(i):
@@ -125,6 +128,27 @@ def gemini_wire_answer_text(i):
 
 def gemini_wire_parse_draft(i):
     return {"draft": gemini_wire.parse_draft(i["text"])}
+
+
+def recognition_choose_recognizer(i):
+    return {"name": choose_recognizer(i["available"], i.get("requested"), i.get("default"))}
+
+
+def recognizer_wire_clean_note(i):
+    return {"note": recognizer_wire.clean_note(i["text"])}
+
+
+def recognizer_wire_request_body(i):
+    import base64
+    return {"body": recognizer_wire.request_body(i["kind"], base64.b64decode(i["dataBase64"]), i.get("note", ""))}
+
+
+def recognizer_wire_response_error(i):
+    return {"error": recognizer_wire.response_error(i["payload"])}
+
+
+def recognizer_wire_draft_from_kitchen_spec(i):
+    return {"draft": recognizer_wire.draft_from_kitchen_spec(i["payload"])}
 
 
 FUNCTIONS = {
@@ -143,4 +167,9 @@ FUNCTIONS = {
     "recognition.gemini_wire.request_body": gemini_wire_request_body,
     "recognition.gemini_wire.answer_text": gemini_wire_answer_text,
     "recognition.gemini_wire.parse_draft": gemini_wire_parse_draft,
+    "recognition.choose_recognizer": recognition_choose_recognizer,
+    "recognition.recognizer_wire.clean_note": recognizer_wire_clean_note,
+    "recognition.recognizer_wire.request_body": recognizer_wire_request_body,
+    "recognition.recognizer_wire.response_error": recognizer_wire_response_error,
+    "recognition.recognizer_wire.draft_from_kitchen_spec": recognizer_wire_draft_from_kitchen_spec,
 }

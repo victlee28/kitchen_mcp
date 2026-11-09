@@ -1,4 +1,4 @@
-"""Gói xuất cho AI tạo ảnh: một file JSON "cuối cùng" của thiết kế (rev mới nhất) để gửi sang Gemini / ComfyUI / dịch vụ khác.
+"""Export the latest design revision as an image-generation request for Gemini or an external chat model.
 
 Gồm: thông tin thiết kế, vật liệu (tên gốc + tiếng Anh + màu), kiểu cánh, prompt chung + negative, từng góc nhìn
 (camera, kích thước, prompt riêng dạng câu, đường dẫn ảnh điều khiển) và toàn bộ cảnh three.js.
@@ -122,13 +122,11 @@ def build(svc, did: str, rev: int | None = None, views: list[str] | None = None,
         "design": {"id": did, "revision": r, "name": spec.name, "style": spec.style, "country": spec.country,
                     "moduleCount": len(spec.module), "doorStyle": style, "handle": {"variant": tn.variant, "material": tn.material},
                     "molding": [m.id for m in spec.moldings if m.enabled]},
-        "instructions": ("Gửi views[].anhNhung (nếu có, ảnh đã nhúng sẵn) hoặc ảnh trong views[].anh theo anhDauVaoGoiY (beauty = render three.js, albedo = màu phẳng, lines = nét) "
-                     "kèm views[].prompt cho AI tạo ảnh (Gemini, ComfyUI img2img/ControlNet…). Ảnh kết quả nộp lại qua "
-                     "tab 'Sửa ảnh theo lớp' (job gen-0, backend job-package) hoặc MCP submit_image_result."),
+        "instructions": ("Attach the suggested input image for each view and include its prompt when sending it to Gemini, ChatGPT, Claude, "
+                         "or another image model. Import the generated image through an image job or MCP submit_image_result."),
         "commonPrompt": common,
         "lighting": lighting,
         "photoRequest": photo_image,
-        "promptComfyUI": f"{common}, {prompts.tags(spec, lighting)}",
         "part": part.strip(),
         "negativePrompt": negative,
         "material": _material(doc),

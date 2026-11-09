@@ -1,36 +1,22 @@
-"""Adapter backend sinh ảnh. Orchestrator (kitchen.images) không phụ thuộc cách gọi model cụ thể.
+"""Image-generation adapters. The image-job orchestrator does not depend on a specific model API.
 
-- `to-mau`  : đổi màu vùng đích giữ sáng tối (không AI, chạy ngay) — kiểm chứng mask/ghép ảnh, xem nhanh màu.
-- `job-package` : xuất gói job (ảnh gốc, mask, nét, depth, prompt, workflow ComfyUI dạng API) để chạy ở nơi khác,
-              rồi nộp ảnh kết quả về bằng `submit_image_result`.
-- `comfyui` : gọi ComfyUI HTTP (/upload/image, /prompt, /history, /view). Cấu hình qua biến môi trường:
-              COMFYUI_URL (mặc định http://127.0.0.1:8188), COMFYUI_CKPT, COMFYUI_CN_LINEART, COMFYUI_CN_DEPTH,
-              COMFYUI_TIMEOUT (giây, mặc định 600).
-- `gemini`  : gọi thẳng Gemini API (generateContent, trả ảnh). Khóa và model lấy từ biến môi trường
-              GEMINI_API_KEY / GEMINI_IMAGE_MODEL, hoặc đọc từ file .env khác qua GEMINI_ENV_FILE
-              (vd .env của dự án mcp-image) để không phải chép khóa. GEMINI_BASE_URL, GEMINI_TIMEOUT (mặc định 300).
-              Gemini không nhận mask như inpaint: ảnh gốc + ảnh mask được gửi kèm chỉ dẫn, còn việc giữ nguyên
-              vùng ngoài mask do bước ghép strict bảo đảm.
+- `recolor`: change the target region's color while preserving shading, without an AI model.
+- `job-package`: export prompts and images for a person or external chat model; import the result with `submit_image_result`.
+- `gemini`: call the Gemini image API. Credentials and model settings use `GEMINI_API_KEY`, `GEMINI_IMAGE_MODEL`,
+  or a separate environment file via `GEMINI_ENV_FILE`.
 """
 from __future__ import annotations
 
 import base64
-import copy
 import json
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
-import uuid
 
 from pathlib import Path
 
-from . import legacy
 from .config import Config
-
-ROOT = Path(__file__).resolve().parent.parent
-WORKFLOWS = ROOT / "workflows"
-
 
 class BackendError(ValueError):
     def __init__(self, code: str, msg: str):
@@ -42,112 +28,10 @@ BACKENDS = {
     "recolor": {"name": "Đổi màu giữ sáng tối (không AI)", "kind": ["edit", "geometry_edit"], "async": False,
                "supported": ["mask"], "needsConfig": []},
     "job-package": {"name": "Xuất gói job, nộp ảnh kết quả sau", "kind": ["edit", "gen0", "geometry_edit"], "async": False,
-                "supported": ["mask", "lineart", "depth"], "needsConfig": []},
-    "comfyui": {"name": "ComfyUI qua HTTP", "kind": ["edit", "gen0", "geometry_edit"], "async": True,
-                "supported": ["mask", "lineart", "depth"], "needsConfig": ["COMFYUI_URL", "COMFYUI_CKPT"]},
+                "supported": ["reference-image", "mask-illustration"], "needsConfig": []},
     "gemini": {"name": "Gemini API (ảnh + chỉ dẫn)", "kind": ["edit", "gen0", "geometry_edit"], "async": True,
                "supported": ["reference-image", "mask-illustration"], "needsConfig": ["GEMINI_API_KEY | GEMINI_ENV_FILE", "GEMINI_IMAGE_MODEL"]},
 }
-
-
-def _read_workflow(path) -> dict:
-    """Read a workflow file; the ``kitchen`` metadata block of old files (Vietnamese keys) is converted on the fly."""
-    data = json.loads(path.read_text(encoding="utf-8"))
-    if isinstance(data.get("kitchen"), dict):
-        data["kitchen"] = legacy.convert(data["kitchen"])
-    return data
-
-
-def workflow_names() -> dict:
-    out = {}
-    for p in sorted(WORKFLOWS.glob("*.json")):
-        out[p.stem] = _read_workflow(p).get("kitchen", {})
-    return out
-
-
-def load_workflow(name: str) -> dict:
-    p = WORKFLOWS / f"{name}.json"
-    if not p.is_file() or p.parent.resolve() != WORKFLOWS.resolve():
-        raise BackendError("unsupported", f"Không có workflow '{name}'. Có: {', '.join(workflow_names())}")
-    return _read_workflow(p)
-
-
-def fill(template, values: dict):
-    """Thay chuỗi '{{khoa}}' bằng giá trị (giữ kiểu: seed là số)."""
-    if isinstance(template, dict):
-        return {k: fill(v, values) for k, v in template.items()}
-    if isinstance(template, list):
-        return [fill(v, values) for v in template]
-    if isinstance(template, str) and template.startswith("{{") and template.endswith("}}"):
-        key = template[2:-2]
-        if key not in values:
-            raise BackendError("unsupported", f"Workflow cần '{key}' nhưng job không có")
-        return values[key]
-    return template
-
-
-def model_defaults(config: Config) -> dict:
-    return {"ckpt": config.comfyui_ckpt, "controlnet_lineart": config.comfyui_cn_lineart, "controlnet_depth": config.comfyui_cn_depth}
-
-
-# ------------------------------------------------------------------ ComfyUI
-class ComfyUI:
-    def __init__(self, config: Config, url: str | None = None, timeout: float | None = None, poll: float = 1.0):
-        self.url = (url or config.comfyui_url).rstrip("/")
-        self.timeout = float(timeout or config.comfyui_timeout)
-        self.poll = poll
-
-    def _req(self, path: str, data: bytes | None = None, headers: dict | None = None, t: float = 30):
-        req = urllib.request.Request(self.url + path, data=data, headers=headers or {})
-        try:
-            with urllib.request.urlopen(req, timeout=t) as r:
-                return r.read()
-        except urllib.error.HTTPError as e:
-            body = e.read()[:500].decode("utf-8", "replace")
-            if e.code in (429, 503):
-                raise BackendError("overloaded", f"ComfyUI bận ({e.code})")
-            raise BackendError("generation-failed", f"ComfyUI trả {e.code}: {body}")
-        except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
-            raise BackendError("overloaded", f"Không kết nối được ComfyUI tại {self.url}: {e}")
-
-    def upload(self, path: Path, name: str) -> str:
-        boundary = uuid.uuid4().hex
-        body = b"".join([
-            f"--{boundary}\r\nContent-Disposition: form-data; name=\"overwrite\"\r\n\r\ntrue\r\n".encode(),
-            f"--{boundary}\r\nContent-Disposition: form-data; name=\"image\"; filename=\"{name}\"\r\n"
-            f"Content-Type: image/png\r\n\r\n".encode(), Path(path).read_bytes(), f"\r\n--{boundary}--\r\n".encode()])
-        r = json.loads(self._req("/upload/image", body, {"Content-Type": f"multipart/form-data; boundary={boundary}"}))
-        return (r.get("subfolder") + "/" if r.get("subfolder") else "") + r["name"]
-
-    def run(self, prompt: dict, out_path: Path) -> dict:
-        r = json.loads(self._req("/prompt", json.dumps({"prompt": prompt, "client_id": "kitchen-design"}).encode(),
-                                 {"Content-Type": "application/json"}))
-        if r.get("node_errors"):
-            raise BackendError("generation-failed", f"Workflow lỗi node: {json.dumps(r['node_errors'], ensure_ascii=False)[:400]}")
-        pid = r["prompt_id"]
-        t0 = time.monotonic()
-        while True:
-            h = json.loads(self._req(f"/history/{pid}")).get(pid)
-            if h:
-                st = h.get("status", {})
-                if st.get("status_str") == "error":
-                    raise BackendError("generation-failed", f"ComfyUI báo lỗi: {json.dumps(st.get('messages', []), ensure_ascii=False)[:400]}")
-                imgs = [im for o in h.get("outputs", {}).values() for im in o.get("images", []) if im.get("type") == "output"]
-                if imgs:
-                    im = imgs[0]
-                    q = urllib.parse.urlencode({"filename": im["filename"], "subfolder": im.get("subfolder", ""), "type": "output"})
-                    out_path.write_bytes(self._req(f"/view?{q}", t=120))
-                    return {"promptId": pid, "file": im["filename"], "giay": round(time.monotonic() - t0, 1)}
-                if st.get("completed"):
-                    raise BackendError("generation-failed", "ComfyUI chạy xong nhưng không có ảnh output (thiếu node SaveImage?)")
-            if time.monotonic() - t0 > self.timeout:
-                raise BackendError("timeout", f"Quá {self.timeout:.0f}s chưa có kết quả (prompt {pid})")
-            time.sleep(self.poll)
-
-
-def build_prompt(workflow: dict, images: dict[str, str], values: dict, models: dict) -> dict:
-    """workflow = {"kitchen": {...}, "prompt": {...}}; images: khóa ảnh -> tên file đã upload."""
-    return fill(copy.deepcopy(workflow["prompt"]), {**models, **values, **images})
 
 
 # ------------------------------------------------------------------ Gemini

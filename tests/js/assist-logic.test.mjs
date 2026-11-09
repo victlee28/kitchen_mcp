@@ -42,6 +42,10 @@ test('upload check: type and size', () => {
   assert.equal(checkUpload({ type: 'image/jpeg', size: 1000 }), null);
   assert.deepEqual(recognizeBody('photo', 'a.jpg', 'image/jpeg', 'QQ==', 2), { source: { kind: 'photo', name: 'a.jpg', mediaType: 'image/jpeg', imageBase64: 'QQ==' }, baseRev: 2 });
   assert.throws(() => recognizeBody('video', 'a', 'b', 'c', 1));
+  // the hint typed in the menu box travels with the picture (trimmed, at most 500 characters, left out when blank)
+  assert.equal(recognizeBody('photo', 'a.jpg', 'image/jpeg', 'QQ==', 2, '  white   doors \n').source.note, 'white doors');
+  assert.equal(recognizeBody('photo', 'a.jpg', 'image/jpeg', 'QQ==', 2, 'x'.repeat(900)).source.note.length, 500);
+  for (const blank of ['', '   ', undefined, null]) assert.ok(!('note' in recognizeBody('photo', 'a.jpg', 'image/jpeg', 'QQ==', 2, blank).source));
 });
 
 test('recognition answers cover every status and flag low-confidence modules', () => {

@@ -87,7 +87,7 @@ class TestBacksplash(unittest.TestCase):
 class TestBacksplashUi(unittest.TestCase):
     def test_form_sends_the_option(self):
         html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
-        js = (ROOT / "web" / "app.js").read_text(encoding="utf-8")
+        js = (ROOT / "web" / "design-create-panel.js").read_text(encoding="utf-8")
         self.assertIn('id="mBacksplash"', html)
         for value in ("standard", "to-upper"):
             self.assertIn(f'value="{value}"', html)

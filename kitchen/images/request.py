@@ -60,7 +60,6 @@ class _Core(TypedDict):
     mode: str
     instruction: str
     backend: str
-    workflow: str
     seed: int
     params: dict[str, Any]
     size: list[int]                 # [width, height] in pixels
@@ -104,7 +103,6 @@ class NewJob:
     reference: str | None = None
     base_rev: int | None = None
     kind: str = "edit"
-    workflow: str | None = None
     seed: int | None = None
     params: dict[str, Any] | None = None
     tasks: list[dict[str, Any]] | None = None

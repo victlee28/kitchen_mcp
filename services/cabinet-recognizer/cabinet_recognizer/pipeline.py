@@ -58,10 +58,27 @@ def recognize(image: bytes, client: VisionClient, *, region: str = "VN",
 
 # ---------------- v0.2: tự chọn nhánh ----------------
 
+NOTE_STEPS = ("scene", "policy")      # gợi ý chỉ đi vào các bước hiểu bố cục và chọn chính sách, không vào các bước đo/chia ô
+
+
+class _NoteClient:
+    """Bọc một VisionClient: thêm gợi ý của người dùng vào câu hỏi của NOTE_STEPS. Tên bước giữ nguyên nên Replay/Inbox chạy như cũ."""
+
+    def __init__(self, inner: VisionClient, note: str) -> None:
+        self.inner = inner
+        self.note = note
+
+    def complete(self, step: str, prompt: str, images: list[bytes]) -> str:
+        return self.inner.complete(step, prompts.with_note(prompt, self.note) if step in NOTE_STEPS else prompt, images)
+
+
 def recognize_auto(image: bytes, client: VisionClient, *, region: str = "VN",
-                   retries: int = 1, debug: dict[str, Any] | None = None) -> dict[str, Any]:
-    """Hỏi AI bố cục trước: dãy thẳng chụp chính diện -> nhánh v0.1; còn lại -> nhánh phối cảnh."""
+                   retries: int = 1, debug: dict[str, Any] | None = None, note: str = "") -> dict[str, Any]:
+    """Hỏi AI bố cục trước: dãy thẳng chụp chính diện -> nhánh v0.1; còn lại -> nhánh phối cảnh. `note`: gợi ý tùy chọn của người dùng."""
     from . import compute_persp, contract_persp, pixels_persp
+
+    if prompts.clean_note(note):
+        client = _NoteClient(client, note)
 
     raw: dict[str, Any] = {}
     scene = _ask(client, "scene", prompts.scene_prompt(), [image], contract_persp.parse_scene, retries, raw)

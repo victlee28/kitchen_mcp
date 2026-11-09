@@ -34,7 +34,7 @@ Change the material or shape of selected parts in a view's photographic image wh
 
 - R16. `recolor` changes the colour inside the mask while keeping light and dark, with no AI.
 - R17. `gemini` is called once per job with the marked base image, the mask (a colour mask for several tasks), and instructions that name each region and its position.
-- R18. `comfyui` runs tasks one after another with the workflow chosen by the job; `job-package` exports files for running elsewhere.
+- R18. `gemini` submits a job to the Gemini image API; `job-package` exports prompts and images for an external chat model.
 - R19. The marked base image has numbered coloured outlines 14 px from each region that never overlap a region; the instruction asks for them to be removed from the result.
 
 ## Geometry edit

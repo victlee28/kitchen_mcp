@@ -1,0 +1,203 @@
+{
+ "function": "recognition.recognizer_wire.draft_from_kitchen_spec",
+ "cases": [
+  {
+   "name": "modules, ceiling, materials and issues become a raw draft; approximated modules are flagged",
+   "input": {
+    "payload": {
+     "kitchen": {
+      "spec": {
+       "schemaVersion": 2,
+       "name": "x",
+       "common": {
+        "ceiling": 2700,
+        "material": {
+         "base": "Trắng mờ",
+         "upper": "Trắng mờ",
+         "carcass": "Gỗ sồi",
+         "wallTile": "Gạch trắng",
+         "tall": 7
+        }
+       },
+       "module": [
+        {
+         "id": "B1",
+         "type": "base",
+         "name": "Tủ bếp",
+         "wall": "back",
+         "fromCorner": 0,
+         "width": 600,
+         "y": 0,
+         "height": 840,
+         "depth": 550,
+         "doors": [
+          300,
+          300
+         ]
+        },
+        {
+         "id": "U3",
+         "type": "upper",
+         "wall": "back",
+         "fromCorner": 600,
+         "width": 800,
+         "y": 1500,
+         "height": 750,
+         "depth": 350
+        },
+        {
+         "id": "L1",
+         "type": "base",
+         "wall": "left",
+         "fromCorner": 0,
+         "width": 450,
+         "height": 840,
+         "depth": 550
+        }
+       ]
+      },
+      "issues": [
+       {
+        "code": "type-approximated",
+        "message": "upper-dish-rack -> upper",
+        "module": "U3"
+       },
+       {
+        "code": "no-loft-row",
+        "message": "không có hàng tủ nóc"
+       },
+       "junk"
+      ]
+     }
+    }
+   },
+   "expected": {
+    "draft": {
+     "modules": [
+      {
+       "type": "base",
+       "wall": "back",
+       "width": 600,
+       "fromCorner": 0,
+       "height": 840,
+       "depth": 550,
+       "label": "Tủ bếp"
+      },
+      {
+       "type": "upper",
+       "wall": "back",
+       "width": 800,
+       "fromCorner": 600,
+       "height": 750,
+       "depth": 350,
+       "confidence": 0.4
+      },
+      {
+       "type": "base",
+       "wall": "left",
+       "width": 450,
+       "fromCorner": 0,
+       "height": 840,
+       "depth": 550
+      }
+     ],
+     "notes": [
+      "U3: upper-dish-rack -> upper",
+      "không có hàng tủ nóc"
+     ],
+     "room": {
+      "ceiling": 2700
+     },
+     "materials": {
+      "base": "Trắng mờ",
+      "upper": "Trắng mờ"
+     }
+    }
+   }
+  },
+  {
+   "name": "an error answer has no draft",
+   "input": {
+    "payload": {
+     "error": {
+      "kind": "validation",
+      "code": "bad-image",
+      "message": "x"
+     }
+    }
+   },
+   "expected": {
+    "draft": null
+   }
+  },
+  {
+   "name": "no kitchen key",
+   "input": {
+    "payload": {
+     "spec": {
+      "module": []
+     }
+    }
+   },
+   "expected": {
+    "draft": null
+   }
+  },
+  {
+   "name": "non-object modules are passed on so build_draft can reject them; a boolean ceiling is ignored",
+   "input": {
+    "payload": {
+     "kitchen": {
+      "spec": {
+       "common": {
+        "ceiling": true
+       },
+       "module": [
+        5,
+        {
+         "type": "base",
+         "wall": "back",
+         "width": 600
+        }
+       ]
+      },
+      "issues": []
+     }
+    }
+   },
+   "expected": {
+    "draft": {
+     "modules": [
+      5,
+      {
+       "type": "base",
+       "wall": "back",
+       "width": 600
+      }
+     ],
+     "notes": [],
+     "materials": {}
+    }
+   }
+  },
+  {
+   "name": "issues missing",
+   "input": {
+    "payload": {
+     "kitchen": {
+      "spec": {
+       "module": []
+      }
+     }
+    }
+   },
+   "expected": {
+    "draft": {
+     "modules": [],
+     "notes": [],
+     "materials": {}
+    }
+   }
+  }
+ ]
+}

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from collections.abc import Sequence
 from typing import Literal, Protocol
 
 SOURCE_KINDS = ("photo", "drawing")
@@ -14,6 +15,7 @@ class RecognitionInput:
     data: bytes
     name: str = ""
     media_type: str = ""
+    note: str = ""                       # the user's free-text hint ("white shaker doors", "fridge on the left"): data for the model, never instructions
 
 
 class Recognizer(Protocol):
@@ -26,3 +28,19 @@ class Recognizer(Protocol):
     """
 
     def recognize(self, source: RecognitionInput) -> dict: ...
+
+
+PREFERENCE = ("cabinet", "gemini")       # which plugged-in recognizer answers when nothing is asked for and there are several
+
+
+def choose_recognizer(available: Sequence[str], requested: str | None, default: str | None) -> str | None:
+    """The recognizer to use: the one asked for (None when it is not plugged in), else ``default`` when plugged in, else the first of PREFERENCE
+    that is, else the only one. None = no choice can be made."""
+    if requested:
+        return requested if requested in available else None
+    if default and default in available:
+        return default
+    for name in PREFERENCE:
+        if name in available:
+            return name
+    return available[0] if len(available) == 1 else None

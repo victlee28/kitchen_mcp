@@ -133,9 +133,9 @@
             </div>
             <label id="cmpWrap" class="cmp" hidden>Trước ◀ ▶ Sau <input id="cmpSlider" type="range" min="0" max="100" value="50"></label>
             <div class="baserow">
-              <button id="baseImport" type="button" title="Thay ảnh gốc của góc nhìn này bằng ảnh đã tạo ở ChatGPT (ảnh đủ ánh sáng). Các job sửa sau đó sẽ dùng ảnh này làm ảnh gốc.">Nhập ảnh kết quả từ ChatGPT → thay ảnh nền</button>
+              <button id="baseImport" type="button" title="Thay ảnh gốc của góc nhìn này bằng ảnh được tạo bằng AI. Các job sửa sau đó sẽ dùng ảnh này làm ảnh gốc.">Nhập ảnh kết quả từ AI → thay ảnh nền</button>
               <button id="baseClear" type="button" class="ghost" hidden title="Bỏ ảnh đã nhập, quay về ảnh đã duyệt / render">Dùng lại ảnh mặc định</button>
-              <select id="baseFit" aria-label="Khi ảnh khác tỉ lệ" title="Nếu ảnh ChatGPT không cùng tỉ lệ với ảnh render"><option value="reject">Đúng tỉ lệ ảnh render</option><option value="crop">Khác tỉ lệ: cắt giữa</option><option value="pad">Khác tỉ lệ: thêm viền</option></select>
+              <select id="baseFit" aria-label="Khi ảnh khác tỉ lệ" title="Nếu ảnh được tạo không cùng tỉ lệ với ảnh render"><option value="reject">Đúng tỉ lệ ảnh render</option><option value="crop">Khác tỉ lệ: cắt giữa</option><option value="pad">Khác tỉ lệ: thêm viền</option></select>
               <input id="baseFile" type="file" accept="image/*" hidden>
             </div>
           </div>
@@ -151,11 +151,10 @@
               <label>Backend<select id="jBackend"></select></label>
               <label class="span2">Vật liệu mới<input id="jItem" type="text" placeholder="vd Laminate xanh rêu mờ"></label>
               <label class="span2">Yêu cầu thêm<input id="jInstr" type="text" placeholder="vd matte sage green, fine wood grain"></label>
-              <label>Ảnh gốc<select id="jRef"><option value="auto">Ảnh đã duyệt gần nhất</option><option value="beauty">Render three.js</option><option value="imported">Ảnh nhập từ ChatGPT</option><option value="albedo">Albedo (render)</option></select></label>
-              <label>Workflow<select id="jWf"></select></label>
+              <label>Ảnh gốc<select id="jRef"><option value="auto">Ảnh đã duyệt gần nhất</option><option value="beauty">Render three.js</option><option value="imported">Ảnh nhập từ AI</option><option value="albedo">Albedo (render)</option></select></label>
               <label class="span2">Ánh sáng ảnh đầy đủ (gen-0)<select id="jLight" title="Sửa vùng luôn bám ánh sáng ảnh gốc"><option value="daylight">Ban ngày, sáng tự nhiên</option><option value="late-afternoon">Nắng chiều ấm</option><option value="dim-evening">Buổi tối, đèn ấm</option></select></label>
               <label class="span2">Phong cách theo góc khác (styleFrom)<select id="jStyleFrom" title="Lấy phong cách (vật liệu, ánh sáng) từ ảnh đã duyệt của góc khác để các góc đồng nhất"></select></label>
-              <label class="span2">Cấu hình AI theo thao tác<select id="jOperation" title="Workflow + trọng số ControlNet chọn sẵn theo loại việc"></select></label>
+              <label class="span2">Thao tác<select id="jOperation" title="Chọn loại chỉnh sửa theo việc cần làm"></select></label>
             </div>
             <button id="tAdd" type="button" title="Thêm layer đang chọn + vật liệu/yêu cầu vào danh sách việc">＋ Thêm vào danh sách việc</button>
             <ol id="taskList" class="tasks"></ol>

@@ -141,7 +141,7 @@ One change inside an image job: a target layer and the new material or instructi
 How an edit job relates to the design. Quick changes only the image. Design also changes the specification when the image is accepted.
 
 **Backend**:
-What actually produces the edited pixels: recolor (no AI), job-package (export for use elsewhere), ComfyUI or Gemini.
+What actually produces the edited pixels: recolor (no AI), job-package (export for use with an external chat model), or Gemini.
 
 **Strict composite**:
 Merging a generated image back so that every pixel outside the mask is exactly the base image.

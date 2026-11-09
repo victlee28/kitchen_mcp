@@ -14,58 +14,10 @@ from .common import Component, GROW_PX, ZONE_COLORS
 
 
 class Packages(Component):
-    def values(self, req: JobRequest, wf: dict) -> dict:
-        W, H = req["size"]
-        return {**wf.get("kitchen", {}).get("default", {}), **req.get("params", {}),
-                "prompt": req["prompt"], "negative": req["negativePrompt"], "seed": req["seed"], "width": W, "height": H}
-
     def export_package(self, jid: str, jdir: Path, req: JobRequest) -> dict:
-        wf = backends.load_workflow(req["workflow"])
-        tasks = req.get("tasks") or []
-        if len(tasks) > 1:
-            return self._export_package_multi(jid, jdir, req, wf, tasks)
-        imgs = {k: f"{jid}_{k}.png" for k in wf["kitchen"].get("image", [])}
-        files = {"reference": "reference.png", "mask": "mask.png", "lines": "lines_inv.png", "depth": "depth.png"}
-        for k, name in imgs.items():
-            shutil.copyfile(jdir / files[k], jdir / name)
-        prompt = backends.build_prompt(wf, imgs, self.values(req, wf), backends.model_defaults(self.config))
-        (jdir / "workflow_api.json").write_text(json.dumps(prompt, ensure_ascii=False, indent=1), encoding="utf-8")
-        (jdir / "INSTRUCTIONS.txt").write_text(
-            f"Job {jid} ({req['kind']}, workflow {req['workflow']})\n"
-            f"1. Chép {', '.join(imgs.values())} vào thư mục input của ComfyUI.\n"
-            "2. ComfyUI > Workflow > Open (hoặc kéo thả) workflow_api.json, sửa tên model nếu cần, bấm Queue.\n"
-            f"3. Nộp ảnh kết quả: web (nút Nộp ảnh) hoặc MCP submit_image_result('{jid}', đường_dẫn_ảnh).\n"
-            f"Prompt: {req['prompt']}\nNegative: {req['negativePrompt']}\n", encoding="utf-8")
-        return self.store.update_job(jid, "awaiting-result", {"package": sorted(p.name for p in jdir.iterdir())})
-
-    def _export_package_multi(self, jid, jdir, req, wf, tasks) -> dict:
-        files = {"lines": "lines_inv.png", "depth": "depth.png"}
-        steps = []
-        for i, t in enumerate(tasks, 1):
-            imgs = {}
-            for k in wf["kitchen"].get("image", []):
-                if k == "reference":
-                    imgs[k] = f"{jid}reference.png" if i == 1 else f"{jid}_ket_qua_{i - 1}.png"
-                elif k == "mask":
-                    imgs[k] = f"{jid}_mask_{i}.png"
-                    shutil.copyfile(jdir / f"mask_{i}.png", jdir / imgs[k])
-                else:
-                    imgs[k] = f"{jid}_{k}.png"
-                    shutil.copyfile(jdir / files[k], jdir / imgs[k])
-            vals = {**self.values(req, wf), "prompt": t.get("prompt", ""), "seed": req["seed"] + i - 1}
-            name = f"workflow_api_{i}.json"
-            (jdir / name).write_text(json.dumps(backends.build_prompt(wf, imgs, vals, backends.model_defaults(self.config)), ensure_ascii=False, indent=1), encoding="utf-8")
-            steps.append(f"  Việc {i} [{ZONE_COLORS[(i - 1) % 8][0]}] {t['targetLayer']}: {name}, ảnh vào {imgs.get('reference', '-')}, "
-                         f"lưu ảnh ra thành {jid}_ket_qua_{i}.png\n     Prompt: {t['prompt']}")
-        shutil.copyfile(jdir / "reference.png", jdir / f"{jid}reference.png")
-        (jdir / "INSTRUCTIONS.txt").write_text(
-            f"Job {jid}: {len(tasks)} việc, workflow {req['workflow']}\n"
-            "Cách 1 (ComfyUI): chép các file PNG vào thư mục input, chạy lần lượt từng workflow; ảnh ra của việc trước là ảnh vào của việc sau.\n"
-            + "\n".join(steps) +
-            "\nCách 2 (công cụ sửa theo chỉ dẫn): dùng reference.png + mask_color.png, mỗi màu là một việc như trên.\n"
-            f"Nộp ẢNH CUỐI (đã đủ mọi việc): web (nút Nộp ảnh) hoặc MCP submit_image_result('{jid}', đường_dẫn_ảnh).\n",
-            encoding="utf-8")
-        return self.store.update_job(jid, "awaiting-result", {"package": sorted(p.name for p in jdir.iterdir())})
+        self.export_request(jid)
+        package = sorted(p.name for p in jdir.iterdir() if p.is_file())
+        return self.store.update_job(jid, "awaiting-result", {"package": package})
 
     def ai_input(self, job: dict, jdir: Path, req: JobRequest) -> tuple[str, list[tuple[str, Path]]]:
         """Chỉ dẫn dạng câu + ảnh gửi model nhận chỉ dẫn (Gemini, gói request). Một nguồn cho cả gọi API lẫn file xuất.
@@ -128,7 +80,7 @@ class Packages(Component):
 
         - request.json        : bản gọn cho người / AI đọc: chỉ dẫn, danh sách việc, ảnh đính kèm theo thứ tự (base64 để xem, lưu).
         - gemini-request.json : thân request Gemini API (generateContent): ảnh ở phần inline_data -> Gemini TỰ GIẢI MÃ và dùng ảnh.
-        - image-1-*.png, image-2-*.png + GEMINI-WEB-GUIDE.txt : cho Gemini web / chat: đính kèm ảnh theo thứ tự + dán chỉ dẫn.
+        - image-1-*.png, image-2-*.png + AI-CHAT-GUIDE.txt : for ChatGPT, Claude or Gemini web; attach images in order and paste the prompt.
         Chat AI KHÔNG tự giải mã chuỗi base64 dán dưới dạng chữ, nên với giao diện chat phải đính kèm file ảnh.
         Thông tin đầy đủ để truy vết vẫn ở job.json (không gửi AI)."""
         import base64
@@ -162,9 +114,8 @@ class Packages(Component):
             "jobId": jid,
             "type": {"geometry_edit": "geometry_edit", "gen0": "gen0"}.get(req["kind"], "material"),
             **({"operation": req["operation"]} if req.get("operation") else {}),
-            "cachDung": ("Gemini API: gửi nguyên file gemini-request.json (ảnh trong inline_data được Gemini tự giải mã). "
-                         "Gemini web / chat: đính kèm các ảnh trong 'anhDinhKem' ĐÚNG THỨ TỰ rồi dán 'chiDan' — "
-                         "không dán chuỗi base64 vào khung chat (AI sẽ đọc như chữ, không thấy ảnh)."),
+            "cachDung": ("For Gemini API, send gemini-request.json with its inline image data. For ChatGPT, Claude, or Gemini web, "
+                         "attach the files listed in attachedImages in order and paste instruction. Do not paste base64 as chat text."),
             "instruction": text,
             "attachedImages": attached,
             "task": task,
@@ -178,15 +129,16 @@ class Packages(Component):
         steps = "\n".join(f"  {d['order']}. {d['file']}  ({d['description']})" for d in attached)
         kt = lean["validation"]
         doors = "".join(f"  ! {x}\n" for x in kt["errors"] + kt["warning"])
-        (jdir / "GEMINI-WEB-GUIDE.txt").write_text(
-            f"Job {jid} — gửi bằng Gemini web (không cần API)\n"
-            + (f"KIỂM TRA: {'đạt' if kt['ok'] else 'CHƯA ĐẠT — sửa trước khi gửi'}\n{doors}" )
-            + "\nKHÔNG dán file JSON vào khung chat: chat AI đọc base64 như chữ (thường bị cắt) và không thấy ảnh.\n"
-            f"1. Mở gemini.google.com, đính kèm ĐÚNG THỨ TỰ các ảnh (dạng file ảnh):\n{steps}\n"
-            "   Ảnh 1 có viền màu + số quanh vùng cần sửa; ảnh 2 là mask của đúng vùng đó.\n"
-            "2. Dán nguyên đoạn chỉ dẫn dưới đây (chỉ phần chữ) rồi gửi:\n\n"
-            f"{text}\n\nKhông được: {req.get('negativePrompt')}\n\n"
-            "3. Tải ảnh kết quả, nộp lại ở tab Sửa ảnh theo lớp > job > Nộp ảnh.\n", encoding="utf-8")
+        (jdir / "AI-CHAT-GUIDE.txt").write_text(
+            f"Job {jid} — use with ChatGPT, Claude or Gemini web\n"
+            + (f"Validation: {'passed' if kt['ok'] else 'failed; resolve before sending'}\n{doors}" )
+            + "\nDo not paste JSON or base64 into the chat; attach the image files directly.\n"
+            f"1. Attach the image files in this order:\n{steps}\n"
+            "   The marked reference identifies edit areas; the mask shows the allowed edit region.\n"
+            "2. Paste the following instruction as text:\n\n"
+            f"{text}\n\nAvoid: {req.get('negativePrompt')}\n\n"
+            f"3. Return an edited image with dimensions {size[0]}x{size[1]}. Import it in the image-editing job or call "
+            f"submit_image_result('{jid}', image_path).\n", encoding="utf-8")
         return jdir / "request.json"
 
     def export_full(self, jid: str) -> Path:
@@ -208,7 +160,7 @@ class Packages(Component):
                "job": {k: job[k] for k in ("id", "status", "kind", "mode", "backend", "design_id", "rev", "view", "render_key",
                                            "target", "created_at", "updated_at", "error")},
                "request": job["request"], "result": res, "image": image,
-               "aiRequestFile": ["request.json", "gemini-request.json", "GEMINI-WEB-GUIDE.txt"]}
+               "aiRequestFile": ["request.json", "gemini-request.json", "AI-CHAT-GUIDE.txt"]}
         p = jdir / "request.full.json"
         p.write_text(json.dumps(out, ensure_ascii=False, indent=1), encoding="utf-8")
         return p

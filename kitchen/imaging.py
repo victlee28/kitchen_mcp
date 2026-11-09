@@ -113,7 +113,7 @@ def alpha(target: np.ndarray, feather: int = 2) -> np.ndarray:
 
 
 def save_mask(mask: np.ndarray, path: Path) -> None:
-    _pil(mask).convert("RGB").save(path)  # trắng = vùng được sửa (ComfyUI LoadImageMask kênh red)
+    _pil(mask).convert("RGB").save(path)
 
 
 def load_rgb(path: Path, size: tuple[int, int] | None = None) -> tuple[np.ndarray, bool]:

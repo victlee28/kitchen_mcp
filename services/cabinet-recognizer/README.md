@@ -125,3 +125,12 @@ Nó chạy `load_spec` → `compile_spec` → `threejs_export.export` → `rules
 ## Test
 
 `python -m unittest discover -s tests` (23 test) — chạy toàn bộ quy trình trên 3 ảnh mẫu bằng câu trả lời AI đã ghi (`tests/data/*.answers.json`) và so với `tests/golden/bep-chu-I-xam.spec.json`; thêm ca hỏi lại, ca bỏ cuộc, hợp đồng, số học, kiến trúc.
+
+## Cắm vào mcp-imagev2 (HTTP)
+
+mcp-imagev2 gọi dịch vụ này qua `kitchen/recognizers.py` (`CabinetRecognizerHttp`); khóa API chỉ nằm trong tiến trình này (`RECOG_*`).
+
+1. Chạy dịch vụ: `python -m cabinet_recognizer.http_server --port 8765` (nạp `RECOG_*` vào môi trường trước).
+2. Ở mcp-imagev2 đặt `CABINET_RECOGNIZER_URL=http://127.0.0.1:8765` (tùy chọn `CABINET_RECOGNIZER_TIMEOUT`, `KITCHEN_RECOGNIZER=cabinet|gemini`).
+3. `POST /recognize` nhận `{"imageBase64", "kind"?, "region"?, "note"?}`; `note` (≤ 500 ký tự) chỉ đi vào câu hỏi `scene` và `policy`, bọc trong `<user_note>` và được dặn là dữ liệu, không phải chỉ thị. Trả `{"spec", "kitchen": {"spec": KitchenSpec, "issues": [...]}}`.
+4. mcp-imagev2 chỉ lấy DANH SÁCH MODULE từ `kitchen.spec` (loại, tường, bề rộng, vị trí, cao, sâu), đưa qua `build_draft` rồi dựng một thao tác `replace` giữ phòng, mặt bằng và thiết lập chung của thiết kế hiện tại. Cánh, ngăn kéo, hốc, thiết bị và id do bộ nhận diện đặt không được mang sang (`draft_operation` dựng lại).

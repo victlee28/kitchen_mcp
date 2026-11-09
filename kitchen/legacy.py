@@ -549,7 +549,7 @@ VALUES = {
 
 # Legacy file-name fragments in generated files.
 FILES = {
-    'GUI-GEMINI-WEB.txt': 'GEMINI-WEB-GUIDE.txt',
+    'GUI-GEMINI-WEB.txt': 'AI-CHAT-GUIDE.txt',
     'HUONG-DAN.txt': 'INSTRUCTIONS.txt',
     'gui-ai.json': 'ai-request-short.json',
     'hinh_moi.png': 'new_geometry.png',
