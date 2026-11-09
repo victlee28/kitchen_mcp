@@ -2,6 +2,7 @@
 
   python run.py                 web editor (http://localhost:8080/web/) + dịch vụ nhận diện cabinet-recognizer (cổng 8765)
   python run.py mcp             MCP server (stdio, do client MCP gọi) + dịch vụ nhận diện chạy nền
+  python run.py recognizer      CHỈ dịch vụ nhận diện, chạy riêng để thử: trang web hộp thư http://127.0.0.1:8770 (chọn ảnh → job → Claude trả lời → Nhận kết quả → Xem 3D)
   python run.py --no-recognizer chỉ chạy web/MCP, không bật dịch vụ nhận diện
   python run.py --no-browser    không tự mở trình duyệt
   python run.py --system-python dùng python đang chạy lệnh này khi chưa có .venv (mặc định: dừng và báo)
@@ -81,11 +82,26 @@ def start_recognizer(python: str, port: int, dotenv: dict[str, str], log_dir: Pa
     return proc, url
 
 
+def run_recognizer_page(python: str, port: int, dotenv: dict[str, str], no_browser: bool) -> int:
+    """The recognizer on its own: the inbox web page (pick a picture, a job waits for Claude, fetch the result, view it in 3D). Jobs are kept in
+    services/cabinet-recognizer/jobs, the folder the full app uses too."""
+    env = {**dotenv, **os.environ, "PYTHONUTF8": "1", "PYTHONPATH": str(RECOGNIZER_DIR) + os.pathsep + os.environ.get("PYTHONPATH", "")}
+    page = f"http://127.0.0.1:{port}"
+    print(f"Dich vu nhan dien (chay rieng): {page}  (Ctrl+C de dung)\nJob luu o {RECOGNIZER_DIR / 'jobs'}")
+    if not no_browser:
+        webbrowser.open(page)
+    try:
+        return subprocess.call([python, "-m", "cabinet_recognizer.web_inbox", "--port", str(port)], cwd=RECOGNIZER_DIR, env=env)
+    except KeyboardInterrupt:
+        return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Chay web editor hoac MCP server cung dich vu nhan dien")
-    ap.add_argument("mode", nargs="?", choices=("web", "mcp"), default="web")
+    ap.add_argument("mode", nargs="?", choices=("web", "mcp", "recognizer"), default="web")
     ap.add_argument("--no-recognizer", action="store_true")
     ap.add_argument("--recognizer-port", type=int, default=8765)
+    ap.add_argument("--page-port", type=int, default=8770, help="cổng trang web hộp thư của chế độ recognizer")
     ap.add_argument("--no-browser", action="store_true")
     ap.add_argument("--system-python", action="store_true")
     args = ap.parse_args(argv)
@@ -116,6 +132,9 @@ def main(argv: list[str] | None = None) -> int:
     os.environ["PYTHONUTF8"] = "1"
     stdio = args.mode == "mcp"                     # stdout belongs to the MCP protocol: say nothing there
     say = (lambda *a, **k: print(*a, file=sys.stderr, **k)) if stdio else print
+
+    if args.mode == "recognizer":
+        return run_recognizer_page(python, args.page_port, read_dotenv(ROOT / ".env"), args.no_browser)
 
     recognizer: subprocess.Popen | None = None
     if not args.no_recognizer and RECOGNIZER_DIR.is_dir():
