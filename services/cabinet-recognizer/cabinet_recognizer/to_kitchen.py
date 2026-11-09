@@ -165,6 +165,8 @@ def to_kitchen_spec(rec: dict[str, Any], name: str = "Tủ bếp nhận diện t
             km["doorStyle"] = "glass"
         if rtype.startswith("tall"):
             secs = m.get("sections", [])
+            if not secs:  # đường v0.1 không có sections: tủ cao cao đến đỉnh dãy tủ
+                km["y"], km["height"] = 0, cab_top
             fridge = next((s for s in secs if s.get("appliance") == "fridge"), None)
             if fridge:
                 km["niche"] = int(fridge["y"] + fridge["height"])
