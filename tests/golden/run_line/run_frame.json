@@ -1,0 +1,130 @@
+{
+ "function": "run_line.run_frame",
+ "cases": [
+  {
+   "name": "doors look +z: s grows towards +x",
+   "input": {
+    "a": [
+     0,
+     0
+    ],
+    "b": [
+     1000,
+     0
+    ],
+    "normal": [
+     0,
+     1
+    ]
+   },
+   "expected": {
+    "frame": {
+     "x": 0.0,
+     "z": 0.0,
+     "yaw": 0.0,
+     "length": 1000.0
+    }
+   }
+  },
+  {
+   "name": "the same line given the other way round",
+   "input": {
+    "a": [
+     1000,
+     0
+    ],
+    "b": [
+     0,
+     0
+    ],
+    "normal": [
+     0,
+     1
+    ]
+   },
+   "expected": {
+    "frame": {
+     "x": 0.0,
+     "z": 0.0,
+     "yaw": 0.0,
+     "length": 1000.0
+    }
+   }
+  },
+  {
+   "name": "doors look -z: the run starts at the far end",
+   "input": {
+    "a": [
+     0,
+     0
+    ],
+    "b": [
+     1000,
+     0
+    ],
+    "normal": [
+     0,
+     -1
+    ]
+   },
+   "expected": {
+    "frame": {
+     "x": 1000.0,
+     "z": 0.0,
+     "yaw": 180.0,
+     "length": 1000.0
+    }
+   }
+  },
+  {
+   "name": "doors look +x on a line along z",
+   "input": {
+    "a": [
+     500,
+     0
+    ],
+    "b": [
+     500,
+     2000
+    ],
+    "normal": [
+     1,
+     0
+    ]
+   },
+   "expected": {
+    "frame": {
+     "x": 500.0,
+     "z": 2000.0,
+     "yaw": 90.0,
+     "length": 2000.0
+    }
+   }
+  },
+  {
+   "name": "a 45 degree line",
+   "input": {
+    "a": [
+     0,
+     0
+    ],
+    "b": [
+     1000,
+     1000
+    ],
+    "normal": [
+     0.707107,
+     -0.707107
+    ]
+   },
+   "expected": {
+    "frame": {
+     "x": 1000.0,
+     "z": 1000.0,
+     "yaw": 135.0,
+     "length": 1414.213562373095
+    }
+   }
+  }
+ ]
+}

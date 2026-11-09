@@ -14,6 +14,7 @@ from .errors import InvalidInput
 from .floorplan.geom import point_in_poly
 from .numeric import round_half_away
 from . import runs as runmod
+from .run_line import Line, nearest_edge as _nearest_edge, outward as _outward, plan_on_line, run_frame
 from .spec import KitchenSpec
 
 MODULE_WIDTH = 600.0         # preferred cabinet width
@@ -23,61 +24,23 @@ AXIS_TOLERANCE_DEG = 1.5     # an edge this close to an axis counts as parallel 
 Pt = tuple[float, float]
 
 
-def _nearest_edge(poly: list[Pt], p: Pt) -> tuple[Pt, Pt]:
-    best, best_d = (poly[0], poly[1]), float("inf")
-    for i in range(len(poly)):
-        a, b = poly[i], poly[(i + 1) % len(poly)]
-        ex, ez = b[0] - a[0], b[1] - a[1]
-        n2 = ex * ex + ez * ez
-        if n2 < 1e-9:
-            continue
-        t = max(0.0, min(1.0, ((p[0] - a[0]) * ex + (p[1] - a[1]) * ez) / n2))
-        d = math.hypot(p[0] - (a[0] + t * ex), p[1] - (a[1] + t * ez))
-        if d < best_d:
-            best, best_d = (a, b), d
-    return best
-
-
 def _is_diagonal(a: Pt, b: Pt) -> bool:
     angle = math.degrees(math.atan2(abs(b[1] - a[1]), abs(b[0] - a[0])))
     return AXIS_TOLERANCE_DEG < angle < 90 - AXIS_TOLERANCE_DEG
 
 
-def _outward(poly: list[Pt], a: Pt, b: Pt) -> Pt:
-    """Unit normal of the edge pointing out of the object (the way the doors must look)."""
-    ex, ez = b[0] - a[0], b[1] - a[1]
-    length = math.hypot(ex, ez)
-    if length < 1.0:
-        raise InvalidInput("The edge is too short", code="edge-too-short")
-    nx, nz = -ez / length, ex / length
-    mid = ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)
-    probe = 5.0
-    if not point_in_poly((mid[0] + nx * probe, mid[1] + nz * probe), poly):
-        return nx, nz
-    if not point_in_poly((mid[0] - nx * probe, mid[1] - nz * probe), poly):
-        return -nx, -nz
-    raise InvalidInput("Both sides of this edge are inside the object", code="edge-inside")
-
-
 def _plan_angled(spec: KitchenSpec, outline: list[Pt], a: Pt, b: Pt, module_type: str) -> dict[str, Any]:
     """A run along an edge at any angle: one explicit run (origin on the edge, doors along the outward normal) and the cabinets in it."""
-    nx, nz = _outward(outline, a, b)
-    yaw = math.degrees(math.atan2(nx, nz))                       # doors look along (sin yaw, cos yaw)
-    ux, uz = nz, -nx                                              # s direction = (cos yaw, -sin yaw)
-    start, end = (a, b) if (b[0] - a[0]) * ux + (b[1] - a[1]) * uz >= 0 else (b, a)
-    length = math.hypot(end[0] - start[0], end[1] - start[1])
-    widths = split_widths(length)
+    line = Line(a, b, _outward(outline, a, b))
+    widths = split_widths(run_frame(line)["length"])
     c = spec.common
-    depth = float(c.baseDepth)
-    run = {"id": next_run_id(spec), "x": float(round_half_away(start[0], 1)), "z": float(round_half_away(start[1], 1)), "yaw": float(round_half_away(yaw, 2))}
-    ops: list[dict[str, Any]] = [{"op": "add-run", "run": run}]
-    at = 0.0
+    at, modules = 0.0, []
     for w in widths:
-        ops.append({"op": "add", "closeGap": False, "module": {"type": module_type, "wall": "island", "run": run["id"], "fromCorner": at, "width": w,
-                                                                "y": 0, "height": float(c.baseTop), "depth": depth}})
+        modules.append({"type": module_type, "width": w, "s": at, "y": 0, "height": float(c.baseTop), "depth": float(c.baseDepth)})
         at += w
-    return {"operation": combine_ops(ops), "facing": None, "run": run, "yaw": run["yaw"], "length": sum(widths), "widths": widths,
-            "summary": [f"{len(widths)} base cabinets, {sum(widths):g} mm, along an edge at {run['yaw']:g}° (run {run['id']})"]}
+    plan = plan_on_line(spec, line, modules)
+    return {"operation": plan["operation"], "facing": None, "run": plan["run"], "yaw": plan["run"]["yaw"], "length": sum(widths), "widths": widths,
+            "summary": [f"{len(widths)} base cabinets, {sum(widths):g} mm, along an edge at {plan['run']['yaw']:g}° (run {plan['run']['id']})"]}
 
 
 def _facing(poly: list[Pt], a: Pt, b: Pt) -> str:

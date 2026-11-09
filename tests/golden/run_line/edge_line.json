@@ -1,0 +1,151 @@
+{
+ "function": "run_line.edge_line",
+ "cases": [
+  {
+   "name": "below the object: doors face +z",
+   "input": {
+    "outline": [
+     [
+      0,
+      0
+     ],
+     [
+      400,
+      0
+     ],
+     [
+      400,
+      300
+     ],
+     [
+      0,
+      300
+     ]
+    ],
+    "point": [
+     200,
+     310
+    ]
+   },
+   "expected": {
+    "a": [
+     400,
+     300
+    ],
+    "b": [
+     0,
+     300
+    ],
+    "normal": [
+     -0.0,
+     1.0
+    ]
+   }
+  },
+  {
+   "name": "left of the object: doors face -x",
+   "input": {
+    "outline": [
+     [
+      0,
+      0
+     ],
+     [
+      400,
+      0
+     ],
+     [
+      400,
+      300
+     ],
+     [
+      0,
+      300
+     ]
+    ],
+    "point": [
+     -10,
+     150
+    ]
+   },
+   "expected": {
+    "a": [
+     0,
+     300
+    ],
+    "b": [
+     0,
+     0
+    ],
+    "normal": [
+     -1.0,
+     -0.0
+    ]
+   }
+  },
+  {
+   "name": "above the object: doors face -z",
+   "input": {
+    "outline": [
+     [
+      0,
+      0
+     ],
+     [
+      400,
+      0
+     ],
+     [
+      400,
+      300
+     ],
+     [
+      0,
+      300
+     ]
+    ],
+    "point": [
+     200,
+     -5
+    ]
+   },
+   "expected": {
+    "a": [
+     0,
+     0
+    ],
+    "b": [
+     400,
+     0
+    ],
+    "normal": [
+     -0.0,
+     -1.0
+    ]
+   }
+  },
+  {
+   "name": "fewer than three points is an error",
+   "input": {
+    "outline": [
+     [
+      0,
+      0
+     ],
+     [
+      400,
+      0
+     ]
+    ],
+    "point": [
+     0,
+     0
+    ]
+   },
+   "error": {
+    "kind": "validation",
+    "code": "no-outline"
+   }
+  }
+ ]
+}

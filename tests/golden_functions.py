@@ -13,8 +13,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from kitchen import edit, floorplan, geometry, layers, moldings, numeric, proposal, rules, structure_mesh  # noqa: E402
-from kitchen.recognition import choose_recognizer, gemini_wire, recognizer_wire  # noqa: E402
+from kitchen import edit, floorplan, geometry, layers, moldings, numeric, proposal, rules, run_line, structure_mesh  # noqa: E402
+from kitchen.recognition import build_draft, choose_recognizer, gemini_wire, line_modules, recognizer_wire  # noqa: E402
 from kitchen.placement import Placement  # noqa: E402
 from kitchen.spec import load_spec, to_data  # noqa: E402
 
@@ -159,6 +159,20 @@ def recognizer_wire_job_progress(i):
     return {"progress": recognizer_wire.job_progress(i["payload"])}
 
 
+def run_line_run_frame(i):
+    return {"frame": run_line.run_frame(run_line.Line(tuple(i["a"]), tuple(i["b"]), tuple(i["normal"])))}
+
+
+def run_line_edge_line(i):
+    line = run_line.edge_line([tuple(p) for p in i["outline"]], tuple(i["point"]))
+    return {"a": list(line.a), "b": list(line.b), "normal": [round(line.normal[0], 6), round(line.normal[1], 6)]}
+
+
+def recognition_line_modules(i):
+    modules, dropped = line_modules(build_draft(i["raw"]), i["common"], i.get("wall", "back"))
+    return {"modules": modules, "dropped": dropped}
+
+
 FUNCTIONS = {
     "placement.to_room": placement_to_room,
     "placement.to_kitchen": placement_to_kitchen,
@@ -180,6 +194,9 @@ FUNCTIONS = {
     "recognition.recognizer_wire.request_body": recognizer_wire_request_body,
     "recognition.recognizer_wire.response_error": recognizer_wire_response_error,
     "recognition.recognizer_wire.draft_from_kitchen_spec": recognizer_wire_draft_from_kitchen_spec,
+    "run_line.run_frame": run_line_run_frame,
+    "run_line.edge_line": run_line_edge_line,
+    "recognition.line_modules": recognition_line_modules,
     "recognition.recognizer_wire.clean_job_id": recognizer_wire_clean_job_id,
     "recognition.recognizer_wire.job_progress": recognizer_wire_job_progress,
 }

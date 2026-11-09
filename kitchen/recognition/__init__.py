@@ -12,6 +12,6 @@ from __future__ import annotations
 from . import gemini_wire, recognizer_wire
 from .contract import Deferred, RecognitionInput, Recognizer, choose_recognizer
 from .draft import Draft, build_draft
-from .operation import draft_operation
+from .operation import draft_operation, line_modules
 
-__all__ = ["gemini_wire", "recognizer_wire", "Draft", "Deferred", "RecognitionInput", "Recognizer", "choose_recognizer", "build_draft", "draft_operation"]
+__all__ = ["gemini_wire", "recognizer_wire", "Draft", "Deferred", "RecognitionInput", "Recognizer", "choose_recognizer", "build_draft", "draft_operation", "line_modules"]

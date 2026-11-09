@@ -49,17 +49,26 @@ export function checkUpload(file) {
   return null;
 }
 
-export function recognizeBody(kind, name, mediaType, base64, baseRev, note = '') {
+/** Where a recognised run stands: along the edge of the floor-plan object picked with the right click. null when the target is no such object. */
+export function anchorFor(target) {
+  const p = target?.point;
+  if (target?.kind !== 'structure' || typeof target.id !== 'string' || !p || !Number.isFinite(p.x) || !Number.isFinite(p.z)) return null;
+  return { structureId: target.id, point: { x: p.x, z: p.z } };
+}
+
+const place = (anchor, mode) => ({ ...(anchor ? { anchor } : {}), ...(mode === 'replace' ? { mode } : {}) });
+
+export function recognizeBody(kind, name, mediaType, base64, baseRev, note = '', anchor = null, mode = 'add') {
   if (kind !== 'photo' && kind !== 'drawing') throw new Error('kind phải là photo hoặc drawing');
   const hint = String(note ?? '').replace(/\s+/g, ' ').trim().slice(0, 500);   // same limit as the server; empty = not sent
-  return { source: { kind, name, mediaType, imageBase64: base64, ...(hint ? { note: hint } : {}) }, baseRev };
+  return { source: { kind, name, mediaType, imageBase64: base64, ...(hint ? { note: hint } : {}) }, baseRev, ...place(anchor, mode) };
 }
 
 /** Body of POST .../recognize-job: ask again for the result of a recognition that answered `pending`. */
-export function recognizeJobBody(job, baseRev) {
+export function recognizeJobBody(job, baseRev, anchor = null, mode = 'add') {
   const id = String(job ?? '').trim();
   if (!/^\d{8}-\d{6}(-\d+)?$/.test(id)) throw new Error('Mã job không hợp lệ');
-  return { job: id, baseRev };
+  return { job: id, baseRev, ...place(anchor, mode) };
 }
 
 const pct = (c) => `${Math.round((c ?? 1) * 100)}%`;

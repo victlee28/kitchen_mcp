@@ -1,0 +1,245 @@
+{
+ "function": "recognition.line_modules",
+ "cases": [
+  {
+   "name": "back wall only; positions mirrored; the left-wall cabinet is counted as dropped",
+   "input": {
+    "raw": {
+     "modules": [
+      {
+       "type": "base",
+       "wall": "back",
+       "width": 600,
+       "fromCorner": 0
+      },
+      {
+       "type": "base",
+       "wall": "back",
+       "width": 900,
+       "fromCorner": 600
+      },
+      {
+       "type": "upper",
+       "wall": "back",
+       "width": 600,
+       "fromCorner": 0
+      },
+      {
+       "type": "base",
+       "wall": "left",
+       "width": 600,
+       "fromCorner": 0
+      }
+     ]
+    },
+    "common": {
+     "cabinetTop": 2200,
+     "baseDepth": 560,
+     "upperBottom": 1450,
+     "upperTierSplit": 2150,
+     "upperDepth": 330,
+     "baseTop": 840
+    }
+   },
+   "expected": {
+    "modules": [
+     {
+      "type": "base",
+      "width": 600.0,
+      "s": 900.0,
+      "y": 0.0,
+      "height": 840,
+      "depth": 560
+     },
+     {
+      "type": "base",
+      "width": 900.0,
+      "s": 0.0,
+      "y": 0.0,
+      "height": 840,
+      "depth": 560
+     },
+     {
+      "type": "upper",
+      "width": 600.0,
+      "s": 900.0,
+      "y": 1450,
+      "height": 700,
+      "depth": 330
+     }
+    ],
+    "dropped": 1
+   }
+  },
+  {
+   "name": "modules without a position follow the previous one of their storey",
+   "input": {
+    "raw": {
+     "modules": [
+      {
+       "type": "base",
+       "wall": "back",
+       "width": 600
+      },
+      {
+       "type": "base",
+       "wall": "back",
+       "width": 800
+      },
+      {
+       "type": "upper",
+       "wall": "back",
+       "width": 700
+      }
+     ]
+    },
+    "common": {
+     "cabinetTop": 2200,
+     "baseDepth": 560,
+     "upperBottom": 1450,
+     "upperTierSplit": 2150,
+     "upperDepth": 330,
+     "baseTop": 840
+    }
+   },
+   "expected": {
+    "modules": [
+     {
+      "type": "base",
+      "width": 600.0,
+      "s": 800.0,
+      "y": 0.0,
+      "height": 840,
+      "depth": 560
+     },
+     {
+      "type": "base",
+      "width": 800.0,
+      "s": 0.0,
+      "y": 0.0,
+      "height": 840,
+      "depth": 560
+     },
+     {
+      "type": "upper",
+      "width": 700.0,
+      "s": 700.0,
+      "y": 1450,
+      "height": 700,
+      "depth": 330
+     }
+    ],
+    "dropped": 0
+   }
+  },
+  {
+   "name": "labels and own heights are kept",
+   "input": {
+    "raw": {
+     "modules": [
+      {
+       "type": "tall-fridge",
+       "wall": "back",
+       "width": 900,
+       "fromCorner": 0,
+       "height": 2100,
+       "label": "Tu lanh"
+      }
+     ]
+    },
+    "common": {
+     "cabinetTop": 2200,
+     "baseDepth": 560,
+     "upperBottom": 1450,
+     "upperTierSplit": 2150,
+     "upperDepth": 330,
+     "baseTop": 840
+    }
+   },
+   "expected": {
+    "modules": [
+     {
+      "type": "tall-fridge",
+      "width": 900.0,
+      "s": 0.0,
+      "y": 0.0,
+      "height": 2100.0,
+      "depth": 560,
+      "name": "Tu lanh"
+     }
+    ],
+    "dropped": 0
+   }
+  },
+  {
+   "name": "nothing on the asked wall",
+   "input": {
+    "raw": {
+     "modules": [
+      {
+       "type": "base",
+       "wall": "left",
+       "width": 600,
+       "fromCorner": 0
+      }
+     ]
+    },
+    "common": {
+     "cabinetTop": 2200,
+     "baseDepth": 560,
+     "upperBottom": 1450,
+     "upperTierSplit": 2150,
+     "upperDepth": 330,
+     "baseTop": 840
+    }
+   },
+   "expected": {
+    "modules": [],
+    "dropped": 1
+   }
+  },
+  {
+   "name": "the other wall can be asked for",
+   "input": {
+    "raw": {
+     "modules": [
+      {
+       "type": "base",
+       "wall": "left",
+       "width": 600,
+       "fromCorner": 0
+      },
+      {
+       "type": "base",
+       "wall": "back",
+       "width": 600,
+       "fromCorner": 0
+      }
+     ]
+    },
+    "common": {
+     "cabinetTop": 2200,
+     "baseDepth": 560,
+     "upperBottom": 1450,
+     "upperTierSplit": 2150,
+     "upperDepth": 330,
+     "baseTop": 840
+    },
+    "wall": "left"
+   },
+   "expected": {
+    "modules": [
+     {
+      "type": "base",
+      "width": 600.0,
+      "s": 0.0,
+      "y": 0.0,
+      "height": 840,
+      "depth": 560
+     }
+    ],
+    "dropped": 1
+   }
+  }
+ ]
+}

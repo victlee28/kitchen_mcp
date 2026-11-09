@@ -7,9 +7,9 @@ import json
 import os
 from pathlib import Path
 from typing import Any, Callable
-from . import cabinet_run, edit, edit_intent, geometry, intent, llm, recognition, regions, roomctx, render, rules, threejs_export
+from . import cabinet_run, run_line, edit, edit_intent, geometry, intent, llm, recognition, regions, roomctx, render, rules, threejs_export
 from .intent import KitchenTemplate as KitchenTemplate
-from .spec import Common, KitchenSpec, Room, Wall, dump_spec, load_spec
+from .spec import Common, KitchenSpec, Room, Wall, dump_spec, load_spec, to_data
 from .store import ConflictError, Store
 from . import legacy as legacy_schema
 from .config import Config
@@ -174,7 +174,6 @@ class KitchenService:
         user clicked) picks the edge. The doors face away from the object. The result carries ``operation``, ``facing``, ``summary`` and the
         :meth:`propose` result under ``proposal``; confirm with :meth:`apply` and its opHash.
         """
-        from .placement import IDENTITY
         spec, current = self.store.get(design_id)
         if base_revision is not None and base_revision != current:
             raise ConflictError(f'base_rev={base_revision}, but the latest revision is {current}; reload before editing')
@@ -188,34 +187,41 @@ class KitchenService:
         point = template.get('point')
         if not isinstance(point, dict) or not all(isinstance(point.get(k), (int, float)) for k in ('x', 'z')):
             raise InvalidInput('template.point needs numeric x and z (mm, room frame)', code='bad-template-point')
+        struct, plan = self._plan_at_object(spec, str(template.get('structureId')), point,
+                                            lambda outline, click: cabinet_run.plan_i_run(spec, outline, click))
+        preview = self.propose(design_id, plan['operation'], current, None, country)
+        return {'id': design_id, 'baseRev': current, 'status': 'ok', 'structureId': struct['id'], 'facing': plan['facing'], 'length': plan['length'],
+                'summary': plan['summary'], 'operation': plan['operation'], 'proposal': preview}
+
+    def _plan_at_object(self, spec: Any, structure_id: str, point: dict[str, Any], planner: Callable[[list[tuple[float, float]], tuple[float, float]], dict]) -> tuple[dict, dict]:
+        """``(object, plan)``: ``planner(outline, click)`` run with the object's outline and the click in the KITCHEN frame, in the frame the design will
+        have once the plan is in. ``point`` is in the room frame (mm). A design without cabinets has no wall binding yet, so its kitchen frame is the room
+        frame; the first cabinet binds the kitchen to a wall and moves that frame, so plan again until the plan and the frame agree."""
+        from .placement import IDENTITY
         scene = geometry.compile_spec(spec)
         ctx = roomctx.for_spec(spec, scene.lsau, scene.lphai)
         if ctx is None:
             raise InvalidInput('This design has no imported floorplan, so there is no object to stand against', code='no-floorplan')
-        struct = next((s for s in ctx.structures if s['id'] == template.get('structureId')), None)
+        struct = next((s for s in ctx.structures if s['id'] == structure_id), None)
         if struct is None:
-            raise NotFound(f"No such object: {template.get('structureId')}", code='structure-not-found')
+            raise NotFound(f"No such object: {structure_id}", code='structure-not-found')
         place = ctx.placement if ctx.placement is not None else IDENTITY
         click = (float(point['x']), float(point['z']))
-        # A design without cabinets has no wall binding yet, so its kitchen frame is the room frame; the first cabinet binds the kitchen to a wall and
-        # moves that frame. Plan in the frame the design WILL have once the run is in (repeat until the plan and the frame agree).
-        plan = None
+        plan: dict = {}
         for _ in range(3):
             outline = [place.to_kitchen(float(p['x']), float(p['z'])) for p in struct['outline']]
-            plan = cabinet_run.plan_i_run(spec, outline, place.to_kitchen(*click))
+            plan = planner(outline, place.to_kitchen(*click))
             try:
                 after = edit.apply_op(spec.model_copy(deep=True), plan['operation'])
                 scene_after = geometry.compile_spec(after)
                 ctx_after = roomctx.for_spec(after, scene_after.lsau, scene_after.lphai)
-            except Exception:       # the preview below reports an operation that cannot be applied
+            except Exception:       # the preview reports an operation that cannot be applied
                 break
             place_after = ctx_after.placement if ctx_after is not None else IDENTITY
             if place_after == place:
                 break
             place = place_after
-        preview = self.propose(design_id, plan['operation'], current, None, country)
-        return {'id': design_id, 'baseRev': current, 'status': 'ok', 'structureId': struct['id'], 'facing': plan['facing'], 'length': plan['length'],
-                'summary': plan['summary'], 'operation': plan['operation'], 'proposal': preview}
+        return struct, plan
 
     def _wire_recognizers(self) -> None:
         from .backends import BackendError
@@ -231,8 +237,12 @@ class KitchenService:
         self.recognizers[name] = recognizer
 
     def recognize(self, design_id: str, source: dict[str, Any], recognizer: str | None=None, base_revision: int | None=None,
-                  country: str | None=None) -> dict:
+                  country: str | None=None, anchor: dict[str, Any] | None=None, mode: str='add') -> dict:
         """Photo or drawing -> a DRAFT kitchen, previewed, never saved. ``source``: ``{"kind": "photo"|"drawing", "imageBase64": "...", "name"?, "mediaType"?, "note"?}`` (``note``: the user's hint, up to 500 characters).
+
+        ``anchor`` (``{"structureId", "point": {"x", "z"}}``, room frame, mm): stand the recognised run along the edge of that floor-plan object nearest
+        to the point, doors facing away from it, ADDING it to the cabinets already there (``mode="replace"``: instead of them). Without an anchor the whole
+        design's cabinets are replaced and placed on the back wall of the kitchen frame. Only the draft's back-wall run is used with an anchor.
 
         ``status``: ``ok`` (``draft`` + ``operation`` + the :meth:`propose` result under ``proposal``; confirm with :meth:`apply` and its opHash),
         ``empty`` (nothing usable was recognised), ``unavailable`` (no recognizer plugged in) or ``failed`` (the recognizer raised).
@@ -257,9 +267,11 @@ class KitchenService:
             raise InvalidInput(f"recognizer must be one of: {', '.join(self.recognizers)}", code='unknown-recognizer')
         inp = recognition.RecognitionInput(kind=kind, data=data, name=str(source.get('name') or ''), media_type=str(source.get('mediaType') or ''),
                                       note=recognition.recognizer_wire.clean_note(source.get('note')))
-        return self._recognition_result(design_id, spec, current, out, name, lambda: self.recognizers[name].recognize(inp), country)
+        anchor, mode = self._check_anchor(anchor, mode)
+        return self._recognition_result(design_id, spec, current, out, name, lambda: self.recognizers[name].recognize(inp), country, anchor, mode)
 
-    def recognize_collect(self, design_id: str, job: str, base_revision: int | None=None, country: str | None=None) -> dict:
+    def recognize_collect(self, design_id: str, job: str, base_revision: int | None=None, country: str | None=None, anchor: dict[str, Any] | None=None,
+                          mode: str='add') -> dict:
         """Ask again for a recognition that came back ``pending`` (recognizer ``inbox``: someone answers the job's questions by chat first).
 
         The answer is that of :meth:`recognize`: still ``pending`` while questions are open, then ``ok`` / ``empty`` / ``failed``.
@@ -274,10 +286,23 @@ class KitchenService:
         inbox = self.recognizers.get('inbox')
         if inbox is None:
             return {**out, 'status': 'unavailable', 'message': 'The inbox recognizer is not configured (CABINET_RECOGNIZER_URL)'}
-        return self._recognition_result(design_id, spec, current, out, 'inbox', lambda: inbox.collect(job_id), country)
+        anchor, mode = self._check_anchor(anchor, mode)
+        return self._recognition_result(design_id, spec, current, out, 'inbox', lambda: inbox.collect(job_id), country, anchor, mode)
+
+    @staticmethod
+    def _check_anchor(anchor: Any, mode: Any) -> tuple[dict[str, Any] | None, str]:
+        if mode not in ('add', 'replace'):
+            raise InvalidInput("mode must be 'add' or 'replace'", code='bad-mode')
+        if anchor is None:
+            return None, mode
+        point = anchor.get('point') if isinstance(anchor, dict) else None
+        if not (isinstance(anchor, dict) and isinstance(anchor.get('structureId'), str) and isinstance(point, dict)
+                and all(isinstance(point.get(k), (int, float)) and not isinstance(point.get(k), bool) for k in ('x', 'z'))):
+            raise InvalidInput('anchor needs structureId and point {x, z} (mm, room frame)', code='bad-anchor')
+        return anchor, mode
 
     def _recognition_result(self, design_id: str, spec: Any, current: int, out: dict[str, Any], name: str, produce: Callable[[], dict],
-                            country: str | None) -> dict:
+                            country: str | None, anchor: dict[str, Any] | None=None, mode: str='add') -> dict:
         try:
             raw = produce()
         except recognition.Deferred as waiting:
@@ -288,9 +313,22 @@ class KitchenService:
         draft = recognition.build_draft(raw)
         if not draft.modules:
             return {**out, 'status': 'empty', 'recognizer': name, 'draft': draft.to_data()}
-        operation = recognition.draft_operation(spec, draft)
-        preview = self.propose(design_id, operation, current, None, country)
-        return {**out, 'status': 'ok', 'recognizer': name, 'draft': draft.to_data(), 'operation': operation, 'proposal': preview}
+        if anchor is None:
+            operation = recognition.draft_operation(spec, draft)
+            preview = self.propose(design_id, operation, current, None, country)
+            return {**out, 'status': 'ok', 'recognizer': name, 'draft': draft.to_data(), 'operation': operation, 'proposal': preview}
+        modules, dropped = recognition.line_modules(draft, to_data(spec)['common'])
+        if not modules:
+            return {**out, 'status': 'empty', 'recognizer': name, 'draft': draft.to_data(), 'message': 'No run on the back wall was recognised'}
+        clear = [m.id for m in spec.module] if mode == 'replace' else None
+        struct, plan = self._plan_at_object(spec, anchor['structureId'], anchor['point'],
+                                            lambda outline, click: run_line.plan_on_line(spec, run_line.edge_line(outline, click), modules, clear))
+        summary = list(plan['summary'])
+        if dropped:
+            summary.append(f'{dropped} recognised cabinets on other walls were left out (one run is placed per edge)')
+        preview = self.propose(design_id, plan['operation'], current, None, country)
+        return {**out, 'status': 'ok', 'recognizer': name, 'draft': draft.to_data(), 'operation': plan['operation'], 'summary': summary,
+                'structureId': struct['id'], 'mode': mode, 'proposal': preview}
 
     def propose(self, design_id: str, operation: dict[str, Any], base_revision: int | None=None, scope: list[str] | None=None,
                 country: str | None=None) -> dict:

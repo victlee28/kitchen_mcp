@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { styleFromOptions, styleFromValue, interpretBody, describeInterpret, confirmBody, checkUpload, recognizeBody, recognizeJobBody, describeRecognition, templateIntent, mentionsReference, recognitionLines } from '../../web/assist-logic.js';
+import { styleFromOptions, styleFromValue, interpretBody, describeInterpret, confirmBody, checkUpload, recognizeBody, recognizeJobBody, anchorFor, describeRecognition, templateIntent, mentionsReference, recognitionLines } from '../../web/assist-logic.js';
 
 const prop = (over = {}) => ({ id: 'd1', baseRev: 4, opHash: 'h', operation: { op: 'remove', id: 'TD1' }, applicable: true, unchanged: false,
   diff: { modules: { added: [], removed: ['TD1'], changed: {} }, other: [] }, validation: { introduced: [], resolved: [] }, ...over });
@@ -59,6 +59,13 @@ test('recognition answers cover every status and flag low-confidence modules', (
   assert.deepEqual([waiting.kind, waiting.job], ['pending', '20261109-142100']);
   assert.match(waiting.text, /trả lời hộp thư job 20261109-142100/);
   assert.deepEqual(recognizeJobBody(' 20261109-142100-2 ', 3), { job: '20261109-142100-2', baseRev: 3 });
+  const anchor = anchorFor({ kind: 'structure', id: 'STRUCT-column_a', point: { x: 1200, z: 3400, y: 5 } });
+  assert.deepEqual(anchor, { structureId: 'STRUCT-column_a', point: { x: 1200, z: 3400 } });
+  for (const t of [null, { kind: 'module', id: 'TD1' }, { kind: 'structure', id: 'STRUCT-a' }, { kind: 'structure', id: 'STRUCT-a', point: { x: 'a', z: 1 } }]) assert.equal(anchorFor(t), null);
+  assert.deepEqual(recognizeBody('photo', 'a', 'image/png', 'QQ==', 2, '', anchor).anchor, anchor);
+  assert.ok(!('mode' in recognizeBody('photo', 'a', 'image/png', 'QQ==', 2, '', anchor, 'add')), 'add is the default and is not sent');
+  assert.equal(recognizeBody('photo', 'a', 'image/png', 'QQ==', 2, '', anchor, 'replace').mode, 'replace');
+  assert.deepEqual(recognizeJobBody('20261109-142100', 3, anchor, 'replace'), { job: '20261109-142100', baseRev: 3, anchor, mode: 'replace' });
   for (const bad of ['', '../x', '20261109-1', null]) assert.throws(() => recognizeJobBody(bad, 1));
   assert.equal(describeRecognition({ status: 'failed', message: 'boom' }).tone, 'bad');
 });

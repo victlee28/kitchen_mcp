@@ -52,3 +52,30 @@ def draft_operation(spec: KitchenSpec, draft: Draft) -> dict[str, Any]:
     if draft.materials:
         common["material"] = {**common.get("material", {}), **draft.materials}
     return {"op": "replace", "spec": data}
+
+
+def line_modules(draft: Draft, common: dict[str, Any], wall: str = "back") -> tuple[list[dict[str, Any]], int]:
+    """The draft's cabinets of ONE straight run, ready for ``run_line.plan_on_line``: ``({type, width, s, y, height, depth, name?}, dropped)``.
+
+    Only the draft's ``wall`` is used (a photo of an L or U kitchen has more runs; ``dropped`` counts the cabinets of the others). The draft measures
+    ``fromCorner`` from the right-hand end of the run towards the left, as seen from the front; a run's ``s`` grows to the right, so each cabinet
+    is mirrored: ``s = length - fromCorner - width``. A cabinet with no position follows the previous one of its storey, as in ``draft_operation``.
+    """
+    cursor: dict[str, float] = {}
+    placed: list[tuple[float, DraftModule]] = []
+    for m in draft.modules:
+        if m.wall != wall:
+            continue
+        storey = _storey(m)
+        start = m.fromCorner if m.fromCorner is not None else cursor.get(storey, 0.0)
+        cursor[storey] = start + m.width
+        placed.append((start, m))
+    length = max((start + m.width for start, m in placed), default=0.0)
+    out: list[dict[str, Any]] = []
+    for start, m in placed:
+        y, height, depth = _geometry(m, common)
+        entry: dict[str, Any] = {"type": m.type, "width": m.width, "s": length - start - m.width, "y": y, "height": height, "depth": depth}
+        if m.label:
+            entry["name"] = m.label
+        out.append(entry)
+    return out, len(draft.modules) - len(placed)
