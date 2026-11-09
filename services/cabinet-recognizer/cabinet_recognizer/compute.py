@@ -189,6 +189,8 @@ def build_spec(measure: dict[str, Any], layout: Layout, seg: Segmentation, polic
                         mod["applianceBelowHeight"] = lower_h - door_h
                     else:
                         warnings.append({"code": "hood-line-missing", "module": mod["id"]})
+            elif ans["type"].startswith("tall"):      # a tall unit in the base band: floor to the top of the wall cabinets
+                mod["storey"], mod["y"], mod["height"] = "tall", 0, upper_top
             else:
                 mod["y"], mod["height"] = 0, base_body
                 if ans["drawers"]:
