@@ -42,7 +42,8 @@ handles, shadows, objects). Pick only the real ones.
 
 Tasks:
 1. rows: choose the H line for each of {list(ROW_KEYS)}
-   (worktopBack = worktop meets the wall, worktopFront = top of the worktop front edge, frontsTop = top edge of the base door/drawer fronts, plinthTop = top of plinth/toe area).
+   (Optional extra key "upperSplit": when the wall cabinets are TWO stacked rows (a top row over the main row), the H line between the two rows; omit it for a single row.
+   worktopBack = worktop meets the wall, worktopFront = top of the worktop front edge, frontsTop = top edge of the base door/drawer fronts, plinthTop = top of plinth/toe area).
 2. For each band list "boundaries": the lines that separate MODULES (carcasses), left end and right end included,
    ordered left to right. A double-door module has its middle gap as a doorSplit, NOT as a boundary.
    Decide by symmetry and function: doors above/below an appliance usually form one module.

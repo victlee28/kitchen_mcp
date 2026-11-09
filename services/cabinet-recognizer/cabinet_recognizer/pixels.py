@@ -110,7 +110,7 @@ def refine_cells(image: bytes, meas: dict[str, Any], seg: dict[str, Any]) -> dic
         vpos = {ln["id"]: ln["pos"] for ln in meas["vlines"][band]}
         xs = [vpos[b] for b in seg[band]["boundaries"]]
         if band == "upper":
-            y0, y1 = hpos[seg["rows"]["upperTop"]], hpos[seg["rows"]["upperBottom"]]
+            y0, y1 = hpos[seg["rows"].get("upperSplit", seg["rows"]["upperTop"])], hpos[seg["rows"]["upperBottom"]]   # under the loft row
         else:
             y0, y1 = hpos[seg["rows"]["frontsTop"]], hpos[seg["rows"]["plinthTop"]]
         cells: list[dict[str, Any]] = []

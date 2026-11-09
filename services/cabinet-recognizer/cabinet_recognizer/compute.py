@@ -142,6 +142,15 @@ def build_spec(measure: dict[str, Any], layout: Layout, seg: Segmentation, polic
     plinth = policy["plinthMm"]
     upper_bottom = worktop + gap
     upper_top = upper_bottom + upper_h
+    loft_h = 0                                    # a second, top row of wall cabinets (rows.upperSplit given)
+    if "upperSplit" in rows:
+        loft_h = round_int((rows["upperSplit"] - rows["upperTop"]) * s_upper, policy["heightRoundingMm"])
+        if not 0 < loft_h < upper_h:
+            warnings.append({"code": "loft-row-ignored", "measuredMm": loft_h})
+            loft_h = 0
+    lower_h = upper_h - loft_h                    # the wall cabinets under the loft row
+    lower_top = upper_bottom + lower_h
+    top_line = rows["upperSplit"] if loft_h else rows["upperTop"]
     base_body = worktop - thick
     front_h = round_int((rows["plinthTop"] - rows["frontsTop"]) * s_base, 10)
     if not 0 < front_h <= base_body - plinth:
@@ -172,12 +181,12 @@ def build_spec(measure: dict[str, Any], layout: Layout, seg: Segmentation, polic
                     mod["doors"] = _split(width, [1 / ans["doors"]] * ans["doors"], step)
             inner = refine.get(band, [])[i]["innerRows"] if i < len(refine.get(band, [])) else []
             if band == "upper":
-                mod["y"], mod["height"] = upper_bottom, upper_h
+                mod["y"], mod["height"] = upper_bottom, lower_h
                 if ans["applianceBelow"] == "hood":
                     if inner:
-                        door_h = round_int((inner[0] - rows["upperTop"]) * s_upper, policy["heightRoundingMm"])
-                        mod["y"], mod["height"] = upper_top - door_h, door_h
-                        mod["applianceBelowHeight"] = upper_h - door_h
+                        door_h = round_int((inner[0] - top_line) * s_upper, policy["heightRoundingMm"])
+                        mod["y"], mod["height"] = lower_top - door_h, door_h
+                        mod["applianceBelowHeight"] = lower_h - door_h
                     else:
                         warnings.append({"code": "hood-line-missing", "module": mod["id"]})
             else:
@@ -194,6 +203,14 @@ def build_spec(measure: dict[str, Any], layout: Layout, seg: Segmentation, polic
             if ans["note"]:
                 mod["note"] = ans["note"]
             modules.append(mod)
+    if loft_h:
+        for i, below in enumerate([m for m in modules if m["storey"] == "upper"]):
+            loft = {k: v for k, v in below.items() if k in ("x", "width", "depth", "confidence")}
+            loft.update(id=f"TN{i + 1}", type="upper-top", storey="upper-top", y=lower_top, height=loft_h,
+                        name=module_name("upper-top", 0, 0, False))
+            if "doors" in below:
+                loft["doors"] = list(below["doors"])
+            modules.append(loft)
 
     appliances = [{
         "id": f"AP{n + 1}", "kind": a["kind"], "name": APPLIANCE_NAMES.get(a["kind"], a["kind"]),
@@ -211,6 +228,7 @@ def build_spec(measure: dict[str, Any], layout: Layout, seg: Segmentation, polic
             "worktopThickness": thick, "baseDepth": policy["baseDepthMm"],
             "baseFrontHeight": front_h, "baseFrontTopGap": base_body - plinth - front_h,
             "upperBottom": upper_bottom, "upperTop": upper_top, "upperDepth": policy["upperDepthMm"],
+            **({"upperSplit": lower_top} if loft_h else {}),
             "materials": layout["materials"],
         },
         "modules": modules,

@@ -29,6 +29,7 @@ END_KINDS: tuple[str, ...] = ("open", "wall", "tall")
 ROW_KEYS: tuple[str, ...] = (
     "upperTop", "upperBottom", "worktopBack", "worktopFront", "frontsTop", "plinthTop", "floor",
 )
+OPTIONAL_ROW_KEYS: tuple[str, ...] = ("upperSplit",)   # the line between two stacked rows of wall cabinets (top row = "loft")
 BANDS: tuple[str, ...] = ("upper", "base")
 
 
@@ -263,6 +264,13 @@ def parse_segmentation(data: Any, measure: dict[str, Any]) -> Segmentation:
     order = [hpos[rows[k]] for k in ROW_KEYS]
     if any(b <= a for a, b in zip(order, order[1:])):
         raise invalid("rows-order", f"rows phải theo thứ tự từ trên xuống: {list(ROW_KEYS)}")
+    split = rows_raw.get("upperSplit")
+    if split is not None:
+        if split not in hpos:
+            raise invalid("unknown-row", f"rows.upperSplit={split!r} không có trong danh sách đường ngang")
+        if not hpos[rows["upperTop"]] < hpos[split] < hpos[rows["upperBottom"]]:
+            raise invalid("rows-order", "rows.upperSplit phải nằm giữa upperTop và upperBottom")
+        rows["upperSplit"] = str(split)
     apps: list[ApplianceAnswer] = []
     upper = _band(d.get("upper"), "upper", measure["vlines"]["upper"])
     base = _band(d.get("base"), "base", measure["vlines"]["base"])
