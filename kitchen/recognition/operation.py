@@ -13,8 +13,11 @@ def _storey(m: DraftModule) -> str:
     return "tall" if m.type.startswith("tall") else "upper" if m.type.startswith("upper") else "base"
 
 
+MIN_TALL_HEIGHT = 1500.0     # a "tall" cabinet shorter than this is a base-band height the recognizer could not improve on
+
+
 def _geometry(m: DraftModule, common: dict[str, Any]) -> tuple[float, float, float]:
-    """(y, height, depth) from the module's own numbers, else the design's common levels."""
+    """(y, height, depth) from the module's own numbers, else the design's common levels. A tall cabinet's implausibly low height is ignored."""
     storey = _storey(m)
     if storey == "tall":
         y, height, depth = 0.0, common["cabinetTop"], common["baseDepth"]
@@ -22,7 +25,8 @@ def _geometry(m: DraftModule, common: dict[str, Any]) -> tuple[float, float, flo
         y, height, depth = common["upperBottom"], common["upperTierSplit"] - common["upperBottom"], common["upperDepth"]
     else:
         y, height, depth = 0.0, common["baseTop"], common["baseDepth"]
-    return y, m.height or height, m.depth or depth
+    own = m.height if m.height and not (storey == "tall" and m.height < MIN_TALL_HEIGHT) else None
+    return (y if m.y is None else m.y), own or height, m.depth or depth
 
 
 def draft_operation(spec: KitchenSpec, draft: Draft) -> dict[str, Any]:

@@ -240,6 +240,59 @@
     ],
     "dropped": 1
    }
+  },
+  {
+   "name": "the cabinet's own level is kept; a tall cabinet with a base-band height gets the full tall height",
+   "input": {
+    "raw": {
+     "modules": [
+      {
+       "type": "upper-hood",
+       "wall": "back",
+       "width": 760,
+       "fromCorner": 0,
+       "y": 2230,
+       "height": 450
+      },
+      {
+       "type": "tall-fridge",
+       "wall": "back",
+       "width": 720,
+       "fromCorner": 760,
+       "height": 830
+      }
+     ]
+    },
+    "common": {
+     "cabinetTop": 2680,
+     "baseDepth": 550,
+     "upperBottom": 1530,
+     "upperTierSplit": 2760,
+     "upperDepth": 350,
+     "baseTop": 830
+    }
+   },
+   "expected": {
+    "modules": [
+     {
+      "type": "upper-hood",
+      "width": 760.0,
+      "s": 720.0,
+      "y": 2230.0,
+      "height": 450.0,
+      "depth": 350
+     },
+     {
+      "type": "tall-fridge",
+      "width": 720.0,
+      "s": 0.0,
+      "y": 0.0,
+      "height": 2680,
+      "depth": 550
+     }
+    ],
+    "dropped": 0
+   }
   }
  ]
 }

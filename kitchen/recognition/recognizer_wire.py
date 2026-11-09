@@ -18,7 +18,7 @@ REVIEW_CODES = ("type-approximated", "unknown-type", "outside-wall", "tall-secti
 REVIEW_CONFIDENCE = 0.4
 MATERIAL_SLOTS = ("base", "upper", "tall", "countertop")        # the slots of ``common.material`` that the draft also knows
 JOB_ID = re.compile(r"[0-9]{8}-[0-9]{6}(-[0-9]+)?")             # the service names a job by its creation time: 20261109-142100, -2 when taken
-MODULE_FIELDS = ("type", "wall", "width", "fromCorner", "height", "depth")
+MODULE_FIELDS = ("type", "wall", "width", "fromCorner", "y", "height", "depth")
 
 
 def clean_note(text: Any) -> str:

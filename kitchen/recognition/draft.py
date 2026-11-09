@@ -22,6 +22,7 @@ class DraftModule:
     fromCorner: float | None = None
     height: float | None = None
     depth: float | None = None
+    y: float | None = None
     confidence: float = 1.0
     label: str = ""
 
@@ -73,11 +74,14 @@ def _module(index: int, raw: Any, rejected: list[dict[str, Any]]) -> DraftModule
     start = _num(raw.get("fromCorner"))
     if raw.get("fromCorner") is not None and (start is None or start < 0):
         return reject("fromCorner must be >= 0") or None
+    level = _num(raw.get("y"))
+    if raw.get("y") is not None and (level is None or level < 0):
+        return reject("y must be >= 0") or None
     sizes = {k: _num(raw.get(k)) for k in ("height", "depth")}
     if any(raw.get(k) is not None and (v is None or v <= 0) for k, v in sizes.items()):
         return reject("height and depth must be positive") or None
     return DraftModule(type=mtype, wall=wall, width=round_half_away(width, 0), fromCorner=None if start is None else round_half_away(start, 0),
-                       height=sizes["height"], depth=sizes["depth"], confidence=_conf(raw.get("confidence")), label=str(raw.get("label") or "")[:60])
+                       height=sizes["height"], depth=sizes["depth"], y=level, confidence=_conf(raw.get("confidence")), label=str(raw.get("label") or "")[:60])
 
 
 def build_draft(raw: Any) -> Draft:

@@ -79,6 +79,7 @@
        "wall": "back",
        "width": 600,
        "fromCorner": 0,
+       "y": 0,
        "height": 840,
        "depth": 550,
        "label": "Tủ bếp"
@@ -88,6 +89,7 @@
        "wall": "back",
        "width": 800,
        "fromCorner": 600,
+       "y": 1500,
        "height": 750,
        "depth": 350,
        "confidence": 0.4
