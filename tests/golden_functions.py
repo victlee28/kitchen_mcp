@@ -151,6 +151,14 @@ def recognizer_wire_draft_from_kitchen_spec(i):
     return {"draft": recognizer_wire.draft_from_kitchen_spec(i["payload"])}
 
 
+def recognizer_wire_clean_job_id(i):
+    return {"job": recognizer_wire.clean_job_id(i["value"])}
+
+
+def recognizer_wire_job_progress(i):
+    return {"progress": recognizer_wire.job_progress(i["payload"])}
+
+
 FUNCTIONS = {
     "placement.to_room": placement_to_room,
     "placement.to_kitchen": placement_to_kitchen,
@@ -172,4 +180,6 @@ FUNCTIONS = {
     "recognition.recognizer_wire.request_body": recognizer_wire_request_body,
     "recognition.recognizer_wire.response_error": recognizer_wire_response_error,
     "recognition.recognizer_wire.draft_from_kitchen_spec": recognizer_wire_draft_from_kitchen_spec,
+    "recognition.recognizer_wire.clean_job_id": recognizer_wire_clean_job_id,
+    "recognition.recognizer_wire.job_progress": recognizer_wire_job_progress,
 }

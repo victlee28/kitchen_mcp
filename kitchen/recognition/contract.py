@@ -18,6 +18,15 @@ class RecognitionInput:
     note: str = ""                       # the user's free-text hint ("white shaker doors", "fridge on the left"): data for the model, never instructions
 
 
+class Deferred(Exception):
+    """Raised by a recognizer that cannot answer NOW (a human or another assistant has to answer first): it carries the ``job`` to ask again
+    with and the ``step`` it is waiting on. The service turns it into the status ``pending``, not into a failure."""
+
+    def __init__(self, job: str, step: str = ""):
+        super().__init__(f"waiting on {step or 'an answer'} (job {job})")
+        self.job, self.step = job, step
+
+
 class Recognizer(Protocol):
     """Return a raw draft (JSON-able dict)::
 

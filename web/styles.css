@@ -98,4 +98,4 @@ label.kind{display:inline-flex;align-items:center;gap:4px;margin-right:10px;colo
 .ctx-preview{margin:6px 0;padding-left:16px;max-height:220px;overflow:auto;font-size:12px}
 #cmdText{flex:1;min-width:0}#recFile{max-width:150px;font-size:11px}#assistResult{margin-top:6px}
 .ctx-cmd{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0}.ctx-cmd input{flex:1;min-width:150px}.ctx-cmd .ctx-msg,.ctx-cmd .chips{width:100%}
-.ctx-cmd select{max-width:96px}
+.ctx-cmd select{max-width:96px}.ctx-cmd .ctx-pending{width:100%;display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12px}

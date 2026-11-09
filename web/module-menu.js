@@ -2,17 +2,21 @@
 // The server decides what a change means (POST .../propose previews, POST .../ops saves); nothing here edits data directly.
 import { el } from './dom.js';
 import { request } from './api-client.js';
-import { interpretBody, describeInterpret, templateIntent, checkUpload, recognizeBody, describeRecognition, recognitionLines } from './assist-logic.js';
+import { interpretBody, describeInterpret, templateIntent, checkUpload, recognizeBody, recognizeJobBody, describeRecognition, recognitionLines } from './assist-logic.js';
 import { actionsFor, buildOp, describeProposal, layerFor, menuPosition, DOOR_STYLES, HANDLE_VARIANTS, MATERIAL_PRESETS } from './menu-logic.js';
 
 const call = (path, body) => request(path, 'POST', body);
+const JOB_KEY = 'recogJob';
+function readJob() { try { return localStorage.getItem(JOB_KEY) || null; } catch { return null; } }
+function keepJob(job) { try { if (job) localStorage.setItem(JOB_KEY, job); else localStorage.removeItem(JOB_KEY); } catch { /* no storage: the job lives until the page closes */ } }
 
 /**
  * ctx: { box, getState() -> {id, rev, spec}, afterChange(result), reload(), imageEdit({layer, material}), structure: {hide, isolate, showAll}, setStatus }
  */
 export function createModuleMenu(ctx) {
   const box = ctx.box;
-  let target = null; let step = null; let busy = false; let picking = false;   // picking: the native file dialog is open (the window blurs, the menu must stay)
+  let pendingJob = readJob();   // a recognition waiting for Claude (inbox mode): survives closing the menu and reloading the page
+  let target = null; let step = null; let busy = false; let picking = false; let previewOfJob = null;   // picking: the native file dialog is open (the window blurs, the menu must stay)
   box.setAttribute('role', 'dialog'); box.hidden = true;
 
   const close = () => { box.hidden = true; box.replaceChildren(); target = null; step = null; busy = false; picking = false; };
@@ -45,7 +49,12 @@ export function createModuleMenu(ctx) {
     const file = el('input', { type: 'file', accept: 'image/png,image/jpeg,image/webp', hidden: true });
     file.addEventListener('change', () => { picking = false; if (file.files[0]) recognizeImage(file.files[0], kind.value, input.value); });
     const attach = el('button', { type: 'button', class: 'ghost', title: 'Nhập ảnh chụp bếp hoặc bản vẽ làm tham chiếu: nhận diện ra các tủ rồi xem trước (thay cả thiết kế khi áp dụng)', onclick: () => { picking = true; file.click(); } }, '📎 Ảnh tham chiếu');
+    const waiting = pendingJob ? el('div', { class: 'ctx-pending' },
+      el('span', {}, `Job ${pendingJob} đang chờ Claude. `),
+      el('button', { type: 'button', class: 'primary', title: 'Lấy kết quả Claude đã trả lời và xem trước các tủ nhận diện được', onclick: () => updateJob(input.value) }, 'Cập nhật'),
+      el('button', { type: 'button', class: 'ghost small', title: 'Bỏ job này', onclick: () => { setJob(null); redraw(input.value, ''); } }, 'Bỏ')) : null;
     return el('div', { class: 'ctx-cmd' }, input, el('button', { type: 'button', class: 'primary', onclick: run }, 'Xem trước'), attach, kind, file,
+      ...(waiting ? [waiting] : []),
       ...(message ? [el('p', { class: 'ctx-msg warn' }, message)] : []),
       ...(choices.length ? [el('div', { class: 'chips' }, ...choices.map((c) => el('button', { type: 'button', class: 'ghost small', onclick: () => command(`${input.value.trim()} ${c}`) }, c)))] : []));
   }
@@ -81,6 +90,18 @@ export function createModuleMenu(ctx) {
     });
   }
 
+  function setJob(job) { pendingJob = job; keepJob(job); }
+
+  // Shared by "Xem trước" with an image and by "Cập nhật": the answer is a preview, a message, or "pending" (the job still waits for Claude).
+  function showRecognition(data, text) {
+    const d = describeRecognition(data);
+    if (d.kind === 'pending') { setJob(d.job); return redraw(text, d.text); }
+    if (data.status === 'empty') setJob(null);
+    if (d.kind !== 'preview') return redraw(text, d.text);
+    previewOfJob = pendingJob;       // applying this preview finishes the job
+    showPreview('cmd', d.proposal, null, [{ kind: 'warn', text: 'Kết quả nhận diện sẽ thay toàn bộ tủ của thiết kế hiện tại (phòng và mặt bằng giữ nguyên; có thể hoàn tác).' }, ...recognitionLines(data)]);
+  }
+
   async function recognizeImage(file, kind, text) {
     if (busy) return; const { id, rev } = ctx.getState();
     const bad = checkUpload(file); if (bad) return redraw(text, bad);
@@ -90,9 +111,19 @@ export function createModuleMenu(ctx) {
       busy = false;
       if (status === 409) return stale('cmd');
       if (!data || data.error) return redraw(text, data?.error || `Lỗi ${status}`);
-      const d = describeRecognition(data);
-      if (d.kind !== 'preview') return redraw(text, d.text);
-      showPreview('cmd', d.proposal, null, [{ kind: 'warn', text: 'Kết quả nhận diện sẽ thay toàn bộ tủ của thiết kế hiện tại (phòng và mặt bằng giữ nguyên; có thể hoàn tác).' }, ...recognitionLines(data)]);
+      showRecognition(data, text);
+    } catch (e) { busy = false; redraw(text, e.message); }
+  }
+
+  async function updateJob(text) {
+    if (busy || !pendingJob) return; const { id, rev } = ctx.getState();
+    busy = true; ctx.setStatus('Lấy kết quả của job…');
+    try {
+      const { status, data } = await call(`/api/designs/${id}/recognize-job`, recognizeJobBody(pendingJob, rev));
+      busy = false;
+      if (status === 409) return stale('cmd');
+      if (!data || data.error) return redraw(text, data?.error || `Lỗi ${status}`);
+      showRecognition(data, text);
     } catch (e) { busy = false; redraw(text, e.message); }
   }
 
@@ -208,6 +239,8 @@ export function createModuleMenu(ctx) {
       busy = false;
       if (status === 409) return stale(action);
       if (!data || data.error) { ctx.setStatus(data?.error || `Lỗi ${status}`, 'warn'); return action === 'cmd' ? list() : form(action, data?.error || `Lỗi ${status}`); }
+      if (previewOfJob && previewOfJob === pendingJob) setJob(null);
+      previewOfJob = null;
       close(); await ctx.afterChange(data); ctx.setStatus(`Đã áp dụng: rev ${data.rev}`, 'ok');
     } catch (e) { busy = false; if (action === 'cmd') ctx.setStatus(e.message, 'warn'); else form(action, e.message); }
   }

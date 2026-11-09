@@ -219,8 +219,8 @@ class KitchenService:
 
     def _wire_recognizers(self) -> None:
         from .backends import BackendError
-        from .recognizers import CabinetRecognizerHttp, GeminiRecognizer
-        for name, make in (("gemini", GeminiRecognizer), ("cabinet", CabinetRecognizerHttp)):
+        from .recognizers import CabinetInboxHttp, CabinetRecognizerHttp, GeminiRecognizer
+        for name, make in (("gemini", GeminiRecognizer), ("cabinet", CabinetRecognizerHttp), ("inbox", CabinetInboxHttp)):
             try:
                 self.recognizers[name] = make(self.config)
             except BackendError:
@@ -257,8 +257,32 @@ class KitchenService:
             raise InvalidInput(f"recognizer must be one of: {', '.join(self.recognizers)}", code='unknown-recognizer')
         inp = recognition.RecognitionInput(kind=kind, data=data, name=str(source.get('name') or ''), media_type=str(source.get('mediaType') or ''),
                                       note=recognition.recognizer_wire.clean_note(source.get('note')))
+        return self._recognition_result(design_id, spec, current, out, name, lambda: self.recognizers[name].recognize(inp), country)
+
+    def recognize_collect(self, design_id: str, job: str, base_revision: int | None=None, country: str | None=None) -> dict:
+        """Ask again for a recognition that came back ``pending`` (recognizer ``inbox``: someone answers the job's questions by chat first).
+
+        The answer is that of :meth:`recognize`: still ``pending`` while questions are open, then ``ok`` / ``empty`` / ``failed``.
+        """
+        spec, current = self.store.get(design_id)
+        if base_revision is not None and base_revision != current:
+            raise ConflictError(f'base_rev={base_revision}, but the latest revision is {current}; reload before editing')
+        job_id = recognition.recognizer_wire.clean_job_id(job)
+        if not job_id:
+            raise InvalidInput('job is not a recognition job id', code='bad-job')
+        out: dict[str, Any] = {'id': design_id, 'baseRev': current}
+        inbox = self.recognizers.get('inbox')
+        if inbox is None:
+            return {**out, 'status': 'unavailable', 'message': 'The inbox recognizer is not configured (CABINET_RECOGNIZER_URL)'}
+        return self._recognition_result(design_id, spec, current, out, 'inbox', lambda: inbox.collect(job_id), country)
+
+    def _recognition_result(self, design_id: str, spec: Any, current: int, out: dict[str, Any], name: str, produce: Callable[[], dict],
+                            country: str | None) -> dict:
         try:
-            raw = self.recognizers[name].recognize(inp)
+            raw = produce()
+        except recognition.Deferred as waiting:
+            return {**out, 'status': 'pending', 'recognizer': name, 'job': waiting.job, 'step': waiting.step,
+                    'message': f'Waiting for the answer to step {waiting.step or "?"} of job {waiting.job}'}
         except Exception as error:  # a plug-in may raise anything; the caller gets a status, not a crash
             return {**out, 'status': 'failed', 'recognizer': name, 'message': f'{type(error).__name__}: {error}'[:300]}
         draft = recognition.build_draft(raw)

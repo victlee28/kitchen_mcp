@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { styleFromOptions, styleFromValue, interpretBody, describeInterpret, confirmBody, checkUpload, recognizeBody, describeRecognition, templateIntent, recognitionLines } from '../../web/assist-logic.js';
+import { styleFromOptions, styleFromValue, interpretBody, describeInterpret, confirmBody, checkUpload, recognizeBody, recognizeJobBody, describeRecognition, templateIntent, recognitionLines } from '../../web/assist-logic.js';
 
 const prop = (over = {}) => ({ id: 'd1', baseRev: 4, opHash: 'h', operation: { op: 'remove', id: 'TD1' }, applicable: true, unchanged: false,
   diff: { modules: { added: [], removed: ['TD1'], changed: {} }, other: [] }, validation: { introduced: [], resolved: [] }, ...over });
@@ -55,6 +55,11 @@ test('recognition answers cover every status and flag low-confidence modules', (
   assert.equal(ok.lines.some((l) => l.kind === 'bad' && /mục 2/.test(l.text)), true);
   assert.equal(describeRecognition({ status: 'empty', draft }).kind, 'message');
   assert.match(describeRecognition({ status: 'unavailable' }).text, /GEMINI_API_KEY/);
+  const waiting = describeRecognition({ status: 'pending', job: '20261109-142100', step: 'scene' });
+  assert.deepEqual([waiting.kind, waiting.job], ['pending', '20261109-142100']);
+  assert.match(waiting.text, /trả lời hộp thư job 20261109-142100/);
+  assert.deepEqual(recognizeJobBody(' 20261109-142100-2 ', 3), { job: '20261109-142100-2', baseRev: 3 });
+  for (const bad of ['', '../x', '20261109-1', null]) assert.throws(() => recognizeJobBody(bad, 1));
   assert.equal(describeRecognition({ status: 'failed', message: 'boom' }).tone, 'bad');
 });
 

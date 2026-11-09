@@ -1,0 +1,120 @@
+{
+ "function": "recognition.recognizer_wire.job_progress",
+ "cases": [
+  {
+   "name": "waiting on a step",
+   "input": {
+    "payload": {
+     "id": "20261109-142100",
+     "state": "waiting",
+     "step": "scene",
+     "answered": []
+    }
+   },
+   "expected": {
+    "progress": {
+     "state": "waiting",
+     "step": "scene",
+     "message": ""
+    }
+   }
+  },
+  {
+   "name": "waiting without a step name",
+   "input": {
+    "payload": {
+     "state": "waiting"
+    }
+   },
+   "expected": {
+    "progress": {
+     "state": "waiting",
+     "step": "",
+     "message": ""
+    }
+   }
+  },
+  {
+   "name": "done",
+   "input": {
+    "payload": {
+     "state": "done",
+     "kitchen": {
+      "spec": {}
+     }
+    }
+   },
+   "expected": {
+    "progress": {
+     "state": "done",
+     "step": "",
+     "message": ""
+    }
+   }
+  },
+  {
+   "name": "service error object",
+   "input": {
+    "payload": {
+     "error": {
+      "kind": "not-found",
+      "code": "no-such-job",
+      "message": "x"
+     }
+    }
+   },
+   "expected": {
+    "progress": {
+     "state": "error",
+     "step": "",
+     "message": "no-such-job: x"
+    }
+   }
+  },
+  {
+   "name": "a job that ended in error without a message",
+   "input": {
+    "payload": {
+     "state": "error"
+    }
+   },
+   "expected": {
+    "progress": {
+     "state": "error",
+     "step": "",
+     "message": "the service gave no job state"
+    }
+   }
+  },
+  {
+   "name": "unknown state",
+   "input": {
+    "payload": {
+     "state": "sleeping"
+    }
+   },
+   "expected": {
+    "progress": {
+     "state": "error",
+     "step": "",
+     "message": "the service gave no job state"
+    }
+   }
+  },
+  {
+   "name": "not an object",
+   "input": {
+    "payload": [
+     1
+    ]
+   },
+   "expected": {
+    "progress": {
+     "state": "error",
+     "step": "",
+     "message": "the service gave no job state"
+    }
+   }
+  }
+ ]
+}

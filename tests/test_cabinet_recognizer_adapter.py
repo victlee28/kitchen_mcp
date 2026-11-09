@@ -19,7 +19,7 @@ sys.path.insert(0, str(SERVICE))
 from kitchen import recognition  # noqa: E402
 from kitchen.backends import BackendError  # noqa: E402
 from kitchen.config import Config  # noqa: E402
-from kitchen.recognizers import CabinetRecognizerHttp  # noqa: E402
+from kitchen.recognizers import CabinetInboxHttp, CabinetRecognizerHttp  # noqa: E402
 from kitchen.service import KitchenService  # noqa: E402
 
 FIX = json.loads((ROOT / "fixtures" / "l-shaped-kitchen.json").read_text(encoding="utf-8"))
@@ -157,6 +157,50 @@ class TestEndToEnd(unittest.TestCase):
         r = self.svc.recognize(self.did, {"kind": "photo", "imageBase64": base64.b64encode(IMAGE).decode()})
         self.assertEqual(r["status"], "failed")
         self.assertIn("cabinet-recognizer", r["message"])
+
+
+class TestInbox(unittest.TestCase):
+    """No model API: the photo opens a job, the preview waits ("pending") until the job's questions are answered, then the update button finishes it."""
+
+    def setUp(self):
+        from cabinet_recognizer.config import Config as RecogConfig
+        from cabinet_recognizer.http_server import make_handler
+        from cabinet_recognizer.vision import ReplayClient
+        self.tmp = Path(tempfile.mkdtemp(prefix="recog-inbox-"))
+        self.server, url = serve(make_handler(RecogConfig.from_env(), ReplayClient({}), self.tmp / "jobs"))
+        self.svc = KitchenService(self.tmp / "k.db", self.tmp / "renders")
+        self.svc.recognizers.clear()
+        self.svc.recognizers["inbox"] = CabinetInboxHttp(cfg(url))
+        self.did = self.svc.create_from_spec(json.loads(json.dumps(FIX)))["id"]
+
+    def tearDown(self):
+        self.server.shutdown(); self.server.server_close()
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_pending_then_ok_after_the_answers_are_written(self):
+        r = self.svc.recognize(self.did, {"kind": "photo", "imageBase64": base64.b64encode(IMAGE).decode(), "note": "white doors"}, "inbox")
+        self.assertEqual((r["status"], r["recognizer"], r["step"]), ("pending", "inbox", "scene"))
+        job = r["job"]
+        self.assertTrue(recognition.recognizer_wire.clean_job_id(job))
+        again = self.svc.recognize_collect(self.did, job)
+        self.assertEqual((again["status"], again["job"]), ("pending", job), "no answer yet")
+        answers = self.tmp / "jobs" / job / "inbox" / "answers"
+        for step, answer in ANSWERS.items():                  # what Claude Desktop does when the user asks it to answer the job
+            (answers / f"{step}.json").write_text(answer if isinstance(answer, str) else json.dumps(answer), encoding="utf-8")
+        done = self.svc.recognize_collect(self.did, job, r["baseRev"])
+        self.assertEqual(done["status"], "ok")
+        self.assertEqual(done["operation"]["op"], "replace")
+        self.assertTrue(done["proposal"]["applicable"])
+        self.assertEqual(len(self.svc.history(self.did)), r["baseRev"], "nothing is saved before the user applies it")
+
+    def test_bad_job_ids_and_missing_inbox(self):
+        for bad in ("", "../x", "20261109-1", None):
+            with self.assertRaises(Exception) as ctx:
+                self.svc.recognize_collect(self.did, bad)
+            self.assertEqual(getattr(ctx.exception, "code", None), "bad-job")
+        self.assertEqual(self.svc.recognize_collect(self.did, "20990101-000000")["status"], "failed", "a job the service does not know")
+        self.svc.recognizers.clear()
+        self.assertEqual(self.svc.recognize_collect(self.did, "20261109-142100")["status"], "unavailable")
 
 
 if __name__ == "__main__":

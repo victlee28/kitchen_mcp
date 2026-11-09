@@ -16,7 +16,8 @@ API:
   POST /api/designs/<id>/ops             {"baseRev": N, "op": {...}, "expect"?: opHash của /propose: chỉ lưu đúng thao tác đã xem trước}
   POST /api/designs/<id>/interpret       {"text": "xóa TD3", "baseRev"?: N, "scope"?: ["TD1"], "useLlm"?: false} câu lệnh tự do -> thao tác + bản xem trước (không lưu) hoặc câu hỏi làm rõ
   POST /api/designs/<id>/template        {"template": {"kind": "run-i", "structureId": "STRUCT-..", "point": {"x": mm, "z": mm}}, "baseRev"?: N} tủ chữ I dựa vào cạnh gần điểm bấm nhất của vật thể, cánh quay ra ngoài; xem trước, không lưu
-  POST /api/designs/<id>/recognize       {"source": {"kind": "photo"|"drawing", "imageBase64": "...", "note"?: "gợi ý, tối đa 500 ký tự"}, "recognizer"?: "gemini"|"cabinet", "baseRev"?: N} ảnh/bản vẽ -> bản nháp thay TOÀN BỘ tủ + xem trước (không lưu); bộ nhận diện mặc định: KITCHEN_RECOGNIZER, rồi "cabinet" (CABINET_RECOGNIZER_URL), rồi "gemini"; chưa có thì status "unavailable"
+  POST /api/designs/<id>/recognize-job  {"job": "<mã job>", "baseRev"?}   hỏi lại kết quả của lần nhận diện trả "pending" (recognizer "inbox")
+  POST /api/designs/<id>/recognize       {"source": {"kind": "photo"|"drawing", "imageBase64": "...", "note"?: "gợi ý, tối đa 500 ký tự"}, "recognizer"?: "gemini"|"cabinet"|"inbox", "baseRev"?: N} ảnh/bản vẽ -> bản nháp thay TOÀN BỘ tủ + xem trước (không lưu); bộ nhận diện mặc định: KITCHEN_RECOGNIZER, rồi "cabinet" (CABINET_RECOGNIZER_URL), rồi "gemini"; chưa có thì status "unavailable"
   POST /api/designs/<id>/propose         {"baseRev": N, "op": {...}, "scope"?: ["TD1"]} xem trước, không lưu: diff, validation mới/đã hết, module bị ảnh hưởng
   POST /api/designs/<id>/revert          {"baseRev": N, "rev": M}
   POST /api/designs/<id>/render          {"rev"?, "views"?, "width"?, "height"?}
@@ -213,7 +214,7 @@ class Handler(BaseHTTPRequestHandler):
                 b = self._body()
                 return self._json(201, self._job_out(s.images.regenerate(jid, b.get("seed"))))
             raise ApiError(405, "Phương thức không hỗ trợ")
-        m = re.fullmatch(r"/api/designs/([a-z0-9-]+)(?:/(scene|threejs|validate|history|ops|revert|render|layers|mask|pick|image-jobs|beauty|base-image|ai-export|floorplan-bind|view-status|regenerate-stale|propose|interpret|recognize|template))?", p)
+        m = re.fullmatch(r"/api/designs/([a-z0-9-]+)(?:/(scene|threejs|validate|history|ops|revert|render|layers|mask|pick|image-jobs|beauty|base-image|ai-export|floorplan-bind|view-status|regenerate-stale|propose|interpret|recognize|recognize-job|template))?", p)
         if not m:
             raise ApiError(404, "Không có endpoint")
         did, sub = m.groups()
@@ -253,7 +254,7 @@ class Handler(BaseHTTPRequestHandler):
             if sub == "pick":
                 return self._json(200, s.images.pick(did, self._need(q, "view"), int(self._need(q, "x")), int(self._need(q, "y")), rev, int(q.get("radius") or 0)))
         if method == "POST":
-            b = self._body(MAX_IMAGE_BODY if sub in ("beauty", "base-image", "recognize") else MAX_BODY)
+            b = self._body(MAX_IMAGE_BODY if sub in ("beauty", "base-image", "recognize", "recognize-job") else MAX_BODY)
             if sub == "regenerate-stale":
                 return self._json(201, s.images.regenerate_stale(did, b.get("views") if isinstance(b.get("views"), list) else None,
                                                                  b.get("backend") or "recolor", b.get("baseRev")))
@@ -308,6 +309,10 @@ class Handler(BaseHTTPRequestHandler):
                 if not isinstance(b.get("source"), dict):
                     raise ApiError(400, "thiếu source")
                 return self._json(200, s.recognize(did, b["source"], b.get("recognizer"), b.get("baseRev"), b.get("country")))
+            if sub == "recognize-job":
+                if not isinstance(b.get("job"), str):
+                    raise ApiError(400, "thiếu job")
+                return self._json(200, s.recognize_collect(did, b["job"], b.get("baseRev"), b.get("country")))
             if sub == "interpret":
                 if not isinstance(b.get("text"), str):
                     raise ApiError(400, "thiếu text")

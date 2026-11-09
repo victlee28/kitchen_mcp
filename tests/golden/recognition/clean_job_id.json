@@ -1,0 +1,68 @@
+{
+ "function": "recognition.recognizer_wire.clean_job_id",
+ "cases": [
+  {
+   "name": "a job id as the service makes it",
+   "input": {
+    "value": "20261109-142100"
+   },
+   "expected": {
+    "job": "20261109-142100"
+   }
+  },
+  {
+   "name": "a second job in the same second",
+   "input": {
+    "value": "20261109-142100-2"
+   },
+   "expected": {
+    "job": "20261109-142100-2"
+   }
+  },
+  {
+   "name": "path tricks are refused",
+   "input": {
+    "value": "../20261109-142100"
+   },
+   "expected": {
+    "job": ""
+   }
+  },
+  {
+   "name": "trailing text is refused",
+   "input": {
+    "value": "20261109-142100/resume"
+   },
+   "expected": {
+    "job": ""
+   }
+  },
+  {
+   "name": "too few digits",
+   "input": {
+    "value": "20261109-1421"
+   },
+   "expected": {
+    "job": ""
+   }
+  },
+  {
+   "name": "not text",
+   "input": {
+    "value": 123
+   },
+   "expected": {
+    "job": ""
+   }
+  },
+  {
+   "name": "empty",
+   "input": {
+    "value": ""
+   },
+   "expected": {
+    "job": ""
+   }
+  }
+ ]
+}

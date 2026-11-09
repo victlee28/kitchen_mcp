@@ -8,6 +8,7 @@ room is never applied). A Rust build ports these functions and runs the golden c
 from __future__ import annotations
 
 import base64
+import re
 from typing import Any
 
 MAX_NOTE = 500
@@ -16,6 +17,7 @@ REVIEW_CODES = ("type-approximated", "unknown-type", "outside-wall", "tall-secti
                 "corner-shelf-split")
 REVIEW_CONFIDENCE = 0.4
 MATERIAL_SLOTS = ("base", "upper", "tall", "countertop")        # the slots of ``common.material`` that the draft also knows
+JOB_ID = re.compile(r"[0-9]{8}-[0-9]{6}(-[0-9]+)?")             # the service names a job by its creation time: 20261109-142100, -2 when taken
 MODULE_FIELDS = ("type", "wall", "width", "fromCorner", "height", "depth")
 
 
@@ -42,6 +44,22 @@ def response_error(payload: Any) -> str:
     if not isinstance(err, dict):
         return ""
     return f"{err.get('code') or err.get('kind') or 'error'}: {err.get('message') or ''}".strip()[:300]
+
+
+def clean_job_id(value: Any) -> str:
+    """A job id as the service makes them, else ``""``. It becomes part of a URL path, so nothing else is let through."""
+    return value if isinstance(value, str) and JOB_ID.fullmatch(value) else ""
+
+
+def job_progress(payload: Any) -> dict[str, str]:
+    """Where a service job stands: ``{"state": "waiting"|"done"|"error", "step": ..., "message": ...}``. An answer that is neither, or that is
+    not an object, is an ``error``. ``step``: the question being waited on; ``message``: the service's error."""
+    body = payload if isinstance(payload, dict) else {}
+    state = body.get("state")
+    if state in ("waiting", "done"):
+        step = body.get("step")
+        return {"state": state, "step": step if isinstance(step, str) else "", "message": ""}
+    return {"state": "error", "step": "", "message": response_error(payload) or "the service gave no job state"}
 
 
 def _issue_text(issue: dict[str, Any]) -> str:

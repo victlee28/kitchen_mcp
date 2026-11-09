@@ -55,6 +55,13 @@ export function recognizeBody(kind, name, mediaType, base64, baseRev, note = '')
   return { source: { kind, name, mediaType, imageBase64: base64, ...(hint ? { note: hint } : {}) }, baseRev };
 }
 
+/** Body of POST .../recognize-job: ask again for the result of a recognition that answered `pending`. */
+export function recognizeJobBody(job, baseRev) {
+  const id = String(job ?? '').trim();
+  if (!/^\d{8}-\d{6}(-\d+)?$/.test(id)) throw new Error('Mã job không hợp lệ');
+  return { job: id, baseRev };
+}
+
 const pct = (c) => `${Math.round((c ?? 1) * 100)}%`;
 
 /** A /recognize answer as {kind: 'preview'|'message', text?, lines, proposal?, ...}. */
@@ -68,8 +75,10 @@ export function describeRecognition(r) {
   switch (r.status) {
     case 'ok': return { kind: 'preview', summary: r.summary || [], lines: [...draftLines, ...describeProposal(r.proposal)], proposal: r.proposal,
       canApply: r.proposal.applicable && !r.proposal.unchanged, introducesErrors: !!r.proposal.validation?.introducesErrors };
+    case 'pending': return { kind: 'pending', job: r.job, step: r.step, lines: [],
+      text: `Đã tạo job ${r.job}${r.step ? ` (đang chờ bước ${r.step})` : ''}. Hãy nhắn Claude: "trả lời hộp thư job ${r.job}"; khi Claude báo xong, bấm "Cập nhật".` };
     case 'empty': return { kind: 'message', tone: 'warn', text: 'Không nhận ra tủ nào trong ảnh.', lines: draftLines };
-    case 'unavailable': return { kind: 'message', tone: 'warn', text: 'Chưa có bộ nhận diện: đặt GEMINI_API_KEY (hoặc GEMINI_ENV_FILE) cho máy chủ rồi chạy lại.', lines: [] };
+    case 'unavailable': return { kind: 'message', tone: 'warn', text: 'Chưa có bộ nhận diện: chạy bằng `python run.py` (đặt CABINET_RECOGNIZER_URL) hoặc đặt GEMINI_API_KEY (hoặc GEMINI_ENV_FILE) cho máy chủ rồi chạy lại.', lines: [] };
     case 'failed': return { kind: 'message', tone: 'bad', text: `Bộ nhận diện lỗi: ${r.message || 'không rõ'}`, lines: [] };
     default: return { kind: 'message', tone: 'warn', text: `Trạng thái lạ: ${r.status}`, lines: [] };
   }
