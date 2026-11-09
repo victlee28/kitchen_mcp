@@ -443,9 +443,9 @@ def room_solids(spec: KitchenSpec, scene: Scene) -> tuple[list[tuple[float, floa
     try:
         ctx = roomctx.for_spec(spec, scene.lsau, scene.lphai)
     except ValueError:
-        return None, []
-    if ctx is None:
-        return None, []
+        ctx = None
+    if ctx is None:   # no floorplan: the room is the box the floor of the scene covers (walls behind the cabinets, open on the viewer's side)
+        return [(-scene.lsau, 0.0), (0.0, 0.0), (0.0, scene.lphai + 3000.0), (-scene.lsau, scene.lphai + 3000.0)], []
     to_kitchen = ctx.placement.to_kitchen
     room = [to_kitchen(float(q["x"]), float(q["z"])) for q in ctx.floorplan.get("outline", [])]
     solids = []
@@ -488,7 +488,7 @@ def default_views(spec: KitchenSpec, scene: Scene | None = None) -> dict[str, Vi
         views["left-wall"] = ViewAngle(name="Chính diện tường trái", position=(-scene.lsau / 1000 + span * 1.4 + 0.6, camera_plan.EYE / 1000, mz), lookAt=(-scene.lsau / 1000, 1.25, mz), verticalFov=48)
     room, solids = room_solids(spec, scene)
     faces = cabinet_faces(spec, scene)
-    if faces and (room is not None or spec.runs):
+    if faces and room is not None:
         planned = camera_plan.plan_views(faces, room, solids)
         views.update({key: ViewAngle(**v) for key, v in planned.items()})
         biggest = max(faces, key=lambda f: f.length)
