@@ -135,7 +135,8 @@ class _Builder:
         self.parts: list[Part] = []
         self._n: dict[str, int] = {}
         self._isl = {m.id: (m.offset, m.depth, m.facing or "-z") for m in spec.module if m.wall == "island" and not m.run}  # free run: (door face position, depth, facing)
-        self._run = {m.id: fr for m in spec.module if (fr := runmod.frame_of(spec, m)) is not None}   # explicit run frames by module (or appliance) id
+        self._run = {m.id: fr for m in spec.module if (fr := runmod.frame_of(spec, m)) is not None}
+        self._joints = runmod.corner_joints(spec)   # explicit run frames by module (or appliance) id
 
     # ---- row coordinates (s, d) -> world
     def seat(self, wall: str, module: str | None = None, isl: tuple[float, float, str] | None = None) -> "runmod.Seat":
@@ -288,6 +289,8 @@ class _Builder:
                     run[-1][2] = max(run[-1][2], m.depth)
                 else:
                     run.append([m.fromCorner, m.endAt, m.depth])
+            if isinstance(z, str) and run:
+                self._close_corner(z, run)
             for s0, s1, depth in run:
                 if isinstance(z, str):
                     fr = self._run[ms[0].id]
@@ -299,6 +302,21 @@ class _Builder:
                          c.baseTop, c.countertop, isl=(z[0], depth, z[1]) if z is not None else None)
                 if c.material.get("wallTile") and wall != "island":  # an island has no wall behind it
                     self.box(None, "wall-tile", wall, s0, s1, 0, 8, c.countertop, c.countertop + backsplash_height(self.spec, wall))
+
+    def _close_corner(self, run_id: str, stretches: list[list[float]]) -> None:
+        """Where this run ends in an inside corner with another run (``runs.corner_joints``) and neither run's cabinets fill the corner, the
+        worktop of this run carries on to the corner, so the two worktops meet instead of leaving a square hole."""
+        c = self.c
+        for joint in self._joints:
+            if joint.a != run_id:
+                continue
+            other = sorted((m for m in self.spec.module if m.run == joint.b and m.storey == "base"), key=lambda m: m.fromCorner)
+            last = stretches[-1]
+            if not other or last[1] >= joint.at - 1:
+                continue
+            reach = max(m.depth for m in other) + c.countertopOverhang          # how far the other run's worktop covers, measured back from the corner
+            if joint.at - last[1] <= reach + 1 and other[0].fromCorner <= last[2] + c.countertopOverhang + 1:
+                last[1] = joint.at
 
     def appliance(self):
         c = self.c

@@ -94,6 +94,90 @@ def add_run(spec: KitchenSpec, run: dict[str, Any]) -> KitchenSpec:
     return from_data(KitchenSpec, to_data(s))
 
 
+def _run(s: KitchenSpec, id: str) -> Run:
+    run = next((r for r in s.runs if r.id == id), None)
+    if run is None:
+        raise NotFound(f"Không có dãy '{id}'", code="run-not-found")
+    return run
+
+
+def move_run(spec: KitchenSpec, id: str, changes: dict[str, Any]) -> KitchenSpec:
+    """Move or turn an explicit run: ``changes`` may give ``x``, ``z`` (mm, kitchen frame) and ``yaw`` (degrees). Its cabinets follow."""
+    s = _clone(spec)
+    run = _run(s, id)
+    extra = sorted(set(changes) - {"x", "z", "yaw"})
+    if extra or not changes:
+        raise InvalidInput(f"move-run đổi được x, z, yaw; không đổi được {', '.join(extra) or '(trống)'}", code="bad-run-change")
+    for key, value in changes.items():
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise InvalidInput(f"{key} phải là số", code="bad-run-change")
+        setattr(run, key, float(value))
+    return from_data(KitchenSpec, to_data(s))
+
+
+def remove_run(spec: KitchenSpec, id: str) -> KitchenSpec:
+    """Remove an explicit run with every cabinet and appliance standing in it."""
+    s = _clone(spec)
+    _run(s, id)
+    gone = {m.id for m in s.module if m.run == id}
+    s.module = [m for m in s.module if m.id not in gone]
+    s.appliances = [t for t in s.appliances if t.module not in gone]
+    s.runs = [r for r in s.runs if r.id != id]
+    return from_data(KitchenSpec, to_data(s))
+
+
+STRETCH_MIN, STRETCH_MAX = 150.0, 2000.0     # a cabinet's width stays a cabinet's width
+
+
+def stretch_run(spec: KitchenSpec, id: str, end: str, delta: float) -> KitchenSpec:
+    """Drag one end of an explicit run by ``delta`` mm along the run (positive: longer). The other end stays where it is.
+
+    The cabinets standing AT the dragged end (one per storey group: floor = base and tall, upper, loft) take the change in their width, doors
+    keeping their proportions; cabinets that stop short of the end are left alone. Dragging the ``start`` moves the run's origin, so every
+    other cabinet keeps its place in the room. Refused when a cabinet would leave ``STRETCH_MIN``-``STRETCH_MAX``."""
+    from . import runs as runmod
+    if end not in ("start", "end"):
+        raise InvalidInput("end phải là 'start' hoặc 'end'", code="bad-run-end")
+    if isinstance(delta, bool) or not isinstance(delta, (int, float)) or not delta:
+        raise InvalidInput("delta phải là số khác 0 (mm)", code="bad-run-delta")
+    s = _clone(spec)
+    run = _run(s, id)
+    mods = [m for m in s.module if m.run == id]
+    if not mods:
+        raise InvalidInput(f"Dãy '{id}' không có tủ", code="empty-run")
+    lo, hi = min(m.fromCorner for m in mods), max(m.endAt for m in mods)
+    group = {"base": "floor", "tall": "floor", "upper": "upper", "loft": "loft"}
+    targets: dict[str, Module] = {}
+    for m in mods:
+        g = group.get(m.storey)
+        if g is None:
+            continue
+        at_end = hi - m.endAt <= 1.0 if end == "end" else m.fromCorner - lo <= 1.0
+        better = g not in targets or (m.endAt > targets[g].endAt if end == "end" else m.fromCorner < targets[g].fromCorner)
+        if at_end and better:
+            targets[g] = m
+    for m in targets.values():
+        width = m.width + delta
+        if not STRETCH_MIN <= width - m.blindCorner - m.endPanel or width > STRETCH_MAX:
+            raise InvalidInput(f"{m.id} sẽ rộng {width:g} mm (cho phép {STRETCH_MIN:g}-{STRETCH_MAX:g}); thêm hoặc bớt một tủ thay vì kéo", code="stretch-limit")
+    hit = {m.id for m in targets.values()}
+    for m in mods:
+        if m.id in hit:
+            if m.doors:                                         # keep the doors' proportions
+                free_old, free_new = m.width - m.blindCorner - m.endPanel, m.width + delta - m.blindCorner - m.endPanel
+                m.doors = [round_half_away(w * free_new / free_old, 1) for w in m.doors]
+            m.width += delta
+        elif end == "start":
+            m.fromCorner += delta                               # the origin moves back by delta, so these stay where they are in the room
+    for tb in s.appliances:                                     # a centre stored along the run follows its cabinet
+        if tb.center is not None and tb.module in {m.id for m in mods}:
+            tb.center += delta / 2 if tb.module in hit else (delta if end == "start" else 0.0)
+    if end == "start":
+        cos, sin = runmod.trig(run.yaw)
+        run.x, run.z = run.x - delta * cos, run.z + delta * sin
+    return from_data(KitchenSpec, to_data(s))
+
+
 def next_run_id(spec: KitchenSpec) -> str:
     """The id ``add_run`` would give a run now (the caller's preview and the later apply see the same design, so they agree)."""
     return new_id(_clone(spec), "R")
@@ -150,6 +234,8 @@ def update_common(spec: KitchenSpec, changes: dict[str, Any]) -> KitchenSpec:
 def apply_op(spec: KitchenSpec, op: dict[str, Any]) -> KitchenSpec:
     """Lệnh dạng dữ liệu (dùng chung cho MCP và HTTP).
     {"op": "add-run", "run": {"id"?, "x", "z", "yaw"}}  — an explicit run at any angle; modules join it with wall="island", run=<id>
+    {"op": "move-run", "id": "R1", "changes": {"x"?, "z"?, "yaw"?}} | {"op": "remove-run", "id": "R1"}  — the run with all its cabinets
+    {"op": "stretch-run", "id": "R1", "end": "start"|"end", "delta": mm}  — drag one end; the cabinets at that end take the change
     {"op": "add", "module": {...}, "afterModule": "TD3"} | {"op": "remove", "id": "TD3"}
     {"op": "update", "id": "TD3", "changes": {...}} | {"op": "common", "changes": {...}}
     {"op": "replace", "spec": {...}}  — thay toàn bộ (vd nhập file)
@@ -163,6 +249,12 @@ def apply_op(spec: KitchenSpec, op: dict[str, Any]) -> KitchenSpec:
         return add_module(spec, op["module"], op.get("afterModule"), dd)
     if kind == "add-run":
         return add_run(spec, op["run"])
+    if kind == "move-run":
+        return move_run(spec, op["id"], op.get("changes", {}))
+    if kind == "remove-run":
+        return remove_run(spec, op["id"])
+    if kind == "stretch-run":
+        return stretch_run(spec, op["id"], op.get("end", "end"), op.get("delta", 0))
     if kind == "remove":
         return remove_module(spec, op["id"], dd)
     if kind == "update":

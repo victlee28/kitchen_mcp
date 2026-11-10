@@ -168,7 +168,10 @@ class KitchenService:
         return {'id': design_id, 'baseRev': current, **result, 'proposal': preview}
 
     def template(self, design_id: str, template: dict[str, Any], base_revision: int | None=None, country: str | None=None) -> dict:
-        """A cabinet template standing against an object of the imported floorplan, previewed and never saved.
+        """A cabinet template standing against an object of the imported floorplan, or on a line the user drew, previewed and never saved.
+
+        ``{"kind": "run-line", "a": {x, z}, "b": {x, z}, "front": {x, z}, "prompt"?}`` (room frame, mm): a run from ``a`` to ``b`` with its doors
+        looking at the side ``front`` is on; base cabinets fill it, or the cabinets ``prompt`` describes. Works without a floorplan too.
 
         ``template``: ``{"kind": "run-i", "structureId": "STRUCT-...", "point": {"x": mm, "z": mm}}`` where ``point`` (room frame, e.g. where the
         user clicked) picks the edge. The doors face away from the object. The result carries ``operation``, ``facing``, ``summary`` and the
@@ -182,8 +185,13 @@ class KitchenService:
             preview = self.propose(design_id, plan['operation'], current, None, country)
             return {'id': design_id, 'baseRev': current, 'status': 'ok', 'facing': None, 'angle': plan['angle'], 'clearance': plan['clearance'], 'length': template.get('width') or 900.0,
                     'summary': plan['summary'], 'operation': plan['operation'], 'proposal': preview}
+        if template.get('kind') == 'run-line':   # {"kind": "run-line", "a": {x, z}, "b": {x, z}, "front": {x, z}, "prompt"?}: a run on a drawn line
+            plan = self._plan_on_drawn_line(spec, template, country)
+            preview = self.propose(design_id, plan['operation'], current, None, country)
+            return {'id': design_id, 'baseRev': current, 'status': 'ok', 'facing': None, 'run': plan['run'], 'length': plan['length'],
+                    'summary': plan['summary'], 'operation': plan['operation'], 'proposal': preview}
         if template.get('kind') != 'run-i':
-            raise InvalidInput("template.kind must be 'run-i' or 'corner'", code='bad-template-kind')
+            raise InvalidInput("template.kind must be 'run-i', 'run-line' or 'corner'", code='bad-template-kind')
         point = template.get('point')
         if not isinstance(point, dict) or not all(isinstance(point.get(k), (int, float)) for k in ('x', 'z')):
             raise InvalidInput('template.point needs numeric x and z (mm, room frame)', code='bad-template-point')
@@ -204,7 +212,11 @@ class KitchenService:
     def _plan_described(spec: KitchenSpec, color: KitchenTemplate, notes: list[str], outline: list, click: tuple) -> dict:
         """The cabinets a sentence describes, in a run along the edge of the object nearest to ``click`` (kitchen frame). The run is as long as
         the edge unless the sentence gives a length; what the sentence says about materials and handles joins the design's own."""
-        line = run_line.edge_line(outline, click)
+        return KitchenService._plan_described_line(spec, color, notes, run_line.edge_line(outline, click))
+
+    @staticmethod
+    def _plan_described_line(spec: KitchenSpec, color: KitchenTemplate, notes: list[str], line: Any) -> dict:
+        """The cabinets a sentence describes, in a run on ``line`` (kitchen frame)."""
         length = float(color.backWallLength) if 'backWallLength' in color.model_fields_set else run_line.run_frame(line)['length'] // 10 * 10
         if length < 600:
             raise InvalidInput(f'The edge is only {length:g} mm long; a run needs at least 600 mm', code='edge-too-short')
@@ -221,10 +233,29 @@ class KitchenService:
         plan['facing'] = None
         return plan
 
+    def _settle(self, spec: Any, planner: Callable[[Any], dict], place: Any) -> dict:
+        """``planner(place)`` run in the kitchen frame the design will have once the plan is in (``place``: room frame <-> kitchen frame). A design
+        without cabinets has no wall binding yet, so its kitchen frame is the room frame; the first cabinet binds the kitchen to a wall and moves that
+        frame, so plan again until the plan and the frame agree."""
+        from .placement import IDENTITY
+        plan: dict = {}
+        for _ in range(3):
+            plan = planner(place)
+            try:
+                after = edit.apply_op(spec.model_copy(deep=True), plan['operation'])
+                scene_after = geometry.compile_spec(after)
+                ctx_after = roomctx.for_spec(after, scene_after.lsau, scene_after.lphai)
+            except Exception:       # the preview reports an operation that cannot be applied
+                break
+            place_after = ctx_after.placement if ctx_after is not None and ctx_after.placement is not None else IDENTITY
+            if place_after == place:
+                break
+            place = place_after
+        return plan
+
     def _plan_at_object(self, spec: Any, structure_id: str, point: dict[str, Any], planner: Callable[[list[tuple[float, float]], tuple[float, float]], dict]) -> tuple[dict, dict]:
-        """``(object, plan)``: ``planner(outline, click)`` run with the object's outline and the click in the KITCHEN frame, in the frame the design will
-        have once the plan is in. ``point`` is in the room frame (mm). A design without cabinets has no wall binding yet, so its kitchen frame is the room
-        frame; the first cabinet binds the kitchen to a wall and moves that frame, so plan again until the plan and the frame agree."""
+        """``(object, plan)``: ``planner(outline, click)`` run with the object's outline and the click in the KITCHEN frame (see ``_settle``).
+        ``point`` is in the room frame (mm)."""
         from .placement import IDENTITY
         scene = geometry.compile_spec(spec)
         ctx = roomctx.for_spec(spec, scene.lsau, scene.lphai)
@@ -233,23 +264,36 @@ class KitchenService:
         struct = next((s for s in ctx.structures if s['id'] == structure_id), None)
         if struct is None:
             raise NotFound(f"No such object: {structure_id}", code='structure-not-found')
-        place = ctx.placement if ctx.placement is not None else IDENTITY
         click = (float(point['x']), float(point['z']))
-        plan: dict = {}
-        for _ in range(3):
-            outline = [place.to_kitchen(float(p['x']), float(p['z'])) for p in struct['outline']]
-            plan = planner(outline, place.to_kitchen(*click))
-            try:
-                after = edit.apply_op(spec.model_copy(deep=True), plan['operation'])
-                scene_after = geometry.compile_spec(after)
-                ctx_after = roomctx.for_spec(after, scene_after.lsau, scene_after.lphai)
-            except Exception:       # the preview reports an operation that cannot be applied
-                break
-            place_after = ctx_after.placement if ctx_after is not None else IDENTITY
-            if place_after == place:
-                break
-            place = place_after
+        plan = self._settle(spec, lambda place: planner([place.to_kitchen(float(p['x']), float(p['z'])) for p in struct['outline']], place.to_kitchen(*click)),
+                            ctx.placement if ctx.placement is not None else IDENTITY)
         return struct, plan
+
+    def _plan_on_drawn_line(self, spec: Any, template: dict[str, Any], country: str | None) -> dict:
+        """A run along a line the user drew: ``{"a": {x, z}, "b": {x, z}, "front": {x, z}, "prompt"?}`` (room frame, mm; ``front``: any point on the
+        side the doors look at). Without a prompt the line is filled with base cabinets; with one, with the cabinets the sentence describes."""
+        from .placement import IDENTITY
+        pts = {}
+        for key in ('a', 'b', 'front'):
+            p = template.get(key)
+            if not isinstance(p, dict) or not all(isinstance(p.get(k), (int, float)) and not isinstance(p.get(k), bool) for k in ('x', 'z')):
+                raise InvalidInput(f'template.{key} needs numeric x and z (mm, room frame)', code='bad-line')
+            pts[key] = (float(p['x']), float(p['z']))
+        prompt = template.get('prompt')
+        described = intent.parse_prompt(prompt) if isinstance(prompt, str) and prompt.strip() else None
+
+        def planner(place: Any) -> dict:
+            line = run_line.drawn_line(place.to_kitchen(*pts['a']), place.to_kitchen(*pts['b']), place.to_kitchen(*pts['front']))
+            if described is not None:
+                color, notes = described
+                if not color.country and country:
+                    color = color.model_copy(update={'country': country})
+                return self._plan_described_line(spec, color, notes, line)
+            return run_line.plan_on_line(spec, line, run_line.base_cabinets(run_line.run_frame(line)['length'], to_data(spec)['common']))
+
+        scene = geometry.compile_spec(spec)
+        ctx = roomctx.for_spec(spec, scene.lsau, scene.lphai)
+        return self._settle(spec, planner, ctx.placement if ctx is not None and ctx.placement is not None else IDENTITY)
 
     def _wire_recognizers(self) -> None:
         from .backends import BackendError

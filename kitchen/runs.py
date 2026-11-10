@@ -203,6 +203,34 @@ def spot(spec: KitchenSpec, tb: Appliance) -> Spot | None:
     return Spot(row_of(m), m.fromCorner + m.width / 2, m.id)
 
 
+@dataclass(frozen=True)
+class Joint:
+    """Two explicit runs meeting at a right angle in an inside corner: the END of run ``a`` meets the START of run ``b``. ``at`` is where b's
+    back line starts, measured along a (mm); b's cabinets reach out of a's back line into the room."""
+    a: str
+    b: str
+    at: float
+
+
+def corner_joints(spec: KitchenSpec) -> list[Joint]:
+    """The inside corners between explicit runs, found from where the runs stand (nothing is stored): b is turned a quarter turn from a
+    (yaw_b = yaw_a - 90) and b's origin lies on a's back line, at or beyond a's cabinets."""
+    out: list[Joint] = []
+    reach = {r.id: max((m.endAt for m in spec.module if m.run == r.id), default=None) for r in spec.runs}
+    for ra in spec.runs:
+        for rb in spec.runs:
+            if ra.id == rb.id or reach[ra.id] is None or reach[rb.id] is None:
+                continue
+            turn = (ra.yaw - rb.yaw - 90.0) % 360.0
+            if min(turn, 360.0 - turn) > 0.5:
+                continue
+            s, d = RunFrame(ra.id, ra.x, ra.z, ra.yaw).to_local(rb.x, rb.z)
+            deepest = max((m.depth for m in spec.module if m.run == rb.id), default=0.0)
+            if abs(d) <= 1.0 and s >= 0 and -1.0 <= s - float(reach[ra.id] or 0.0) <= deepest + 100.0:
+                out.append(Joint(ra.id, rb.id, s))
+    return out
+
+
 def frames(spec: KitchenSpec) -> dict[str, RunFrame]:
     return {r.id: RunFrame(r.id, r.x, r.z, r.yaw) for r in spec.runs}
 

@@ -124,22 +124,30 @@ def _end_depth(seg, neighbor, ho: str) -> float | None:
     return 0.0 if ho == "return-to-wall" else None
 
 
+def _run_items(spec: KitchenSpec, mol: Molding, run_id: str, y: float) -> list[tuple[float, float, float, str]]:
+    if mol.variant == "crown":
+        return [(m.fromCorner, m.endAt, m.depth, m.id) for m in spec.module
+                if m.run == run_id and m.storey in ("upper", "loft", "tall", "corner") and abs(_top(m) - y) <= 1]
+    return [(m.fromCorner, m.endAt, m.depth, m.id) for m in spec.module
+            if m.run == run_id and m.y == 0 and (m.storey == "base" or (m.storey == "tall" and not m.niche))]
+
+
 def _angled_runs(spec: KitchenSpec, mol: Molding, prof: MoldingProfile, y: float) -> list[Run]:
-    """Moldings along the explicit runs (any angle). Each run is its own chain: the joint of two angled runs is the corner cabinet, a run of its own,
-    so no mitre between runs is built. Points are walked against s (the run frame is mirror-wise like the right wall)."""
+    """Moldings along the explicit runs (any angle). Points are walked against s (the run frame is mirror-wise like the right wall).
+
+    Each run is its own chain, except where two runs meet at a right angle in an inside corner (``runs.corner_joints``: the end of a meets
+    the start of b) and both have cabinets up to the corner: there the two chains are ONE, turning at the point where the two front lines
+    cross, so the molding is mitred round the corner instead of two pieces ending in each other."""
     out: list[Run] = []
+    chains: dict[tuple[str, int], dict] = {}
+    order: list[tuple[str, int]] = []
+    segs_of: dict[str, list[dict]] = {}
     for r in spec.runs:
         if mol.wall and r.id not in mol.wall:
             continue
         fr = runmod.RunFrame(r.id, r.x, r.z, r.yaw)
-        items: list[tuple[float, float, float, str]] = []
-        if mol.variant == "crown":
-            items = [(m.fromCorner, m.endAt, m.depth, m.id) for m in spec.module
-                     if m.run == r.id and m.storey in ("upper", "loft", "tall", "corner") and abs(_top(m) - y) <= 1]
-        else:
-            items = [(m.fromCorner, m.endAt, m.depth, m.id) for m in spec.module
-                     if m.run == r.id and m.y == 0 and (m.storey == "base" or (m.storey == "tall" and not m.niche))]
-        segs = _segments(items, mol.joinGap)
+        segs = _segments(_run_items(spec, mol, r.id, y), mol.joinGap)
+        segs_of[r.id] = segs
         for i, sg in enumerate(segs):
             prev_n = segs[i - 1] if i > 0 and sg["s0"] - segs[i - 1]["s1"] <= mol.joinGap else None
             next_n = segs[i + 1] if i + 1 < len(segs) and segs[i + 1]["s0"] - sg["s1"] <= mol.joinGap else None
@@ -148,10 +156,39 @@ def _angled_runs(spec: KitchenSpec, mol: Molding, prof: MoldingProfile, y: float
             start = [(sg["s0"], d)] if dr is None or abs(dr - d) < 1 else [(sg["s0"], dr), (sg["s0"], d)]
             dr = _end_depth(sg, next_n, mol.openEnd)
             end = [(sg["s1"], d)] if dr is None or abs(dr - d) < 1 else [(sg["s1"], d), (sg["s1"], dr)]
-            pts = [fr.to_world(s0, d0) for s0, d0 in (start + end)[::-1]]
-            pts = [p for k, p in enumerate(pts) if k == 0 or math.dist(p, pts[k - 1]) > 0.5]
-            if len(pts) >= 2:
-                out.append(Run(mol, prof, y, pts, sg["mods"], [r.id]))
+            chains[(r.id, i)] = {"fr": fr, "start": start, "end": end, "mods": sg["mods"], "runs": [r.id], "d": d, "s0": sg["s0"], "s1": sg["s1"]}
+            order.append((r.id, i))
+    joined: dict[tuple[str, int], tuple[str, int]] = {}          # last chain of a -> first chain of b, where they turn the corner together
+    for joint in runmod.corner_joints(spec):
+        if not segs_of.get(joint.a) or not segs_of.get(joint.b):
+            continue
+        ka, kb = (joint.a, len(segs_of[joint.a]) - 1), (joint.b, 0)
+        ca, cb = chains[ka], chains[kb]
+        if ca["s1"] >= joint.at - cb["d"] - mol.joinGap - 1 and cb["s0"] <= ca["d"] + mol.joinGap + 1 and ka not in joined and kb not in joined.values():
+            joined[ka] = kb
+            ca["turn"] = ca["fr"].to_world(joint.at - cb["d"], ca["d"])    # where the two front lines cross
+    tails = set(joined.values())
+    for key in order:
+        if key in tails:
+            continue                                              # walked as the far part of the chain that turns into it
+        parts = [key]
+        while parts[-1] in joined:
+            parts.append(joined[parts[-1]])
+        pts: list[tuple[float, float]] = []
+        mods: list[str] = []
+        names: list[str] = []
+        for n, k in reversed(list(enumerate(parts))):             # against s: the far run first, back to the first
+            ch = chains[k]
+            start = [] if n > 0 else ch["start"]                  # its start is the corner it shares with the run before it
+            end = [] if k in joined else ch["end"]                # its end is the corner it shares with the run after it
+            pts += [ch["fr"].to_world(s0, d0) for s0, d0 in (start + end)[::-1]] if (start or end) else []
+            if n > 0:
+                pts.append(chains[parts[n - 1]]["turn"])
+            mods += ch["mods"]
+            names += ch["runs"]
+        pts = [p for k, p in enumerate(pts) if k == 0 or math.dist(p, pts[k - 1]) > 0.5]
+        if len(pts) >= 2:
+            out.append(Run(mol, prof, y, pts, mods, names))
     return out
 
 

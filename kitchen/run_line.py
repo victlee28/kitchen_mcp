@@ -67,6 +67,30 @@ def edge_line(poly: list[Pt], point: Pt) -> Line:
     return Line(a, b, outward(poly, a, b))
 
 
+def drawn_line(a: Pt, b: Pt, front: Pt) -> Line:
+    """The line from ``a`` to ``b`` with its doors looking at the side ``front`` is on (a point exactly on the line is refused)."""
+    ex, ez = b[0] - a[0], b[1] - a[1]
+    length = math.hypot(ex, ez)
+    if length < 1.0:
+        raise InvalidInput("The line has no length", code="bad-line")
+    nx, nz = -ez / length, ex / length
+    side = (front[0] - a[0]) * nx + (front[1] - a[1]) * nz
+    if abs(side) < 1.0:
+        raise InvalidInput("The front point lies on the line: it must be on the side the doors look at", code="bad-line")
+    return Line(a, b, (nx, nz) if side > 0 else (-nx, -nz))
+
+
+def base_cabinets(length: float, common: dict[str, Any]) -> list[dict[str, Any]]:
+    """Plain base cabinets filling ``length`` (``cabinet_run.split_widths``: 600s, a short remainder widening the last), ready for ``plan_on_line``."""
+    from .cabinet_run import split_widths
+    out: list[dict[str, Any]] = []
+    at = 0.0
+    for w in split_widths(float(int(length // 10) * 10)):
+        out.append({"type": "base", "s": at, "width": w, "y": 0.0, "height": float(common["baseTop"]), "depth": float(common["baseDepth"])})
+        at += w
+    return out
+
+
 def run_frame(line: Line) -> dict[str, float]:
     """The explicit run standing on the line: origin at the start (the end the run's ``s`` grows away from), ``yaw`` so the doors look along the
     normal, and ``length``. ``s`` grows to the right of someone standing in front of the doors."""
