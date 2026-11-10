@@ -8,6 +8,20 @@ Cần Internet để tải three.js 0.161.0 từ CDN. Xem README.md ở thư m�
 - Recognition uses `kitchen/recognizers.py` `GeminiRecognizer` (Gemini vision, model `GEMINI_VISION_MODEL`, default `gemini-2.5-flash`); wired automatically when `GEMINI_API_KEY`/`GEMINI_ENV_FILE` is set, otherwise the answer is `unavailable`.
 - Image tab: the "Phong cách theo góc khác" select sends `styleFrom` (default / `auto` / `none` / a view name).
 
+## Cabinet systems and Shift-selection
+
+A cabinet system is the set of runs that belong together: the runs made against one floorplan element carry its id (`Run.system`, e.g.
+`furniture_003`); other runs are grouped with the runs they touch (`auto-<run>`); see `kitchen/runs.py` (`systems`). `GET /api/designs/<id>`
+returns `systems: {module: {system, tier, storey}}`; the page never works them out itself.
+
+- **3D view:** Shift+click a door, a drawer front, a handle or a cabinet body: every module of the same system and tier (base, upper with
+  loft, tall, corner) showing that role is selected, and only those parts light up. Right click one of them: change the front material, the
+  door style or the handles of the whole group (one previewed change), or "Sửa ảnh của vùng chọn này" to open the image tab on the same
+  group. Plain click or Esc drops the group.
+- **Image tab:** Shift+click picks `sys:<system>:tier:<tier>:<role>` when the design has several systems, `tier:<tier>:<role>` otherwise.
+- Changing a material for part of the modules that share one (one system of several) gives those modules a material of their own, so the
+  other systems keep theirs.
+
 ## Tests of the web app
 - `tests/js/*.test.mjs` (run by `test_web_logic`): pure logic (`menu-logic`, `assist-logic`, `design-logic`) and `web-architecture` (no module imports `app.js`, no import cycles, `window.kitchen` only assigned by `app.js`).
 - `tests/browser/smoke_web.py`: real-Chromium smoke test of the main flows (open, select, edit, undo, add/remove, right-click menu, free command, render, AI JSON, image tab). Needs `pip install playwright` and a launchable Chromium; prints SKIP and exits 0 without Playwright. Run it before and after every step of splitting `app.js` (plan: `claude/ke-hoach-tach-app-js.md` in the project docs).
