@@ -112,7 +112,8 @@ def layout(length: float, common: dict[str, Any], style: str = "columns", panel:
     out: list[dict[str, Any]] = []
     if style == "full":
         niche = length if length < 2000 else min(length - 800.0, max(1200.0, float(round_int(length * 0.45 / 10) * 10)))
-        side = (length - niche) / 2
+        side = float(int((length - niche) / 2 // 10) * 10)     # whole 10 mm, like every cabinet width
+        niche = length - 2 * side
         at = 0.0
         for w in (_split(side, COLUMN_MAX) if side > 0 else []):
             out.append({"type": "tall", "s": at, "width": w, "y": 0.0, "height": top, "depth": 400.0, "name": "Tủ cao vách tivi"})
