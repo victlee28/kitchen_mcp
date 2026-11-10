@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
+from collections.abc import Sequence
 from typing import Any
 
 from .floorplan.geom import point_in_poly
@@ -24,7 +25,8 @@ STEP = 250.0
 WALL_CLEAR = 300.0        # nearest the camera stands to a wall (mm)
 V_MIN, V_MAX = 40.0, 78.0 # vertical field of view limits (degrees)
 OBLIQUE = math.radians(35.0)
-NON_BLOCKING = ("area", "opening")   # floor areas and door/window openings are not solids that hide cabinets
+NON_BLOCKING = ("area", "opening")
+FRONT_PROBE = 300.0       # how far in front of a run its room is probed (mm)   # floor areas and door/window openings are not solids that hide cabinets
 
 
 @dataclass(frozen=True)
@@ -36,6 +38,7 @@ class Face:
     normal: Pt
     length: float
     height: float
+    run: str = ""         # the run (or wall) the front belongs to: its own cabinets never block it
 
 
 @dataclass(frozen=True)
@@ -128,16 +131,32 @@ def _candidate(face: Face, direction: Pt, dist: float, width_factor: float) -> t
     return (face.center[0] + direction[0] * dist, face.center[1] + direction[1] * dist), _fov(face, dist, width_factor)
 
 
-def _best(face: Face, directions: list[Pt], width_factor: float, room: list[Pt] | None, obstacles: list[Obstacle]) -> tuple[Pt, float, list[str]]:
+def in_body(p: Pt, bodies: list[Obstacle], clear: float = WALL_CLEAR) -> bool:
+    """Does the point stand inside a cabinet, or closer than ``clear`` to one?"""
+    for b in bodies:
+        poly = list(b.outline)
+        if point_in_poly(p, poly) or any(_dist_to_segment(p, poly[i], poly[(i + 1) % len(poly)]) < clear for i in range(len(poly))):
+            return True
+    return False
+
+
+def _best(face: Face, directions: list[Pt], width_factor: float, room: list[Pt] | None, obstacles: list[Obstacle],
+          bodies: list[Obstacle]) -> tuple[Pt, float, list[str]]:
+    """Ranked: stands in the room and clear of cabinets; without a room, fewest target points seen across another run's cabinets (they cannot be hidden);
+    field of view not too wide; fewest solids to hide; farthest back."""
     targets = face_targets(face)
+    # seen over a run is still across it; only weighed where no room guides the camera (keeps the planned views of rooms as they were)
+    others = [] if room else [Obstacle(b.id, b.kind, b.outline, -math.inf, math.inf) for b in bodies if b.kind != f"cabinet:{face.run}"]
     best: tuple[tuple, Pt, float, list[str]] | None = None
     dist = MAX_DIST
     while dist >= MIN_DIST - 1e-6:
         for direction in directions:
             pos, fov = _candidate(face, direction, dist, width_factor)
-            ok_room = stands_in_room(pos, room)
-            hidden = blockers((pos[0], EYE, pos[1]), targets, obstacles) if ok_room else []
-            key = (not ok_room, fov > V_MAX, len(hidden), -dist)
+            eye = (pos[0], EYE, pos[1])
+            ok = stands_in_room(pos, room) and not in_body(pos, bodies)
+            hidden = blockers(eye, targets, obstacles)
+            behind = sum(any(blocks(eye, t, b) for b in others) for t in targets)
+            key = (not ok, behind, fov > V_MAX, len(hidden), -dist)
             if best is None or key < best[0]:
                 best = (key, pos, fov, hidden)
         dist -= STEP
@@ -145,17 +164,27 @@ def _best(face: Face, directions: list[Pt], width_factor: float, room: list[Pt] 
     return best[1], best[2], best[3]
 
 
-def plan_views(faces: list[Face], room: list[Pt] | None, obstacles: list[Obstacle]) -> dict[str, dict[str, Any]]:
+def faces_room(face: Face, room: list[Pt] | None) -> bool:
+    """Does the run's front open into the room (a point just in front of its middle lies inside the outline)? True when the room is unknown."""
+    if not room:
+        return True
+    return point_in_poly((face.center[0] + face.normal[0] * FRONT_PROBE, face.center[1] + face.normal[1] * FRONT_PROBE), room)
+
+
+def plan_views(faces: list[Face], room: list[Pt] | None, obstacles: list[Obstacle], bodies: Sequence[Obstacle] = ()) -> dict[str, dict[str, Any]]:
     """``{key: {name, position, lookAt, verticalFov, hide}}`` (position / lookAt in metres, like ``ViewAngle``): per face a front view and an
-    oblique view from the side that sees it with the fewest solids in the way. ``room``: the floor outline, or None when it is not known."""
+    oblique view from the side that sees it with the fewest solids in the way. ``room``: the floor outline, or None when it is not known.
+    ``bodies``: the cabinets' footprints (kind ``cabinet:<run>``), never stood in and never hidden; a run outside the room is planned without it."""
+    bodies = list(bodies)
     views: dict[str, dict[str, Any]] = {}
     for face in faces:
         nx, nz = face.normal
+        room_of = room if faces_room(face, room) else None     # a run outside the imported room: no room to stand in, only the solids to hide
         look = (face.center[0] / 1000.0, _look_height(face) / 1000.0, face.center[1] / 1000.0)
-        pos, fov, hide = _best(face, [(nx, nz)], 1.0, room, obstacles)
+        pos, fov, hide = _best(face, [(nx, nz)], 1.0, room_of, obstacles, bodies)
         views[face.key] = _view(face.name, pos, look, fov, hide)
         sides = [(nx * math.cos(s * OBLIQUE) - nz * math.sin(s * OBLIQUE), nx * math.sin(s * OBLIQUE) + nz * math.cos(s * OBLIQUE)) for s in (-1, 1)]
-        pos, fov, hide = _best(face, sides, 0.85, room, obstacles)
+        pos, fov, hide = _best(face, sides, 0.85, room_of, obstacles, bodies)
         views[f"{face.key}-oblique"] = _view(f"{face.name} (chéo)", pos, look, fov, hide)
     return views
 

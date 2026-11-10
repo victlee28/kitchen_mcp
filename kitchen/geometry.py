@@ -496,15 +496,15 @@ def cabinet_faces(spec: KitchenSpec, scene: Scene) -> list[camera_plan.Face]:
     """The front of every run of cabinets (wall runs and explicit runs) in the kitchen frame, for the camera planner."""
     faces: list[camera_plan.Face] = []
 
-    def face(key: str, name: str, mods: list, center, normal) -> None:
+    def face(key: str, name: str, mods: list, center, normal, owner: str) -> None:
         lo, hi = min(m.fromCorner for m in mods), max(m.endAt for m in mods)
-        faces.append(camera_plan.Face(key, name, center(lo, hi, max(m.depth for m in mods)), normal, hi - lo, max(m.y + m.height for m in mods)))
+        faces.append(camera_plan.Face(key, name, center(lo, hi, max(m.depth for m in mods)), normal, hi - lo, max(m.y + m.height for m in mods), owner))
 
     for wall, name in (("back", "Chính diện tường sau"), ("right", "Chính diện tường phải"), ("left", "Chính diện tường trái")):
         mods = [m for m in spec.module if m.wall == wall]
         seat = runmod.wall_seat(wall, scene.lsau)
         if mods and seat is not None:
-            face(f"{wall}-wall", name, mods, lambda lo, hi, d, seat=seat: seat.to_world((lo + hi) / 2, d), seat.normal())
+            face(f"{wall}-wall", name, mods, lambda lo, hi, d, seat=seat: seat.to_world((lo + hi) / 2, d), seat.normal(), wall)
     for run in spec.runs:
         mods = [m for m in spec.module if m.run == run.id and m.storey != "corner"]      # a corner shelf is not a front
         if mods:
@@ -515,8 +515,19 @@ def cabinet_faces(spec: KitchenSpec, scene: Scene) -> list[camera_plan.Face]:
                 key, name = f"{wall}-wall", {"back": "Chính diện tường sau", "right": "Chính diện tường phải", "left": "Chính diện tường trái"}[wall]
             else:
                 key, name = f"run-{run.id}", f"Chính diện dãy tủ {run.id}"
-            face(key, name, mods, lambda lo, hi, d, fr=fr: fr.to_world((lo + hi) / 2, d), (nx - ox, nz - oz))
+            face(key, name, mods, lambda lo, hi, d, fr=fr: fr.to_world((lo + hi) / 2, d), (nx - ox, nz - oz), run.id)
     return faces
+
+
+def cabinet_bodies(spec: KitchenSpec) -> list[camera_plan.Obstacle]:
+    """The floor footprint of every cabinet standing in a run, up to its top (kind ``cabinet:<run>``): cameras stand clear of them."""
+    frames = runmod.frames(spec)
+    out = []
+    for m in spec.module:
+        fr = frames.get(m.run) if m.run else None
+        if fr is not None and m.storey in ("base", "tall"):
+            out.append(camera_plan.Obstacle(m.id, f"cabinet:{m.run}", tuple(runmod.module_footprint(fr, m)), float(m.y), float(m.y + m.height)))
+    return out
 
 
 def room_solids(spec: KitchenSpec, scene: Scene) -> tuple[list[tuple[float, float]] | None, list[camera_plan.Obstacle]]:
@@ -571,7 +582,7 @@ def default_views(spec: KitchenSpec, scene: Scene | None = None) -> dict[str, Vi
     room, solids = room_solids(spec, scene)
     faces = cabinet_faces(spec, scene)
     if faces and room is not None:
-        planned = camera_plan.plan_views(faces, room, solids)
+        planned = camera_plan.plan_views(faces, room, solids, cabinet_bodies(spec))
         views.update({key: ViewAngle(**v) for key, v in planned.items()})
         biggest = max(faces, key=lambda f: f.length)
         if "left" not in reach:  # a U sees all three runs only from the open side: keep its own overview
