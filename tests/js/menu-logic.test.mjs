@@ -22,7 +22,7 @@ test('the nearest module or visible structure wins; empty space and unknown mesh
 
 test('actions: modules get design and image actions, structures only view actions, corner modules cannot take a neighbour', () => {
   const ids = (t) => actionsFor(t, spec).map((a) => a.id);
-  assert.deepEqual(ids({ kind: 'module', id: 'TD1' }), ['material', 'doorStyle', 'add', 'remove', 'image']);
+  assert.deepEqual(ids({ kind: 'module', id: 'TD1' }), ['material', 'doorStyle', 'add', 'remove', 'image', 'replaceSystem']);
   assert.ok(!ids({ kind: 'module', id: 'KG1' }).includes('add'));
   assert.deepEqual(ids({ kind: 'structure', id: 'S' }), ['struct-hide', 'struct-isolate', 'struct-all']);
   assert.deepEqual(ids({ kind: 'structure', id: 'S', point: { x: 1, z: 2 } }), ['run-i', 'struct-hide', 'struct-isolate', 'struct-all']);   // a clicked point is needed to pick the edge
@@ -119,9 +119,9 @@ const byRuns = { runs: [{ id: 'R1', x: -3000, z: 0, yaw: 0 }, { id: 'R2', x: 0, 
 
 test('a cabinet of a run offers the run actions; a corner shelf by runs still takes no neighbour', () => {
   const ids = (id) => actionsFor({ kind: 'module', id }, byRuns).map((a) => a.id);
-  assert.deepEqual(ids('A1').slice(-3), ['runMove', 'runStretch', 'runRemove']);
+  assert.deepEqual(ids('A1').slice(-4), ['runMove', 'runStretch', 'runRemove', 'replaceSystem']);
   assert.ok(!ids('K1').includes('add'));
-  assert.deepEqual(actionsFor({ kind: 'part', part: 'door', id: 'A1' }, byRuns).map((a) => a.id).slice(-3), ['runMove', 'runStretch', 'runRemove']);
+  assert.deepEqual(actionsFor({ kind: 'part', part: 'door', id: 'A1' }, byRuns).map((a) => a.id).slice(-4), ['runMove', 'runStretch', 'runRemove', 'replaceSystem']);
   assert.ok(!actionsFor({ kind: 'part', part: 'handle', id: 'A1' }, byRuns).some((a) => a.id.startsWith('run')));
   assert.ok(!actionsFor({ kind: 'module', id: 'TD1' }, spec).some((a) => a.id.startsWith('run')));
 });

@@ -7,7 +7,7 @@ import json
 import os
 from pathlib import Path
 from typing import Any, Callable
-from . import cabinet_run, run_line, run_template, runs, edit, edit_intent, geometry, intent, llm, recognition, regions, roomctx, render, rules, threejs_export
+from . import cabinet_run, run_line, run_template, runs, system_replace, edit, edit_intent, geometry, intent, llm, recognition, regions, roomctx, render, rules, threejs_export
 from .intent import KitchenTemplate as KitchenTemplate
 from .spec import Common, KitchenSpec, Room, Wall, dump_spec, load_spec, to_data
 from .store import ConflictError, Store
@@ -206,8 +206,13 @@ class KitchenService:
             preview = self.propose(design_id, plan['operation'], current, None, country)
             return {'id': design_id, 'baseRev': current, 'status': 'ok', 'facing': None, 'run': plan['run'], 'length': plan['length'],
                     'summary': plan['summary'], 'operation': plan['operation'], 'proposal': preview}
+        if template.get('kind') == 'replace-system':   # {"kind": "replace-system", "system": id, "prompt"?, "style"?}: a new system in place of one
+            plan = self._replace_system(spec, str(template.get('system') or ''), template.get('prompt'), template.get('style'), country)
+            preview = self.propose(design_id, plan['operation'], current, None, country)
+            return {'id': design_id, 'baseRev': current, 'status': 'ok', 'facing': None, 'system': plan['system'], 'mode': plan['mode'], 'style': plan.get('style'),
+                    'summary': plan['summary'], 'operation': plan['operation'], 'proposal': preview}
         if template.get('kind') != 'run-i':
-            raise InvalidInput("template.kind must be 'run-i', 'run-line' or 'corner'", code='bad-template-kind')
+            raise InvalidInput("template.kind must be 'run-i', 'run-line', 'corner' or 'replace-system'", code='bad-template-kind')
         point = template.get('point')
         if not isinstance(point, dict) or not all(isinstance(point.get(k), (int, float)) for k in ('x', 'z')):
             raise InvalidInput('template.point needs numeric x and z (mm, room frame)', code='bad-template-point')
@@ -223,6 +228,35 @@ class KitchenService:
         preview = self.propose(design_id, plan['operation'], current, None, country)
         return {'id': design_id, 'baseRev': current, 'status': 'ok', 'structureId': struct['id'], 'facing': plan['facing'], 'length': plan['length'],
                 'summary': plan['summary'], 'operation': plan['operation'], 'proposal': preview}
+
+    @staticmethod
+    def _replace_system(spec: KitchenSpec, system: str, prompt: Any, style: Any, country: str | None) -> dict:
+        """A whole cabinet system replaced (``system_replace``): with a sentence, its runs are laid again with the cabinets the sentence
+        describes (the longest run gets all of it, the others the same kind of cabinets without a fridge); without one, its cabinets take a
+        style preset (``style``: a preset id, or ``auto`` / None for the first one unlike what it shows now)."""
+        mods = system_replace.members(spec, system)
+        if not (isinstance(prompt, str) and prompt.strip()):
+            chosen = system_replace.pick_style(spec, mods, style if isinstance(style, str) else None)
+            ops = system_replace.style_ops(spec, mods, chosen)
+            return {'operation': edit.combine_ops(ops), 'system': system, 'mode': 'restyle', 'style': chosen.id,
+                    'summary': [f"System {system}: {len(ops)} cabinets take the style \"{chosen.name}\" ({chosen.front}, {chosen.door} doors, {chosen.handle} handles)"]}
+        color, notes = intent.parse_prompt(prompt)
+        if not color.country and country:
+            color = color.model_copy(update={'country': country})
+        slots = system_replace.run_slots(spec, mods)
+        laid: dict[str, list[dict[str, Any]]] = {}
+        fronts: dict[str, Any] = {}
+        for i, slot in enumerate(slots):
+            if slot.length < 600:
+                continue
+            c = color if i == 0 else color.model_copy(update={'fridge': False})
+            built = run_template.run_from_template(c, slot.length // 10 * 10)
+            laid[slot.run] = built['modules']
+            if i == 0:
+                fronts = {k: built['common'][k] for k in ('material', 'handle') if k in built['common']}
+        ops, summary = system_replace.relayout_ops(spec, mods, laid, fronts)
+        kept = [n for n in notes if 'chiều dài' not in n]          # the run keeps its length: the "no length given" note does not apply
+        return {'operation': edit.combine_ops(ops), 'system': system, 'mode': 'relayout', 'summary': [f"System {system} laid out again", *summary, *kept]}
 
     @staticmethod
     def _plan_described(spec: KitchenSpec, color: KitchenTemplate, notes: list[str], outline: list, click: tuple, system: str | None = None) -> dict:

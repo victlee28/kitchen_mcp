@@ -21,6 +21,11 @@ returns `systems: {module: {system, tier, storey}}`; the page never works them o
 - **Image tab:** Shift+click picks `sys:<system>:tier:<tier>:<role>` when the design has several systems, `tier:<tier>:<role>` otherwise.
 - Changing a material for part of the modules that share one (one system of several) gives those modules a material of their own, so the
   other systems keep theirs.
+- **Replace a whole system** ("Thay cả hệ tủ này…" in the menu of a cabinet, a door or drawer, or a Shift-selected group): with a sentence,
+  the system's runs keep their place, angle and length and are laid out again with the cabinets it describes (the longest run gets all of
+  it, the others the same kind without a fridge; no wall cabinets where the system had none; fronts the sentence does not name come from
+  the old cabinets). Without one, the cabinets stay and take a style preset (front, door style, handle; `kitchen/system_replace.STYLES`,
+  "Tự chọn" = the first one unlike the current front). Server: template `{"kind": "replace-system", "system", "prompt"?, "style"?}`.
 
 ## Tests of the web app
 - `tests/js/*.test.mjs` (run by `test_web_logic`): pure logic (`menu-logic`, `assist-logic`, `design-logic`) and `web-architecture` (no module imports `app.js`, no import cycles, `window.kitchen` only assigned by `app.js`).

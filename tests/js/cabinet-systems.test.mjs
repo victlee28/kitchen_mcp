@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { groupLabel, groupLayerIds, groupRole, manySystems, shiftGroup } from '../../web/design-logic.js';
-import { buildGroupOp, groupActions } from '../../web/menu-logic.js';
+import { buildGroupOp, groupActions, SYSTEM_STYLES, systemTemplate } from '../../web/menu-logic.js';
 import { shiftGroupId } from '../../web/selection.js';
 
 // furniture_003: A1, A2 (base), U1 (upper), H1 (loft). furniture_017: C1, C2 (base).
@@ -46,9 +46,9 @@ test('labels and the image-tab layers of a group', () => {
 
 test('group menu: actions fit the role; one operation for every module, modules it would not change are left out', () => {
   const doors = { system: 'furniture_003', tier: 'base', role: 'door', modules: ['A1', 'A2'] };
-  assert.deepEqual(groupActions(doors).map((a) => a.id), ['material', 'doorStyle', 'handleVariant', 'handleMaterial', 'image']);
-  assert.deepEqual(groupActions({ ...doors, role: 'handle' }).map((a) => a.id), ['handleVariant', 'handleMaterial', 'image']);
-  assert.deepEqual(groupActions({ ...doors, role: 'drawer' }).map((a) => a.id), ['material', 'handleVariant', 'handleMaterial', 'image']);
+  assert.deepEqual(groupActions(doors).map((a) => a.id), ['material', 'doorStyle', 'handleVariant', 'handleMaterial', 'image', 'replaceSystem']);
+  assert.deepEqual(groupActions({ ...doors, role: 'handle' }).map((a) => a.id), ['handleVariant', 'handleMaterial', 'image', 'replaceSystem']);
+  assert.deepEqual(groupActions({ ...doors, role: 'drawer' }).map((a) => a.id), ['material', 'handleVariant', 'handleMaterial', 'image', 'replaceSystem']);
   assert.deepEqual(buildGroupOp('material', doors, { material: 'Sồi' }, spec), { op: 'update', id: 'A1', changes: { material: 'Sồi' }, closeGap: false }, 'A2 already has it');
   assert.deepEqual(buildGroupOp('doorStyle', doors, { style: 'glass' }, spec).ops.map((o) => o.id), ['A1', 'A2']);
   assert.throws(() => buildGroupOp('material', { ...doors, modules: ['A2'] }, { material: 'Sồi' }, spec), /đã dùng/);
@@ -64,4 +64,14 @@ test('image tab: Shift on a part uses its system group when the catalogue has on
   assert.equal(shiftGroupId({ storey: 'base', type: 'handle', cabinetSystemId: 'furniture_003' }, layers), null, 'never the design-wide handles of another system');
   assert.equal(shiftGroupId({ storey: 'base', type: 'handle', cabinetSystemId: 'auto-R1' }, layers), 'tier:base:handle', 'one system: the design-wide group');
   assert.equal(shiftGroupId({ storey: 'loft', type: 'door' }), 'tier:upper:door');
+});
+
+test('replacing a whole system: a sentence lays it out again, none restyles it', () => {
+  assert.deepEqual(systemTemplate('wall_h10', '  có chậu rửa  ', 'warm-oak'), { kind: 'replace-system', system: 'wall_h10', prompt: 'có chậu rửa' });
+  assert.deepEqual(systemTemplate('wall_h10', '', 'warm-oak'), { kind: 'replace-system', system: 'wall_h10', style: 'warm-oak' });
+  assert.deepEqual(systemTemplate('auto-R1', null), { kind: 'replace-system', system: 'auto-R1', style: 'auto' });
+  assert.throws(() => systemTemplate(undefined, 'x'), /hệ tủ/);
+  assert.throws(() => systemTemplate('S', '', 'no-such'), /Phong cách/);
+  assert.equal(SYSTEM_STYLES[0][0], 'auto');
+  assert.throws(() => buildGroupOp('replaceSystem', { system: 'S', tier: 'base', role: 'door', modules: ['A1'] }, {}, {}), /không hỗ trợ/);
 });
