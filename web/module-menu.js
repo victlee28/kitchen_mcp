@@ -2,8 +2,8 @@
 // The server decides what a change means (POST .../propose previews, POST .../ops saves); nothing here edits data directly.
 import { el } from './dom.js';
 import { request } from './api-client.js';
-import { interpretBody, describeInterpret, templateIntent, mentionsReference, checkUpload, recognizeBody, recognizeJobBody, anchorFor, describeRecognition, recognitionLines } from './assist-logic.js';
-import { actionsFor, buildGroupOp, buildOp, describeProposal, groupActions, layerFor, lineTemplate, menuPosition, DOOR_STYLES, HANDLE_VARIANTS, MATERIAL_PRESETS, RUN_ACTIONS, RUN_TURNS, SYSTEM_STYLES, systemTemplate } from './menu-logic.js';
+import { interpretBody, describeInterpret, templateIntent, systemIntent, mentionsReference, checkUpload, recognizeBody, recognizeJobBody, anchorFor, describeRecognition, recognitionLines } from './assist-logic.js';
+import { actionsFor, buildGroupOp, buildOp, describeProposal, groupActions, layerFor, lineTemplate, menuPosition, DOOR_STYLES, HANDLE_VARIANTS, MATERIAL_PRESETS, RUN_ACTIONS, RUN_TURNS, systemTemplate } from './menu-logic.js';
 import { groupLabel, groupLayerIds, manySystems } from './design-logic.js';
 
 const call = (path, body) => request(path, 'POST', body);
@@ -88,6 +88,8 @@ export function createModuleMenu(ctx) {
   async function command(text) {
     if (busy) return; const { id, rev } = ctx.getState();
     if (mentionsReference(text)) return redraw(text, 'Câu lệnh nhắc tới ảnh tham chiếu: hãy bấm "📎 Ảnh tham chiếu" để chọn ảnh trước, rồi bấm "Xem trước".');
+    const wish = target.kind === 'structure' ? null : systemIntent(text);
+    if (wish) return replaceSystem(text, wish);
     const intent = templateIntent(text);
     if (intent?.kind === 'shape') return redraw(text, `Chưa tạo được tủ chữ ${intent.shape} bằng lệnh. Hãy dùng "Tạo từ mẫu" ở cột trái, hoặc nói "tủ chữ I" để tạo một dãy dọc cạnh vật thể.`);
     if (intent?.kind === 'run-i') {
@@ -172,7 +174,6 @@ export function createModuleMenu(ctx) {
 
   function choose(action) {
     if (action === 'run-i') return runI();
-    if (action === 'replaceSystem') return systemForm();
     if (action === 'line-start') { lineFrom = { ...target.point }; close(); return ctx.setStatus('Đã đặt điểm đầu của dãy tủ. Chuột phải vào sàn ở điểm cuối để vẽ tiếp.', 'ok'); }
     if (action === 'line-cancel') { lineFrom = null; close(); return ctx.setStatus('Đã bỏ dãy đang vẽ.'); }
     if (action === 'line-end') return lineForm();
@@ -217,44 +218,19 @@ export function createModuleMenu(ctx) {
     } catch (e) { busy = false; lineForm(e.message, { side, text }); }
   }
 
-  // A whole cabinet system replaced: with a sentence its runs are laid out again (they keep their place and length); without one its cabinets take a style.
-  function systemOf() {
-    if (target.group) return { system: target.group.system, count: null };
-    const systems = ctx.getState().systems || {}; const system = systems[target.id]?.system;
-    return { system, count: Object.values(systems).filter((x) => x.system === system).length };
-  }
-
-  function systemForm(message = '', keep = {}) {
-    const { system, count } = systemOf();
-    const text = el('textarea', { rows: 3, placeholder: 'vd "có chậu rửa, bếp và tủ lạnh, cánh khung xanh rêu" · để trống: chỉ đổi phong cách', autocomplete: 'off' });
-    text.value = keep.text || '';
-    const style = el('select', {}, ...SYSTEM_STYLES.map(([v, t]) => el('option', { value: v }, t)));
-    style.value = keep.style || 'auto';
-    const sync = () => { style.disabled = !!text.value.trim(); };
-    text.addEventListener('input', sync); sync();
-    const out = el('div', { class: 'ctx-msg' }); if (message) out.append(err(message));
-    const go = el('button', { type: 'button', class: 'primary', onclick: () => replaceSystem(text.value, style.value) }, 'Xem trước');
-    box.replaceChildren(header(`Thay cả hệ tủ ${system || '?'}${count ? ` · ${count} tủ` : ''}`),
-      el('label', {}, 'Mô tả hệ tủ mới (không bắt buộc)', text),
-      el('p', { class: 'ctx-msg' }, 'Có mô tả: xếp lại tủ trên các dãy của hệ (giữ vị trí, hướng, chiều dài). Để trống: giữ tủ, đổi phong cách cả hệ.'),
-      el('label', {}, 'Phong cách (khi để trống mô tả)', style), out,
-      el('div', { class: 'row' }, go, el('button', { type: 'button', class: 'ghost', onclick: list }, 'Quay lại')));
-    box.onkeydown = (e) => { if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); go.click(); } };
-    text.focus();
-  }
-
-  async function replaceSystem(text, style) {
-    if (busy) return; const { id, rev } = ctx.getState();
+  // "Thay cả hệ tủ …" typed in the command box: the clicked cabinet's whole system, laid out again from what follows, or restyled when nothing does.
+  async function replaceSystem(text, wish) {
+    if (busy) return; const { id, rev, systems } = ctx.getState();
     let template;
-    try { template = systemTemplate(systemOf().system, text, style); } catch (e) { return systemForm(e.message, { text, style }); }
-    busy = true; ctx.setStatus(template.prompt ? 'Xếp lại hệ tủ theo mô tả…' : 'Đổi phong cách cả hệ tủ…');
+    try { template = systemTemplate(systems?.[target.id]?.system, wish.prompt, wish.style); } catch (e) { return redraw(text, e.message); }
+    busy = true; ctx.setStatus(template.prompt ? 'Xếp lại cả hệ tủ theo mô tả…' : 'Đổi phong cách cả hệ tủ…');
     try {
       const { status, data } = await call(`/api/designs/${id}/template`, { template, baseRev: rev });
       busy = false;
-      if (status === 409) return stale('replace-system');
-      if (!data || data.error || !data.proposal) return systemForm(data?.error || `Lỗi ${status}`, { text, style });
-      showPreview('replace-system', data.proposal, null, data.summary || []);
-    } catch (e) { busy = false; systemForm(e.message, { text, style }); }
+      if (status === 409) return stale('cmd');
+      if (!data || data.error || !data.proposal) return redraw(text, data?.error || `Lỗi ${status}`);
+      showPreview('cmd', data.proposal, null, data.summary || []);
+    } catch (e) { busy = false; redraw(text, e.message); }
   }
 
   function form(action, message) {
@@ -357,8 +333,8 @@ export function createModuleMenu(ctx) {
     const lines = [...extra.map((x) => (typeof x === 'string' ? { kind: 'info', text: x } : x)), ...describeProposal(p)];
     const confirm = el('button', { type: 'button', class: p.validation?.introducesErrors ? 'danger' : 'primary', disabled: !p.applicable || p.unchanged,
       onclick: () => apply(action, p) }, p.validation?.introducesErrors ? 'Vẫn áp dụng' : 'Áp dụng');
-    const back = action === 'replace-system' ? () => systemForm() : ['run-i', 'run-line', 'cmd'].includes(action) ? list : () => form(action);
-    box.replaceChildren(header(`Xem trước · ${action === 'run-line' ? 'dãy tủ mới' : action === 'replace-system' ? `hệ tủ ${systemOf().system}` : target.group ? groupLabel(target.group) : target.id}`), el('ul', { class: 'ctx-preview' }, ...lines.map((l) => el('li', { class: l.kind }, l.text))),
+    const back = ['run-i', 'run-line', 'cmd'].includes(action) ? list : () => form(action);
+    box.replaceChildren(header(`Xem trước · ${action === 'run-line' ? 'dãy tủ mới' : target.group ? groupLabel(target.group) : target.id}`), el('ul', { class: 'ctx-preview' }, ...lines.map((l) => el('li', { class: l.kind }, l.text))),
       el('div', { class: 'row' }, confirm, el('button', { type: 'button', class: 'ghost', onclick: back }, ['run-i', 'run-line', 'cmd'].includes(action) ? 'Quay lại' : 'Sửa lại'), el('button', { type: 'button', class: 'ghost', onclick: close }, 'Hủy')));
     confirm.focus();
   }
@@ -369,12 +345,12 @@ export function createModuleMenu(ctx) {
       const { status, data } = await call(`/api/designs/${p.id}/ops`, { op: p.operation, baseRev: p.baseRev, expect: p.opHash });
       busy = false;
       if (status === 409) return stale(action);
-      if (!data || data.error) { ctx.setStatus(data?.error || `Lỗi ${status}`, 'warn'); return action === 'cmd' ? list() : action === 'replace-system' ? systemForm(data?.error || `Lỗi ${status}`) : form(action, data?.error || `Lỗi ${status}`); }
+      if (!data || data.error) { ctx.setStatus(data?.error || `Lỗi ${status}`, 'warn'); return action === 'cmd' ? list() : form(action, data?.error || `Lỗi ${status}`); }
       if (previewOfJob && previewOfJob === pendingJob) setJob(null);
       previewOfJob = null;
       if (action === 'run-line') lineFrom = null;
       close(); await ctx.afterChange(data); ctx.setStatus(`Đã áp dụng: rev ${data.rev}`, 'ok');
-    } catch (e) { busy = false; if (action === 'cmd') ctx.setStatus(e.message, 'warn'); else if (action === 'replace-system') systemForm(e.message); else form(action, e.message); }
+    } catch (e) { busy = false; if (action === 'cmd') ctx.setStatus(e.message, 'warn'); else form(action, e.message); }
   }
 
   function stale(action) {

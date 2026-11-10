@@ -8,10 +8,9 @@ export const HANDLE_VARIANTS = [['bar', 'Tay thanh'], ['knob', 'Núm'], ['concea
 export const MAX_OVERHANG = 100;
 export const MAX_RUN_SHIFT = 10000, MAX_STRETCH = 1500;   // mm a run may be moved / an end dragged in one go
 export const RUN_ACTIONS = ['runMove', 'runStretch', 'runRemove'];
-// The style presets of kitchen/system_replace.py (same ids, same order; tests/test_system_replace.py checks it): a system with no sentence takes one.
+// The style presets of kitchen/system_replace.py (same ids, same order; tests/test_system_replace.py checks it): "thay cả hệ tủ" with no description takes one.
 export const SYSTEM_STYLES = [['auto', 'Tự chọn (khác phong cách hiện tại)'], ['modern-white', 'Hiện đại trắng bóng'], ['warm-oak', 'Gỗ sồi ấm'],
   ['classic-sage', 'Cổ điển xanh rêu'], ['minimal-grey', 'Tối giản xám đậm'], ['shaker-cream', 'Shaker kem'], ['walnut-luxe', 'Gỗ óc chó sang trọng']];
-export const REPLACE_SYSTEM = { id: 'replaceSystem', label: 'Thay cả hệ tủ này…' };
 export const RUN_TURNS = [[0, 'Không xoay'], [90, 'Xoay 90° ngược chiều kim đồng hồ'], [-90, 'Xoay 90° theo chiều kim đồng hồ'], [180, 'Quay ngược lại (180°)'], [45, 'Xoay 45° ngược chiều'], [-45, 'Xoay 45° theo chiều']];
 
 /** Was the press-and-release a click (pointer barely moved, short)? down/up: {x, y, t}. */
@@ -49,14 +48,14 @@ export function actionsFor(target, spec, drawing = null) {
     if (target.part === 'countertop') return [{ id: 'countertopMaterial', label: 'Đổi vật liệu mặt bàn' }, { id: 'countertopOverhang', label: 'Đổi độ nhô mặt bàn' }];
     if (target.part === 'handle') return [{ id: 'handleVariant', label: 'Đổi kiểu tay nắm' }, { id: 'handleMaterial', label: 'Đổi vật liệu tay nắm' }];
     return [...(target.part === 'door' ? [{ id: 'doorStyle', label: 'Đổi kiểu cánh' }] : []), { id: 'material', label: 'Đổi vật liệu mặt trước' },
-      { id: 'handleVariant', label: 'Đổi kiểu tay nắm' }, { id: 'image', label: 'Sửa ảnh của module này' }, ...runActions(spec?.module?.find((x) => x.id === target.id)), REPLACE_SYSTEM];
+      { id: 'handleVariant', label: 'Đổi kiểu tay nắm' }, { id: 'image', label: 'Sửa ảnh của module này' }, ...runActions(spec?.module?.find((x) => x.id === target.id))];
   }
   if (target.kind === 'structure') return [...(target.point ? [{ id: 'run-i', label: 'Tạo dãy tủ chữ I dọc cạnh này' }] : []), { id: 'struct-hide', label: 'Ẩn thành phần này' }, { id: 'struct-isolate', label: 'Chỉ giữ thành phần này' }, { id: 'struct-all', label: 'Hiện tất cả' }];
   const m = spec?.module?.find((x) => x.id === target.id);
   const out = [{ id: 'material', label: 'Đổi vật liệu mặt trước' }, { id: 'doorStyle', label: 'Đổi kiểu cánh' }];
   if (m && m.wall !== 'corner' && m.type !== 'corner-shelf') out.push({ id: 'add', label: 'Thêm tủ bên cạnh' });
   out.push({ id: 'remove', label: 'Xóa module' }, { id: 'image', label: 'Sửa ảnh của module này' });
-  return [...out, ...runActions(m), ...(m ? [REPLACE_SYSTEM] : [])];
+  return [...out, ...runActions(m)];
 }
 
 /** Operation for a form. Throws Error with a message the user can read. */
@@ -220,14 +219,14 @@ export function groupActions(g) {
   if (g.role !== 'handle') out.push({ id: 'material', label: 'Đổi vật liệu mặt trước (cả nhóm)' });
   if (g.role === 'door' || g.role === 'all') out.push({ id: 'doorStyle', label: 'Đổi kiểu cánh (cả nhóm)' });
   out.push({ id: 'handleVariant', label: 'Đổi kiểu tay nắm (cả nhóm)' }, { id: 'handleMaterial', label: 'Đổi vật liệu tay nắm (cả nhóm)' },
-    { id: 'image', label: 'Sửa ảnh của vùng chọn này' }, REPLACE_SYSTEM);
+    { id: 'image', label: 'Sửa ảnh của vùng chọn này' });
   return out;
 }
 
 /** One operation for a group: the menu's own operation for each module (buildOp), together. A module the change does nothing to (it
  *  already has that material) is left out; when it does nothing to any, the first reason is the error. */
 export function buildGroupOp(action, g, form, spec) {
-  if (!groupActions(g).some((a) => a.id === action) || action === 'image' || action === REPLACE_SYSTEM.id) throw new Error(`Hành động không hỗ trợ cho nhóm: ${action}`);
+  if (!groupActions(g).some((a) => a.id === action) || action === 'image') throw new Error(`Hành động không hỗ trợ cho nhóm: ${action}`);
   const ops = []; const reasons = [];
   for (const id of g.modules) {
     try { ops.push(buildOp(action, id, form, spec)); } catch (e) { reasons.push(e.message); }

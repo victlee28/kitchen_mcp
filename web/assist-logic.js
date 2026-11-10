@@ -1,5 +1,5 @@
 // Pure logic for the free-command box, the photo/drawing upload and the styleFrom select (no DOM, no fetch).
-import { describeProposal } from './menu-logic.js';
+import { describeProposal, SYSTEM_STYLES } from './menu-logic.js';
 
 export const MAX_UPLOAD_BYTES = 12 * 1024 * 1024;
 export const UPLOAD_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
@@ -108,6 +108,29 @@ export function templateIntent(text) {
   // A described kitchen ("tạo tủ bếp có tủ lạnh, mặt đá đen"): only with a clear "make it" verb, so edit sentences ("cánh kính cho tủ trên") stay edits.
   if (/\b(tao|lam|dung|thiet\s+ke|xay|lap|ve|dat|xep)\b/.test(f) && /\btu\s+bep\b|\btu\s+lanh\b|\bmat\s+da\b|\btu\s+(duoi|tren|nong)\b/.test(f)) return { kind: 'run-i', described: true };
   return null;
+}
+
+/** "Thay cả hệ tủ …" typed in the command box: the whole cabinet system of the clicked cabinet is replaced. Returns null when the sentence is
+ *  not about the system, else `{ prompt }` (what follows describes the new system: it is laid out again) or `{ style }` (nothing more, "phong
+ *  cách khác", or the name of a preset: the cabinets stay and take that style; `auto` = one unlike the current). */
+export function systemIntent(text) {
+  const words = String(text ?? '').trim().split(/\s+/).filter(Boolean);
+  const flat = words.map(plain);
+  const f = flat.join(' ');
+  if (!/\bhe\s+tu\b|\bca\s+he\b/.test(f) || !/\b(thay|doi|chuyen|lam\s+lai|xep\s+lai|tao\s+lai)\b/.test(f)) return null;
+  // drop the lead-in: everything up to "hệ (tủ)" [này / hiện tại / cũ / đang có] [bằng / sang / thành / theo] [một] [hệ (tủ)] [mới] [:]
+  let i = flat.findIndex((w, k) => w === 'he' && (flat[k + 1] === 'tu' || flat[k - 1] === 'ca'));
+  if (i < 0) return null;
+  i += flat[i + 1] === 'tu' ? 2 : 1;
+  const skip = (set) => { while (i < flat.length && set.includes(flat[i].replace(/[:,.]$/, ''))) i += 1; };
+  skip(['nay', 'hien', 'tai', 'cu', 'dang', 'co', 'do']);
+  skip(['bang', 'sang', 'thanh', 'theo', 'voi', 'qua']);
+  skip(['mot', '1', 'he', 'tu', 'moi', 'khac']);
+  const rest = words.slice(i).join(' ').replace(/^[:,.\s-]+/, '').trim();
+  const r = plain(rest).replace(/[.!]+$/, '').trim();
+  if (!r || /^(phong\s+cach|kieu|style)(\s+(khac|moi))?$/.test(r) || /^(mot\s+)?(phong\s+cach|kieu)\s+khac(\s+di)?$/.test(r)) return { style: 'auto' };
+  const named = SYSTEM_STYLES.find(([id, label]) => id !== 'auto' && (r === plain(label) || r === `phong cach ${plain(label)}` || r === id));
+  return named ? { style: named[0] } : { prompt: rest };
 }
 
 /** Does the sentence point at a reference picture ("giống hình ảnh tham chiếu", "theo ảnh mẫu")? Such a sentence needs an attached image. */
