@@ -69,22 +69,39 @@ def _sections(value: Any) -> list[dict[str, Any]] | None:
     return out
 
 
-def worktop_size(kind: str, width: float) -> str | None:
-    """Stock size of a worktop appliance fitted into a cabinet ``width`` wide (the sizes ``intent`` gives a new kitchen); None for other kinds.
-    A photo gives no reliable size for these, and without one they are neither drawn nor checked."""
+OVEN_NICHE_WIDTH = 560.0            # knowledge APPLIANCE-OVEN-60 / -45: recess of a built-in oven, 60 cm single and 45 cm compact
+OVEN_NICHE_HEIGHTS = (590.0, 450.0)
+PANEL = 18.0                        # the default board thickness (spec.Common.doorThickness): an appliance needs one board of air on each side
+HOOD_MAX_WIDTH, HOOD_HEIGHT = 730.0, 165.0     # the built-in hood ``intent`` gives a new kitchen (no source: this project's own convention)
+
+
+def appliance_size(kind: str, width: float, niche: float | None = None) -> str | None:
+    """Stock size of an appliance fitted into a cabinet ``width`` wide (``niche``: height of the cabinet's open section, for an oven); None
+    for kinds that need none. A photo gives no reliable size for these, and without one they are neither drawn nor checked.
+
+    Sink, hob, tap, hood: the sizes ``intent`` gives a new kitchen. Oven: the recess a built-in oven is made for (560 wide; 590 high for a
+    60 cm single oven, 450 for a compact one), the largest that fits the niche; a lower niche gets what fits (a microwave)."""
     if kind == "sink":
         return f"{min(780.0, width - 40.0):g} × 430"
     if kind == "cooktop":
         return f"{min(730.0, width - 10.0):g} × 430"
-    return "cao 300" if kind == "faucet" else None
+    if kind == "faucet":
+        return "cao 300"
+    if kind == "hood":
+        return f"{min(HOOD_MAX_WIDTH, width - 40.0):g} × {HOOD_HEIGHT:g}"
+    if kind == "oven":
+        room = niche - 2 * PANEL if niche else OVEN_NICHE_HEIGHTS[0]
+        height = next((h for h in OVEN_NICHE_HEIGHTS if h <= room + 0.5), room)
+        return f"{min(OVEN_NICHE_WIDTH, width - 2 * PANEL):g} × {height:g}"
+    return None
 
 
-def _appliances(value: Any, width: float) -> list[dict[str, Any]]:
+def _appliances(value: Any, width: float, niche: float | None) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     for item in value if isinstance(value, list) else []:
         if isinstance(item, dict) and item.get("type") in APPLIANCE_TYPES and len(out) < MAX_APPLIANCES:
             entry = {"type": item["type"], "name": str(item.get("name") or "")[:60]}
-            size = worktop_size(item["type"], width)
+            size = appliance_size(item["type"], width, niche)
             if size:
                 entry["dimensions"] = size
             out.append(entry)
@@ -126,7 +143,8 @@ def _module(raw: Any, length: float) -> tuple[dict[str, Any] | None, str]:
     shelves = raw.get("shelfCount")
     if isinstance(shelves, int) and not isinstance(shelves, bool) and 1 <= shelves <= 8:
         out["shelfCount"] = shelves
-    devices = _appliances(raw.get("appliances"), out["width"])
+    niches = [float(t["height"]) for t in out.get("frontSections") or [] if t.get("type") == "niche"]
+    devices = _appliances(raw.get("appliances"), out["width"], niches[0] if niches else None)
     if mtype == "tall-fridge":
         niche = _num(raw.get("niche"))
         extra, fridge = fridge_bay(DraftModule(type=mtype, wall="back", width=out["width"], niche=niche if niche and niche > 0 else None), height, depth)

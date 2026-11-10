@@ -28,7 +28,7 @@ from __future__ import annotations
 from typing import Any
 
 from .numeric import round_int
-from .to_kitchen import APPLIANCE_MAP, OVEN_NICHE_MM, TYPE_MAP
+from .to_kitchen import APPLIANCE_MAP, TYPE_MAP, oven_niche
 
 SCHEMA = "recognized-runs/1"
 ORDER = ("left", "back", "right")
@@ -59,8 +59,8 @@ def _fronts(m: dict[str, Any], c: dict[str, Any], cab_top: int, issues: list[dic
         heights = m.get("drawers") or [zone // 3, zone // 3, zone - 2 * (zone // 3)]
         out["frontSections"] = [{"type": "drawer", "height": int(h)} for h in heights]
     elif rtype == "base-oven":
-        rest = zone - OVEN_NICHE_MM
-        out["frontSections"] = [{"type": "niche", "height": OVEN_NICHE_MM}] + (
+        rest = zone - oven_niche(zone)
+        out["frontSections"] = [{"type": "niche", "height": oven_niche(zone)}] + (
             [{"type": "drawer", "height": rest // 2}, {"type": "drawer", "height": rest - rest // 2}] if rest > 150 else [])
     elif rtype == "base-dishwasher":
         out["frontSections"] = [{"type": "niche", "height": zone}]

@@ -117,6 +117,39 @@ class TestRules(unittest.TestCase):
         self.assertEqual((round(x), round(z)), (round(left.x + 300.0), round(left.z - 1000.0)))
 
 
+class TestStockSizes(unittest.TestCase):
+    """A photo gives no size for an appliance: it gets the stock one, taken from the knowledge base where a source gives it."""
+
+    def test_the_sizes_are_those_of_the_knowledge_base(self):
+        from kitchen import knowledge_seed
+        from kitchen.recognition import layout
+        rows = {k["code"]: k["metadata"]["params"] for k in knowledge_seed.KNOWLEDGE if k["code"].startswith("APPLIANCE-OVEN")}
+        self.assertEqual({rows["APPLIANCE-OVEN-60"]["niche_width"], rows["APPLIANCE-OVEN-45"]["niche_width"]}, {layout.OVEN_NICHE_WIDTH})
+        self.assertEqual((rows["APPLIANCE-OVEN-60"]["niche_height"], rows["APPLIANCE-OVEN-45"]["niche_height"]), layout.OVEN_NICHE_HEIGHTS)
+
+    def test_an_oven_takes_the_largest_standard_recess_that_fits_its_niche(self):
+        from kitchen.recognition.layout import appliance_size
+        self.assertEqual(appliance_size("oven", 600, 626), "560 × 590")       # a 60 cm single oven
+        self.assertEqual(appliance_size("oven", 600, 500), "560 × 450")       # a compact one
+        self.assertEqual(appliance_size("oven", 600, 420), "560 × 384")       # lower still: what fits
+        self.assertEqual(appliance_size("oven", 500, None), "464 × 590")      # a narrow cabinet, no niche given
+        self.assertEqual(appliance_size("hood", 740), "700 × 165")
+        self.assertEqual(appliance_size("hood", 900), "730 × 165")
+        self.assertIsNone(appliance_size("light", 600))
+
+    def test_a_recognised_oven_and_hood_are_drawn_and_fit(self):
+        oven = base("base-oven", 0, 600, frontSections=[{"type": "niche", "height": 626}], appliances=[{"type": "oven", "name": "Lò"}])
+        hood = {"type": "upper-hood", "s": 600, "width": 800, "y": 1500, "height": 650, "depth": 350, "appliances": [{"type": "hood", "name": "Hút mùi"}]}
+        spec = kitchen([oven, base("base-cooktop", 600, 800, **HOB), hood, base("base", 1400, 900)])
+        sizes = {t.type: t.dimensions for t in spec.appliances}
+        self.assertEqual((sizes["oven"], sizes["hood"]), ("560 × 590", "730 × 165"))
+        scene = geometry.compile_spec(spec)
+        for kind in ("oven", "hood"):
+            tb = next(t for t in spec.appliances if t.type == kind)
+            self.assertTrue([p for p in scene.parts if p.module == tb.id], f"the {kind} is drawn")
+        self.assertFalse([c for c in codes(spec) if c[0] == "APPLIANCE-NICHE"])
+
+
 class TestEdit(unittest.TestCase):
     def test_removing_a_cabinet_closes_the_gap_in_its_run_only_and_the_sink_follows_its_cabinet(self):
         spec = kitchen([base("base", 0, 600), base("base-sink", 600, 800, **SINK), base("base", 1400, 600)],

@@ -26,7 +26,13 @@ TYPE_MAP: dict[str, str] = {
 }
 APPLIANCE_MAP = {"sink": "sink", "faucet": "faucet", "hob": "cooktop", "hood": "hood", "oven": "oven",
                  "microwave": "oven", "fridge": "fridge", "led": "light", "dishwasher": "other", "other": "other"}
-OVEN_NICHE_MM = 450
+OVEN_RECESS_MM = (590, 450)     # recess height of a built-in oven: 60 cm single (585-595) and 45 cm compact (450-455), manufacturers' data sheets
+PANEL_MM = 18                   # the kitchen service wants one board of air above and below the appliance
+
+
+def oven_niche(zone: int) -> int:
+    """Height of the open section of an oven cabinet whose front zone is ``zone`` high: the largest standard recess that fits."""
+    return next((h + 2 * PANEL_MM for h in OVEN_RECESS_MM if h + 2 * PANEL_MM <= zone), zone)
 
 
 def _issue(issues: list[dict[str, Any]], code: str, msg: str, module: str | None = None) -> None:
@@ -152,8 +158,8 @@ def to_kitchen_spec(rec: dict[str, Any], name: str = "Tủ bếp nhận diện t
             km["frontSections"] = [{"type": "drawer", "height": int(h)} for h in m["drawers"]]
         elif rtype == "base-oven":
             zone = int(c["worktopTop"]) - thick - int(c["plinthHeight"])
-            rest = zone - OVEN_NICHE_MM
-            km["frontSections"] = [{"type": "niche", "height": OVEN_NICHE_MM}] + (
+            rest = zone - oven_niche(zone)
+            km["frontSections"] = [{"type": "niche", "height": oven_niche(zone)}] + (
                 [{"type": "drawer", "height": rest // 2}, {"type": "drawer", "height": rest - rest // 2}] if rest > 150 else [])
         elif rtype == "base-dishwasher":
             zone = int(c["worktopTop"]) - thick - int(c["plinthHeight"])

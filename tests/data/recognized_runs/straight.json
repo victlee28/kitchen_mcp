@@ -71,15 +71,7 @@
       "frontSections": [
        {
         "type": "niche",
-        "height": 450
-       },
-       {
-        "type": "drawer",
-        "height": 140
-       },
-       {
-        "type": "drawer",
-        "height": 140
+        "height": 626
        }
       ],
       "appliances": [

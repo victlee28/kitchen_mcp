@@ -14,6 +14,8 @@ phải theo bản đầy đủ, quy chuẩn địa phương và hướng dẫn l
 NKBA = "https://kb.nkba.org/uploads/2022/05/Kitchen-Planning-Guidelines.pdf"
 RANGEMASTER = "https://www.rangemaster.co.uk/what-clearances-are-required-between-cooker-top-and-cooker-hood"
 EN1116 = "https://catas.com/uploads/media/unien1116-eng.pdf"
+BSH_OVEN = "https://media3.bsh-group.com/Documents/specsheet/en-IE/B3ACE4AG3B.pdf"
+COMPACT_OVEN = "https://www.mediamarkt.nl/en/category/built-in-ovens-82.html"
 ASNZS5601 = "https://energysafe.vic.gov.au/industry-guidance/gas/gas-information-sheets/gis-25-domestic-gas-cooking-appliance-overhead"
 GB55038 = "https://ghzrzyw.beijing.gov.cn/biaozhunguanli/bzzl/202506/P020250609570099619169.pdf"
 CHEAA = "https://www.cheaa.org/upload/files/2018/7/30152038804.pdf"
@@ -88,6 +90,15 @@ KNOWLEDGE = [
        ["countertop-height", "countertop-depth", "upper-depth", "upper-gap", "cabinet-plinth"],
        {"countertop_min": 850, "countertop_max": 950, "countertop_allowed": [850, 900, 950], "countertopDepth_min": 600,
         "upperDepth_min": 310, "upperDepth_max": 400, "upper_gap_min": 450, "plinthHeight_min": 80, "module_width": [400, 500, 600, 900]}),
+    _k("standard", "APPLIANCE-OVEN-60", "Lò âm tủ 60 cm – kích thước hốc (bảng thông số BSH/Neff)",
+       "Lò âm tủ một khoang 60 cm: máy 595 × 594 × 548 mm (cao × rộng × sâu); hốc lắp cao 585–595, rộng 560–568, sâu 550 mm. "
+       "Dùng làm kích thước mặc định khi thiết bị không ghi kích thước; khi thi công theo bảng thông số của đúng máy.",
+       BSH_OVEN, "GLOBAL", "", "BSH (Neff B3ACE4AG3B, bảng thông số nhà sản xuất)", "practice", None,
+       {"niche_width": 560, "niche_height": 590, "niche_depth": 550, "face_width": 594, "face_height": 595}),
+    _k("standard", "APPLIANCE-OVEN-45", "Lò âm tủ compact 45 cm – kích thước hốc (danh mục bán lẻ)",
+       "Lò compact âm tủ: hốc lắp tối thiểu rộng 560, cao 450, sâu 550 mm. Dùng làm kích thước mặc định khi hốc không đủ cao cho lò 60 cm.",
+       COMPACT_OVEN, "GLOBAL", "", "MediaMarkt (thông số hốc tối thiểu ghi theo từng máy)", "practice", None,
+       {"niche_width": 560, "niche_height": 450, "niche_depth": 550}),
     _k("rule", "HOOD-001", "Máy hút mùi – mặt bếp (Rangemaster)",
        "Đáy máy hút mùi cách mặt bếp tối thiểu khoảng 650 mm (điện và gas; 670 mm nếu có tấm chắn sau). Ưu tiên hướng dẫn lắp của máy.",
        RANGEMASTER, "EU", "GB", "Rangemaster (nhà sản xuất)", "recommended", ["hood"], {"gap_min": 650}),
