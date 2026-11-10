@@ -217,7 +217,7 @@ export function groupActions(g) {
   if (!g) return [];
   const out = [];
   if (g.role !== 'handle') out.push({ id: 'material', label: 'Đổi vật liệu mặt trước (cả nhóm)' });
-  if (g.role === 'door' || g.role === 'all') out.push({ id: 'doorStyle', label: 'Đổi kiểu cánh (cả nhóm)' });
+  if (['front', 'door', 'all'].includes(g.role)) out.push({ id: 'doorStyle', label: 'Đổi kiểu cánh (cả nhóm)' });
   out.push({ id: 'handleVariant', label: 'Đổi kiểu tay nắm (cả nhóm)' }, { id: 'handleMaterial', label: 'Đổi vật liệu tay nắm (cả nhóm)' },
     { id: 'image', label: 'Sửa ảnh của vùng chọn này' });
   return out;

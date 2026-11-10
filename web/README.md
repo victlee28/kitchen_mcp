@@ -14,11 +14,12 @@ A cabinet system is the set of runs that belong together: the runs made against 
 `furniture_003`); other runs are grouped with the runs they touch (`auto-<run>`); see `kitchen/runs.py` (`systems`). `GET /api/designs/<id>`
 returns `systems: {module: {system, tier, storey}}`; the page never works them out itself.
 
-- **3D view:** Shift+click a door, a drawer front, a handle or a cabinet body: every module of the same system and tier (base, upper with
-  loft, tall, corner) showing that role is selected, and only those parts light up. Right click one of them: change the front material, the
+- **3D view:** Shift+click a door or a drawer front (both are picked together: doors and drawer fronts), a handle or a cabinet body: every
+  module of the same system and tier (base, upper with loft, tall, corner) showing that role is selected, and only those parts light up. Right click one of them: change the front material, the
   door style or the handles of the whole group (one previewed change), or "Sửa ảnh của vùng chọn này" to open the image tab on the same
   group. Plain click or Esc drops the group.
-- **Image tab:** Shift+click picks `sys:<system>:tier:<tier>:<role>` when the design has several systems, `tier:<tier>:<role>` otherwise.
+- **Image tab:** Shift+click picks `sys:<system>:tier:<tier>:<role>` when the design has several systems, `tier:<tier>:<role>` otherwise; a door
+  or a drawer front picks the `front` group (doors + drawer fronts; `door` when the tier has no drawers).
 - Changing a material for part of the modules that share one (one system of several) gives those modules a material of their own, so the
   other systems keep theirs.
 - **Replace a whole system:** type a sentence that names the system and asks for a change in the command box of a cabinet's right-click

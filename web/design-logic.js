@@ -52,14 +52,14 @@ export function aiExportUrls(id, rev, light) {
 
 // ---- Shift-selection by cabinet system (server: runs.systems; `systems` = GET /api/designs/<id> -> systems: {module: {system, tier, storey}})
 export const TIER_VI = { base: 'tủ dưới', upper: 'tủ trên', tall: 'tủ cao', corner: 'kệ góc' };
-const GROUP_ROLE_VI = { door: 'cánh', drawer: 'mặt ngăn kéo', handle: 'tay nắm', all: 'mặt trước và tay nắm' };
+const GROUP_ROLE_VI = { front: 'cánh và ngăn kéo', door: 'cánh', drawer: 'mặt ngăn kéo', handle: 'tay nắm', all: 'mặt trước và tay nắm' };
 
 /** Role a Shift+click picks from what was clicked: a door, a drawer front, a handle, or the cabinet body (its fronts and handles). */
 export function groupRole(target) {
   if (!target) return null;
   if (target.kind === 'module') return 'all';
   if (target.kind !== 'part' || target.part === 'countertop') return null;
-  return target.part === 'drawer' ? 'drawer' : target.part === 'handle' ? 'handle' : 'door';
+  return target.part === 'handle' ? 'handle' : 'front';      // a door or a drawer front: both, doors and drawer fronts together
 }
 
 /** The group a Shift+click selects: every module of the same cabinet system and tier that has a part of that role.
@@ -79,6 +79,6 @@ export const manySystems = (systems) => new Set(Object.values(systems || {}).map
 /** Image-tab layer ids for a group, best first (the server drops a group equal to an earlier one, e.g. "front" when there are no drawers). */
 export function groupLayerIds(g, many) {
   const prefix = many ? `sys:${g.system}:tier` : 'tier';
-  const roles = { door: ['door', 'front', 'all'], drawer: ['drawer', 'front', 'all'], handle: ['handle'], all: ['all', 'front', 'door', 'drawer'] }[g.role];
+  const roles = { front: ['front', 'door', 'drawer', 'all'], door: ['door', 'front', 'all'], drawer: ['drawer', 'front', 'all'], handle: ['handle'], all: ['all', 'front', 'door', 'drawer'] }[g.role];
   return roles.map((r) => `${prefix}:${g.tier}:${r}`);
 }

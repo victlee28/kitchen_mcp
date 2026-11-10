@@ -118,8 +118,8 @@ export function createViewer(opts) {
     if (change && typeof selected === 'string') opts.onRunDrag?.({ module: selected, ...change }, { x: ev.clientX, y: ev.clientY });
   });
 
-  // a Shift-selected group lights only its role's parts: doors (glass ones too), drawer fronts, handles, or all three
-  const ROLE_PARTS = { door: ['door'], drawer: ['drawer'], handle: ['handle'], all: ['door', 'drawer', 'handle'] };
+  // a Shift-selected group lights only its role's parts: doors and drawer fronts (glass doors too), handles, or all of them
+  const ROLE_PARTS = { front: ['door', 'drawer'], door: ['door'], drawer: ['drawer'], handle: ['handle'], all: ['door', 'drawer', 'handle'] };
   const inRole = (part, role) => (ROLE_PARTS[role] || []).includes(part);
   const selMats = new WeakMap();
   const SEL_TINT = new THREE.Color(0x2f6bff);

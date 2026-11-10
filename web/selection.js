@@ -14,8 +14,8 @@ export const partIndex = (layers) => new Map(layers.filter((l) => l.variant === 
 export function shiftGroupId(part, layers = []) {
   const tier = TIER_OF[part.storey];
   if (!tier) return layers.some((l) => l.id === `type:${part.type}`) || !layers.length ? `type:${part.type}` : null;
-  const role = part.type === 'handle' ? 'handle' : part.type === 'door' || part.type === 'glass-door' ? 'door' : part.type === 'drawer' ? 'drawer' : 'all';
-  const roles = { door: ['door', 'front', 'all'], drawer: ['drawer', 'front', 'all'], handle: ['handle'], all: ['all', 'front', 'door', 'drawer'] }[role];
+  const role = part.type === 'handle' ? 'handle' : FRONT.includes(part.type) ? 'front' : 'all';      // a door or a drawer front picks both
+  const roles = { front: ['front', 'door', 'drawer', 'all'], handle: ['handle'], all: ['all', 'front', 'door', 'drawer'] }[role];
   const bySystem = part.cabinetSystemId && layers.some((l) => l.id.startsWith(`sys:${part.cabinetSystemId}:`));
   const prefix = bySystem ? `sys:${part.cabinetSystemId}:tier` : 'tier';
   const ids = roles.map((r) => `${prefix}:${tier}:${r}`);
