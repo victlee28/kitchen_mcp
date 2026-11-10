@@ -1,0 +1,1045 @@
+{
+ "function": "recognition.build_layout",
+ "cases": [
+  {
+   "name": "an L: runs kept in order, doors/drawers/blind corner/appliances carried, fridge bay made, low confidence flagged",
+   "input": {
+    "raw": {
+     "schema": "recognized-runs/1",
+     "runs": [
+      {
+       "id": "left",
+       "length": 1800,
+       "modules": [
+        {
+         "type": "base",
+         "s": 0,
+         "width": 600,
+         "y": 0,
+         "height": 840,
+         "depth": 600,
+         "doors": [
+          300,
+          300
+         ]
+        },
+        {
+         "type": "base-drawers",
+         "s": 600,
+         "width": 600,
+         "y": 0,
+         "height": 840,
+         "depth": 600,
+         "frontSections": [
+          {
+           "type": "drawer",
+           "height": 250
+          },
+          {
+           "type": "drawer",
+           "height": 490
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "id": "back",
+       "length": 2400,
+       "modules": [
+        {
+         "type": "base",
+         "s": 0,
+         "width": 1200,
+         "y": 0,
+         "height": 840,
+         "depth": 600,
+         "blindCorner": 600,
+         "doors": [
+          600
+         ],
+         "confidence": 0.3
+        },
+        {
+         "type": "base-sink",
+         "s": 1200,
+         "width": 800,
+         "y": 0,
+         "height": 840,
+         "depth": 600,
+         "doors": [
+          400,
+          400
+         ],
+         "appliances": [
+          {
+           "type": "sink",
+           "name": "Chậu rửa"
+          },
+          {
+           "type": "rocket"
+          }
+         ]
+        },
+        {
+         "type": "tall-fridge",
+         "s": 1600,
+         "width": 800,
+         "y": 0,
+         "height": 2300,
+         "depth": 600,
+         "niche": 1800,
+         "appliances": [
+          {
+           "type": "fridge",
+           "name": "x"
+          }
+         ]
+        }
+       ]
+      }
+     ],
+     "joints": [
+      {
+       "a": "left",
+       "b": "back",
+       "angle": 90
+      }
+     ]
+    }
+   },
+   "expected": {
+    "layout": {
+     "runs": [
+      {
+       "id": "left",
+       "length": 1800.0,
+       "modules": [
+        {
+         "type": "base",
+         "width": 600.0,
+         "s": 0.0,
+         "y": 0.0,
+         "height": 840.0,
+         "depth": 600.0,
+         "doors": [
+          300.0,
+          300.0
+         ],
+         "confidence": 1.0,
+         "needsReview": false
+        },
+        {
+         "type": "base-drawers",
+         "width": 600.0,
+         "s": 600.0,
+         "y": 0.0,
+         "height": 840.0,
+         "depth": 600.0,
+         "frontSections": [
+          {
+           "type": "drawer",
+           "height": 250.0
+          },
+          {
+           "type": "drawer",
+           "height": 490.0
+          }
+         ],
+         "confidence": 1.0,
+         "needsReview": false
+        }
+       ]
+      },
+      {
+       "id": "back",
+       "length": 2400.0,
+       "modules": [
+        {
+         "type": "base",
+         "width": 1200.0,
+         "s": 0.0,
+         "y": 0.0,
+         "height": 840.0,
+         "depth": 600.0,
+         "blindCorner": 600.0,
+         "doors": [
+          600.0
+         ],
+         "confidence": 0.3,
+         "needsReview": true
+        },
+        {
+         "type": "base-sink",
+         "width": 800.0,
+         "s": 1200.0,
+         "y": 0.0,
+         "height": 840.0,
+         "depth": 600.0,
+         "doors": [
+          400.0,
+          400.0
+         ],
+         "appliances": [
+          {
+           "type": "sink",
+           "name": "Chậu rửa"
+          }
+         ],
+         "confidence": 1.0,
+         "needsReview": false
+        },
+        {
+         "type": "tall-fridge",
+         "width": 800.0,
+         "s": 1600.0,
+         "y": 0.0,
+         "height": 2300.0,
+         "depth": 640.0,
+         "niche": 1800.0,
+         "appliances": [
+          {
+           "type": "fridge",
+           "name": "Tủ lạnh",
+           "dimensions": "700 × 1750 × 620"
+          }
+         ],
+         "confidence": 1.0,
+         "needsReview": false
+        }
+       ]
+      }
+     ],
+     "joints": [
+      [
+       "left",
+       "back"
+      ]
+     ],
+     "rejected": [],
+     "notes": []
+    }
+   }
+  },
+  {
+   "name": "nothing trusted: bad cabinets rejected with reasons, unknown/repeated runs ignored, a non-right corner is not joined, bad doors dropped",
+   "input": {
+    "raw": {
+     "schema": "recognized-runs/1",
+     "runs": [
+      {
+       "id": "back",
+       "length": 2000,
+       "modules": [
+        {
+         "type": "base",
+         "s": 0,
+         "width": 600,
+         "y": 0,
+         "height": 840,
+         "depth": 600,
+         "doors": [
+          100
+         ]
+        },
+        {
+         "type": "spaceship",
+         "s": 600,
+         "width": 600,
+         "y": 0,
+         "height": 840,
+         "depth": 600
+        },
+        {
+         "type": "base",
+         "s": 1700,
+         "width": 600,
+         "y": 0,
+         "height": 840,
+         "depth": 600
+        },
+        {
+         "type": "base",
+         "s": 600,
+         "width": 90,
+         "y": 0,
+         "height": 840,
+         "depth": 600
+        },
+        "x",
+        {
+         "type": "base",
+         "s": "0",
+         "width": 600,
+         "y": 0,
+         "height": 840,
+         "depth": 600
+        }
+       ]
+      },
+      {
+       "id": "attic",
+       "length": 1000,
+       "modules": []
+      },
+      {
+       "id": "back",
+       "length": 900,
+       "modules": []
+      },
+      {
+       "id": "right",
+       "length": 1200,
+       "modules": [
+        {
+         "type": "upper",
+         "s": 0,
+         "width": 600,
+         "y": 1450,
+         "height": 700,
+         "depth": 350
+        }
+       ]
+      }
+     ],
+     "joints": [
+      {
+       "a": "back",
+       "b": "right",
+       "angle": 120
+      },
+      {
+       "a": "back",
+       "b": "left",
+       "angle": 90
+      }
+     ]
+    }
+   },
+   "expected": {
+    "layout": {
+     "runs": [
+      {
+       "id": "back",
+       "length": 2000.0,
+       "modules": [
+        {
+         "type": "base",
+         "width": 600.0,
+         "s": 0.0,
+         "y": 0.0,
+         "height": 840.0,
+         "depth": 600.0,
+         "confidence": 1.0,
+         "needsReview": false
+        }
+       ]
+      },
+      {
+       "id": "right",
+       "length": 1200.0,
+       "modules": [
+        {
+         "type": "upper",
+         "width": 600.0,
+         "s": 0.0,
+         "y": 1450.0,
+         "height": 700.0,
+         "depth": 350.0,
+         "confidence": 1.0,
+         "needsReview": false
+        }
+       ]
+      }
+     ],
+     "joints": [],
+     "rejected": [
+      {
+       "run": "back",
+       "index": 1,
+       "reason": "unknown or unsupported module type 'spaceship'"
+      },
+      {
+       "run": "back",
+       "index": 2,
+       "reason": "the cabinet (1700..2300) is outside its run (0..2000)"
+      },
+      {
+       "run": "back",
+       "index": 3,
+       "reason": "width must be 150-2000 mm, got 90"
+      },
+      {
+       "run": "back",
+       "index": 4,
+       "reason": "not an object"
+      },
+      {
+       "run": "back",
+       "index": 5,
+       "reason": "s, width, y, height and depth must be numbers"
+      }
+     ],
+     "notes": [
+      "run 'attic' was ignored (unknown id, repeated, or no usable length)",
+      "run 'back' was ignored (unknown id, repeated, or no usable length)",
+      "the corner between back and right is not a right angle (120.0); the two runs are not joined"
+     ]
+    }
+   }
+  },
+  {
+   "name": "not a recognized-runs document",
+   "input": {
+    "raw": {
+     "modules": []
+    }
+   },
+   "expected": {
+    "layout": null
+   }
+  },
+  {
+   "name": "a document with no usable cabinet",
+   "input": {
+    "raw": {
+     "schema": "recognized-runs/1",
+     "runs": [
+      {
+       "id": "back",
+       "length": 1000,
+       "modules": [
+        {
+         "type": "nope"
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "expected": {
+    "layout": null
+   }
+  },
+  {
+   "name": "a real L from a photo (the shared fixture)",
+   "input": {
+    "raw": {
+     "schema": "recognized-runs/1",
+     "unit": "mm",
+     "layout": "l-shape",
+     "runs": [
+      {
+       "id": "left",
+       "length": 2130,
+       "end": "open",
+       "modules": [
+        {
+         "id": "TD5",
+         "type": "base-sink",
+         "sourceType": "base-sink",
+         "name": "Tủ chậu rửa 2 cánh",
+         "storey": "base",
+         "s": 160,
+         "width": 590,
+         "y": 0,
+         "height": 840,
+         "depth": 600,
+         "confidence": 0.7,
+         "doors": [
+          295,
+          295
+         ],
+         "appliances": [
+          {
+           "type": "sink",
+           "name": "Chậu rửa",
+           "note": "single bowl, top-mounted"
+          }
+         ],
+         "note": "sink above; oak end post at the open end"
+        },
+        {
+         "id": "TD4",
+         "type": "base",
+         "sourceType": "base",
+         "name": "Tủ dưới 2 cánh",
+         "storey": "base",
+         "s": 750,
+         "width": 480,
+         "y": 0,
+         "height": 840,
+         "depth": 600,
+         "confidence": 0.7,
+         "doors": [
+          230,
+          250
+         ]
+        },
+        {
+         "id": "TD3",
+         "type": "base",
+         "sourceType": "base",
+         "name": "Tủ dưới 1 cánh",
+         "storey": "base",
+         "s": 1230,
+         "width": 280,
+         "y": 0,
+         "height": 840,
+         "depth": 600,
+         "confidence": 0.7,
+         "doors": [
+          280
+         ]
+        },
+        {
+         "id": "TT6",
+         "type": "upper",
+         "sourceType": "upper",
+         "name": "Tủ trên 1 cánh",
+         "storey": "upper",
+         "s": 30,
+         "width": 520,
+         "y": 1400,
+         "height": 700,
+         "depth": 350,
+         "confidence": 0.7,
+         "doors": [
+          520
+         ],
+         "note": "oak end panel"
+        },
+        {
+         "id": "TT5",
+         "type": "upper",
+         "sourceType": "upper-lift-up",
+         "name": "Tủ trên cánh nâng",
+         "storey": "upper",
+         "s": 550,
+         "width": 680,
+         "y": 1400,
+         "height": 700,
+         "depth": 350,
+         "confidence": 0.7,
+         "note": "glass lift-up flap (dish rack) above an open oak niche · upper-lift-up"
+        },
+        {
+         "id": "TT4",
+         "type": "upper",
+         "sourceType": "upper",
+         "name": "Tủ trên 2 cánh",
+         "storey": "upper",
+         "s": 1230,
+         "width": 500,
+         "y": 1400,
+         "height": 700,
+         "depth": 350,
+         "confidence": 0.7,
+         "doors": [
+          260,
+          240
+         ]
+        },
+        {
+         "id": "TN5",
+         "type": "upper-loft",
+         "sourceType": "upper-top",
+         "name": "upper-top 1 cánh",
+         "storey": "upper-top",
+         "s": 0,
+         "width": 540,
+         "y": 2100,
+         "height": 330,
+         "depth": 350,
+         "confidence": 0.7,
+         "doors": [
+          540
+         ],
+         "note": "upper-top"
+        },
+        {
+         "id": "TN4",
+         "type": "upper-loft",
+         "sourceType": "upper-top",
+         "name": "upper-top 1 cánh",
+         "storey": "upper-top",
+         "s": 540,
+         "width": 690,
+         "y": 2100,
+         "height": 330,
+         "depth": 350,
+         "confidence": 0.7,
+         "doors": [
+          690
+         ],
+         "note": "upper-top"
+        },
+        {
+         "id": "TN3",
+         "type": "upper-loft",
+         "sourceType": "upper-top",
+         "name": "upper-top 1 cánh",
+         "storey": "upper-top",
+         "s": 1230,
+         "width": 480,
+         "y": 2100,
+         "height": 330,
+         "depth": 350,
+         "confidence": 0.7,
+         "doors": [
+          480
+         ],
+         "note": "upper-top"
+        }
+       ]
+      },
+      {
+       "id": "back",
+       "length": 1970,
+       "end": "open",
+       "modules": [
+        {
+         "id": "TD1",
+         "type": "base",
+         "sourceType": "base-corner",
+         "name": "Tủ dưới góc 2 cánh",
+         "storey": "base",
+         "s": 0,
+         "width": 1340,
+         "y": 0,
+         "height": 840,
+         "depth": 600,
+         "confidence": 0.7,
+         "doors": [
+          430,
+          340
+         ],
+         "blindCorner": 570,
+         "note": "blind corner behind the left run, 2 oak doors visible · base-corner"
+        },
+        {
+         "id": "TD2",
+         "type": "base-drawers",
+         "sourceType": "base-drawer",
+         "name": "Tủ ngăn kéo 3 ngăn kéo",
+         "storey": "base",
+         "s": 1340,
+         "width": 630,
+         "y": 0,
+         "height": 840,
+         "depth": 600,
+         "confidence": 0.7,
+         "frontSections": [
+          {
+           "type": "drawer",
+           "height": 260
+          },
+          {
+           "type": "drawer",
+           "height": 260
+          },
+          {
+           "type": "drawer",
+           "height": 270
+          }
+         ],
+         "note": "3 oak drawers, ends with an oak end post; worktop continues over a white wall return · base-drawer"
+        },
+        {
+         "id": "TT1",
+         "type": "upper",
+         "sourceType": "upper-corner",
+         "name": "Tủ trên góc 1 cánh",
+         "storey": "upper",
+         "s": 0,
+         "width": 630,
+         "y": 1400,
+         "height": 700,
+         "depth": 350,
+         "confidence": 0.6,
+         "doors": [
+          350
+         ],
+         "blindCorner": 280,
+         "note": "corner cabinet, mostly hidden · upper-corner"
+        },
+        {
+         "id": "TT2",
+         "type": "upper",
+         "sourceType": "upper",
+         "name": "Tủ trên 2 cánh",
+         "storey": "upper",
+         "s": 630,
+         "width": 710,
+         "y": 1400,
+         "height": 700,
+         "depth": 350,
+         "confidence": 0.7,
+         "doors": [
+          355,
+          355
+         ],
+         "note": "open oak niche at the bottom of the cabinet"
+        },
+        {
+         "id": "TT3",
+         "type": "upper",
+         "sourceType": "upper-lift-up",
+         "name": "Tủ trên cánh nâng",
+         "storey": "upper",
+         "s": 1340,
+         "width": 630,
+         "y": 1400,
+         "height": 700,
+         "depth": 350,
+         "confidence": 0.7,
+         "note": "two stacked white lift-up flaps with an oak strip, oak end panel · upper-lift-up"
+        },
+        {
+         "id": "TN1",
+         "type": "upper-loft",
+         "sourceType": "upper-top",
+         "name": "upper-top 1 cánh",
+         "storey": "upper-top",
+         "s": 250,
+         "width": 860,
+         "y": 2100,
+         "height": 330,
+         "depth": 350,
+         "confidence": 0.6,
+         "doors": [
+          860
+         ],
+         "note": "upper-top"
+        },
+        {
+         "id": "TN2",
+         "type": "upper-loft",
+         "sourceType": "upper-top",
+         "name": "upper-top 1 cánh",
+         "storey": "upper-top",
+         "s": 1110,
+         "width": 860,
+         "y": 2100,
+         "height": 330,
+         "depth": 350,
+         "confidence": 0.7,
+         "doors": [
+          860
+         ],
+         "note": "upper-top"
+        }
+       ]
+      }
+     ],
+     "joints": [
+      {
+       "a": "left",
+       "b": "back",
+       "angle": 90
+      }
+     ],
+     "common": {
+      "plinthHeight": 50,
+      "baseTop": 840,
+      "countertop": 870,
+      "countertopThickness": 30,
+      "baseDepth": 600,
+      "upperBottom": 1400,
+      "upperTierSplit": 2100,
+      "cabinetTop": 2430,
+      "upperDepth": 350,
+      "material": {
+       "base": "white high-gloss acrylic (wall cabinets), light oak laminate (base)",
+       "upper": "white high-gloss acrylic (wall cabinets), light oak laminate (base)",
+       "tall": "white high-gloss acrylic (wall cabinets), light oak laminate (base)",
+       "countertop": "black granite",
+       "wallTile": "white glossy wall tiles",
+       "carcass": "light oak end panels and horizontal strips"
+      }
+     },
+     "issues": [
+      {
+       "code": "type-approximated",
+       "message": "upper-lift-up -> upper",
+       "module": "TT3"
+      },
+      {
+       "code": "type-approximated",
+       "message": "upper-lift-up -> upper",
+       "module": "TT5"
+      }
+     ]
+    }
+   },
+   "expected": {
+    "layout": {
+     "runs": [
+      {
+       "id": "left",
+       "length": 2130.0,
+       "modules": [
+        {
+         "type": "base-sink",
+         "width": 590.0,
+         "s": 160.0,
+         "y": 0.0,
+         "height": 840.0,
+         "depth": 600.0,
+         "name": "Tủ chậu rửa 2 cánh",
+         "doors": [
+          295.0,
+          295.0
+         ],
+         "appliances": [
+          {
+           "type": "sink",
+           "name": "Chậu rửa"
+          }
+         ],
+         "confidence": 0.7,
+         "needsReview": false
+        },
+        {
+         "type": "base",
+         "width": 480.0,
+         "s": 750.0,
+         "y": 0.0,
+         "height": 840.0,
+         "depth": 600.0,
+         "name": "Tủ dưới 2 cánh",
+         "doors": [
+          230.0,
+          250.0
+         ],
+         "confidence": 0.7,
+         "needsReview": false
+        },
+        {
+         "type": "base",
+         "width": 280.0,
+         "s": 1230.0,
+         "y": 0.0,
+         "height": 840.0,
+         "depth": 600.0,
+         "name": "Tủ dưới 1 cánh",
+         "doors": [
+          280.0
+         ],
+         "confidence": 0.7,
+         "needsReview": false
+        },
+        {
+         "type": "upper",
+         "width": 520.0,
+         "s": 30.0,
+         "y": 1400.0,
+         "height": 700.0,
+         "depth": 350.0,
+         "name": "Tủ trên 1 cánh",
+         "doors": [
+          520.0
+         ],
+         "confidence": 0.7,
+         "needsReview": false
+        },
+        {
+         "type": "upper",
+         "width": 680.0,
+         "s": 550.0,
+         "y": 1400.0,
+         "height": 700.0,
+         "depth": 350.0,
+         "name": "Tủ trên cánh nâng",
+         "confidence": 0.7,
+         "needsReview": false
+        },
+        {
+         "type": "upper",
+         "width": 500.0,
+         "s": 1230.0,
+         "y": 1400.0,
+         "height": 700.0,
+         "depth": 350.0,
+         "name": "Tủ trên 2 cánh",
+         "doors": [
+          260.0,
+          240.0
+         ],
+         "confidence": 0.7,
+         "needsReview": false
+        },
+        {
+         "type": "upper-loft",
+         "width": 540.0,
+         "s": 0.0,
+         "y": 2100.0,
+         "height": 330.0,
+         "depth": 350.0,
+         "name": "upper-top 1 cánh",
+         "doors": [
+          540.0
+         ],
+         "confidence": 0.7,
+         "needsReview": false
+        },
+        {
+         "type": "upper-loft",
+         "width": 690.0,
+         "s": 540.0,
+         "y": 2100.0,
+         "height": 330.0,
+         "depth": 350.0,
+         "name": "upper-top 1 cánh",
+         "doors": [
+          690.0
+         ],
+         "confidence": 0.7,
+         "needsReview": false
+        },
+        {
+         "type": "upper-loft",
+         "width": 480.0,
+         "s": 1230.0,
+         "y": 2100.0,
+         "height": 330.0,
+         "depth": 350.0,
+         "name": "upper-top 1 cánh",
+         "doors": [
+          480.0
+         ],
+         "confidence": 0.7,
+         "needsReview": false
+        }
+       ]
+      },
+      {
+       "id": "back",
+       "length": 1970.0,
+       "modules": [
+        {
+         "type": "base",
+         "width": 1340.0,
+         "s": 0.0,
+         "y": 0.0,
+         "height": 840.0,
+         "depth": 600.0,
+         "name": "Tủ dưới góc 2 cánh",
+         "blindCorner": 570.0,
+         "doors": [
+          430.0,
+          340.0
+         ],
+         "confidence": 0.7,
+         "needsReview": false
+        },
+        {
+         "type": "base-drawers",
+         "width": 630.0,
+         "s": 1340.0,
+         "y": 0.0,
+         "height": 840.0,
+         "depth": 600.0,
+         "name": "Tủ ngăn kéo 3 ngăn kéo",
+         "frontSections": [
+          {
+           "type": "drawer",
+           "height": 260.0
+          },
+          {
+           "type": "drawer",
+           "height": 260.0
+          },
+          {
+           "type": "drawer",
+           "height": 270.0
+          }
+         ],
+         "confidence": 0.7,
+         "needsReview": false
+        },
+        {
+         "type": "upper",
+         "width": 630.0,
+         "s": 0.0,
+         "y": 1400.0,
+         "height": 700.0,
+         "depth": 350.0,
+         "name": "Tủ trên góc 1 cánh",
+         "blindCorner": 280.0,
+         "doors": [
+          350.0
+         ],
+         "confidence": 0.6,
+         "needsReview": false
+        },
+        {
+         "type": "upper",
+         "width": 710.0,
+         "s": 630.0,
+         "y": 1400.0,
+         "height": 700.0,
+         "depth": 350.0,
+         "name": "Tủ trên 2 cánh",
+         "doors": [
+          355.0,
+          355.0
+         ],
+         "confidence": 0.7,
+         "needsReview": false
+        },
+        {
+         "type": "upper",
+         "width": 630.0,
+         "s": 1340.0,
+         "y": 1400.0,
+         "height": 700.0,
+         "depth": 350.0,
+         "name": "Tủ trên cánh nâng",
+         "confidence": 0.7,
+         "needsReview": false
+        },
+        {
+         "type": "upper-loft",
+         "width": 860.0,
+         "s": 250.0,
+         "y": 2100.0,
+         "height": 330.0,
+         "depth": 350.0,
+         "name": "upper-top 1 cánh",
+         "doors": [
+          860.0
+         ],
+         "confidence": 0.6,
+         "needsReview": false
+        },
+        {
+         "type": "upper-loft",
+         "width": 860.0,
+         "s": 1110.0,
+         "y": 2100.0,
+         "height": 330.0,
+         "depth": 350.0,
+         "name": "upper-top 1 cánh",
+         "doors": [
+          860.0
+         ],
+         "confidence": 0.7,
+         "needsReview": false
+        }
+       ]
+      }
+     ],
+     "joints": [
+      [
+       "left",
+       "back"
+      ]
+     ],
+     "rejected": [],
+     "notes": []
+    }
+   }
+  }
+ ]
+}

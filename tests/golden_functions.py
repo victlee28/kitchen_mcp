@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from kitchen import edit, floorplan, geometry, layers, moldings, numeric, proposal, rules, run_line, structure_mesh  # noqa: E402
-from kitchen.recognition import build_draft, choose_recognizer, gemini_wire, line_modules, recognizer_wire  # noqa: E402
+from kitchen.recognition import build_draft, build_layout, choose_recognizer, gemini_wire, line_modules, recognizer_wire  # noqa: E402
 from kitchen import intent, run_template  # noqa: E402
 from kitchen.placement import Placement  # noqa: E402
 from kitchen.spec import load_spec, to_data  # noqa: E402
@@ -169,6 +169,16 @@ def run_line_edge_line(i):
     return {"a": list(line.a), "b": list(line.b), "normal": [round(line.normal[0], 6), round(line.normal[1], 6)]}
 
 
+def recognition_build_layout(i):
+    layout = build_layout(i["raw"])
+    return {"layout": None if layout is None else layout.to_data()}
+
+
+def run_line_run_lines(i):
+    placed, skipped = run_line.run_lines(run_line.Line(tuple(i["a"]), tuple(i["b"]), tuple(i["normal"])), i["runs"], [tuple(j) for j in i["joints"]])
+    return {"placed": [{"run": r["id"], **run_line.run_frame(line)} for r, line in placed], "skipped": skipped}
+
+
 def recognition_line_modules(i):
     modules, dropped = line_modules(build_draft(i["raw"]), i["common"], i.get("wall", "back"))
     return {"modules": modules, "dropped": dropped}
@@ -207,6 +217,8 @@ FUNCTIONS = {
     "run_template.run_from_template": run_template_run_from_template,
     "run_line.edge_line": run_line_edge_line,
     "recognition.line_modules": recognition_line_modules,
+    "recognition.build_layout": recognition_build_layout,
+    "run_line.run_lines": run_line_run_lines,
     "recognition.recognizer_wire.clean_job_id": recognizer_wire_clean_job_id,
     "recognition.recognizer_wire.job_progress": recognizer_wire_job_progress,
 }

@@ -1,0 +1,147 @@
+"""A kitchen recognised BY RUNS (recognized-runs/1) stands on the edge the user picked: the main run along it, the joined runs square to it."""
+import json
+import shutil
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / "tests"))
+
+from kitchen import geometry, roomctx, run_line  # noqa: E402
+from kitchen.recognition import build_layout, recognizer_wire  # noqa: E402
+from kitchen.service import KitchenService  # noqa: E402
+from kitchen.spec import KitchenSpec  # noqa: E402
+from test_floorplan import ROOM, elem, plan, rect  # noqa: E402
+
+DATA = ROOT / "tests" / "data" / "recognized_runs"
+
+
+def fixture(name):
+    return json.loads((DATA / f"{name}.json").read_text(encoding="utf-8"))["runs"]
+
+
+def ops_of(operation):
+    return operation["ops"] if "ops" in operation else [operation]
+
+
+class Fake:
+    def __init__(self, doc):
+        self.doc = doc
+
+    def recognize(self, source):
+        flat = [{"type": m["type"], "wall": "back", "width": m["width"], "fromCorner": m["s"]} for r in self.doc["runs"] for m in r["modules"]]
+        return {"modules": flat, "layout": self.doc}
+
+
+class TestPlanRuns(unittest.TestCase):
+    """Pure core: recognised runs -> one operation on an empty kitchen."""
+    LINE = run_line.Line((0.0, 0.0), (6000.0, 0.0), (0.0, 1.0))
+
+    def plan(self, name):
+        layout = build_layout(fixture(name))
+        self.assertIsNotNone(layout)
+        runs = [{"id": r.id, "length": r.length, "modules": list(r.modules)} for r in layout.runs]
+        return layout, run_line.plan_runs(KitchenSpec(), self.LINE, runs, list(layout.joints))
+
+    def test_every_recognised_cabinet_of_every_fixture_is_placed_and_the_kitchen_compiles(self):
+        from kitchen import edit
+        for name in ("l-shape", "u-shape", "straight"):
+            with self.subTest(fixture=name):
+                layout, p = self.plan(name)
+                spec = edit.apply_op(KitchenSpec(), p["operation"])
+                self.assertEqual(len(spec.module), layout.count)
+                self.assertEqual(len(spec.runs), len(layout.runs))
+                self.assertTrue(all(m.run and m.wall == "island" for m in spec.module))
+                geometry.compile_spec(spec)
+
+    def test_the_runs_of_an_l_and_a_u_stand_square_to_each_other(self):
+        _, l = self.plan("l-shape")
+        self.assertEqual(sorted(round(r["run"]["yaw"]) % 180 for r in l["runs"]), [0, 90])
+        _, u = self.plan("u-shape")
+        self.assertEqual(sorted(round(r["run"]["yaw"]) for r in u["runs"]), [-90, 0, 90])
+
+    def test_doors_drawers_and_appliances_survive(self):
+        from kitchen import edit
+        layout, p = self.plan("l-shape")
+        spec = edit.apply_op(KitchenSpec(), p["operation"])
+        want_doors = sum(1 for r in layout.runs for m in r.modules if m.get("doors"))
+        want_fronts = sum(1 for r in layout.runs for m in r.modules if m.get("frontSections"))
+        want_apps = sum(len(m.get("appliances") or []) for r in layout.runs for m in r.modules)
+        self.assertGreater(want_doors + want_fronts, 0)
+        self.assertGreater(want_apps, 0)
+        self.assertTrue(all(a.module for a in spec.appliances))
+        self.assertEqual(sum(1 for m in spec.module if m.doors), want_doors)
+        self.assertEqual(sum(1 for m in spec.module if m.frontSections), want_fronts)
+        self.assertEqual(len(spec.appliances), want_apps)
+
+
+class TestWire(unittest.TestCase):
+    def test_layout_is_taken_only_from_a_recognized_runs_payload(self):
+        doc = fixture("l-shape")
+        self.assertEqual(recognizer_wire.layout_from_runs({"runs": doc}), doc)
+        self.assertIsNone(recognizer_wire.layout_from_runs({"runs": {"schema": "other"}}))
+        self.assertIsNone(recognizer_wire.layout_from_runs({"kitchenSpec": {}}))
+
+
+class TestAnchoredLayout(unittest.TestCase):
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="layout-"))
+        self.svc = KitchenService(self.tmp / "k.db", self.tmp / "renders")
+        self.svc.recognizers.clear()
+        self.doc = fixture("l-shape")
+        self.svc.recognizers["fake"] = Fake(self.doc)
+        col = elem("column_a", "column", "column", rect(1500, 2000, 1900, 2400), "Cot")
+        self.did = self.svc.import_floorplan(plan(ROOM, col))["id"]
+        self.svc.apply(self.did, {"op": "add", "module": {"type": "base", "wall": "back", "fromCorner": 0, "width": 600, "y": 0, "height": 840, "depth": 550}}, 1)
+        self.svc.bind_floorplan(self.did)
+        spec, self.rev = self.svc.store.get(self.did)
+        sc = geometry.compile_spec(spec)
+        self.place = roomctx.for_spec(spec, sc.lsau, sc.lphai).placement
+        self.source = {"kind": "photo", "imageBase64": "AA=="}
+        x, z = self.place.to_room(-1500.0, 1990.0)
+        self.anchor = {"structureId": "STRUCT-column_a", "point": {"x": x, "z": z}}
+        self.total = sum(len(r["modules"]) for r in self.doc["runs"])
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_all_runs_are_proposed_and_nothing_is_saved_until_apply(self):
+        before, rev = self.svc.store.get(self.did)
+        r = self.svc.recognize(self.did, self.source, "fake", anchor=self.anchor)
+        self.assertEqual(r["status"], "ok")
+        self.assertEqual(len(r["runs"]), len(self.doc["runs"]))
+        kinds = [o["op"] for o in ops_of(r["operation"])]
+        self.assertEqual((kinds.count("add-run"), kinds.count("add")), (len(self.doc["runs"]), self.total))
+        self.assertEqual(r["layout"]["joints"], [["left", "back"]] if self.doc["joints"][0]["a"] == "left" else [["back", "right"]])
+        self.assertEqual(self.svc.store.get(self.did)[1], rev)
+        self.assertTrue(r["proposal"]["applicable"])
+        self.svc.apply(self.did, r["operation"], r["baseRev"], "test", r["proposal"]["opHash"])
+        after, rev2 = self.svc.store.get(self.did)
+        self.assertEqual((rev2, len(after.module)), (rev + 1, len(before.module) + self.total))
+
+    def test_replace_mode_clears_the_old_cabinets(self):
+        r = self.svc.recognize(self.did, self.source, "fake", anchor=self.anchor, mode="replace")
+        self.assertEqual(r["status"], "ok")
+        self.svc.apply(self.did, r["operation"], r["baseRev"], "test", r["proposal"]["opHash"])
+        after, _ = self.svc.store.get(self.did)
+        self.assertEqual(len(after.module), self.total)
+
+    def test_without_an_anchor_the_old_wall_path_still_answers(self):
+        r = self.svc.recognize(self.did, self.source, "fake")
+        self.assertEqual((r["status"], r["operation"]["op"]), ("ok", "replace"))
+
+    def test_a_recogniser_without_a_layout_keeps_the_single_run_path(self):
+        class Flat:
+            def recognize(self, source):
+                return {"modules": [{"type": "base", "wall": "back", "width": 600, "fromCorner": 0}]}
+        self.svc.recognizers["fake"] = Flat()
+        r = self.svc.recognize(self.did, self.source, "fake", anchor=self.anchor)
+        self.assertEqual(r["status"], "ok")
+        self.assertNotIn("layout", r)
+
+
+if __name__ == "__main__":
+    unittest.main()

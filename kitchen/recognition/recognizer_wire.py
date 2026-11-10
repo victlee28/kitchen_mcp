@@ -1,7 +1,8 @@
 """The wire format of the stand-alone cabinet-recognizer service, as pure functions (rule R1): what to send and how to read the answer.
 
 The HTTP call itself lives in ``kitchen/recognizers.py`` (shell). The service answers ``{"kitchen": {"spec": KitchenSpec, "issues": [...]}}``
-or ``{"error": {kind, code, message}}``. Only its MODULES are used: ``draft_from_kitchen_spec`` turns them into the raw draft that
+or ``{"error": {kind, code, message}}``, and since recognized-runs/1 also ``"runs"`` (the kitchen by runs; ``layout_from_runs``), which is what
+an anchored recognition places. Of ``kitchen`` only the MODULES are used: ``draft_from_kitchen_spec`` turns them into the raw draft that
 ``build_draft`` checks, and ``draft_operation`` then keeps the room, floor plan and ``common`` of the current design (the recognizer's own
 room is never applied). A Rust build ports these functions and runs the golden cases in tests/golden/recognition.
 """
@@ -101,3 +102,10 @@ def draft_from_kitchen_spec(payload: Any) -> dict[str, Any] | None:
         draft["room"] = {"ceiling": ceiling}
     draft["materials"] = {k: v for k, v in _dict(common.get("material")).items() if k in MATERIAL_SLOTS and isinstance(v, str)}
     return draft
+
+
+def layout_from_runs(payload: Any) -> dict[str, Any] | None:
+    """The service's kitchen BY RUNS (``recognized-runs/1``: runs, joints, each cabinet's ``s`` from the left end of its run) from an answer, or
+    None when the answer has none (an older service). ``recognition.build_layout`` checks it."""
+    runs = _dict(payload).get("runs")
+    return runs if isinstance(runs, dict) and isinstance(runs.get("runs"), list) else None

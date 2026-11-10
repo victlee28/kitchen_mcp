@@ -153,6 +153,33 @@ class TestEndToEnd(unittest.TestCase):
         after, rev2 = self.svc.store.get(self.did)
         self.assertEqual((rev2, len(after.module)), (rev + 1, len(r["operation"]["spec"]["module"])))
 
+    def test_on_a_picked_edge_the_whole_l_is_placed_by_runs_with_its_doors(self):
+        sys.path.insert(0, str(ROOT / "tests"))
+        from kitchen import geometry, roomctx
+        from test_floorplan import ROOM, elem, plan, rect
+        did = self.svc.import_floorplan(plan(ROOM, elem("column_a", "column", "column", rect(1500, 2000, 1900, 2400), "Cot")))["id"]
+        self.svc.apply(did, {"op": "add", "module": {"type": "base", "wall": "back", "fromCorner": 0, "width": 600, "y": 0, "height": 840, "depth": 550}}, 1)
+        self.svc.bind_floorplan(did)
+        spec, rev = self.svc.store.get(did)
+        sc = geometry.compile_spec(spec)
+        x, z = roomctx.for_spec(spec, sc.lsau, sc.lphai).placement.to_room(-1500.0, 1990.0)
+        r = self.svc.recognize(did, {"kind": "photo", "imageBase64": base64.b64encode(IMAGE).decode()},
+                               anchor={"structureId": "STRUCT-column_a", "point": {"x": x, "z": z}})
+        self.assertEqual(r["status"], "ok")
+        layout = r["layout"]
+        self.assertEqual([run["id"] for run in layout["runs"]], ["left", "back"])
+        self.assertEqual(layout["joints"], [["left", "back"]])
+        total = sum(len(run["modules"]) for run in layout["runs"])
+        ops = r["operation"]["ops"]
+        adds = [o["module"] for o in ops if o["op"] == "add"]
+        self.assertEqual(([o["op"] for o in ops].count("add-run"), len(adds)), (2, total), "both runs, every recognised cabinet: none is dropped")
+        self.assertTrue(any(m.get("doors") for m in adds) and any(m.get("frontSections") for m in adds), "doors and drawers come through")
+        self.assertTrue(r["proposal"]["applicable"])
+        self.assertEqual(self.svc.store.get(did)[1], rev, "nothing is saved before apply")
+        self.svc.apply(did, r["operation"], r["baseRev"], "test", r["proposal"]["opHash"])
+        after, _ = self.svc.store.get(did)
+        self.assertEqual((len(after.runs), len([m for m in after.module if m.run])), (2, total))
+
     def test_service_down_is_a_failed_status(self):
         self.server.shutdown(); self.server.server_close()
         r = self.svc.recognize(self.did, {"kind": "photo", "imageBase64": base64.b64encode(IMAGE).decode()})

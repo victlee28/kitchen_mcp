@@ -14,7 +14,7 @@ IMAGE = (HERE / "data" / "bep-chu-I-xam.png").read_bytes()
 ANSWERS = json.loads((HERE / "data" / "bep-chu-I-xam.answers.json").read_text(encoding="utf-8"))
 GOLDEN = json.loads((HERE / "golden" / "bep-chu-I-xam.spec.json").read_text(encoding="utf-8"))
 
-CORE = ["errors", "numeric", "contract", "compute", "prompts", "labels_vi", "persp", "contract_persp", "compute_persp", "to_kitchen"]
+CORE = ["errors", "numeric", "contract", "compute", "prompts", "labels_vi", "persp", "contract_persp", "compute_persp", "to_kitchen", "to_runs"]
 CORE_ALLOWED = {"__future__", "math", "dataclasses", "typing", "enum", "re", "json", "collections"}
 
 

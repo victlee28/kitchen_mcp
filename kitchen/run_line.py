@@ -10,7 +10,7 @@ import math
 from dataclasses import dataclass
 from typing import Any
 
-from .edit import combine_ops, next_run_id
+from .edit import apply_op, combine_ops, next_run_id
 from .errors import InvalidInput
 from .floorplan.geom import point_in_poly
 from .numeric import round_half_away
@@ -79,7 +79,7 @@ def run_frame(line: Line) -> dict[str, float]:
             "length": math.hypot(end[0] - start[0], end[1] - start[1])}
 
 
-EXTRA_FIELDS = ("name", "niche", "appliance", "appliances", "doors", "frontSections", "hingeSides", "doorStyle")   # what a module may carry besides its box
+EXTRA_FIELDS = ("name", "niche", "appliance", "appliances", "doors", "frontSections", "hingeSides", "doorStyle", "blindCorner", "shelfCount")   # what a module may carry besides its box
 
 
 def plan_on_line(spec: KitchenSpec, line: Line, modules: list[dict[str, Any]], clear: list[str] | None = None,
@@ -104,3 +104,52 @@ def plan_on_line(spec: KitchenSpec, line: Line, modules: list[dict[str, Any]], c
     if reach > frame["length"] + 1.0:
         summary.append(f"The cabinets are {reach - frame['length']:g} mm longer than the edge ({frame['length']:g} mm)")
     return {"operation": combine_ops(ops), "run": run, "length": reach, "summary": summary}
+
+
+def run_lines(line: Line, runs: list[dict[str, Any]], joints: list[tuple[str, str]]) -> tuple[list[tuple[dict[str, Any], Line]], list[str]]:
+    """Where each run of a recognised kitchen stands when its MAIN run (``back``, else the first) stands on ``line``: ``([(run, line)], skipped ids)``.
+
+    ``runs``: ``[{"id", "length", "modules"}]``; a joint ``(a, b)`` = the end of run ``a`` meets the start of run ``b`` at a right angle in an inside
+    corner. A run joined to the main run's START stands square to it at the line's start and reaches into the room; one joined to its END stands at
+    the main run's end. With only an end corner the main run is pushed to the far end of the line, so the corner sits where the edge ends.
+    Runs not joined to the main run have no place and are skipped."""
+    by_id = {r["id"]: r for r in runs}
+    main = by_id.get("back") or runs[0]
+    before = next((by_id[a] for a, b in joints if b == main["id"] and a in by_id and a != main["id"]), None)
+    after = next((by_id[b] for a, b in joints if a == main["id"] and b in by_id and b != main["id"]), None)
+    frame = run_frame(line)
+    nx, nz = line.normal
+    ux, uz = nz, -nx                                              # the main run's s direction
+    offset = max(0.0, frame["length"] - float(main["length"])) if after is not None and before is None else 0.0
+    p0 = (frame["x"] + ux * offset, frame["z"] + uz * offset)
+    p1 = (p0[0] + ux * float(main["length"]), p0[1] + uz * float(main["length"]))
+    placed: list[tuple[dict[str, Any], Line]] = [(main, Line(p0, p1, (nx, nz)))]
+    if before is not None:                                        # its doors look along the main run; its s runs towards the corner
+        reach = float(before["length"])
+        placed.append((before, Line((p0[0] + nx * reach, p0[1] + nz * reach), p0, (ux, uz))))
+    if after is not None:                                         # its doors look back along the main run; its s runs away from the corner
+        reach = float(after["length"])
+        placed.append((after, Line(p1, (p1[0] + nx * reach, p1[1] + nz * reach), (-ux, -uz))))
+    used = {r["id"] for r, _ in placed}
+    return placed, [r["id"] for r in runs if r["id"] not in used]
+
+
+def plan_runs(spec: KitchenSpec, line: Line, runs: list[dict[str, Any]], joints: list[tuple[str, str]], clear: list[str] | None = None) -> dict[str, Any]:
+    """The operation that puts a whole recognised kitchen (one run, an L or a U) on ``line``: one explicit run per recognised run, see ``run_lines``.
+    ``clear``: ids of cabinets to remove first. Returns what ``plan_on_line`` returns, plus ``runs`` (``[{"source", "run"}]``)."""
+    if not runs:
+        raise InvalidInput("No run to place", code="no-run")
+    placed, skipped = run_lines(line, runs, joints)
+    ops: list[dict[str, Any]] = []
+    summary: list[str] = []
+    made: list[dict[str, Any]] = []
+    current = spec
+    for index, (run, at) in enumerate(placed):
+        plan = plan_on_line(current, at, [dict(m) for m in run["modules"]], clear if index == 0 else None)
+        ops.append(plan["operation"])
+        summary.extend(plan["summary"] if index == 0 else [f"{run['id']}: {plan['summary'][0]}"])
+        made.append({"source": run["id"], "run": plan["run"]})
+        current = apply_op(current, {"op": "add-run", "run": plan["run"]})      # so the next run gets the next id
+    if skipped:
+        summary.append(f"Runs not joined to the main run were left out: {', '.join(skipped)}")
+    return {"operation": combine_ops(ops), "run": made[0]["run"], "runs": made, "length": float(placed[0][0]["length"]), "summary": summary}

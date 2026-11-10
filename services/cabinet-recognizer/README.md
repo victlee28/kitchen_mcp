@@ -104,6 +104,27 @@ python services/cabinet-recognizer/tools/check_kitchen_compat.py ket-qua.json --
 ```
 Nó chạy `load_spec` → `compile_spec` → `threejs_export.export` → `rules.validate`. File `--out` nạp được vào kitchen service bằng thao tác `{"op": "replace", "spec": ...}` (qua `propose` trước).
 
+## Đầu ra theo dãy: `recognized-runs/1` (dùng cho kitchen service)
+
+Ngoài `spec` (toạ độ theo tường) và `kitchen` (KitchenSpec kiểu tường, đường cũ), mọi câu trả lời (`/recognize`, `/jobs/<id>`, web hộp thư: `runs.json`) có thêm `runs` — hệ tủ **theo dãy**, là hợp đồng chính với kitchen service:
+
+```json
+{"schema": "recognized-runs/1", "unit": "mm", "layout": "L",
+ "runs": [{"id": "left", "length": 2130, "end": 2130, "modules": [{"id": "TD1", "type": "base", "storey": "base", "s": 0, "width": 600, "y": 0, "height": 840, "depth": 600, "doors": [300, 300], "confidence": 0.8}]},
+          {"id": "back", "length": 3600, "modules": []}],
+ "joints": [{"a": "left", "b": "back", "angle": 90}], "common": {}, "issues": []}
+```
+
+- Thứ tự dãy: `left`, `back`, `right`. `s` đo dọc dãy **từ đầu bên trái của người đứng nhìn vào cánh tủ**; không còn khái niệm tường hay góc gốc.
+- `joints[{a, b}]`: **cuối** dãy `a` gặp **đầu** dãy `b` ở góc trong 90°.
+- Mỗi module mang đủ `doors`, `frontSections`, `blindCorner`, `niche`, `doorStyle`, `shelfCount`, `appliances`.
+- Ô góc mù luôn nằm ở **đầu** một dãy (phía `s` nhỏ); ô góc mù nhận ra ở cuối dãy được chuyển sang tủ đầu của dãy kề, không chuyển được thì ghi `corner-gap` trong `issues`.
+- Code: `cabinet_recognizer/to_runs.py` (`to_runs`, `check_runs`), thuần lõi. Test: `tests/test_to_runs.py`; ba tài liệu mẫu dùng chung với kitchen ở `tests/data/recognized_runs/` (gốc repo) — service phải sinh ra đúng chúng, kitchen phải đọc được chúng.
+
+## Ca thử từ job thật
+
+`python tools/jobs_to_cases.py` gom các job hộp thư đã trả lời xong thành ca phát lại (`tests/data/jobs/<id>.png` + `.answers.json`, kết quả chuẩn `tests/golden/jobs/<id>.spec.json`); `tests/test_job_cases.py` chạy lại không cần model.
+
 ## Đầu ra
 
 `schema: cabinet-recognizer/0.1`, đơn vị mm, x từ đầu trái dãy, y từ sàn. `common` (dài dãy, chân, mặt đá, đáy/đỉnh tủ trên, chiều sâu, vật liệu), `modules[]` (`id` TT\*/TD\*, `type`, `storey`, `x`, `width`, `y`, `height`, `depth`, `doors[]`, `drawers[]`, `applianceBelowHeight`, `confidence`), `appliances[]`, `evidence` (mm/px, số đo trước khi làm tròn, toạ độ px đã chọn, lý do AI chọn chuẩn) và `warnings[]` (ví dụ `upper-aligned-to-base`, `gap-not-standard`, `hood-line-missing`).

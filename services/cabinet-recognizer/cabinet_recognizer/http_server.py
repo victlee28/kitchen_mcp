@@ -3,8 +3,9 @@
   python -m cabinet_recognizer.http_server --port 8765
 
   POST /recognize   body = ảnh (image/png, image/jpeg)  hoặc  JSON {"imageBase64": "...", "region"?: "VN", "note"?: "gợi ý của người dùng"}
-                    -> 200 {"spec": {...}, "kitchen": {"spec": KitchenSpec, "issues": [...]}}  |  4xx/5xx {"error": {kind, code, message}}
-                    `spec` là định dạng riêng của bộ nhận diện; `kitchen` là bản đã đổi sang KitchenSpec kèm danh sách điều bị mất/xấp xỉ.
+                    -> 200 {"spec": {...}, "runs": {recognized-runs/1}, "kitchen": {"spec": KitchenSpec, "issues": [...]}}  |  4xx/5xx {"error": {kind, code, message}}
+                    `spec` là định dạng riêng của bộ nhận diện; `runs` là hợp đồng theo dãy (to_runs.py) mà kitchen service dùng để đặt tủ lên line;
+                    `kitchen` là bản đổi sang KitchenSpec kiểu tường (đường cũ, chỉ còn dùng khi không có điểm neo).
   POST /jobs        cùng body như /recognize, nhưng KHÔNG gọi API: tạo job (thư mục jobs/<mã>/), chạy tới bước cần AI rồi dừng
                     -> 202 {"id", "state": "waiting", "step", "answered"}   (người/Claude trả lời vào jobs/<mã>/inbox/answers/<bước>.json)
   POST /jobs/<mã>/resume   (hoặc GET /jobs/<mã>)  chạy tiếp từ các câu trả lời đã có
@@ -29,6 +30,7 @@ from .errors import RecognizerError, http_status
 from .pipeline import recognize_auto
 from .prompts import clean_note
 from .to_kitchen import to_kitchen_spec
+from .to_runs import to_runs
 from .vision import VisionClient, make_client
 from .web_inbox import JOB_ID, create_job, run_job
 
@@ -53,11 +55,19 @@ def _kitchen(rec: dict[str, Any]) -> dict[str, Any]:
         raise RecognizerError("validation", "convert-failed", f"không đổi được sang KitchenSpec: {e!r}") from e
 
 
+def _runs(rec: dict[str, Any]) -> dict[str, Any]:
+    try:
+        return to_runs(rec)
+    except (KeyError, TypeError, ValueError) as e:       # kết quả nhận diện thiếu trường mà bước đổi sang dãy cần
+        raise RecognizerError("validation", "convert-failed", f"không đổi được sang recognized-runs: {e!r}") from e
+
+
 def _job_payload(job: Path, status: dict[str, Any]) -> dict[str, Any]:
     """The job's status; when finished also the converted ``kitchen`` ({"spec", "issues"}), read back from the files ``run_job`` wrote."""
     out = {k: v for k, v in status.items() if k in ("id", "state", "step", "answered", "error", "warnings", "layout", "modules")}
     if status.get("state") == "done":
         out["kitchen"] = {"spec": json.loads((job / "kitchen-spec.json").read_text(encoding="utf-8")), "issues": status.get("kitchenIssues", [])}
+        out["runs"] = _runs(json.loads((job / "result.json").read_text(encoding="utf-8")))      # tính lại từ kết quả: job cũ chưa có runs.json
     return out
 
 
@@ -145,7 +155,7 @@ def make_handler(config: Config, client: VisionClient, jobs_root: Path | None = 
                     self._send(202, _job_payload(job, run_job(job)))
                     return
                 result = recognize_auto(png, client, region=region, retries=config.max_retries, note=note)
-                self._send(200, {"spec": result["spec"], "kitchen": _kitchen(result["spec"])})
+                self._send(200, {"spec": result["spec"], "kitchen": _kitchen(result["spec"]), "runs": _runs(result["spec"])})
             except RecognizerError as e:
                 self._send(http_status(e), {"error": e.to_data()})
             except (ValueError, KeyError) as e:

@@ -1,0 +1,409 @@
+{
+ "source": "jobs/20261109-163001",
+ "runs": {
+  "schema": "recognized-runs/1",
+  "unit": "mm",
+  "layout": "straight",
+  "runs": [
+   {
+    "id": "back",
+    "length": 4900,
+    "end": "wall",
+    "modules": [
+     {
+      "id": "TD1",
+      "type": "tall",
+      "sourceType": "tall-display",
+      "name": "tall-display",
+      "storey": "tall",
+      "s": 0,
+      "width": 460,
+      "y": 0,
+      "height": 2770,
+      "depth": 550,
+      "confidence": 0.7,
+      "doorStyle": "glass",
+      "note": "open shelf column, loft cabinet above · tall-display"
+     },
+     {
+      "id": "TD2",
+      "type": "tall-fridge",
+      "sourceType": "tall-fridge",
+      "name": "Tủ cao tủ lạnh",
+      "storey": "tall",
+      "s": 460,
+      "width": 1010,
+      "y": 0,
+      "height": 2770,
+      "depth": 550,
+      "confidence": 0.8,
+      "note": "stainless side-by-side fridge, loft above"
+     },
+     {
+      "id": "TD3",
+      "type": "base",
+      "sourceType": "base",
+      "name": "Tủ dưới 1 cánh",
+      "storey": "base",
+      "s": 1470,
+      "width": 470,
+      "y": 0,
+      "height": 830,
+      "depth": 550,
+      "confidence": 0.8,
+      "doors": [
+       470
+      ],
+      "note": "one door left of oven"
+     },
+     {
+      "id": "TD4",
+      "type": "base-oven",
+      "sourceType": "base-oven",
+      "name": "Tủ lò nướng",
+      "storey": "base",
+      "s": 1940,
+      "width": 630,
+      "y": 0,
+      "height": 830,
+      "depth": 550,
+      "confidence": 0.7,
+      "frontSections": [
+       {
+        "type": "niche",
+        "height": 450
+       },
+       {
+        "type": "drawer",
+        "height": 140
+       },
+       {
+        "type": "drawer",
+        "height": 140
+       }
+      ],
+      "appliances": [
+       {
+        "type": "cooktop",
+        "name": "Bếp nấu âm",
+        "note": "induction"
+       },
+       {
+        "type": "oven",
+        "name": "Lò nướng"
+       }
+      ],
+      "note": "built-in oven under the induction hob"
+     },
+     {
+      "id": "TD5",
+      "type": "base-drawers",
+      "sourceType": "base-drawer",
+      "name": "Tủ ngăn kéo 3 ngăn kéo",
+      "storey": "base",
+      "s": 2570,
+      "width": 840,
+      "y": 0,
+      "height": 830,
+      "depth": 550,
+      "confidence": 0.8,
+      "frontSections": [
+       {
+        "type": "drawer",
+        "height": 190
+       },
+       {
+        "type": "drawer",
+        "height": 190
+       },
+       {
+        "type": "drawer",
+        "height": 350
+       }
+      ],
+      "note": "three drawers · base-drawer"
+     },
+     {
+      "id": "TD6",
+      "type": "base-sink",
+      "sourceType": "base-sink",
+      "name": "Tủ chậu rửa 2 cánh",
+      "storey": "base",
+      "s": 3410,
+      "width": 940,
+      "y": 0,
+      "height": 830,
+      "depth": 550,
+      "confidence": 0.8,
+      "doors": [
+       470,
+       470
+      ],
+      "appliances": [
+       {
+        "type": "sink",
+        "name": "Chậu rửa"
+       },
+       {
+        "type": "faucet",
+        "name": "Vòi rửa"
+       }
+      ],
+      "note": "sink on top, two doors"
+     },
+     {
+      "id": "TD7",
+      "type": "base",
+      "sourceType": "base",
+      "name": "Tủ dưới 1 cánh",
+      "storey": "base",
+      "s": 4350,
+      "width": 450,
+      "y": 0,
+      "height": 830,
+      "depth": 550,
+      "confidence": 0.8,
+      "doors": [
+       450
+      ],
+      "note": "right end, one door"
+     },
+     {
+      "id": "TT1",
+      "type": "upper",
+      "sourceType": "upper",
+      "name": "Tủ trên 1 cánh",
+      "storey": "upper",
+      "s": 1470,
+      "width": 500,
+      "y": 1500,
+      "height": 820,
+      "depth": 350,
+      "confidence": 0.8,
+      "doors": [
+       500
+      ],
+      "note": "white door; loft row above"
+     },
+     {
+      "id": "TT2",
+      "type": "upper",
+      "sourceType": "upper",
+      "name": "Tủ trên 1 cánh",
+      "storey": "upper",
+      "s": 1970,
+      "width": 640,
+      "y": 1500,
+      "height": 820,
+      "depth": 350,
+      "confidence": 0.8,
+      "doors": [
+       640
+      ],
+      "appliances": [
+       {
+        "type": "hood",
+        "name": "Máy hút mùi"
+       }
+      ],
+      "note": "one door; slim hood under it"
+     },
+     {
+      "id": "TT3",
+      "type": "upper",
+      "sourceType": "upper",
+      "name": "Tủ trên 1 cánh",
+      "storey": "upper",
+      "s": 2610,
+      "width": 430,
+      "y": 1500,
+      "height": 820,
+      "depth": 350,
+      "confidence": 0.8,
+      "doors": [
+       430
+      ]
+     },
+     {
+      "id": "TT4",
+      "type": "upper",
+      "sourceType": "upper",
+      "name": "Tủ trên 1 cánh",
+      "storey": "upper",
+      "s": 3040,
+      "width": 490,
+      "y": 1500,
+      "height": 820,
+      "depth": 350,
+      "confidence": 0.8,
+      "doors": [
+       490
+      ]
+     },
+     {
+      "id": "TT5",
+      "type": "upper",
+      "sourceType": "upper-dish-rack",
+      "name": "Tủ giá bát nâng hạ",
+      "storey": "upper",
+      "s": 3530,
+      "width": 890,
+      "y": 1500,
+      "height": 820,
+      "depth": 350,
+      "confidence": 0.7,
+      "note": "two open glass dish racks, loft door above · upper-dish-rack"
+     },
+     {
+      "id": "TT6",
+      "type": "upper",
+      "sourceType": "upper",
+      "name": "Tủ trên 1 cánh",
+      "storey": "upper",
+      "s": 4420,
+      "width": 480,
+      "y": 1500,
+      "height": 820,
+      "depth": 350,
+      "confidence": 0.8,
+      "doors": [
+       480
+      ],
+      "note": "right end"
+     },
+     {
+      "id": "TN1",
+      "type": "upper-loft",
+      "sourceType": "upper-top",
+      "name": "upper-top",
+      "storey": "upper-top",
+      "s": 1470,
+      "width": 500,
+      "y": 2320,
+      "height": 450,
+      "depth": 350,
+      "confidence": 0.8,
+      "doors": [
+       500
+      ],
+      "note": "upper-top"
+     },
+     {
+      "id": "TN2",
+      "type": "upper-loft",
+      "sourceType": "upper-top",
+      "name": "upper-top",
+      "storey": "upper-top",
+      "s": 1970,
+      "width": 640,
+      "y": 2320,
+      "height": 450,
+      "depth": 350,
+      "confidence": 0.8,
+      "doors": [
+       640
+      ],
+      "note": "upper-top"
+     },
+     {
+      "id": "TN3",
+      "type": "upper-loft",
+      "sourceType": "upper-top",
+      "name": "upper-top",
+      "storey": "upper-top",
+      "s": 2610,
+      "width": 430,
+      "y": 2320,
+      "height": 450,
+      "depth": 350,
+      "confidence": 0.8,
+      "doors": [
+       430
+      ],
+      "note": "upper-top"
+     },
+     {
+      "id": "TN4",
+      "type": "upper-loft",
+      "sourceType": "upper-top",
+      "name": "upper-top",
+      "storey": "upper-top",
+      "s": 3040,
+      "width": 490,
+      "y": 2320,
+      "height": 450,
+      "depth": 350,
+      "confidence": 0.8,
+      "doors": [
+       490
+      ],
+      "note": "upper-top"
+     },
+     {
+      "id": "TN5",
+      "type": "upper-loft",
+      "sourceType": "upper-top",
+      "name": "upper-top",
+      "storey": "upper-top",
+      "s": 3530,
+      "width": 890,
+      "y": 2320,
+      "height": 450,
+      "depth": 350,
+      "confidence": 0.7,
+      "note": "upper-top"
+     },
+     {
+      "id": "TN6",
+      "type": "upper-loft",
+      "sourceType": "upper-top",
+      "name": "upper-top",
+      "storey": "upper-top",
+      "s": 4420,
+      "width": 480,
+      "y": 2320,
+      "height": 450,
+      "depth": 350,
+      "confidence": 0.8,
+      "doors": [
+       480
+      ],
+      "note": "upper-top"
+     }
+    ]
+   }
+  ],
+  "joints": [],
+  "common": {
+   "plinthHeight": 100,
+   "baseTop": 830,
+   "countertop": 850,
+   "countertopThickness": 20,
+   "baseDepth": 550,
+   "upperBottom": 1500,
+   "upperTierSplit": 2320,
+   "cabinetTop": 2770,
+   "upperDepth": 350,
+   "material": {
+    "base": "white matte",
+    "upper": "white matte",
+    "tall": "white matte",
+    "countertop": "white terrazzo",
+    "wallTile": "beige glass",
+    "carcass": "light oak"
+   }
+  },
+  "issues": [
+   {
+    "code": "type-approximated",
+    "message": "upper-dish-rack -> upper",
+    "module": "TT5"
+   },
+   {
+    "code": "type-approximated",
+    "message": "tall-display -> tall",
+    "module": "TD1"
+   }
+  ]
+ }
+}

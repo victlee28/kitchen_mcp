@@ -23,6 +23,7 @@ from PIL import Image
 from .errors import RecognizerError
 from .pipeline import recognize_auto
 from .to_kitchen import to_kitchen_spec
+from .to_runs import to_runs
 from .vision import InboxClient, VisionClient
 
 JOB_ID = re.compile(r"^[0-9]{8}-[0-9]{6}(-[0-9]+)?$")
@@ -56,6 +57,9 @@ def run_job(job: Path) -> dict[str, Any]:
         conv = to_kitchen_spec(res["spec"])
         (job / "kitchen-spec.json").write_text(json.dumps(conv["spec"], ensure_ascii=False, indent=2), encoding="utf-8")
         status["kitchenIssues"] = conv["issues"]
+        runs = to_runs(res["spec"])
+        (job / "runs.json").write_text(json.dumps(runs, ensure_ascii=False, indent=2), encoding="utf-8")
+        status["runs"] = [{"id": r["id"], "length": r["length"], "modules": len(r["modules"])} for r in runs["runs"]]
         status.update(state="done", modules=len(res["spec"]["modules"]), layout=res["spec"].get("layout"),
                       warnings=res["spec"].get("warnings", []))
     except RecognizerError as e:
@@ -125,7 +129,7 @@ function stText(s){ if(s.state==='done') return `<span class="st done">Xong</spa
   if(s.state==='error') return `<span class="st error">Lỗi</span> <code>${s.error.code}</code><br><small>${s.error.message}</small>`; return s.state; }
 function row(s){ const tr=document.createElement('tr'); tr.id='j'+s.id;
   tr.innerHTML=`<td><code>${s.id}</code></td><td>${(s.note||'').replace(/</g,'&lt;')}</td><td>${stText(s)}</td>
-  <td><button class="sec" onclick="resume('${s.id}',this)">Nhận kết quả</button> ${s.state==='done'?`<a href="/jobs/${s.id}/view" target="_blank"><button>Xem 3D</button></a> <a href="/jobs/${s.id}/result.json?download=1">JSON nhận diện</a> · <a href="/jobs/${s.id}/kitchen-spec.json?download=1">KitchenSpec</a>`+((s.kitchenIssues||[]).length?`<br><small>${s.kitchenIssues.length} điểm chuyển đổi xấp xỉ</small>`:''):''}</td>`; return tr; }
+  <td><button class="sec" onclick="resume('${s.id}',this)">Nhận kết quả</button> ${s.state==='done'?`<a href="/jobs/${s.id}/view" target="_blank"><button>Xem 3D</button></a> <a href="/jobs/${s.id}/result.json?download=1">JSON nhận diện</a> · <a href="/jobs/${s.id}/runs.json?download=1">Theo dãy</a> · <a href="/jobs/${s.id}/kitchen-spec.json?download=1">KitchenSpec</a>`+((s.kitchenIssues||[]).length?`<br><small>${s.kitchenIssues.length} điểm chuyển đổi xấp xỉ</small>`:''):''}</td>`; return tr; }
 async function load(){ const r=await fetch('/jobs'); const js=await r.json(); const t=$('#jobs'); t.querySelectorAll('tr[id]').forEach(x=>x.remove()); js.forEach(s=>t.appendChild(row(s))); }
 async function resume(id,btn){ btn.disabled=true; const r=await fetch('/jobs/'+id+'/resume',{method:'POST'}); const s=await r.json(); btn.disabled=false;
   document.getElementById('j'+id).replaceWith(row(s)); if(s.state==='done') location.href='/jobs/'+id+'/result.json?download=1'; }
@@ -175,13 +179,13 @@ def make_handler(root: Path) -> type[BaseHTTPRequestHandler]:
                 for j in sorted(root.glob("*/status.json"), reverse=True):
                     out.append(json.loads(j.read_text(encoding="utf-8")))
                 self._json(200, out)
-            elif path.startswith("/jobs/") and path.split("/")[-1] in ("result.json", "kitchen-spec.json"):
+            elif path.startswith("/jobs/") and path.split("/")[-1] in ("result.json", "kitchen-spec.json", "runs.json"):
                 job = self._job(path.split("/")[2])
                 fname = path.split("/")[-1]
                 if job is None or not (job / fname).exists():
                     self._json(404, {"error": "chưa có kết quả"})
                 else:
-                    label = "tu-bep" if fname == "result.json" else "kitchen-spec"
+                    label = {"result.json": "tu-bep", "runs.json": "day-tu"}.get(fname, "kitchen-spec")
                     extra = {"content-disposition": f'attachment; filename="{label}-{job.name}.json"'} if "download" in self.path else {}
                     self._send(200, (job / fname).read_bytes(), "application/json; charset=utf-8", extra)
             else:
