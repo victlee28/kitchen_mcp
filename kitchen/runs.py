@@ -205,30 +205,53 @@ def spot(spec: KitchenSpec, tb: Appliance) -> Spot | None:
 
 @dataclass(frozen=True)
 class Joint:
-    """Two explicit runs meeting at a right angle in an inside corner: the END of run ``a`` meets the START of run ``b``. ``at`` is where b's
-    back line starts, measured along a (mm); b's cabinets reach out of a's back line into the room."""
+    """Two explicit runs meeting in an inside corner: the END of run ``a`` meets the START of run ``b``. ``at`` is where b's back line starts,
+    measured along a (mm); ``angle`` is the corner's angle in the room, in degrees (90 for a square corner, more for an open one)."""
     a: str
     b: str
     at: float
+    angle: float = 90.0
+
+    @property
+    def square(self) -> bool:
+        return abs(self.angle - 90.0) <= 0.5
+
+
+JOINT_ANGLES = (30.0, 150.0)        # corners sharper or flatter than this are not joined (a flat one is one run, a sharp one has no room for doors)
 
 
 def corner_joints(spec: KitchenSpec) -> list[Joint]:
-    """The inside corners between explicit runs, found from where the runs stand (nothing is stored): b is turned a quarter turn from a
-    (yaw_b = yaw_a - 90) and b's origin lies on a's back line, at or beyond a's cabinets."""
+    """The inside corners between explicit runs, found from where the runs stand (nothing is stored): b is turned clockwise from a by less
+    than a half turn (yaw_b = yaw_a - 180 + angle) and b's origin lies on a's back line, at or just beyond a's cabinets."""
     out: list[Joint] = []
     reach = {r.id: max((m.endAt for m in spec.module if m.run == r.id), default=None) for r in spec.runs}
     for ra in spec.runs:
         for rb in spec.runs:
             if ra.id == rb.id or reach[ra.id] is None or reach[rb.id] is None:
                 continue
-            turn = (ra.yaw - rb.yaw - 90.0) % 360.0
-            if min(turn, 360.0 - turn) > 0.5:
+            angle = 180.0 - (ra.yaw - rb.yaw) % 360.0
+            if not JOINT_ANGLES[0] <= angle <= JOINT_ANGLES[1]:
                 continue
             s, d = RunFrame(ra.id, ra.x, ra.z, ra.yaw).to_local(rb.x, rb.z)
             deepest = max((m.depth for m in spec.module if m.run == rb.id), default=0.0)
-            if abs(d) <= 1.0 and s >= 0 and -1.0 <= s - float(reach[ra.id] or 0.0) <= deepest + 100.0:
-                out.append(Joint(ra.id, rb.id, s))
+            limit = deepest / math.sin(math.radians(angle)) + 100.0
+            if abs(d) <= 1.0 and s >= 0 and -1.0 <= s - float(reach[ra.id] or 0.0) <= limit:
+                out.append(Joint(ra.id, rb.id, s, 90.0 if abs(angle - 90.0) < 1e-6 else angle))
     return out
+
+
+def front_cross(fa: RunFrame, da: float, fb: RunFrame, db: float) -> tuple[float, float, Point] | None:
+    """Where the line d = ``da`` of run a crosses the line d = ``db`` of run b: ``(s along a, s along b, world point)``; None when parallel."""
+    (ax, az), (bx, bz) = fa.to_world(0.0, da), fb.to_world(0.0, db)
+    (ux, uz), (vx, vz) = fa.to_world(1.0, da), fb.to_world(1.0, db)
+    ux, uz, vx, vz = ux - ax, uz - az, vx - bx, vz - bz
+    det = ux * (-vz) - (-vx) * uz
+    if abs(det) < EPS:
+        return None
+    rx, rz = bx - ax, bz - az
+    s = (rx * (-vz) - (-vx) * rz) / det
+    t = (ux * rz - uz * rx) / det
+    return s, t, (ax + s * ux, az + s * uz)
 
 
 def frames(spec: KitchenSpec) -> dict[str, RunFrame]:

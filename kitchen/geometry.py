@@ -308,7 +308,7 @@ class _Builder:
         worktop of this run carries on to the corner, so the two worktops meet instead of leaving a square hole."""
         c = self.c
         for joint in self._joints:
-            if joint.a != run_id:
+            if joint.a != run_id or not joint.square:        # a corner that is not square is closed by a wedge (``corner_tops``)
                 continue
             other = sorted((m for m in self.spec.module if m.run == joint.b and m.storey == "base"), key=lambda m: m.fromCorner)
             last = stretches[-1]
@@ -317,6 +317,33 @@ class _Builder:
             reach = max(m.depth for m in other) + c.countertopOverhang          # how far the other run's worktop covers, measured back from the corner
             if joint.at - last[1] <= reach + 1 and other[0].fromCorner <= last[2] + c.countertopOverhang + 1:
                 last[1] = joint.at
+
+    def corner_tops(self) -> list:
+        """The wedge of worktop that closes a corner which is NOT square between two explicit runs: from the end of a's worktop, round the point
+        where the two front edges cross, to the start of b's worktop. A box cannot be that shape, so it is a mesh (as the moldings are)."""
+        from .moldings import MeshPart
+        c = self.c
+        out: list = []
+        for joint in self._joints:
+            if joint.square:
+                continue
+            a = sorted((m for m in self.spec.module if m.run == joint.a and m.storey == "base"), key=lambda m: m.endAt)
+            b = sorted((m for m in self.spec.module if m.run == joint.b and m.storey == "base"), key=lambda m: m.fromCorner)
+            if not a or not b:
+                continue
+            fa, fb = self._run[a[-1].id], self._run[b[0].id]
+            end, start = a[-1].endAt, b[0].fromCorner
+            da, db = a[-1].depth + c.countertopOverhang, b[0].depth + c.countertopOverhang
+            cross = runmod.front_cross(fa, da, fb, db)
+            if cross is None or end > cross[0] + 1 or start < cross[1] - 1:       # the two worktops already run into each other
+                continue
+            poly = [fa.to_world(end, 0.0), fa.to_world(end, da), cross[2], fb.to_world(start, db), fb.to_world(start, 0.0), fb.to_world(0.0, 0.0)]
+            poly = [p for k, p in enumerate(poly) if all(abs(p[0] - q[0]) + abs(p[1] - q[1]) > 0.5 for q in poly[:k])]
+            if len(poly) < 3:
+                continue
+            verts, faces = structure_mesh.prism(poly, c.baseTop, c.countertop)
+            out.append(MeshPart(f"room-countertop-corner-{len(out) + 1}", f"countertop-{joint.a}-{joint.b}", "countertop", verts, faces))
+        return out
 
     def appliance(self):
         c = self.c
@@ -432,7 +459,7 @@ class _Builder:
         self.room()
         from .moldings import meshes as molding_meshes
         meshes = molding_meshes(self.spec) if self.spec.moldings else []
-        return Scene(self.parts, self.lsau, self.lphai, meshes + self.structures())
+        return Scene(self.parts, self.lsau, self.lphai, meshes + self.corner_tops() + self.structures())
 
 
 def compile_spec(spec: KitchenSpec) -> Scene:

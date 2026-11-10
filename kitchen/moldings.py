@@ -135,7 +135,7 @@ def _run_items(spec: KitchenSpec, mol: Molding, run_id: str, y: float) -> list[t
 def _angled_runs(spec: KitchenSpec, mol: Molding, prof: MoldingProfile, y: float) -> list[Run]:
     """Moldings along the explicit runs (any angle). Points are walked against s (the run frame is mirror-wise like the right wall).
 
-    Each run is its own chain, except where two runs meet at a right angle in an inside corner (``runs.corner_joints``: the end of a meets
+    Each run is its own chain, except where two runs meet in an inside corner, square or not (``runs.corner_joints``: the end of a meets
     the start of b) and both have cabinets up to the corner: there the two chains are ONE, turning at the point where the two front lines
     cross, so the molding is mitred round the corner instead of two pieces ending in each other."""
     out: list[Run] = []
@@ -164,9 +164,16 @@ def _angled_runs(spec: KitchenSpec, mol: Molding, prof: MoldingProfile, y: float
             continue
         ka, kb = (joint.a, len(segs_of[joint.a]) - 1), (joint.b, 0)
         ca, cb = chains[ka], chains[kb]
-        if ca["s1"] >= joint.at - cb["d"] - mol.joinGap - 1 and cb["s0"] <= ca["d"] + mol.joinGap + 1 and ka not in joined and kb not in joined.values():
+        cross = runmod.front_cross(ca["fr"], ca["d"], cb["fr"], cb["d"])         # where the two front lines cross (any corner angle)
+        if cross is None:
+            continue
+        # a square corner is turned only by cabinets that reach it; in an open or sharp one the cabinets stop short of the crossing by a wedge
+        # (which the worktop closes too), so the molding may bridge up to that wedge
+        wedge = 2.0 * math.tan(math.radians(abs(joint.angle - 90.0) / 2.0))
+        slack_a, slack_b = mol.joinGap + 1 + ca["d"] * wedge, mol.joinGap + 1 + cb["d"] * wedge
+        if ca["s1"] >= cross[0] - slack_a and cb["s0"] <= cross[1] + slack_b and ka not in joined and kb not in joined.values():
             joined[ka] = kb
-            ca["turn"] = ca["fr"].to_world(joint.at - cb["d"], ca["d"])    # where the two front lines cross
+            ca["turn"] = cross[2]
     tails = set(joined.values())
     for key in order:
         if key in tails:

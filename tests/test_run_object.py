@@ -122,6 +122,46 @@ class TestCorner(unittest.TestCase):
         self.assertEqual(sorted(len(c.wall) for c in moldings.compute_runs(apart)), [1, 1, 1, 1], "apart again: each run its own pieces")
 
 
+class TestOpenCorner(unittest.TestCase):
+    """Two runs meeting at 135 degrees (a bay): the back run, and a second run turned 45 degrees starting on its back line."""
+
+    def setUp(self):
+        from kitchen.spec import KitchenSpec
+        mods = []
+        for run, at in (("R1", 0), ("R1", 900), ("R2", 300), ("R2", 1200)):
+            n = len(mods) + 1
+            mods.append({"id": f"TD{n}", "type": "base", "wall": "island", "run": run, "fromCorner": at, "width": 900, "y": 0, "height": 840, "depth": 600})
+            mods.append({"id": f"TT{n}", "type": "upper", "wall": "island", "run": run, "fromCorner": at, "width": 900, "y": 1500, "height": 700, "depth": 350})
+        self.spec = KitchenSpec.model_validate({"runs": [{"id": "R1", "x": -4000, "z": 0, "yaw": 0}, {"id": "R2", "x": -1900, "z": 0, "yaw": -45}], "module": mods,
+                                                "floorplan": None})
+
+    def test_the_corner_is_found_with_its_angle(self):
+        (joint,) = runs.corner_joints(self.spec)
+        self.assertEqual((joint.a, joint.b, joint.at, round(joint.angle, 3), joint.square), ("R1", "R2", 2100.0, 135.0, False))
+        flat = edit.apply_op(self.spec, {"op": "move-run", "id": "R2", "changes": {"yaw": -5}})
+        self.assertEqual(runs.corner_joints(flat), [], "nearly straight on: not a corner")
+
+    def test_a_wedge_of_worktop_closes_it(self):
+        scene = geometry.compile_spec(self.spec)
+        (wedge,) = [m for m in scene.meshes if m.type == "countertop"]
+        xs, zs, ys = [v[0] for v in wedge.vertices], [v[2] for v in wedge.vertices], {v[1] for v in wedge.vertices}
+        self.assertEqual(ys, {self.spec.common.baseTop, self.spec.common.countertop})
+        self.assertEqual((round(min(xs)), round(min(zs))), (-2200, 0), "from the end of the first worktop, at the wall")
+        self.assertGreater(max(zs), 600, "round the point where the two front edges cross, to the second worktop")
+        self.assertFalse([i for i in rules.validate(self.spec)["issues"] if i["rule"] == "GEO-COLLISION"])
+        square = edit.apply_op(self.spec, {"op": "move-run", "id": "R2", "changes": {"yaw": -90}})
+        self.assertFalse([m for m in geometry.compile_spec(square).meshes if m.type == "countertop"], "a square corner needs no wedge")
+
+    def test_moldings_turn_it_as_one_piece(self):
+        spec = edit.apply_op(self.spec, {"op": "set-moldings", "moldings": [m.model_dump() for m in moldings.default_moldings(True, True)], "style": "Classic"})
+        chains = moldings.compute_runs(spec)
+        self.assertEqual(sorted((c.molding.variant, c.wall) for c in chains), [("base", ["R2", "R1"]), ("crown", ["R2", "R1"])])
+        crown = next(c for c in chains if c.molding.variant == "crown")
+        cross = runs.front_cross(runs.frames(spec)["R1"], 350.0, runs.frames(spec)["R2"], 350.0)
+        self.assertIn(tuple(round(v, 3) for v in cross[2]), [tuple(round(v, 3) for v in p) for p in crown.points])
+        self.assertEqual(len(moldings.meshes(spec)), 2)
+
+
 class TestDrawnLine(unittest.TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp(prefix="line-"))
