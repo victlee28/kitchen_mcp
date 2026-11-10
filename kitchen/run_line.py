@@ -191,3 +191,50 @@ def plan_runs(spec: KitchenSpec, line: Line, runs: list[dict[str, Any]], joints:
     if skipped:
         summary.append(f"Runs not joined to the main run were left out: {', '.join(skipped)}")
     return {"operation": combine_ops(ops), "run": made[0]["run"], "runs": made, "length": float(placed[0][0]["length"]), "summary": summary}
+
+
+ANCHOR_KINDS = ("furniture", "column", "wall", "shaft")     # floorplan elements a run can stand against (not openings, stairs, areas)
+ANCHOR_TOLERANCE = 1.0                                      # mm: how far a run's back line may lie from the element's edge
+
+
+def element_against(frame: dict[str, float], s0: float, s1: float, structures: list[dict[str, Any]]) -> tuple[str | None, list[str]]:
+    """The floorplan element a run stands against: its back line (``s0..s1`` along the run, d = 0) lies on an edge of the element (within
+    ``ANCHOR_TOLERANCE``), overlapping it, and its doors look out of the element. ``frame``: the run (``x, z, yaw``, kitchen frame); each
+    structure: ``{"sourceElement", "kind", "outline": [(x, z), ...]}`` in the kitchen frame. Returns ``(element id, [])``, or ``(None,
+    candidates)`` when no element or more than one equally good one is found (then nothing should be guessed)."""
+    from . import runs as runmod
+    fr = runmod.RunFrame("", frame["x"], frame["z"], frame["yaw"])
+    a, b = fr.to_world(s0, 0.0), fr.to_world(s1, 0.0)
+    nx, nz = fr.normal()
+    best: dict[str, float] = {}
+    for st in structures:
+        if st.get("kind") not in ANCHOR_KINDS or len(st["outline"]) < 3:
+            continue
+        poly = [(float(p[0]), float(p[1])) for p in st["outline"]]
+        for i, p in enumerate(poly):
+            q = poly[(i + 1) % len(poly)]
+            ex, ez = q[0] - p[0], q[1] - p[1]
+            length = math.hypot(ex, ez)
+            if length < MIN_LENGTH:
+                continue
+            ux, uz = ex / length, ez / length
+            off = [abs((pt[0] - p[0]) * uz - (pt[1] - p[1]) * ux) for pt in (a, b)]          # distance of both ends from the edge's line
+            if max(off) > ANCHOR_TOLERANCE:
+                continue
+            t = sorted(((pt[0] - p[0]) * ux + (pt[1] - p[1]) * uz) for pt in (a, b))
+            overlap = min(t[1], length) - max(t[0], 0.0)
+            if overlap <= ANCHOR_TOLERANCE:
+                continue
+            try:
+                ox, oz = outward(poly, p, q)
+            except InvalidInput:
+                continue
+            if ox * nx + oz * nz < 0.99:
+                continue
+            key = str(st["sourceElement"])
+            best[key] = max(best.get(key, 0.0), overlap)
+    if not best:
+        return None, []
+    top = max(best.values())
+    winners = sorted(k for k, v in best.items() if v >= top - ANCHOR_TOLERANCE)
+    return (winners[0], []) if len(winners) == 1 else (None, winners)

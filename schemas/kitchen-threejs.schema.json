@@ -1198,6 +1198,11 @@
             "runId": {
               "$ref": "#/$defs/id",
               "description": "[Bổ sung v1.1 (VicKitchenCabinet)] v1.5: mã dãy (runs[].id) chứa module"
+            },
+            "cabinetSystemId": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_.-]+$",
+              "description": "[Bổ sung v1.1 (VicKitchenCabinet)] Hệ tủ chứa module: id phần tử mặt bằng (vd furniture_003) mà dãy được tạo dựa vào; auto-<mã dãy> cho các dãy chạm nhau không gắn phần tử; design cho tủ không ở dãy nào"
             }
           }
         },

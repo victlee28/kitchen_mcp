@@ -440,9 +440,11 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
 
     # module
     modules = []
+    system_of = runs.systems(spec)
     for m in spec.module:
         frame, size = _module_frame(m, lsau, runs.frame_of(spec, m))
         modules.append(_module_entry(spec, m, by_mod.get(m.id, []), frame, size, mats, has_led))
+        modules[-1]["placement"]["cabinetSystemId"] = system_of[m.id]     # the cabinet system (runs.systems): a floorplan element id, auto-…, or design
 
     run_docs = _run_docs(spec, modules)
 

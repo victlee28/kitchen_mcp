@@ -107,6 +107,27 @@ class TestRecorded(unittest.TestCase):
         self.assertTrue(runs.systems(KitchenSpec.model_validate(old)))
 
 
+class TestElementAgainst(unittest.TestCase):
+    """Old runs made against an element get its id back: the run's back line on an edge, doors looking out of the element."""
+    BOX = {"sourceElement": "furniture_003", "kind": "furniture", "outline": [(-3000.0, 1000.0), (-1000.0, 1000.0), (-1000.0, 1600.0), (-3000.0, 1600.0)]}
+
+    def test_a_run_on_an_edge_facing_out(self):
+        from kitchen import run_line
+        front = {"x": -1200.0, "z": 1600.0, "yaw": 180.0}       # back line on the z = 1600 edge, doors looking -z: into the box
+        self.assertEqual(run_line.element_against(front, 0, 1500, [self.BOX]), (None, []), "doors looking into the element: not against it")
+        out = {"x": -2800.0, "z": 1600.0, "yaw": 0.0}            # doors look +z, out of the box
+        self.assertEqual(run_line.element_against(out, 0, 1500, [self.BOX]), ("furniture_003", []))
+        off = {"x": -2800.0, "z": 1603.0, "yaw": 0.0}
+        self.assertEqual(run_line.element_against(off, 0, 1500, [self.BOX]), (None, []), "3 mm away: not on the edge")
+        door = {**self.BOX, "kind": "opening", "sourceElement": "door_1"}
+        self.assertEqual(run_line.element_against(out, 0, 1500, [door]), (None, []), "openings are not anchors")
+
+    def test_two_elements_sharing_the_edge_are_not_guessed(self):
+        from kitchen import run_line
+        twin = {**self.BOX, "sourceElement": "furniture_004"}
+        self.assertEqual(run_line.element_against({"x": -2800.0, "z": 1600.0, "yaw": 0.0}, 0, 1500, [self.BOX, twin]), (None, ["furniture_003", "furniture_004"]))
+
+
 class TestSelectionGroups(unittest.TestCase):
     """The layers catalogue carries each part's system; Shift groups exist per system when there are several."""
 
@@ -166,6 +187,14 @@ class TestSelectionGroups(unittest.TestCase):
         layer, _ = layers.resolve(cat, "parts:" + ",".join(doors))
         op, _ = layers.design_op(s, layer, "Sồi", scene)
         self.assertEqual((op["op"], op["id"]), ("update", "C1"))
+
+    def test_the_exported_scene_names_the_system_of_each_module(self):
+        import jsonschema
+        from kitchen import threejs_export
+        doc = threejs_export.export(self.two())
+        got = {m["sourceRef"]: m["placement"]["cabinetSystemId"] for m in doc["modules"]}
+        self.assertEqual((got["A1"], got["B1"], got["C1"]), ("furniture_003", "furniture_003", "furniture_017"))
+        jsonschema.Draft202012Validator(json.loads((ROOT / "schemas" / "kitchen-threejs.schema.json").read_text(encoding="utf-8"))).validate(doc)
 
     def test_the_page_gets_system_and_tier_of_each_module(self):
         import shutil

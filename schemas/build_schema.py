@@ -179,6 +179,9 @@ def main():
                                "frontAxis": {"$ref": "#/$defs/vec3", "description": "Hướng mặt trước của các cánh trong toạ độ thế giới"}}}
     P["runs"] = {"type": "array", "items": {"$ref": "#/$defs/run"}, "description": f"[{ADD5}] Các dãy tủ có hướng bất kỳ; trống khi mọi tủ bám tường"}
     md["placement"]["properties"]["runId"] = opt({"$ref": "#/$defs/id"}, "v1.5: mã dãy (runs[].id) chứa module")
+    md["placement"]["properties"]["cabinetSystemId"] = opt({"type": "string", "pattern": "^[A-Za-z0-9_.-]+$"},
+                                                            "Hệ tủ chứa module: id phần tử mặt bằng (vd furniture_003) mà dãy được tạo dựa vào; "
+                                                            "auto-<mã dãy> cho các dãy chạm nhau không gắn phần tử; design cho tủ không ở dãy nào")
     md["localTransform"] = {"$ref": "#/$defs/transform", "description": f"[{ADD5}] Vị trí module trong khung dãy (x dọc dãy, z từ hậu ra trước); có khi module thuộc runs[]. `transform` vẫn là toạ độ thế giới"}
     D["partRef"]["properties"]["run"] = {"type": "string", "description": "Mã dãy (KitchenSpec.runs) của dải mặt bàn; có với countertop trong dãy có hướng bất kỳ"}
 
