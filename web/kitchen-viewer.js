@@ -5,7 +5,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { buildKitchen } from './scene-loader.js';
-import { isClick, pickTarget, sceneToMm } from './menu-logic.js';
+import { floorPoint, isClick, pickTarget, sceneToMm } from './menu-logic.js';
 
 /**
  * opts: { container, moduleIds() -> string[] | null (null: nothing to pick yet), extraPickables() -> Object3D[],
@@ -75,7 +75,9 @@ export function createViewer(opts) {
     if (!ids) return null;
     const target = pickTarget(hitsAt(ev), ids);
     if (target?.point) target.point = sceneToMm(target.point, doc?.units);
-    return target;
+    if (target) return target;
+    const onFloor = floorPoint(raycaster.ray.origin, raycaster.ray.direction);      // nothing under the pointer: the floor, where a run can be drawn
+    return onFloor ? { kind: 'floor', id: 'floor', point: sceneToMm(onFloor, doc?.units) } : null;
   }
 
   // context menu: opens on the release of a right click (or Ctrl+click) that did not move. Windows fires `contextmenu` on release but

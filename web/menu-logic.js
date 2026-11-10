@@ -6,6 +6,9 @@ export const MATERIAL_PRESETS = ['Trắng mờ', 'Laminate vân gỗ sồi sáng
 export const MIN_ADD_WIDTH = 200, MAX_ADD_WIDTH = 1200;
 export const HANDLE_VARIANTS = [['bar', 'Tay thanh'], ['knob', 'Núm'], ['concealed', 'Tay âm'], ['none', 'Không tay (nhấn mở)']];
 export const MAX_OVERHANG = 100;
+export const MAX_RUN_SHIFT = 10000, MAX_STRETCH = 1500;   // mm a run may be moved / an end dragged in one go
+export const RUN_ACTIONS = ['runMove', 'runStretch', 'runRemove'];
+export const RUN_TURNS = [[0, 'Không xoay'], [90, 'Xoay 90° ngược chiều kim đồng hồ'], [-90, 'Xoay 90° theo chiều kim đồng hồ'], [180, 'Quay ngược lại (180°)'], [45, 'Xoay 45° ngược chiều'], [-45, 'Xoay 45° theo chiều']];
 
 /** Was the press-and-release a click (pointer barely moved, short)? down/up: {x, y, t}. */
 export function isClick(down, up) {
@@ -26,21 +29,30 @@ export function pickTarget(hits, moduleIds) {
   return null;
 }
 
+/** What can be done to the whole run a cabinet stands in (a click on a cabinet usually lands on its door, so doors offer these too). */
+function runActions(m) {
+  return m?.run ? [{ id: 'runMove', label: `Dời / xoay dãy ${m.run}` }, { id: 'runStretch', label: `Kéo dài / thu ngắn dãy ${m.run}` }, { id: 'runRemove', label: `Xóa cả dãy ${m.run}` }] : [];
+}
+
 /** Actions the menu offers for a target. */
-export function actionsFor(target, spec) {
+export function actionsFor(target, spec, drawing = null) {
   if (!target) return [];
+  if (target.kind === 'floor') {     // drawing a run: first point, then the second; `drawing` is the first point while one is pending
+    return drawing ? [{ id: 'line-end', label: 'Vẽ dãy tủ: kết thúc ở điểm này' }, { id: 'line-start', label: 'Bắt đầu lại từ điểm này' }, { id: 'line-cancel', label: 'Bỏ dãy đang vẽ' }]
+      : [{ id: 'line-start', label: 'Vẽ dãy tủ: bắt đầu từ điểm này' }];
+  }
   if (target.kind === 'part') {
     if (target.part === 'countertop') return [{ id: 'countertopMaterial', label: 'Đổi vật liệu mặt bàn' }, { id: 'countertopOverhang', label: 'Đổi độ nhô mặt bàn' }];
     if (target.part === 'handle') return [{ id: 'handleVariant', label: 'Đổi kiểu tay nắm' }, { id: 'handleMaterial', label: 'Đổi vật liệu tay nắm' }];
     return [...(target.part === 'door' ? [{ id: 'doorStyle', label: 'Đổi kiểu cánh' }] : []), { id: 'material', label: 'Đổi vật liệu mặt trước' },
-      { id: 'handleVariant', label: 'Đổi kiểu tay nắm' }, { id: 'image', label: 'Sửa ảnh của module này' }];
+      { id: 'handleVariant', label: 'Đổi kiểu tay nắm' }, { id: 'image', label: 'Sửa ảnh của module này' }, ...runActions(spec?.module?.find((x) => x.id === target.id))];
   }
   if (target.kind === 'structure') return [...(target.point ? [{ id: 'run-i', label: 'Tạo dãy tủ chữ I dọc cạnh này' }] : []), { id: 'struct-hide', label: 'Ẩn thành phần này' }, { id: 'struct-isolate', label: 'Chỉ giữ thành phần này' }, { id: 'struct-all', label: 'Hiện tất cả' }];
   const m = spec?.module?.find((x) => x.id === target.id);
   const out = [{ id: 'material', label: 'Đổi vật liệu mặt trước' }, { id: 'doorStyle', label: 'Đổi kiểu cánh' }];
-  if (m && m.wall !== 'corner') out.push({ id: 'add', label: 'Thêm tủ bên cạnh' });
+  if (m && m.wall !== 'corner' && m.type !== 'corner-shelf') out.push({ id: 'add', label: 'Thêm tủ bên cạnh' });
   out.push({ id: 'remove', label: 'Xóa module' }, { id: 'image', label: 'Sửa ảnh của module này' });
-  return out;
+  return [...out, ...runActions(m)];
 }
 
 /** Operation for a form. Throws Error with a message the user can read. */
@@ -57,7 +69,7 @@ export function buildOp(action, id, form, spec) {
     if (mm === spec?.common?.countertopOverhang) throw new Error('Mặt bàn đã nhô đúng mức này');
     return { op: 'common', changes: { countertopOverhang: mm } };
   }
-  if (!['material', 'doorStyle', 'remove', 'add', 'handleVariant', 'handleMaterial'].includes(action)) throw new Error(`Hành động không hỗ trợ: ${action}`);   // checked first: a wrong action must not look like a missing module
+  if (!['material', 'doorStyle', 'remove', 'add', 'handleVariant', 'handleMaterial', ...RUN_ACTIONS].includes(action)) throw new Error(`Hành động không hỗ trợ: ${action}`);   // checked first: a wrong action must not look like a missing module
   const m = spec?.module?.find((x) => x.id === id);
   if (!m) throw new Error(`Không còn module ${id} trong thiết kế`);
   if (action === 'material') {
@@ -79,13 +91,35 @@ export function buildOp(action, id, form, spec) {
     if (!material) throw new Error('Nhập vật liệu tay nắm');
     return { op: 'update', id, changes: { handle: { ...(m.handle || {}), material } }, closeGap: false };
   }
+  if (RUN_ACTIONS.includes(action)) {
+    const run = spec?.runs?.find((r) => r.id === m.run);
+    if (!run) throw new Error(`Module ${id} không đứng trong một dãy`);
+    if (action === 'runRemove') return { op: 'remove-run', id: run.id };
+    if (action === 'runStretch') {
+      const delta = Number(form.delta);
+      if (!['start', 'end'].includes(form.end)) throw new Error('Chọn đầu dãy cần kéo');
+      if (!Number.isFinite(delta) || delta === 0 || Math.abs(delta) > MAX_STRETCH) throw new Error(`Nhập số mm khác 0, tối đa ±${MAX_STRETCH} (dương: dài ra, âm: ngắn lại)`);
+      return { op: 'stretch-run', id: run.id, end: form.end, delta };
+    }
+    const along = Number(form.along || 0), out = Number(form.out || 0), turn = Number(form.turn || 0);   // along the run (to the right, seen from the front) / towards the room
+    if (![along, out, turn].every(Number.isFinite) || Math.abs(along) > MAX_RUN_SHIFT || Math.abs(out) > MAX_RUN_SHIFT) throw new Error(`Khoảng dời tối đa ±${MAX_RUN_SHIFT} mm`);
+    if (!RUN_TURNS.some(([v]) => v === turn)) throw new Error('Chọn góc xoay');
+    if (!along && !out && !turn) throw new Error('Nhập khoảng dời hoặc chọn góc xoay');
+    const t = (run.yaw * Math.PI) / 180; const cos = Math.cos(t), sin = Math.sin(t);
+    const round = (v) => Math.round(v * 10) / 10;
+    const changes = {};
+    if (along || out) { changes.x = round(run.x + along * cos + out * sin); changes.z = round(run.z - along * sin + out * cos); }
+    if (turn) changes.yaw = ((run.yaw + turn + 180) % 360 + 360) % 360 - 180;
+    return { op: 'move-run', id: run.id, changes };
+  }
   if (action === 'remove') return { op: 'remove', id, closeGap: !!form.closeGap };
   if (action === 'add') {
     const width = Number(form.width);
     if (!Number.isFinite(width) || width < MIN_ADD_WIDTH || width > MAX_ADD_WIDTH) throw new Error(`Chiều rộng ${MIN_ADD_WIDTH}–${MAX_ADD_WIDTH} mm`);
     if (m.wall === 'corner') throw new Error('Không thêm cạnh module góc ở đây');
     if (form.side === 'after') return { op: 'add', module: { width }, afterModule: id, closeGap: !!form.closeGap };
-    return { op: 'add', module: { width, type: m.type, wall: m.wall, y: m.y, height: m.height, depth: m.depth, fromCorner: m.fromCorner }, closeGap: !!form.closeGap };
+    const where = m.run ? { run: m.run } : m.wall === 'island' ? { offset: m.offset, facing: m.facing } : {};      // the same run / free row as the cabinet it stands beside
+    return { op: 'add', module: { width, type: m.type, wall: m.wall, ...where, y: m.y, height: m.height, depth: m.depth, fromCorner: m.fromCorner }, closeGap: !!form.closeGap };
   }
   throw new Error(`Hành động không hỗ trợ: ${action}`);
 }
@@ -123,6 +157,23 @@ export function menuPosition(x, y, w, h, vw, vh, margin = 8) {
  * What picking `target` (a click or a right click) does to the selection. null = empty space.
  * -> {clearStructure?: true, selectStructure?: id, selectModule?: id}. A countertop is not a module: it only clears the structure selection.
  */
+/** The run-line template for a drawn run: from `a` to `b` (mm), doors looking to the LEFT or RIGHT of the drawing direction, seen from above. */
+export function lineTemplate(a, b, side, prompt = '') {
+  const ex = b.x - a.x, ez = b.z - a.z; const len = Math.hypot(ex, ez);
+  if (!(len >= 300)) throw new Error('Hai điểm phải cách nhau ít nhất 300 mm');
+  if (!['left', 'right'].includes(side)) throw new Error('Chọn phía cánh tủ quay ra');
+  const k = side === 'left' ? 1 : -1;        // left of a -> b seen from above (x to the right, z towards the viewer) is (ez, -ex)
+  const front = { x: (a.x + b.x) / 2 + (k * ez / len) * 500, z: (a.z + b.z) / 2 - (k * ex / len) * 500 };
+  return { kind: 'run-line', a: { x: a.x, z: a.z }, b: { x: b.x, z: b.z }, front, ...(prompt.trim() ? { prompt: prompt.trim() } : {}) };
+}
+
+/** Where a ray meets the floor (y = 0), or null when it points away from it. Scene units in, scene units out. */
+export function floorPoint(origin, direction) {
+  if (!(direction.y < -1e-9) || !(origin.y > 0)) return null;
+  const t = -origin.y / direction.y;
+  return { x: origin.x + t * direction.x, z: origin.z + t * direction.z };
+}
+
 export function selectionEffect(target) {
   if (!target) return { clearStructure: true };
   if (target.kind === 'structure') return { selectStructure: target.id };

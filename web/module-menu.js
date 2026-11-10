@@ -3,7 +3,7 @@
 import { el } from './dom.js';
 import { request } from './api-client.js';
 import { interpretBody, describeInterpret, templateIntent, mentionsReference, checkUpload, recognizeBody, recognizeJobBody, anchorFor, describeRecognition, recognitionLines } from './assist-logic.js';
-import { actionsFor, buildOp, describeProposal, layerFor, menuPosition, DOOR_STYLES, HANDLE_VARIANTS, MATERIAL_PRESETS } from './menu-logic.js';
+import { actionsFor, buildOp, describeProposal, layerFor, lineTemplate, menuPosition, DOOR_STYLES, HANDLE_VARIANTS, MATERIAL_PRESETS, RUN_ACTIONS, RUN_TURNS } from './menu-logic.js';
 
 const call = (path, body) => request(path, 'POST', body);
 const JOB_KEY = 'recogJob';
@@ -19,6 +19,7 @@ export function createModuleMenu(ctx) {
   const saved = readJob();
   let pendingJob = saved?.job ?? null; let pendingPlace = { anchor: saved?.anchor ?? null, mode: saved?.mode ?? 'add' }; let recMode = 'add';   // a recognition waiting for Claude (inbox mode): survives closing the menu and reloading the page
   let target = null; let step = null; let busy = false; let previewOfJob = null; let attached = null;   // attached: the picture chosen with 📎, sent together with the sentence when "Xem trước" is pressed   // picking: the native file dialog is open (the window blurs, the menu must stay)
+  let lineFrom = null;      // first point of a run being drawn on the floor (mm); survives closing the menu, the second right click ends the line
   box.setAttribute('role', 'dialog'); box.hidden = true;
 
   const close = () => { box.hidden = true; box.replaceChildren(); target = null; step = null; busy = false; attached = null; };
@@ -35,10 +36,11 @@ export function createModuleMenu(ctx) {
     const { spec } = ctx.getState();
     const partName = { door: 'Cánh', drawer: 'Mặt ngăn kéo', handle: 'Tay nắm', countertop: 'Mặt bàn' }[target.part];
     const title = target.kind === 'part' ? (target.part === 'countertop' ? 'Mặt bàn' : `${partName} · ${target.id}`)
-      : target.kind === 'module' ? `Module ${target.id}` : `Thành phần mặt bằng ${target.id.replace(/^STRUCT-/, '')}`;
+      : target.kind === 'module' ? `Module ${target.id}` : target.kind === 'floor' ? (lineFrom ? 'Sàn · đang vẽ dãy tủ' : 'Sàn')
+        : `Thành phần mặt bằng ${target.id.replace(/^STRUCT-/, '')}`;
     box.onkeydown = null;
-    const cmd = commandBox();
-    box.replaceChildren(header(title), ...(cmd ? [cmd] : []), el('ul', { class: 'ctx-list' }, ...actionsFor(target, spec).map((a) =>
+    const cmd = target.kind === 'floor' ? null : commandBox();
+    box.replaceChildren(header(title), ...(cmd ? [cmd] : []), el('ul', { class: 'ctx-list' }, ...actionsFor(target, spec, lineFrom).map((a) =>
       el('li', {}, el('button', { type: 'button', onclick: () => choose(a.id) }, a.label)))));
   }
 
@@ -158,11 +160,43 @@ export function createModuleMenu(ctx) {
 
   function choose(action) {
     if (action === 'run-i') return runI();
+    if (action === 'line-start') { lineFrom = { ...target.point }; close(); return ctx.setStatus('Đã đặt điểm đầu của dãy tủ. Chuột phải vào sàn ở điểm cuối để vẽ tiếp.', 'ok'); }
+    if (action === 'line-cancel') { lineFrom = null; close(); return ctx.setStatus('Đã bỏ dãy đang vẽ.'); }
+    if (action === 'line-end') return lineForm();
     if (action === 'struct-hide') { ctx.structure.hide(); return close(); }
     if (action === 'struct-isolate') { ctx.structure.isolate(); return close(); }
     if (action === 'struct-all') { ctx.structure.showAll(); return close(); }
     if (action === 'image') { const id = target.id; close(); return ctx.imageEdit({ layer: layerFor('image', id), module: id }); }
     form(action);
+  }
+
+  // The second point of a drawn run: which side the doors look at, and optionally what stands in it; the server makes the run, the preview shows it.
+  function lineForm(message = '', keep = {}) {
+    const from = lineFrom; const to = { ...target.point };
+    const len = Math.round(Math.hypot(to.x - from.x, to.z - from.z));
+    const side = el('select', {}, el('option', { value: 'left' }, 'Bên trái hướng vẽ'), el('option', { value: 'right' }, 'Bên phải hướng vẽ'));
+    side.value = keep.side || 'left';
+    const text = el('input', { type: 'text', value: keep.text || '', placeholder: 'để trống: toàn tủ dưới · vd "có chậu rửa và bếp"', autocomplete: 'off' });
+    const out = el('div', { class: 'ctx-msg' }); if (message) out.append(err(message));
+    const go = el('button', { type: 'button', class: 'primary', onclick: () => drawRun(from, to, side.value, text.value) }, 'Xem trước');
+    box.replaceChildren(header(`Dãy tủ mới · dài ${len} mm`), el('label', {}, 'Cánh tủ quay ra', side), el('label', {}, 'Trong dãy có gì (không bắt buộc)', text), out,
+      el('div', { class: 'row' }, go, el('button', { type: 'button', class: 'ghost', onclick: list }, 'Quay lại')));
+    box.onkeydown = (e) => { if (e.key === 'Enter' && e.target.tagName !== 'BUTTON') { e.preventDefault(); go.click(); } };
+    go.focus();
+  }
+
+  async function drawRun(from, to, side, text) {
+    if (busy) return; const { id, rev } = ctx.getState();
+    let template;
+    try { template = lineTemplate(from, to, side, text); } catch (e) { return lineForm(e.message, { side, text }); }
+    busy = true; ctx.setStatus('Tính dãy tủ trên đường vừa vẽ…');
+    try {
+      const { status, data } = await call(`/api/designs/${id}/template`, { template, baseRev: rev });
+      busy = false;
+      if (status === 409) return stale('run-line');
+      if (!data || data.error || !data.proposal) return lineForm(data?.error || `Lỗi ${status}`, { side, text });
+      showPreview('run-line', data.proposal, null, data.summary || []);
+    } catch (e) { busy = false; lineForm(e.message, { side, text }); }
   }
 
   function form(action, message) {
@@ -193,8 +227,23 @@ export function createModuleMenu(ctx) {
       const owned = spec.appliances.filter((a) => a.module === target.id).map((a) => a.name || a.id);
       fields.push(el('label', { class: 'inline' }, f.closeGap, ' Dồn các tủ còn lại lấp chỗ trống'));
       if (owned.length) fields.push(el('p', { class: 'ctx-msg warn' }, `Thiết bị gắn theo module này cũng bị xóa: ${owned.join(', ')}`));
+    } else if (action === 'runMove') {
+      f.along = el('input', { type: 'number', step: 50, value: 0 });
+      f.out = el('input', { type: 'number', step: 50, value: 0 });
+      f.turn = el('select', {}, ...RUN_TURNS.map(([v, t]) => el('option', { value: v }, t)));
+      fields.push(el('label', {}, 'Dọc theo dãy, sang phải khi nhìn từ trước (mm; âm: sang trái)', f.along), el('label', {}, 'Ra phía trước cánh tủ (mm; âm: lùi về sau)', f.out),
+        el('label', {}, 'Xoay quanh đầu trái của dãy', f.turn));
+    } else if (action === 'runStretch') {
+      f.end = el('select', {}, el('option', { value: 'end' }, 'Đầu phải (nhìn từ trước)'), el('option', { value: 'start' }, 'Đầu trái (nhìn từ trước)'));
+      f.delta = el('input', { type: 'number', step: 50, value: 100 });
+      fields.push(el('label', {}, 'Kéo đầu nào', f.end), el('label', {}, 'Bao nhiêu mm (dương: dài ra, âm: ngắn lại)', f.delta),
+        el('p', { class: 'ctx-msg' }, 'Tủ đứng ngay đầu được kéo sẽ đổi bề rộng; các tủ khác đứng yên.'));
+    } else if (action === 'runRemove') {
+      const inRun = spec.module.filter((x) => x.run === m?.run).map((x) => x.id);
+      fields.push(el('p', { class: 'ctx-msg warn' }, `Sẽ xóa ${inRun.length} module của dãy ${m?.run} cùng thiết bị gắn theo chúng: ${inRun.join(', ')}`));
     } else if (action === 'add') {
-      f.side = el('select', {}, el('option', { value: 'after' }, 'Phía sau (xa góc hơn)'), el('option', { value: 'before' }, 'Phía trước (gần góc hơn)'));
+      f.side = m?.run ? el('select', {}, el('option', { value: 'after' }, 'Bên phải (nhìn từ trước)'), el('option', { value: 'before' }, 'Bên trái (nhìn từ trước)'))
+        : el('select', {}, el('option', { value: 'after' }, 'Phía sau (xa góc hơn)'), el('option', { value: 'before' }, 'Phía trước (gần góc hơn)'));
       f.width = el('input', { type: 'number', min: 200, max: 1200, step: 10, value: m?.width || 600 });
       f.closeGap = el('input', { type: 'checkbox', checked: true });
       fields.push(el('label', {}, 'Vị trí', f.side), el('label', {}, 'Chiều rộng (mm)', f.width), el('label', { class: 'inline' }, f.closeGap, ' Đẩy các tủ phía sau ra'));
@@ -210,7 +259,7 @@ export function createModuleMenu(ctx) {
     }
     box.replaceChildren(header(`${target.part === 'countertop' ? 'Mặt bàn' : target.id}: ${actionsFor(target, spec).find((a) => a.id === action)?.label}`), ...fields, out,
       el('div', { class: 'row' }, go, ...extra, el('button', { type: 'button', class: 'ghost', onclick: list }, 'Quay lại')));
-    (f.material || f.style || f.width || go).focus?.();
+    (f.material || f.style || f.width || f.along || f.delta || go).focus?.();
     box.onkeydown = (e) => { if (e.key === 'Enter' && e.target.tagName !== 'BUTTON') { e.preventDefault(); go.click(); } };
   }
 
@@ -220,7 +269,7 @@ export function createModuleMenu(ctx) {
     try { op = buildOp(action, target.id, read(), spec); } catch (e) { return form(action, e.message); }
     busy = true; ctx.setStatus('Xem trước thay đổi…');
     try {
-      const { status, data } = await call(`/api/designs/${id}/propose`, { op, baseRev: rev, ...(target.part === 'countertop' ? {} : { scope: [target.id] }) });
+      const { status, data } = await call(`/api/designs/${id}/propose`, { op, baseRev: rev, ...(target.part === 'countertop' || RUN_ACTIONS.includes(action) ? {} : { scope: [target.id] }) });   // a run action is meant to touch the whole run
       busy = false;
       if (status === 409) return stale(action);
       if (!data || data.error) return form(action, data?.error || `Lỗi ${status}`);
@@ -249,8 +298,8 @@ export function createModuleMenu(ctx) {
     const lines = [...extra.map((x) => (typeof x === 'string' ? { kind: 'info', text: x } : x)), ...describeProposal(p)];
     const confirm = el('button', { type: 'button', class: p.validation?.introducesErrors ? 'danger' : 'primary', disabled: !p.applicable || p.unchanged,
       onclick: () => apply(action, p) }, p.validation?.introducesErrors ? 'Vẫn áp dụng' : 'Áp dụng');
-    box.replaceChildren(header(`Xem trước · ${target.id}`), el('ul', { class: 'ctx-preview' }, ...lines.map((l) => el('li', { class: l.kind }, l.text))),
-      el('div', { class: 'row' }, confirm, el('button', { type: 'button', class: 'ghost', onclick: () => (action === 'run-i' || action === 'cmd' ? list() : form(action)) }, action === 'run-i' || action === 'cmd' ? 'Quay lại' : 'Sửa lại'), el('button', { type: 'button', class: 'ghost', onclick: close }, 'Hủy')));
+    box.replaceChildren(header(`Xem trước · ${action === 'run-line' ? 'dãy tủ mới' : target.id}`), el('ul', { class: 'ctx-preview' }, ...lines.map((l) => el('li', { class: l.kind }, l.text))),
+      el('div', { class: 'row' }, confirm, el('button', { type: 'button', class: 'ghost', onclick: () => (['run-i', 'run-line', 'cmd'].includes(action) ? list() : form(action)) }, ['run-i', 'run-line', 'cmd'].includes(action) ? 'Quay lại' : 'Sửa lại'), el('button', { type: 'button', class: 'ghost', onclick: close }, 'Hủy')));
     confirm.focus();
   }
 
@@ -263,6 +312,7 @@ export function createModuleMenu(ctx) {
       if (!data || data.error) { ctx.setStatus(data?.error || `Lỗi ${status}`, 'warn'); return action === 'cmd' ? list() : form(action, data?.error || `Lỗi ${status}`); }
       if (previewOfJob && previewOfJob === pendingJob) setJob(null);
       previewOfJob = null;
+      if (action === 'run-line') lineFrom = null;
       close(); await ctx.afterChange(data); ctx.setStatus(`Đã áp dụng: rev ${data.rev}`, 'ok');
     } catch (e) { busy = false; if (action === 'cmd') ctx.setStatus(e.message, 'warn'); else form(action, e.message); }
   }
@@ -275,7 +325,7 @@ export function createModuleMenu(ctx) {
 
   document.addEventListener('pointerdown', (e) => { if (!box.hidden && !box.contains(e.target) && !ctx.keepOpenOn?.(e.target)) close(); }, true);
   window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !box.hidden) { e.stopPropagation(); close(); } }, true);
-  window.addEventListener('design-opened', () => { if (!busy) close(); });
+  window.addEventListener('design-opened', () => { lineFrom = null; if (!busy) close(); });
 
   return {
     open(t, x, y) { target = t; list(); place(x, y); box.querySelector('button:not(.ctx-x)')?.focus(); },

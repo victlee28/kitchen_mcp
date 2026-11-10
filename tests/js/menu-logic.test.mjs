@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { isClick, pickTarget, actionsFor, buildOp, layerFor, describeProposal, menuPosition, selectionEffect, sceneToMm } from '../../web/menu-logic.js';
+import { isClick, pickTarget, actionsFor, buildOp, layerFor, describeProposal, menuPosition, selectionEffect, sceneToMm, lineTemplate, floorPoint } from '../../web/menu-logic.js';
 
 const spec = { module: [{ id: 'TD1', type: 'base', wall: 'back', y: 0, height: 720, depth: 560, fromCorner: 0, width: 600, material: 'Trắng mờ' }, { id: 'KG1', type: 'corner-shelf', wall: 'corner' }] };
 const hit = (userData, visible = true) => ({ object: { userData, visible } });
@@ -110,4 +110,52 @@ test('scene units to millimetres: the factor table of the scene file (mm 0.001, 
   assert.deepEqual(sceneToMm({ x: 1.5, z: 0.2 }, 'cm'), { x: 150, z: 20 });
   assert.deepEqual(sceneToMm({ x: 1.5, z: 7 }, 'm'), { x: 1.5, z: 7 });
   assert.deepEqual(sceneToMm({ x: 1.5, z: 7 }, undefined), { x: 1500, z: 7000 });
+});
+
+const byRuns = { runs: [{ id: 'R1', x: -3000, z: 0, yaw: 0 }, { id: 'R2', x: 0, z: 0, yaw: -90 }], appliances: [],
+  module: [{ id: 'A1', type: 'base', wall: 'island', run: 'R1', fromCorner: 0, width: 600, y: 0, height: 840, depth: 600 },
+    { id: 'B1', type: 'base', wall: 'island', run: 'R2', fromCorner: 600, width: 600, y: 0, height: 840, depth: 600 },
+    { id: 'K1', type: 'corner-shelf', wall: 'island', run: 'R1', turnsInto: 'R2', fromCorner: 2400, width: 600, rightLength: 600, y: 1500, height: 700, depth: 350 }] };
+
+test('a cabinet of a run offers the run actions; a corner shelf by runs still takes no neighbour', () => {
+  const ids = (id) => actionsFor({ kind: 'module', id }, byRuns).map((a) => a.id);
+  assert.deepEqual(ids('A1').slice(-3), ['runMove', 'runStretch', 'runRemove']);
+  assert.ok(!ids('K1').includes('add'));
+  assert.deepEqual(actionsFor({ kind: 'part', part: 'door', id: 'A1' }, byRuns).map((a) => a.id).slice(-3), ['runMove', 'runStretch', 'runRemove']);
+  assert.ok(!actionsFor({ kind: 'part', part: 'handle', id: 'A1' }, byRuns).some((a) => a.id.startsWith('run')));
+  assert.ok(!actionsFor({ kind: 'module', id: 'TD1' }, spec).some((a) => a.id.startsWith('run')));
+});
+
+test('run operations: moving is told along the run and towards the room, whatever way the run looks', () => {
+  assert.deepEqual(buildOp('runMove', 'A1', { along: 200, out: 0, turn: 0 }, byRuns), { op: 'move-run', id: 'R1', changes: { x: -2800, z: 0 } });
+  assert.deepEqual(buildOp('runMove', 'A1', { along: 0, out: 300, turn: 0 }, byRuns), { op: 'move-run', id: 'R1', changes: { x: -3000, z: 300 } });
+  assert.deepEqual(buildOp('runMove', 'B1', { along: 200, out: 100, turn: 0 }, byRuns), { op: 'move-run', id: 'R2', changes: { x: -100, z: 200 } });   // yaw -90: along is +z, out is -x
+  assert.deepEqual(buildOp('runMove', 'B1', { along: 0, out: 0, turn: -90 }, byRuns), { op: 'move-run', id: 'R2', changes: { yaw: -180 } });
+  assert.throws(() => buildOp('runMove', 'A1', { along: 0, out: 0, turn: 0 }, byRuns), /Nhập/);
+  assert.throws(() => buildOp('runMove', 'A1', { along: 0, out: 0, turn: 30 }, byRuns), /góc xoay/);
+  assert.deepEqual(buildOp('runStretch', 'A1', { end: 'start', delta: '-150' }, byRuns), { op: 'stretch-run', id: 'R1', end: 'start', delta: -150 });
+  assert.throws(() => buildOp('runStretch', 'A1', { end: 'end', delta: 0 }, byRuns));
+  assert.throws(() => buildOp('runStretch', 'A1', { end: 'middle', delta: 10 }, byRuns));
+  assert.deepEqual(buildOp('runRemove', 'B1', {}, byRuns), { op: 'remove-run', id: 'R2' });
+  assert.throws(() => buildOp('runMove', 'TD1', { along: 10 }, spec), /dãy/);
+});
+
+test('a cabinet added to the left of one in a run joins that run', () => {
+  const op = buildOp('add', 'A1', { side: 'before', width: 400, closeGap: true }, byRuns);
+  assert.equal(op.module.run, 'R1');
+  assert.equal(op.module.wall, 'island');
+});
+
+test('drawing a run on the floor: the floor is the target where nothing else is, two points and a side make the template', () => {
+  assert.deepEqual(floorPoint({ x: 0, y: 2, z: 4 }, { x: 0, y: -1, z: -1 }), { x: 0, z: 2 });
+  assert.equal(floorPoint({ x: 0, y: 2, z: 4 }, { x: 0, y: 0.5, z: -1 }), null);
+  const ids = (drawing) => actionsFor({ kind: 'floor', id: 'floor', point: { x: 0, z: 0 } }, spec, drawing).map((a) => a.id);
+  assert.deepEqual(ids(null), ['line-start']);
+  assert.deepEqual(ids({ x: 1, z: 2 }), ['line-end', 'line-start', 'line-cancel']);
+  const left = lineTemplate({ x: -3000, z: 1000 }, { x: -1000, z: 1000 }, 'left', '  có chậu rửa ');
+  assert.deepEqual(left, { kind: 'run-line', a: { x: -3000, z: 1000 }, b: { x: -1000, z: 1000 }, front: { x: -2000, z: 500 }, prompt: 'có chậu rửa' });
+  assert.deepEqual(lineTemplate({ x: -3000, z: 1000 }, { x: -1000, z: 1000 }, 'right').front, { x: -2000, z: 1500 });
+  assert.throws(() => lineTemplate({ x: 0, z: 0 }, { x: 100, z: 0 }, 'left'), /300/);
+  assert.throws(() => lineTemplate({ x: 0, z: 0 }, { x: 1000, z: 0 }, 'up'));
+  assert.deepEqual(selectionEffect({ kind: 'floor', id: 'floor' }), { clearStructure: true });
 });
