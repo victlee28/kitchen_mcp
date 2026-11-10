@@ -4,6 +4,7 @@ import base64
 import binascii
 import datetime as _dt
 import json
+import re
 import os
 from pathlib import Path
 from typing import Any, Callable
@@ -232,7 +233,7 @@ class KitchenService:
     @staticmethod
     def _replace_system(spec: KitchenSpec, system: str, prompt: Any, style: Any, country: str | None) -> dict:
         """A whole cabinet system replaced (``system_replace``): with a sentence, its runs are laid again with the cabinets the sentence
-        describes (the longest run gets all of it, the others the same kind of cabinets without a fridge); without one, its cabinets take a
+        describes (the longest run gets all of it, the others plain cabinets of the same storeys); without one, its cabinets take a
         style preset (``style``: a preset id, or ``auto`` / None for the first one unlike what it shows now)."""
         mods = system_replace.members(spec, system)
         if not (isinstance(prompt, str) and prompt.strip()):
@@ -251,10 +252,18 @@ class KitchenService:
                 continue
             c = color if i == 0 else color.model_copy(update={'fridge': False})
             built = run_template.run_from_template(c, slot.length // 10 * 10)
-            laid[slot.run] = built['modules']
+            laid[slot.run] = built['modules'] if i == 0 else system_replace.plain_cabinets(built['modules'])   # sink, hob, fridge: the main run only
             if i == 0:
                 fronts = {k: built['common'][k] for k in ('material', 'handle') if k in built['common']}
-        ops, summary = system_replace.relayout_ops(spec, mods, laid, fronts)
+        said = prompt.lower()
+        no = r"(?:bỏ|bớt|không\s*(?:có|cần|làm)?|xóa|xoá)\s*(?:hết\s*|các\s*|cả\s*)?"
+        refused = {s for s, word in (('upper', r"tủ\s*(?:trên|treo)"), ('loft', r"tủ\s*nóc")) if re.search(no + word, said)}
+        if 'upper' in refused:
+            refused.add('loft')                                      # a loft row stands on wall cabinets
+        asked = {'upper', 'loft'} if color.loft and 'loft' not in refused else set()
+        if re.search(r"tủ\s*(?:trên|treo)", re.sub(no + r"tủ\s*(?:trên|treo)", "", said)):
+            asked.add('upper')
+        ops, summary = system_replace.relayout_ops(spec, mods, laid, fronts, frozenset(asked - refused), frozenset(refused))
         kept = [n for n in notes if 'chiều dài' not in n]          # the run keeps its length: the "no length given" note does not apply
         return {'operation': edit.combine_ops(ops), 'system': system, 'mode': 'relayout', 'summary': [f"System {system} laid out again", *summary, *kept]}
 

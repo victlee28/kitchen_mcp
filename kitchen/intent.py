@@ -43,6 +43,7 @@ class KitchenTemplate(BaseModel):
     cabinetTop: float = Field(2200, ge=1500, le=3200, description="Cao độ đỉnh tủ trên (mm)")
     ceiling: float | None = Field(None, ge=2000, le=4000)
     fridge: bool = False
+    fridgeSide: Literal["left", "right"] | None = Field(None, description="Đầu dãy đặt tủ lạnh, nhìn từ phía trước (left / right); trống = theo mẫu")
     loft: bool = False
     island: bool = False
     peninsula: bool = False
@@ -95,6 +96,10 @@ def parse_prompt(prompt: str) -> tuple[KitchenTemplate, list[str]]:
     if ceiling:
         data["ceiling"] = _mm(*ceiling.groups())
     data["fridge"] = bool(re.search(_KW + r"tủ\s*lạnh", t)) or bool(lex.updates.get("fridge"))
+    side = re.search(r"tủ\s*lạnh[^,.;]{0,24}?\b(?:sang|bên|phía|ở|về|đặt)\s+(?:bên\s+|phía\s+)?(phải|trái)", t)
+    if side:
+        data["fridgeSide"] = "right" if side.group(1) == "phải" else "left"
+        notes.append(f"Tủ lạnh ở đầu {side.group(1)} của dãy (nhìn từ phía trước)")
     for key, value in lex.updates.items():  # phong cách, vật liệu theo phạm vi, tay nắm, kiểu cánh, ốp tường, tủ kịch trần…
         if key != "geometry_edit":
             data[key] = value
@@ -114,7 +119,7 @@ def parse_prompt(prompt: str) -> tuple[KitchenTemplate, list[str]]:
         color = KitchenTemplate.model_validate(data)
     except ValidationError as e:
         notes.append(f"Bỏ qua số đo ngoài phạm vi: {e.errors()[0]['msg']}")
-        color = KitchenTemplate.model_validate({k: v for k, v in data.items() if k in ("geometry_edit", "fridge", "loft", "material", "country", "region", "leftWallLength", "island", "peninsula", "openShelf", "islandLength",
+        color = KitchenTemplate.model_validate({k: v for k, v in data.items() if k in ("geometry_edit", "fridge", "fridgeSide", "loft", "material", "country", "region", "leftWallLength", "island", "peninsula", "openShelf", "islandLength",
                                                                             "style", "crownMolding", "baseMolding", "styleTags", "aiHints", "renderPreferences", "handleVariant",
                                                                             "handleMaterial", "doorStyle", "wallTilePattern", "promptInterpretation")})
     if not lens:

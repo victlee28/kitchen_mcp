@@ -21,8 +21,11 @@ returns `systems: {module: {system, tier, storey}}`; the page never works them o
 - **Image tab:** Shift+click picks `sys:<system>:tier:<tier>:<role>` when the design has several systems, `tier:<tier>:<role>` otherwise.
 - Changing a material for part of the modules that share one (one system of several) gives those modules a material of their own, so the
   other systems keep theirs.
-- **Replace a whole system:** type "thay cả hệ tủ …" (or "đổi hệ tủ …", "làm lại hệ tủ …") in the command box of a cabinet's right-click
-  menu (`assist-logic.systemIntent`; no menu entry of its own). With a description after it ("thay cả hệ tủ bằng: có chậu rửa, bếp, cánh
+- **Replace a whole system:** type a sentence that names the system and asks for a change in the command box of a cabinet's right-click
+  menu: "thay cả hệ tủ …", "đổi hệ tủ …", "làm lại hệ tủ …", "sửa lại, thêm tủ nóc cho hệ, cho tủ lạnh sang phải", "bỏ tủ trên của hệ này"
+  (`assist-logic.systemIntent`; no menu entry of its own). The system phrase and the lead-in verbs are taken out; the rest is the description.
+  A loft row / wall cabinets the sentence asks for are laid even where the system had none; "bỏ / không tủ trên / tủ nóc" leaves them out;
+  "tủ lạnh sang phải / bên trái" puts the fridge at that end (seen from the front). Sink, hob, hood and fridge go in the main run only. With a description after it ("thay cả hệ tủ bằng: có chậu rửa, bếp, cánh
   khung"), the system's runs keep their place, angle and length and are laid out again with what it describes (the longest run gets all of
   it, the others the same kind without a fridge; no wall cabinets where the system had none; fronts it does not name come from the old
   cabinets). With nothing after it, "phong cách khác", or a preset's name ("đổi cả hệ sang Gỗ sồi ấm"), the cabinets stay and take a style

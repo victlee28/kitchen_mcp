@@ -116,6 +116,24 @@ def run_slots(spec: KitchenSpec, mods: list[Module]) -> list[Slot]:
     return sorted(slots, key=lambda s: (-s.length, order.index(s.run) if s.run in order else len(order)))
 
 
+PLAIN_TYPE = {"base-sink": "base", "base-cooktop": "base", "base-oven": "base", "base-corner-sink": "base", "upper-hood": "upper"}
+
+
+def plain_cabinets(modules: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """The same cabinets without what belongs to the main run only: sink, hob, oven and hood cabinets become plain ones (their devices
+    go), a fridge cabinet is left out. For the other runs of a system laid out from one sentence."""
+    out = []
+    for m in modules:
+        if m["type"] == "tall-fridge":
+            continue
+        entry = {k: v for k, v in m.items() if k not in ("appliances", "appliance", "niche")}
+        if m["type"] in PLAIN_TYPE:
+            entry["type"] = PLAIN_TYPE[m["type"]]
+            entry.pop("name", None)
+        out.append(entry)
+    return out
+
+
 STOREY_OF_TYPE = {"upper-loft": "loft", "corner-shelf": "corner"}
 
 
@@ -152,7 +170,8 @@ def _inherited(spec: KitchenSpec, mods: list[Module]) -> dict[str, dict[str, Any
     return out
 
 
-def relayout_ops(spec: KitchenSpec, mods: list[Module], laid: dict[str, list[dict[str, Any]]], fronts: dict[str, Any]) -> tuple[list[dict[str, Any]], list[str]]:
+def relayout_ops(spec: KitchenSpec, mods: list[Module], laid: dict[str, list[dict[str, Any]]], fronts: dict[str, Any],
+                 asked: frozenset[str] = frozenset(), refused: frozenset[str] = frozenset()) -> tuple[list[dict[str, Any]], list[str]]:
     """``(operations, summary)``: add ``laid[run]`` to each run, then remove every old cabinet of the system (modules as ``run_template`` gives
     them: ``{"type", "width", "s", "y", "height", "depth", ...}``, ``s`` from the slot's start). ``fronts``: what the sentence said about the fronts,
     ``{"material"?: {storey: name}, "handle"?: {...}}``; what it did not say is taken from the old cabinets of the same storey."""
@@ -166,7 +185,7 @@ def relayout_ops(spec: KitchenSpec, mods: list[Module], laid: dict[str, list[dic
         added = 0
         for m in sorted(modules, key=lambda item: item["s"]):
             storey = storey_of(str(m["type"]))
-            if storey not in slot.storeys and storey not in ("base", "tall"):
+            if storey in refused or (storey not in slot.storeys and storey not in ("base", "tall") and storey not in asked):
                 dropped[storey] += 1
                 continue
             entry: dict[str, Any] = {"type": m["type"], "wall": "island", "run": run_id, "fromCorner": slot.start + float(m["s"]),
@@ -189,5 +208,5 @@ def relayout_ops(spec: KitchenSpec, mods: list[Module], laid: dict[str, list[dic
         summary.append(f"Run {run_id}: {added} cabinets over {slot.length:g} mm")
     ops.extend({"op": "remove", "id": m.id, "closeGap": False} for m in mods)
     for storey, n in sorted(dropped.items()):
-        summary.append(f"{n} {storey} cabinets left out: the system had none on that storey")
+        summary.append(f"{n} {storey} cabinets left out: " + ("the sentence asks so" if storey in refused else "the system had none on that storey"))
     return ops, summary

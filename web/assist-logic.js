@@ -110,23 +110,34 @@ export function templateIntent(text) {
   return null;
 }
 
-/** "Thay cả hệ tủ …" typed in the command box: the whole cabinet system of the clicked cabinet is replaced. Returns null when the sentence is
- *  not about the system, else `{ prompt }` (what follows describes the new system: it is laid out again) or `{ style }` (nothing more, "phong
- *  cách khác", or the name of a preset: the cabinets stay and take that style; `auto` = one unlike the current). */
+/** A sentence about the clicked cabinet's whole SYSTEM ("thay cả hệ tủ …", "sửa lại, thêm tủ nóc cho hệ, cho tủ lạnh sang phải"): it names the
+ *  system ("hệ tủ", "cả / cho / của / toàn hệ") and asks for a change (thay, đổi, sửa, làm lại, thêm, bỏ…). Returns null when it is not such a
+ *  sentence, else `{ prompt }` (what is left once the system phrase and the lead-in verbs are taken out describes the new system: it is laid out
+ *  again) or `{ style }` (nothing is left, "phong cách khác", or the name of a preset: the cabinets stay and take that style; `auto` = one unlike
+ *  the current). */
 export function systemIntent(text) {
   const words = String(text ?? '').trim().split(/\s+/).filter(Boolean);
-  const flat = words.map(plain);
+  const flat = words.map((w) => plain(w).replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, ''));
   const f = flat.join(' ');
-  if (!/\bhe\s+tu\b|\bca\s+he\b/.test(f) || !/\b(thay|doi|chuyen|lam\s+lai|xep\s+lai|tao\s+lai)\b/.test(f)) return null;
-  // drop the lead-in: everything up to "hệ (tủ)" [này / hiện tại / cũ / đang có] [bằng / sang / thành / theo] [một] [hệ (tủ)] [mới] [:]
-  let i = flat.findIndex((w, k) => w === 'he' && (flat[k + 1] === 'tu' || flat[k - 1] === 'ca'));
-  if (i < 0) return null;
-  i += flat[i + 1] === 'tu' ? 2 : 1;
-  const skip = (set) => { while (i < flat.length && set.includes(flat[i].replace(/[:,.]$/, ''))) i += 1; };
-  skip(['nay', 'hien', 'tai', 'cu', 'dang', 'co', 'do']);
-  skip(['bang', 'sang', 'thanh', 'theo', 'voi', 'qua']);
-  skip(['mot', '1', 'he', 'tu', 'moi', 'khac']);
-  const rest = words.slice(i).join(' ').replace(/^[:,.\s-]+/, '').trim();
+  if (!/\bhe\s+tu\b|\b(ca|cho|cua|toan|nguyen)\s+he\b/.test(f)) return null;
+  if (!/\b(thay|doi|chuyen|sua|lam\s+lai|xep\s+lai|tao\s+lai|them|bo|bot)\b/.test(f)) return null;
+  // take out the system phrase: [cả / cho / của / toàn / nguyên] hệ [tủ] [này / hiện tại / cũ / đang có / đó]
+  const at = flat.findIndex((w, k) => w === 'he' && (flat[k + 1] === 'tu' || ['ca', 'cho', 'cua', 'toan', 'nguyen'].includes(flat[k - 1])));
+  if (at < 0) return null;
+  let from = at;
+  while (from > 0 && ['ca', 'cho', 'cua', 'toan', 'nguyen'].includes(flat[from - 1])) from -= 1;     // "cho cả hệ", "của toàn hệ"…
+  let to = at + (flat[at + 1] === 'tu' ? 2 : 1);
+  while (to < flat.length && ['nay', 'hien', 'tai', 'cu', 'dang', 'co', 'do'].includes(flat[to]) && !(flat[to] === 'co' && flat[to - 1] !== 'dang')) to += 1;
+  if (words[to - 1] && /[,;:.]$/.test(words[to - 1]) && from > 0) words[from - 1] = words[from - 1].replace(/[,;:.]?$/, ',');
+  const keep = [...words.slice(0, from), ...words.slice(to)]; const kflat = [...flat.slice(0, from), ...flat.slice(to)];
+  // then the lead-in: [thay / đổi / sửa / làm / xếp / tạo / chuyển] [lại / thế] [bằng / sang / thành / theo / với / qua] [một] [hệ] [tủ] [mới / khác]
+  let i = 0;
+  const skip = (set) => { while (i < kflat.length && (set.includes(kflat[i]) || kflat[i] === '')) i += 1; };
+  skip(['thay', 'doi', 'sua', 'lam', 'xep', 'tao', 'chuyen']); skip(['lai', 'the']);
+  skip(['bang', 'sang', 'thanh', 'theo', 'voi', 'qua']); skip(['mot', '1']);
+  if (kflat[i] === 'he') { i += 1; if (kflat[i] === 'tu') i += 1; skip(['moi', 'khac']); }     // "… bằng một hệ tủ mới": not "tủ lạnh"
+
+  const rest = keep.slice(i).join(' ').replace(/\s+([,;:.])/g, '$1').replace(/([,;:])(?=[,;:.])/g, '').replace(/^[:,;.\s-]+|[,;:\s]+$/g, '').trim();
   const r = plain(rest).replace(/[.!]+$/, '').trim();
   if (!r || /^(phong\s+cach|kieu|style)(\s+(khac|moi))?$/.test(r) || /^(mot\s+)?(phong\s+cach|kieu)\s+khac(\s+di)?$/.test(r)) return { style: 'auto' };
   const named = SYSTEM_STYLES.find(([id, label]) => id !== 'auto' && (r === plain(label) || r === `phong cach ${plain(label)}` || r === id));

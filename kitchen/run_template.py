@@ -67,4 +67,19 @@ def run_from_template(color: KitchenTemplate, length: float) -> dict[str, Any]:
         if value not in (None, "standard"):
             common[key] = value
     modules = sorted(entries.values(), key=lambda e: e["s"])
+    fridge = next((e for e in modules if e["type"] == "tall-fridge"), None)
+    if color.fridgeSide and fridge is not None and (fridge["s"] + fridge["width"] / 2 < length / 2) != (color.fridgeSide == "left"):
+        modules = sorted((_mirrored(e, length) for e in modules), key=lambda e: e["s"])     # the fridge belongs at the other end
     return {"modules": modules, "common": common, "length": float(length)}
+
+
+def _mirrored(entry: dict[str, Any], length: float) -> dict[str, Any]:
+    """The cabinet seen in a mirror across the middle of the run: its place, door order, hinges and worktop devices swap ends."""
+    out = {**entry, "s": length - entry["s"] - entry["width"]}
+    if entry.get("doors"):
+        out["doors"] = list(reversed(entry["doors"]))
+    if entry.get("hingeSides"):
+        out["hingeSides"] = [{"left": "right", "right": "left"}.get(h, h) for h in entry["hingeSides"]]
+    if entry.get("appliances"):
+        out["appliances"] = [{**a, "center": length - a["center"]} if isinstance(a.get("center"), (int, float)) else dict(a) for a in entry["appliances"]]
+    return out

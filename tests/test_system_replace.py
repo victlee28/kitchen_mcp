@@ -81,6 +81,38 @@ class TestRelayout(unittest.TestCase):
         with self.assertRaises(InvalidInput):
             sr.run_slots(free, sr.members(free, "design"))
 
+    def test_asked_and_refused_storeys(self):
+        mods = sr.members(KITCHEN, "furniture_003")
+        loft = {"type": "upper-loft", "width": 400.0, "s": 0.0, "y": 2200.0, "height": 400.0, "depth": 350.0}
+        ops, _ = sr.relayout_ops(KITCHEN, mods, {"R3": [*NEW, loft]}, {}, asked=frozenset({"upper", "loft"}))
+        after = edit.apply_op(KITCHEN, edit.combine_ops(ops))
+        self.assertEqual(sorted(m.storey for m in after.module if m.run == "R3"), ["base", "base", "loft", "upper"])
+        ops, summary = sr.relayout_ops(KITCHEN, sr.members(KITCHEN, "auto-R1"), {"R1": NEW}, {}, refused=frozenset({"upper"}))
+        after = edit.apply_op(KITCHEN, edit.combine_ops(ops))
+        self.assertFalse(any(m.run == "R1" and m.storey == "upper" for m in after.module))
+        self.assertIn("1 upper cabinets left out: the sentence asks so", summary)
+
+    def test_other_runs_get_plain_cabinets(self):
+        mods = [{"type": "tall-fridge", "width": 700.0, "s": 0.0, "appliances": [{"type": "fridge"}], "niche": 1650.0},
+                {"type": "base-sink", "width": 800.0, "s": 700.0, "name": "Tủ chậu", "appliances": [{"type": "sink"}]},
+                {"type": "upper-hood", "width": 600.0, "s": 700.0}, {"type": "base", "width": 600.0, "s": 1500.0, "doorStyle": "frame"}]
+        self.assertEqual(sr.plain_cabinets(mods), [{"type": "base", "width": 800.0, "s": 700.0}, {"type": "upper", "width": 600.0, "s": 700.0},
+                                                   {"type": "base", "width": 600.0, "s": 1500.0, "doorStyle": "frame"}])
+
+
+class TestFridgeSide(unittest.TestCase):
+    def test_the_sentence_puts_the_fridge_at_the_end_it_names(self):
+        from kitchen import intent, run_template
+        for text, side in (("thêm tủ nóc, cho tủ lạnh sang phải", "right"), ("tủ lạnh bên trái", "left"), ("có tủ lạnh", None)):
+            color, _ = intent.parse_prompt(text)
+            self.assertEqual(color.fridgeSide, side, text)
+            mods = run_template.run_from_template(color, 3970)["modules"]
+            fridge = next(m for m in mods if m["type"] == "tall-fridge")
+            self.assertEqual(fridge["s"], 3970 - 700 if side == "right" else 0.0, text)
+            sink = next(m for m in mods if m["type"] == "base-sink")
+            on = next(a for a in sink["appliances"] if a["type"] == "sink")
+            self.assertTrue(sink["s"] <= on["center"] <= sink["s"] + sink["width"], "the sink stays over its cabinet when mirrored")
+
 
 class TestWebStyles(unittest.TestCase):
     def test_the_page_lists_the_same_presets(self):

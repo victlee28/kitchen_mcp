@@ -84,6 +84,10 @@ test('"thay cả hệ tủ" in the command box: a description lays the system ou
   assert.deepEqual(systemIntent('thay hệ tủ bằng phong cách cổ điển xanh rêu'), { style: 'classic-sage' });
   assert.deepEqual(systemIntent('thay cả hệ tủ bằng hệ mới: có chậu rửa, bếp và tủ lạnh, cánh khung'), { prompt: 'có chậu rửa, bếp và tủ lạnh, cánh khung' });
   assert.deepEqual(systemIntent('làm lại hệ tủ này theo kiểu bồn rửa giữa, 2 ngăn kéo'), { prompt: 'kiểu bồn rửa giữa, 2 ngăn kéo' });
+  assert.deepEqual(systemIntent('sửa lại, thêm tủ nóc cho hệ , cho tủ lạnh sang phải'), { prompt: 'thêm tủ nóc, cho tủ lạnh sang phải' });
+  assert.deepEqual(systemIntent('thêm tủ nóc cho cả hệ'), { prompt: 'thêm tủ nóc' });
+  assert.deepEqual(systemIntent('bỏ tủ trên của hệ này'), { prompt: 'bỏ tủ trên' });
+  assert.deepEqual(systemIntent('thay hệ tủ đang có bằng tủ lạnh bên trái'), { prompt: 'tủ lạnh bên trái' });
   assert.equal(systemIntent('đổi màu cánh tủ sang trắng'), null);
   assert.equal(systemIntent('hệ tủ này dài bao nhiêu'), null);
 });
