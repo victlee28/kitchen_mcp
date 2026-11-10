@@ -10,7 +10,7 @@ from __future__ import annotations
 import math
 
 from .numeric import round_half_away, round_int
-from . import regions
+from . import regions, runs
 from .errors import require
 from .spec import KitchenSpec, Appliance
 
@@ -63,33 +63,35 @@ class _Ctx:
         self.out.append(d)
 
 
-def _runs(spec: KitchenSpec, wall: str) -> list[tuple[float, float]]:
-    ms = sorted((m for m in spec.module if m.wall == wall and m.storey == "base"), key=lambda m: m.fromCorner)
-    runs: list[list[float]] = []
+def _runs(spec: KitchenSpec, row: str) -> list[tuple[float, float]]:
+    """Continuous stretches of base cabinets (worktop) in a row: a wall's row or an explicit run (``runs.row_of``)."""
+    ms = sorted((m for m in spec.module if runs.row_of(m) == row and m.storey == "base"), key=lambda m: m.fromCorner)
+    out: list[list[float]] = []
     for m in ms:
-        if runs and m.fromCorner <= runs[-1][1] + 1:
-            runs[-1][1] = max(runs[-1][1], m.endAt)
+        if out and m.fromCorner <= out[-1][1] + 1:
+            out[-1][1] = max(out[-1][1], m.endAt)
         else:
-            runs.append([m.fromCorner, m.endAt])
-    return [(a, b) for a, b in runs]
+            out.append([m.fromCorner, m.endAt])
+    return [(a, b) for a, b in out]
 
 
-def _span(tb: Appliance) -> tuple[float, float]:
+def _span(tb: Appliance, center: float) -> tuple[float, float]:
     w = (tb.numeric_dimensions() or [0])[0]
-    center = require(tb.center, f"{tb.id}.center")
     return center - w / 2, center + w / 2
 
 
-def _landing(spec: KitchenSpec, tb: Appliance):
-    s0, s1 = _span(tb)
-    run = next(((a, b) for a, b in _runs(spec, require(tb.wall, f"{tb.id}.wall")) if a - 1 <= s0 and s1 <= b + 1), None)
+def _landing(spec: KitchenSpec, tb: Appliance, spots: "dict[str, runs.Spot]"):
+    me = spots[tb.id]
+    s0, s1 = _span(tb, me.center)
+    run = next(((a, b) for a, b in _runs(spec, me.row) if a - 1 <= s0 and s1 <= b + 1), None)
     if not run:
         return None
     left, right = run
     for o in spec.appliances:
-        if o is tb or o.wall != tb.wall or o.center is None or o.type not in ("sink", "cooktop"):
+        at = spots.get(o.id)
+        if o is tb or at is None or at.row != me.row or o.type not in ("sink", "cooktop"):
             continue
-        o0, o1 = _span(o)
+        o0, o1 = _span(o, at.center)
         if o1 <= s0:
             left = max(left, o1)
         elif o0 >= s1:
@@ -97,13 +99,16 @@ def _landing(spec: KitchenSpec, tb: Appliance):
     return s0 - left, right - s1
 
 
-def _plan_point(spec, wall, s, d):
-    if wall == "back":
-        return -s, d
-    if wall == "right":
-        return -d, s
+def _plan_point(spec, row, s, d):
+    """Plan position (x, z) of the point (s, d) of a row, in the kitchen frame."""
+    if row.startswith("run:"):
+        fr = runs.frames(spec).get(row[4:])
+        if fr is not None:
+            return fr.to_world(s, d)
     lsau = (spec.room.length("back") if spec.room else None) or max([m.endAt for m in spec.module if m.wall == "back"] + [0]) + 600
-    return -lsau + d, s
+    seat = runs.wall_seat(row, lsau) or runs.wall_seat("left", lsau)
+    assert seat is not None
+    return seat.to_world(s, d)
 
 
 def _range(ctx, topic, value, lo_key, hi_key, label, mods=()):
@@ -119,8 +124,9 @@ def _range(ctx, topic, value, lo_key, hi_key, label, mods=()):
 def check(spec: KitchenSpec, sel: dict[str, dict]) -> list[dict]:
     c = spec.common
     ctx = _Ctx(spec, sel)
-    sink = [t for t in spec.appliances if t.type == "sink" and t.wall and t.center is not None]
-    cooktop = [t for t in spec.appliances if t.type == "cooktop" and t.wall and t.center is not None]
+    spots = {t.id: at for t in spec.appliances if t.type in ("sink", "cooktop") and (at := runs.spot(spec, t)) is not None}   # where each stands, by row
+    sink = [t for t in spec.appliances if t.type == "sink" and t.id in spots]
+    cooktop = [t for t in spec.appliances if t.type == "cooktop" and t.id in spots]
     fridge = [t for t in spec.appliances if t.type == "fridge" and t.module]
     lows = [m for m in spec.module if m.storey == "base"]
     ups = [m for m in spec.module if m.storey in ("upper", "loft")]
@@ -155,15 +161,15 @@ def check(spec: KitchenSpec, sel: dict[str, dict]) -> list[dict]:
     if (p := ctx.p("sink-cooktop")):
         for a in sink:
             for b in cooktop:
-                if a.wall == b.wall:
-                    gap = abs(require(a.center, f"{a.id}.center") - require(b.center, f"{b.id}.center")) - (a.numeric_dimensions() or [0])[0] / 2 - (b.numeric_dimensions() or [0])[0] / 2
+                if spots[a.id].row == spots[b.id].row:
+                    gap = abs(spots[a.id].center - spots[b.id].center) - (a.numeric_dimensions() or [0])[0] / 2 - (b.numeric_dimensions() or [0])[0] / 2
                     if gap < p["sink_cooktop_min"] - 1:
                         ctx.add("sink-cooktop", [a.id, b.id], f"Chậu {a.id} cách bếp {b.id} {gap:g} mm < {p['sink_cooktop_min']}", gap, p["sink_cooktop_min"])
     # mặt bàn thao tác
     for topic, items, name in (("sink-table", sink, "chậu"), ("cooktop-table", cooktop, "bếp")):
         if (p := ctx.p(topic)):
             for t in items:
-                sides = _landing(spec, t)
+                sides = _landing(spec, t, spots)
                 if not sides:
                     continue
                 a, b = sorted(sides, reverse=True)
@@ -178,13 +184,13 @@ def check(spec: KitchenSpec, sel: dict[str, dict]) -> list[dict]:
             except KeyError:
                 continue
             best = 0.0
-            for a, b in _runs(spec, m.wall):
+            for a, b in _runs(spec, runs.row_of(m)):
                 if abs(a - m.endAt) <= 1 or abs(b - m.fromCorner) <= 1:
                     near_start = abs(a - m.endAt) <= 1
                     free = b - a
                     for o in spec.appliances:
-                        if o.wall == m.wall and o.center is not None and o.type in ("sink", "cooktop"):
-                            o0, o1 = _span(o)
+                        if (at := spots.get(o.id)) is not None and at.row == runs.row_of(m):
+                            o0, o1 = _span(o, at.center)
                             if a - 1 <= o0 and o1 <= b + 1:
                                 free = min(free, (o0 - a) if near_start else (b - o1))
                     best = max(best, free)
@@ -194,11 +200,11 @@ def check(spec: KitchenSpec, sel: dict[str, dict]) -> list[dict]:
     # phía trên bếp
     hood = {t.module: t for t in spec.appliances if t.type == "hood" and t.module}
     for t in cooktop:
-        s0, s1 = _span(t)
-        above = [m for m in ups if m.wall == t.wall and m.fromCorner < s1 and m.endAt > s0]
+        s0, s1 = _span(t, spots[t.id].center)
+        above = [m for m in ups if runs.row_of(m) == spots[t.id].row and m.fromCorner < s1 and m.endAt > s0]
         if not above:
             continue
-        direct = [m for m in above if m.fromCorner <= require(t.center, f"{t.id}.center") < m.endAt]
+        direct = [m for m in above if m.fromCorner <= spots[t.id].center < m.endAt]
         lowest = min(direct or above, key=lambda m: m.y)
         if lowest.id in hood and (p := ctx.p("hood")):
             h = (hood[lowest.id].numeric_dimensions() + [0, 0])[1]
@@ -232,8 +238,9 @@ def check(spec: KitchenSpec, sel: dict[str, dict]) -> list[dict]:
         try:
             m = spec.find(fridge[0].module or "")
             dm = c.baseDepth / 2
-            pts = {"chậu": _plan_point(spec, sink[0].wall, sink[0].center, dm), "bếp": _plan_point(spec, cooktop[0].wall, cooktop[0].center, dm),
-                   "tủ lạnh": _plan_point(spec, m.wall, m.fromCorner + m.width / 2, m.depth)}
+            pts = {"chậu": _plan_point(spec, spots[sink[0].id].row, spots[sink[0].id].center, dm),
+                   "bếp": _plan_point(spec, spots[cooktop[0].id].row, spots[cooktop[0].id].center, dm),
+                   "tủ lạnh": _plan_point(spec, runs.row_of(m), m.fromCorner + m.width / 2, m.depth)}
             names = list(pts)
             legs = {f"{a}–{b}": math.dist(pts[a], pts[b]) for i, a in enumerate(names) for b in names[i + 1:]}
             total = sum(legs.values())

@@ -183,7 +183,8 @@
          "appliances": [
           {
            "type": "sink",
-           "name": "Chậu rửa"
+           "name": "Chậu rửa",
+           "dimensions": "760 × 430"
           }
          ],
          "confidence": 1.0,
@@ -794,7 +795,8 @@
          "appliances": [
           {
            "type": "sink",
-           "name": "Chậu rửa"
+           "name": "Chậu rửa",
+           "dimensions": "550 × 430"
           }
          ],
          "confidence": 0.7,

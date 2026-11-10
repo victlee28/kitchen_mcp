@@ -10,7 +10,7 @@ import math
 from dataclasses import dataclass
 
 from .numeric import round_half_away
-from .spec import KitchenSpec, Module
+from .spec import Appliance, KitchenSpec, Module
 
 Point = tuple[float, float]
 EPS = 1e-9
@@ -174,6 +174,33 @@ def frame_of(spec: KitchenSpec, module: Module) -> RunFrame | None:
         if r.id == module.run:
             return RunFrame(r.id, r.x, r.z, r.yaw)
     return None
+
+
+def row_of(m: Module) -> str:
+    """Key of the row a cabinet stands in: ``run:<id>`` in an explicit run, else the name of its wall (``island`` for a legacy free run).
+    Rules and edits compare ROWS, not walls, so cabinets of two different runs never count as neighbours."""
+    return f"run:{m.run}" if m.run else m.wall
+
+
+@dataclass(frozen=True)
+class Spot:
+    """Where an appliance stands along a row: the row key (``row_of``), the position of its centre along the row (mm), its module if any."""
+    row: str
+    center: float
+    module: str | None
+
+
+def spot(spec: KitchenSpec, tb: Appliance) -> Spot | None:
+    """Where a worktop appliance (sink, hob, tap) stands. One whose module stands in an explicit run stands in that run (at its ``center`` along
+    the run, else at the middle of the module); one given by wall + centre stands there; one given only by its module, at the middle of it. None when it has no place."""
+    m = next((x for x in spec.module if x.id == tb.module), None) if tb.module else None
+    if m is not None and m.run:                 # in an explicit run the centre is measured along the run, whatever ``wall`` says
+        return Spot(row_of(m), tb.center if tb.center is not None else m.fromCorner + m.width / 2, m.id)
+    if tb.wall and tb.center is not None:
+        return Spot(tb.wall, tb.center, tb.module)
+    if m is None or m.wall == "corner":
+        return None
+    return Spot(row_of(m), m.fromCorner + m.width / 2, m.id)
 
 
 def frames(spec: KitchenSpec) -> dict[str, RunFrame]:

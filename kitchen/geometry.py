@@ -327,17 +327,20 @@ class _Builder:
                 w, h = k[:2]
                 sc = m.fromCorner + m.width / 2
                 self.box(tb.id, "hood", m.wall, sc - w / 2, sc + w / 2, 0, m.depth, m.y - h, m.y)
-            elif tb.type in ("sink", "cooktop", "faucet") and tb.wall and tb.center is not None:
+            elif tb.type in ("sink", "cooktop", "faucet") and (at := runmod.spot(self.spec, tb)) is not None:
+                host = m if tb.wall is None else None                      # placed by its module: it stands in that module's row
+                wall = tb.wall or (host.wall if host else "back")
+                isl = self._isl.get(host.id) if host is not None else None
                 dmat = c.baseDepth + c.countertopOverhang
                 if tb.type == "faucet":
                     h = k[0] if k else 300
-                    self.box(tb.id, "faucet", tb.wall, tb.center - 20, tb.center + 20, 40, 80, c.countertop, c.countertop + h)
+                    self.box(tb.id, "faucet", wall, at.center - 20, at.center + 20, 40, 80, c.countertop, c.countertop + h, isl=isl)
                 elif len(k) >= 2:
                     w, d = k[:2]
                     dc_ = dmat / 2 + 20
                     height = 4 if tb.type == "sink" else 6
-                    self.box(tb.id, tb.type, tb.wall, tb.center - w / 2, tb.center + w / 2, dc_ - d / 2, dc_ + d / 2,
-                             c.countertop, c.countertop + height)
+                    self.box(tb.id, tb.type, wall, at.center - w / 2, at.center + w / 2, dc_ - d / 2, dc_ + d / 2,
+                             c.countertop, c.countertop + height, isl=isl)
 
     def structures(self) -> list:
         """Meshes of the imported floorplan's elements in the kitchen frame (none without a floorplan or when the kitchen fits no wall)."""

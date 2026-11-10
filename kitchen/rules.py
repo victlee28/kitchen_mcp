@@ -37,22 +37,11 @@ def _envelopes(spec: KitchenSpec) -> list[tuple[str, tuple, tuple]]:
         elif m.type == "corner-shelf":
             out.append((m.id, (-require(m.backLength, f"{m.id}.backLength"), y0, 0), (0, y1, m.depth)))
             out.append((m.id, (-m.depth, y0, 0), (0, y1, require(m.rightLength, f"{m.id}.rightLength"))))
-        elif m.wall == "back":
-            out.append((m.id, (-m.endAt, y0, 0), (-m.fromCorner, y1, m.depth)))
-        elif m.wall == "right":
-            out.append((m.id, (-m.depth, y0, m.fromCorner), (0, y1, m.endAt)))
-        elif m.wall == "island":
-            f = m.facing or "-z"
-            if f == "-z":
-                out.append((m.id, (-m.endAt, y0, m.offset), (-m.fromCorner, y1, m.offset + m.depth)))
-            elif f == "+z":
-                out.append((m.id, (-m.endAt, y0, m.offset - m.depth), (-m.fromCorner, y1, m.offset)))
-            elif f == "-x":
-                out.append((m.id, (-m.offset, y0, m.fromCorner), (-m.offset + m.depth, y1, m.endAt)))
-            else:
-                out.append((m.id, (-m.offset - m.depth, y0, m.fromCorner), (-m.offset, y1, m.endAt)))
-        else:
-            out.append((m.id, (-lsau, y0, m.fromCorner), (-lsau + m.depth, y1, m.endAt)))
+        else:                          # a wall's row or a legacy free run: its seat (an unknown wall name is read as the left wall, as before)
+            seat = runs.seat_of(m, lsau) or runs.wall_seat("left", lsau)
+            assert seat is not None
+            mn, mx = seat.box(m.fromCorner, m.endAt, 0, m.depth, y0, y1)
+            out.append((m.id, mn, mx))
     return out
 
 
@@ -97,6 +86,17 @@ def check_geometry(spec: KitchenSpec) -> list[dict]:
             L = spec.room.length(m.wall)
             if L and m.endAt > L + TOL:
                 issues.append(_issue("GEO-WALL", "error", [m.id], f"{m.id} vượt chiều dài tường {m.wall} ({m.endAt:g} > {L:g})", m.endAt, L))
+    if spec.room and not isinstance(getattr(spec, "floorplan", None), dict):      # explicit runs against the drawn room (an imported plan has its own walls)
+        back, right = spec.room.length("back"), spec.room.length("right")
+        for m in spec.module:
+            fr = runs.frame_of(spec, m)
+            if fr is None:
+                continue
+            pts = runs.module_footprint(fr, m)
+            over = max([-x - back for x, _ in pts] if back else [0.0]) if back else 0.0
+            over = max(over, max(z - right for _, z in pts) if right else 0.0, max(x for x, _ in pts), max(-z for _, z in pts))
+            if over > TOL:
+                issues.append(_issue("GEO-WALL", "error", [m.id], f"{m.id} vượt ra ngoài phòng {over:g} mm (dãy {m.run})", over, 0))
     if c.cabinetTop > c.ceiling + TOL:
         issues.append(_issue("GEO-CEILING", "error", [], f"Đỉnh tủ {c.cabinetTop:g} cao hơn trần {c.ceiling:g}", c.cabinetTop, c.ceiling))
     if abs(c.countertop - (c.baseTop + c.countertopThickness)) > TOL:

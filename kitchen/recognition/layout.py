@@ -69,11 +69,25 @@ def _sections(value: Any) -> list[dict[str, Any]] | None:
     return out
 
 
-def _appliances(value: Any) -> list[dict[str, Any]]:
+def worktop_size(kind: str, width: float) -> str | None:
+    """Stock size of a worktop appliance fitted into a cabinet ``width`` wide (the sizes ``intent`` gives a new kitchen); None for other kinds.
+    A photo gives no reliable size for these, and without one they are neither drawn nor checked."""
+    if kind == "sink":
+        return f"{min(780.0, width - 40.0):g} × 430"
+    if kind == "cooktop":
+        return f"{min(730.0, width - 10.0):g} × 430"
+    return "cao 300" if kind == "faucet" else None
+
+
+def _appliances(value: Any, width: float) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     for item in value if isinstance(value, list) else []:
         if isinstance(item, dict) and item.get("type") in APPLIANCE_TYPES and len(out) < MAX_APPLIANCES:
-            out.append({"type": item["type"], "name": str(item.get("name") or "")[:60]})
+            entry = {"type": item["type"], "name": str(item.get("name") or "")[:60]}
+            size = worktop_size(item["type"], width)
+            if size:
+                entry["dimensions"] = size
+            out.append(entry)
     return out
 
 
@@ -112,7 +126,7 @@ def _module(raw: Any, length: float) -> tuple[dict[str, Any] | None, str]:
     shelves = raw.get("shelfCount")
     if isinstance(shelves, int) and not isinstance(shelves, bool) and 1 <= shelves <= 8:
         out["shelfCount"] = shelves
-    devices = _appliances(raw.get("appliances"))
+    devices = _appliances(raw.get("appliances"), out["width"])
     if mtype == "tall-fridge":
         niche = _num(raw.get("niche"))
         extra, fridge = fridge_bay(DraftModule(type=mtype, wall="back", width=out["width"], niche=niche if niche and niche > 0 else None), height, depth)
