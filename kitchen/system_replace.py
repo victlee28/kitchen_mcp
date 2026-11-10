@@ -80,7 +80,8 @@ def style_ops(spec: KitchenSpec, mods: list[Module], style: Style) -> list[dict[
     for m in mods:
         if m.type in FRONTLESS:
             continue
-        changes: dict[str, Any] = {"material": style.front, "handle": {"variant": style.handle, "material": style.handle_material}}
+        handle = {**dict(_handle_of(m)), "variant": style.handle, "material": style.handle_material}     # its own handle length stays
+        changes: dict[str, Any] = {"material": style.front, "handle": handle}
         if m.type not in OWN_DOOR:
             changes["doorStyle"] = style.door
         ops.append({"op": "update", "id": m.id, "changes": changes})

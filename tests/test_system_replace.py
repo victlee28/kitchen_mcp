@@ -16,7 +16,7 @@ from test_systems import ISLAND, L, L_MODS, mod, spec  # noqa: E402
 
 KITCHEN = spec([*L, {**ISLAND, "system": "furniture_003"}],
                [*L_MODS, mod("U1", "R1", 0, kind="upper"), mod("K1", "R3", 0, material="Acrylic xám đậm", doorStyle="flat"),
-                mod("K2", "R3", 600, material="Acrylic xám đậm", doorStyle="flat", handle={"variant": "knob", "material": "Đồng"})])
+                mod("K2", "R3", 600, material="Acrylic xám đậm", doorStyle="flat", handle={"variant": "knob", "material": "Đồng", "length": 128})])
 NEW = [{"type": "base-sink", "width": 800.0, "s": 0.0, "y": 0.0, "height": 840.0, "depth": 600.0, "name": "Tủ chậu"},
        {"type": "base", "width": 400.0, "s": 800.0, "y": 0.0, "height": 840.0, "depth": 600.0},
        {"type": "upper", "width": 600.0, "s": 0.0, "y": 1500.0, "height": 700.0, "depth": 350.0}]
@@ -38,6 +38,7 @@ class TestRestyle(unittest.TestCase):
         for i in ("K1", "K2"):
             m = after.find(i)
             self.assertEqual((m.material, m.doorStyle, m.handle.variant, m.handle.material), (style.front, "frame", "knob", "Đồng thau"))
+        self.assertEqual(after.find("K2").handle.length, 128, "the cabinet's own handle length stays")
         for i in ("A1", "A2", "B1", "B2", "U1"):
             self.assertEqual(after.find(i), KITCHEN.find(i))
         self.assertEqual(after.common, KITCHEN.common)
