@@ -70,12 +70,10 @@ def _service_url(config: Config) -> str:
 
 
 def _draft(payload: object) -> dict:
-    raw = recognizer_wire.draft_from_kitchen_spec(payload)
+    raw = recognizer_wire.draft_from_runs(payload)
     if raw is None:
-        raise BackendError("generation-failed", f"cabinet-recognizer: {recognizer_wire.response_error(payload) or 'no kitchen in the answer'}")
-    layout = recognizer_wire.layout_from_runs(payload)
-    if layout is not None:
-        raw["layout"] = layout                     # the kitchen by runs; build_layout checks it, an anchored recognition places it
+        raise BackendError("generation-failed", f"cabinet-recognizer: {recognizer_wire.response_error(payload) or 'no kitchen by runs in the answer'}")
+    raw["layout"] = recognizer_wire.layout_from_runs(payload)     # the kitchen by runs; build_layout checks it and it is what gets placed
     return raw
 
 

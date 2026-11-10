@@ -496,11 +496,11 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
                             "transform": _tf(fr.pos, fr.rot), "materialId": mats["countertop"], "edgeProfile": "eased", "overhang": c.countertopOverhang,
                             "cutouts": cutouts, "sourceRef": f"countertop-{p.run or p.wall}",
                             "partRef": {"kind": "countertop", "wall": p.wall, **({"run": p.run} if p.run else {})}})
-        height = backsplash_height(spec, require(p.wall, "countertop wall"))  # cùng một hàm với hình học 3D
+        height = backsplash_height(spec, require(p.wall, "countertop wall"), p.run)  # cùng một hàm với hình học 3D
         if c.material.get("wallTile") and height >= 50:  # ốp tường giữa mặt đá và tủ trên, sát tường
             accessories.append({"id": f"ACC-BACKSPLASH-{i + 1}", "type": "Backsplash_Tile", "assetId": "ASSET-PANEL",
                                 "dimensions": _dims(w, height, 8), "materialId": mats["wallTile"],
-                                "transform": _tf((fr.pos[0], c.countertop, fr.pos[2]), fr.rot), "sourceRef": f"wall-tile-{p.wall}"})
+                                "transform": _tf((fr.pos[0], c.countertop, fr.pos[2]), fr.rot), "sourceRef": f"wall-tile-{p.run or p.wall}"})
 
     # phào: mặt cắt -> assets (dùng chung), đường chạy -> decorations
     from . import moldings as _mol

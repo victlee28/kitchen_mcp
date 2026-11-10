@@ -85,11 +85,11 @@ class TestService(unittest.TestCase):
         r = self.svc.recognize(self.did, self.src)
         self.assertEqual(r["status"], "ok")
         self.assertEqual((fake.seen.kind, fake.seen.name, fake.seen.data), ("photo", "a.png", b"\x89PNG fake"))
-        self.assertEqual(r["operation"]["op"], "replace")
-        ids = [m["id"] for m in r["operation"]["spec"]["module"]]
-        self.assertEqual(ids, ["TD1", "TD2", "TT1", "TC1"])
-        back = [m for m in r["operation"]["spec"]["module"] if m["wall"] == "back" and m["id"].startswith("TD")]
-        self.assertEqual([m["fromCorner"] for m in back], [0, 900])            # the second follows the first
+        ops = r["operation"]["ops"]
+        adds = [o["module"] for o in ops if o["op"] == "add"]
+        self.assertEqual(sorted(m["type"] for m in adds), sorted(m["type"] for m in r["draft"]["modules"]), "every cabinet of the draft is placed, by runs")
+        self.assertTrue(all(m["wall"] == "island" and m["run"] for m in adds))
+        self.assertEqual(r["mode"], "replace")
         self.assertTrue(r["proposal"]["applicable"])
         self.assertEqual(len(self.svc.history(self.did)), 1)                    # still only the original revision
 

@@ -86,7 +86,7 @@ class Scene:
 BACKSPLASH_STANDARD = 600.0  # "standard" backsplash height above the countertop (mm)
 
 
-def backsplash_height(spec: KitchenSpec, wall: str) -> float:
+def backsplash_height(spec: KitchenSpec, wall: str, run: str | None = None) -> float:
     """Height of the wall backsplash above the countertop on one wall (shared by the 3D geometry and the Three.js export).
 
     "standard" is a fixed 600 mm; "to-upper" reaches the underside of the lowest upper cabinet on that wall
@@ -100,7 +100,7 @@ def backsplash_height(spec: KitchenSpec, wall: str) -> float:
         return max(50.0, c.ceiling - c.countertop)
     if c.backsplashHeight != "to-upper":
         return BACKSPLASH_STANDARD
-    upper_edge = min((m.y for m in spec.module if m.wall == wall and m.storey == "upper"), default=c.upperBottom)
+    upper_edge = min((m.y for m in spec.module if m.wall == wall and (m.run or None) == run and m.storey == "upper"), default=c.upperBottom)   # of that row only
     return max(50.0, upper_edge - c.countertop)
 
 
@@ -293,7 +293,7 @@ class _Builder:
                     fr = self._run[ms[0].id]
                     self.box(None, "countertop", wall, s0, s1, 0, depth + c.countertopOverhang, c.baseTop, c.countertop, fr=fr)
                     if c.material.get("wallTile") and self.wall_behind(fr):     # a run standing against a wall of the room is tiled like a wall row
-                        self.box(None, "wall-tile", wall, s0, s1, 0, 8, c.countertop, c.countertop + backsplash_height(self.spec, wall), fr=fr)
+                        self.box(None, "wall-tile", wall, s0, s1, 0, 8, c.countertop, c.countertop + backsplash_height(self.spec, wall, fr.id), fr=fr)
                     continue
                 self.box(None, "countertop", wall, s0, s1, 0, depth + c.countertopOverhang,
                          c.baseTop, c.countertop, isl=(z[0], depth, z[1]) if z is not None else None)

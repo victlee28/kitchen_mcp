@@ -7,7 +7,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from kitchen import edit  # noqa: E402
-from kitchen.recognition import build_draft, draft_operation, line_modules  # noqa: E402
+from kitchen.recognition import build_draft, build_layout, runs_from_draft  # noqa: E402
 from kitchen.recognition.operation import fridge_bay  # noqa: E402
 from kitchen.spec import KitchenSpec, from_data, to_data  # noqa: E402
 
@@ -22,9 +22,10 @@ class TestFridgeBay(unittest.TestCase):
         self.assertEqual(extra, {"niche": 1850.0, "depth": 640.0})
         self.assertEqual(fridge["dimensions"], "910 × 1800 × 620")
 
-    def test_line_modules_carry_niche_and_fridge(self):
-        mods, _ = line_modules(build_draft(RAW), COMMON)
-        self.assertEqual((mods[0]["height"], mods[0]["niche"], mods[0]["appliance"]["type"]), (2770, 1850.0, "fridge"))
+    def test_a_flat_draft_written_by_runs_carries_the_bay_and_the_fridge(self):
+        layout = build_layout(runs_from_draft(build_draft(RAW), COMMON))
+        m = layout.runs[0].modules[0]
+        self.assertEqual((m["height"], m["niche"], [a["type"] for a in m["appliances"]]), (2770, 1850.0, ["fridge"]))
 
     def test_add_with_an_appliance_attaches_it_to_the_new_module(self):
         spec = from_data(KitchenSpec, {"schemaVersion": 2, "name": "x", "room": {"wall": [{"id": "back", "length": 3000}]}, "module": []})
@@ -32,12 +33,6 @@ class TestFridgeBay(unittest.TestCase):
                                                           "depth": 640, "niche": 1850, "appliance": {"type": "fridge", "dimensions": "600 × 1800 × 620"}}})
         data = to_data(out)
         self.assertEqual([(a["type"], a["module"]) for a in data["appliances"]], [("fridge", data["module"][0]["id"])])
-
-    def test_replace_operation_has_the_fridge_too(self):
-        spec = from_data(KitchenSpec, {"schemaVersion": 2, "name": "x", "room": {"wall": [{"id": "back", "length": 3000}]}, "module": []})
-        op = draft_operation(spec, build_draft(RAW))
-        self.assertEqual([a["type"] for a in op["spec"]["appliances"]], ["fridge"])
-        self.assertEqual(op["spec"]["module"][0]["niche"], 1850.0)
 
 
 if __name__ == "__main__":

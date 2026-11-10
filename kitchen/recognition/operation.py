@@ -46,66 +46,40 @@ def fridge_bay(m: DraftModule, height: float, depth: float) -> tuple[dict[str, A
     return {"niche": niche, "depth": max(depth, FRIDGE_MODULE_DEPTH)}, appliance
 
 
-def draft_operation(spec: KitchenSpec, draft: Draft) -> dict[str, Any]:
-    """The design with its cabinets replaced by the draft's; room, appliances and the rest of ``common`` stay. Modules without a position
-    follow the previous one on the same wall and storey (in the order given)."""
-    data = to_data(spec)
-    common = data["common"]
+def runs_from_draft(draft: Draft, common: dict[str, Any]) -> dict[str, Any]:
+    """A flat draft as a ``recognized-runs/1`` document, so every recognition is placed the same way (``build_layout`` checks it).
+
+    The draft gives each cabinet a wall and a ``fromCorner`` measured the way the walls are: on the back wall from its right-hand end towards
+    the left, on the side walls from the back corner towards the room. A run's ``s`` grows to the right of someone looking at the doors, so the
+    back and left runs are mirrored (``s = length - fromCorner - width``) and the right run is not. A cabinet with no position follows the
+    previous one of its wall and storey; one with no size takes the design's common levels. The left run ends, and the right run starts, at
+    the corner of the back run (the joints)."""
     cursor: dict[tuple[str, str], float] = {}
-    count: dict[str, int] = {}
-    modules: list[dict[str, Any]] = []
-    appliances: list[dict[str, Any]] = []
+    placed: dict[str, list[tuple[float, DraftModule]]] = {"left": [], "back": [], "right": []}
     for m in draft.modules:
-        storey = _storey(m)
-        key = (m.wall, storey)
+        if m.wall not in placed:
+            continue
+        key = (m.wall, _storey(m))
         start = m.fromCorner if m.fromCorner is not None else cursor.get(key, 0.0)
         cursor[key] = start + m.width
-        count[storey] = count.get(storey, 0) + 1
-        y, height, depth = _geometry(m, common)
-        entry: dict[str, Any] = {"id": f"{PREFIX[storey]}{count[storey]}", "type": m.type, "wall": m.wall, "fromCorner": start, "width": m.width,
-                                 "y": y, "height": height, "depth": depth}
-        if m.label:
-            entry["name"] = m.label
-        if m.type == "tall-fridge":
-            extra, fridge = fridge_bay(m, height, depth)
-            entry.update(extra)
-            appliances.append({**fridge, "id": f"TB{len(appliances) + 1}", "module": entry["id"]})
-        modules.append(entry)
-    data["module"] = modules
-    data["appliances"] = appliances               # the old ones pointed at the old module ids
-    if draft.ceiling is not None:
-        common["ceiling"] = draft.ceiling
-    if draft.materials:
-        common["material"] = {**common.get("material", {}), **draft.materials}
-    return {"op": "replace", "spec": data}
-
-
-def line_modules(draft: Draft, common: dict[str, Any], wall: str = "back") -> tuple[list[dict[str, Any]], int]:
-    """The draft's cabinets of ONE straight run, ready for ``run_line.plan_on_line``: ``({type, width, s, y, height, depth, name?}, dropped)``.
-
-    Only the draft's ``wall`` is used (a photo of an L or U kitchen has more runs; ``dropped`` counts the cabinets of the others). The draft measures
-    ``fromCorner`` from the right-hand end of the run towards the left, as seen from the front; a run's ``s`` grows to the right, so each cabinet
-    is mirrored: ``s = length - fromCorner - width``. A cabinet with no position follows the previous one of its storey, as in ``draft_operation``.
-    """
-    cursor: dict[str, float] = {}
-    placed: list[tuple[float, DraftModule]] = []
-    for m in draft.modules:
-        if m.wall != wall:
+        placed[m.wall].append((start, m))
+    runs: list[dict[str, Any]] = []
+    for wall in ("left", "back", "right"):
+        items = placed[wall]
+        if not items:
             continue
-        storey = _storey(m)
-        start = m.fromCorner if m.fromCorner is not None else cursor.get(storey, 0.0)
-        cursor[storey] = start + m.width
-        placed.append((start, m))
-    length = max((start + m.width for start, m in placed), default=0.0)
-    out: list[dict[str, Any]] = []
-    for start, m in placed:
-        y, height, depth = _geometry(m, common)
-        entry: dict[str, Any] = {"type": m.type, "width": m.width, "s": length - start - m.width, "y": y, "height": height, "depth": depth}
-        if m.label:
-            entry["name"] = m.label
-        if m.type == "tall-fridge":
-            extra, fridge = fridge_bay(m, height, depth)
-            entry.update(extra)
-            entry["appliance"] = fridge
-        out.append(entry)
-    return out, len(draft.modules) - len(placed)
+        length = max(start + m.width for start, m in items)
+        modules: list[dict[str, Any]] = []
+        for start, m in items:
+            y, height, depth = _geometry(m, common)
+            entry: dict[str, Any] = {"type": m.type, "s": start if wall == "right" else length - start - m.width, "width": m.width,
+                                     "y": y, "height": height, "depth": depth, "confidence": m.confidence}
+            if m.label:
+                entry["name"] = m.label
+            if m.niche:
+                entry["niche"] = m.niche
+            modules.append(entry)
+        runs.append({"id": wall, "length": length, "modules": modules})
+    ids = [r["id"] for r in runs]
+    joints = [{"a": a, "b": b, "angle": 90} for a, b in (("left", "back"), ("back", "right")) if a in ids and b in ids]
+    return {"schema": "recognized-runs/1", "unit": "mm", "runs": runs, "joints": joints}

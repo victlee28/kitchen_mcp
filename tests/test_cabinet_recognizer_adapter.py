@@ -67,12 +67,20 @@ class TestAdapter(unittest.TestCase):
 
     def test_sends_the_picture_and_the_cleaned_note_and_reads_the_modules(self):
         seen: list = []
-        answer = {"kitchen": {"spec": {"common": {"ceiling": 2700}, "module": [{"id": "B1", "type": "base", "wall": "back", "fromCorner": 0, "width": 600}]},
-                              "issues": []}}
+        answer = {"runs": {"schema": "recognized-runs/1", "runs": [{"id": "back", "length": 1500, "modules": [
+            {"id": "B1", "type": "base", "s": 900, "width": 600, "y": 0, "height": 840, "depth": 600},
+            {"id": "B2", "type": "base", "s": 0, "width": 900, "y": 0, "height": 840, "depth": 600, "confidence": 0.9}]}],
+            "joints": [], "common": {"material": {"countertop": "granite", "floor": "x"}}, "issues": [{"code": "type-approximated", "module": "B1", "message": "m"}]}}
         rec = CabinetRecognizerHttp(cfg(self.up(canned(200, json.dumps(answer).encode(), seen))))
         raw = rec.recognize(recognition.RecognitionInput("photo", b"\x89PNG data", "a.png", "image/png", "  white   doors "))
         self.assertEqual(seen[0], {"kind": "photo", "imageBase64": base64.b64encode(b"\x89PNG data").decode(), "note": "white doors"})
-        self.assertEqual(raw["modules"][0]["width"], 600)
+        self.assertEqual([(m["wall"], m["fromCorner"], m["width"], m.get("confidence")) for m in raw["modules"]],
+                         [("back", 0.0, 600, 0.4), ("back", 600.0, 900, 0.9)], "the flat draft for review: fromCorner from the right-hand end, approximations flagged")
+        self.assertEqual(raw["materials"], {"countertop": "granite"})
+        self.assertEqual(raw["layout"], answer["runs"])
+        with self.assertRaises(BackendError):
+            CabinetRecognizerHttp(cfg(self.up(canned(200, json.dumps({"kitchen": {"spec": {"module": []}}}).encode())))).recognize(
+                recognition.RecognitionInput("photo", b"\x89PNG data", "a.png", "image/png", ""))
 
     def test_errors_become_backend_errors_with_the_service_reason(self):
         err = json.dumps({"error": {"kind": "validation", "code": "bad-image", "message": "cannot identify"}}).encode()

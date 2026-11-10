@@ -1,0 +1,567 @@
+{
+ "function": "recognition.runs_from_draft",
+ "cases": [
+  {
+   "name": "every wall becomes a run; positions mirrored; the left-wall cabinet is counted as dropped",
+   "input": {
+    "raw": {
+     "modules": [
+      {
+       "type": "base",
+       "wall": "back",
+       "width": 600,
+       "fromCorner": 0
+      },
+      {
+       "type": "base",
+       "wall": "back",
+       "width": 900,
+       "fromCorner": 600
+      },
+      {
+       "type": "upper",
+       "wall": "back",
+       "width": 600,
+       "fromCorner": 0
+      },
+      {
+       "type": "base",
+       "wall": "left",
+       "width": 600,
+       "fromCorner": 0
+      }
+     ]
+    },
+    "common": {
+     "cabinetTop": 2200,
+     "baseDepth": 560,
+     "upperBottom": 1450,
+     "upperTierSplit": 2150,
+     "upperDepth": 330,
+     "baseTop": 840
+    }
+   },
+   "expected": {
+    "runs": {
+     "schema": "recognized-runs/1",
+     "unit": "mm",
+     "runs": [
+      {
+       "id": "left",
+       "length": 600.0,
+       "modules": [
+        {
+         "type": "base",
+         "s": 0.0,
+         "width": 600.0,
+         "y": 0.0,
+         "height": 840,
+         "depth": 560,
+         "confidence": 1.0
+        }
+       ]
+      },
+      {
+       "id": "back",
+       "length": 1500.0,
+       "modules": [
+        {
+         "type": "base",
+         "s": 900.0,
+         "width": 600.0,
+         "y": 0.0,
+         "height": 840,
+         "depth": 560,
+         "confidence": 1.0
+        },
+        {
+         "type": "base",
+         "s": 0.0,
+         "width": 900.0,
+         "y": 0.0,
+         "height": 840,
+         "depth": 560,
+         "confidence": 1.0
+        },
+        {
+         "type": "upper",
+         "s": 900.0,
+         "width": 600.0,
+         "y": 1450,
+         "height": 700,
+         "depth": 330,
+         "confidence": 1.0
+        }
+       ]
+      }
+     ],
+     "joints": [
+      {
+       "a": "left",
+       "b": "back",
+       "angle": 90
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "modules without a position follow the previous one of their storey",
+   "input": {
+    "raw": {
+     "modules": [
+      {
+       "type": "base",
+       "wall": "back",
+       "width": 600
+      },
+      {
+       "type": "base",
+       "wall": "back",
+       "width": 800
+      },
+      {
+       "type": "upper",
+       "wall": "back",
+       "width": 700
+      }
+     ]
+    },
+    "common": {
+     "cabinetTop": 2200,
+     "baseDepth": 560,
+     "upperBottom": 1450,
+     "upperTierSplit": 2150,
+     "upperDepth": 330,
+     "baseTop": 840
+    }
+   },
+   "expected": {
+    "runs": {
+     "schema": "recognized-runs/1",
+     "unit": "mm",
+     "runs": [
+      {
+       "id": "back",
+       "length": 1400.0,
+       "modules": [
+        {
+         "type": "base",
+         "s": 800.0,
+         "width": 600.0,
+         "y": 0.0,
+         "height": 840,
+         "depth": 560,
+         "confidence": 1.0
+        },
+        {
+         "type": "base",
+         "s": 0.0,
+         "width": 800.0,
+         "y": 0.0,
+         "height": 840,
+         "depth": 560,
+         "confidence": 1.0
+        },
+        {
+         "type": "upper",
+         "s": 700.0,
+         "width": 700.0,
+         "y": 1450,
+         "height": 700,
+         "depth": 330,
+         "confidence": 1.0
+        }
+       ]
+      }
+     ],
+     "joints": []
+    }
+   }
+  },
+  {
+   "name": "labels and own heights are kept",
+   "input": {
+    "raw": {
+     "modules": [
+      {
+       "type": "tall-fridge",
+       "wall": "back",
+       "width": 900,
+       "fromCorner": 0,
+       "height": 2100,
+       "label": "Tu lanh"
+      }
+     ]
+    },
+    "common": {
+     "cabinetTop": 2200,
+     "baseDepth": 560,
+     "upperBottom": 1450,
+     "upperTierSplit": 2150,
+     "upperDepth": 330,
+     "baseTop": 840
+    }
+   },
+   "expected": {
+    "runs": {
+     "schema": "recognized-runs/1",
+     "unit": "mm",
+     "runs": [
+      {
+       "id": "back",
+       "length": 900.0,
+       "modules": [
+        {
+         "type": "tall-fridge",
+         "s": 0.0,
+         "width": 900.0,
+         "y": 0.0,
+         "height": 2100.0,
+         "depth": 560,
+         "confidence": 1.0,
+         "name": "Tu lanh"
+        }
+       ]
+      }
+     ],
+     "joints": []
+    }
+   }
+  },
+  {
+   "name": "only a side wall",
+   "input": {
+    "raw": {
+     "modules": [
+      {
+       "type": "base",
+       "wall": "left",
+       "width": 600,
+       "fromCorner": 0
+      }
+     ]
+    },
+    "common": {
+     "cabinetTop": 2200,
+     "baseDepth": 560,
+     "upperBottom": 1450,
+     "upperTierSplit": 2150,
+     "upperDepth": 330,
+     "baseTop": 840
+    }
+   },
+   "expected": {
+    "runs": {
+     "schema": "recognized-runs/1",
+     "unit": "mm",
+     "runs": [
+      {
+       "id": "left",
+       "length": 600.0,
+       "modules": [
+        {
+         "type": "base",
+         "s": 0.0,
+         "width": 600.0,
+         "y": 0.0,
+         "height": 840,
+         "depth": 560,
+         "confidence": 1.0
+        }
+       ]
+      }
+     ],
+     "joints": []
+    }
+   }
+  },
+  {
+   "name": "one cabinet on the back wall and one on the left",
+   "input": {
+    "raw": {
+     "modules": [
+      {
+       "type": "base",
+       "wall": "left",
+       "width": 600,
+       "fromCorner": 0
+      },
+      {
+       "type": "base",
+       "wall": "back",
+       "width": 600,
+       "fromCorner": 0
+      }
+     ]
+    },
+    "common": {
+     "cabinetTop": 2200,
+     "baseDepth": 560,
+     "upperBottom": 1450,
+     "upperTierSplit": 2150,
+     "upperDepth": 330,
+     "baseTop": 840
+    }
+   },
+   "expected": {
+    "runs": {
+     "schema": "recognized-runs/1",
+     "unit": "mm",
+     "runs": [
+      {
+       "id": "left",
+       "length": 600.0,
+       "modules": [
+        {
+         "type": "base",
+         "s": 0.0,
+         "width": 600.0,
+         "y": 0.0,
+         "height": 840,
+         "depth": 560,
+         "confidence": 1.0
+        }
+       ]
+      },
+      {
+       "id": "back",
+       "length": 600.0,
+       "modules": [
+        {
+         "type": "base",
+         "s": 0.0,
+         "width": 600.0,
+         "y": 0.0,
+         "height": 840,
+         "depth": 560,
+         "confidence": 1.0
+        }
+       ]
+      }
+     ],
+     "joints": [
+      {
+       "a": "left",
+       "b": "back",
+       "angle": 90
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "the cabinet's own level is kept; a tall cabinet with a base-band height gets the full tall height",
+   "input": {
+    "raw": {
+     "modules": [
+      {
+       "type": "upper-hood",
+       "wall": "back",
+       "width": 760,
+       "fromCorner": 0,
+       "y": 2230,
+       "height": 450
+      },
+      {
+       "type": "tall-fridge",
+       "wall": "back",
+       "width": 720,
+       "fromCorner": 760,
+       "height": 830
+      }
+     ]
+    },
+    "common": {
+     "cabinetTop": 2680,
+     "baseDepth": 550,
+     "upperBottom": 1530,
+     "upperTierSplit": 2760,
+     "upperDepth": 350,
+     "baseTop": 830
+    }
+   },
+   "expected": {
+    "runs": {
+     "schema": "recognized-runs/1",
+     "unit": "mm",
+     "runs": [
+      {
+       "id": "back",
+       "length": 1480.0,
+       "modules": [
+        {
+         "type": "upper-hood",
+         "s": 720.0,
+         "width": 760.0,
+         "y": 2230.0,
+         "height": 450.0,
+         "depth": 350,
+         "confidence": 1.0
+        },
+        {
+         "type": "tall-fridge",
+         "s": 0.0,
+         "width": 720.0,
+         "y": 0.0,
+         "height": 2680,
+         "depth": 550,
+         "confidence": 1.0
+        }
+       ]
+      }
+     ],
+     "joints": []
+    }
+   }
+  },
+  {
+   "name": "an L and a U: joints at the corners of the back run, right run not mirrored, niche and confidence carried",
+   "input": {
+    "raw": {
+     "modules": [
+      {
+       "type": "base",
+       "wall": "back",
+       "width": 600,
+       "fromCorner": 0
+      },
+      {
+       "type": "base",
+       "wall": "back",
+       "width": 900,
+       "fromCorner": 600
+      },
+      {
+       "type": "base",
+       "wall": "right",
+       "width": 600,
+       "fromCorner": 600
+      },
+      {
+       "type": "upper",
+       "wall": "right",
+       "width": 700,
+       "fromCorner": 0,
+       "confidence": 0.3
+      },
+      {
+       "type": "base",
+       "wall": "left",
+       "width": 500,
+       "fromCorner": 600
+      },
+      {
+       "type": "tall-fridge",
+       "wall": "left",
+       "width": 800,
+       "fromCorner": 1100,
+       "niche": 1800
+      }
+     ]
+    },
+    "common": {
+     "cabinetTop": 2200,
+     "baseDepth": 560,
+     "upperBottom": 1450,
+     "upperTierSplit": 2150,
+     "upperDepth": 330,
+     "baseTop": 840
+    }
+   },
+   "expected": {
+    "runs": {
+     "schema": "recognized-runs/1",
+     "unit": "mm",
+     "runs": [
+      {
+       "id": "left",
+       "length": 1900.0,
+       "modules": [
+        {
+         "type": "base",
+         "s": 800.0,
+         "width": 500.0,
+         "y": 0.0,
+         "height": 840,
+         "depth": 560,
+         "confidence": 1.0
+        },
+        {
+         "type": "tall-fridge",
+         "s": 0.0,
+         "width": 800.0,
+         "y": 0.0,
+         "height": 2200,
+         "depth": 560,
+         "confidence": 1.0,
+         "niche": 1800.0
+        }
+       ]
+      },
+      {
+       "id": "back",
+       "length": 1500.0,
+       "modules": [
+        {
+         "type": "base",
+         "s": 900.0,
+         "width": 600.0,
+         "y": 0.0,
+         "height": 840,
+         "depth": 560,
+         "confidence": 1.0
+        },
+        {
+         "type": "base",
+         "s": 0.0,
+         "width": 900.0,
+         "y": 0.0,
+         "height": 840,
+         "depth": 560,
+         "confidence": 1.0
+        }
+       ]
+      },
+      {
+       "id": "right",
+       "length": 1200.0,
+       "modules": [
+        {
+         "type": "base",
+         "s": 600.0,
+         "width": 600.0,
+         "y": 0.0,
+         "height": 840,
+         "depth": 560,
+         "confidence": 1.0
+        },
+        {
+         "type": "upper",
+         "s": 0.0,
+         "width": 700.0,
+         "y": 1450,
+         "height": 700,
+         "depth": 330,
+         "confidence": 0.3
+        }
+       ]
+      }
+     ],
+     "joints": [
+      {
+       "a": "left",
+       "b": "back",
+       "angle": 90
+      },
+      {
+       "a": "back",
+       "b": "right",
+       "angle": 90
+      }
+     ]
+    }
+   }
+  }
+ ]
+}

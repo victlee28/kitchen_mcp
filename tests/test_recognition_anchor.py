@@ -68,7 +68,10 @@ class TestAnchored(unittest.TestCase):
 
     def test_without_an_anchor_everything_is_replaced_as_before(self):
         r = self.svc.recognize(self.did, self.source, "fake")
-        self.assertEqual((r["status"], r["operation"]["op"]), ("ok", "replace"))
+        self.assertEqual((r["status"], r["mode"]), ("ok", "replace"))
+        ops = r["operation"]["ops"]
+        self.assertEqual(sum(1 for o in ops if o["op"] == "add"), 4, "all four cabinets, the left-wall one in its own run")
+        self.assertEqual(sum(1 for o in ops if o["op"] == "add-run"), 2)
 
     def test_the_back_wall_run_is_added_along_the_object_and_saves_nothing(self):
         before, rev = self.svc.store.get(self.did)
@@ -78,14 +81,14 @@ class TestAnchored(unittest.TestCase):
         ops = r["operation"]["ops"] if "ops" in r["operation"] else [r["operation"]]
         kinds = [o["op"] for o in ops]
         self.assertEqual(kinds[0], "add-run")
-        self.assertEqual(kinds.count("add"), 3, "two base cabinets and one wall cabinet; the left-wall one is dropped")
-        self.assertTrue(any("left out" in line for line in r["summary"]))
+        self.assertEqual((kinds.count("add-run"), kinds.count("add")), (2, 4), "the back run along the edge and the left-wall cabinet in a run square to it")
         self.assertTrue(r["proposal"]["applicable"])
         self.assertEqual(len(self.svc.history(self.did)), rev)
         out = self.svc.apply(self.did, r["operation"], r["baseRev"], "test", r["proposal"]["opHash"])
         after, rev2 = self.svc.store.get(self.did)
-        self.assertEqual((rev2, len(after.module)), (rev + 1, len(before.module) + 3))
-        run_modules = [m for m in after.module if m.run]
+        self.assertEqual((rev2, len(after.module)), (rev + 1, len(before.module) + 4))
+        main = next(r_.id for r_ in after.runs if any(m.run == r_.id and m.type == "upper" for m in after.module))
+        run_modules = [m for m in after.module if m.run == main]
         self.assertEqual(sorted((m.type, m.fromCorner, m.width) for m in run_modules),
                          [("base", 0.0, 900.0), ("base", 900.0, 600.0), ("upper", 900.0, 600.0)], "mirrored: the first cabinet seen from the right ends the run")
         self.assertTrue(out)

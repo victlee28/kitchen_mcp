@@ -1039,7 +1039,18 @@
       ]
      ],
      "rejected": [],
-     "notes": []
+     "notes": [],
+     "levels": {
+      "plinthHeight": 50.0,
+      "baseTop": 840.0,
+      "countertop": 870.0,
+      "countertopThickness": 30.0,
+      "baseDepth": 600.0,
+      "upperBottom": 1400.0,
+      "upperTierSplit": 2100.0,
+      "cabinetTop": 2430.0,
+      "upperDepth": 350.0
+     }
     }
    }
   }

@@ -40,6 +40,7 @@ class Layout:
     joints: tuple[tuple[str, str], ...]       # (a, b): the end of run a meets the start of run b at a right angle
     rejected: tuple[dict[str, Any], ...]      # [{"run", "index", "reason"}]
     notes: tuple[str, ...]
+    levels: tuple[tuple[str, float], ...] = ()   # the recognised kitchen's own levels (``LEVELS`` of spec.Common), when the recognizer gives them
 
     @property
     def count(self) -> int:
@@ -47,7 +48,8 @@ class Layout:
 
     def to_data(self) -> dict[str, Any]:
         return {"runs": [{"id": r.id, "length": r.length, "modules": [dict(m) for m in r.modules]} for r in self.runs],
-                "joints": [list(j) for j in self.joints], "rejected": list(self.rejected), "notes": list(self.notes)}
+                "joints": [list(j) for j in self.joints], "rejected": list(self.rejected), "notes": list(self.notes),
+                **({"levels": dict(self.levels)} if self.levels else {})}
 
 
 def _positive_list(value: Any, limit: int) -> list[float] | None:
@@ -73,6 +75,38 @@ OVEN_NICHE_WIDTH = 560.0            # knowledge APPLIANCE-OVEN-60 / -45: recess 
 OVEN_NICHE_HEIGHTS = (590.0, 450.0)
 PANEL = 18.0                        # the default board thickness (spec.Common.doorThickness): an appliance needs one board of air on each side
 HOOD_MAX_WIDTH, HOOD_HEIGHT = 730.0, 165.0     # the built-in hood ``intent`` gives a new kitchen (no source: this project's own convention)
+
+
+LEVELS = ("plinthHeight", "baseTop", "countertop", "countertopThickness", "baseDepth", "upperBottom", "upperTierSplit", "cabinetTop", "upperDepth")
+CEILING_GAP = 30.0                  # air between the top of the cabinets and the ceiling when the ceiling was not seen
+
+
+def _levels(raw: Any) -> tuple[tuple[str, float], ...]:
+    """The numeric levels of a recognised ``common`` that are plausible on their own (0 < v <= 4000 mm); the spec's own validation judges the set."""
+    if not isinstance(raw, dict):
+        return ()
+    out: list[tuple[str, float]] = []
+    for key in LEVELS:
+        v = _num(raw.get(key))
+        if v is not None and 0 < v <= 4000:
+            out.append((key, float(v)))
+    return tuple(out)
+
+
+def common_changes(common: dict[str, Any], layout: Layout, ceiling: float | None, materials: dict[str, str]) -> dict[str, Any]:
+    """What a recognised kitchen changes in the design's ``common`` when it REPLACES the cabinets: its own levels (so the worktop sits on the
+    cabinets that were seen), the ceiling (the one seen, else kept, but never lower than the cabinets plus a gap) and the materials seen.
+    Only real differences are returned; {} when nothing changes."""
+    out: dict[str, Any] = {k: v for k, v in layout.levels if common.get(k) != v}
+    seen = dict(layout.levels)
+    top = seen["cabinetTop"] if "cabinetTop" in seen else float(common["cabinetTop"])
+    height = max(ceiling if ceiling is not None else float(common["ceiling"]), top + CEILING_GAP)
+    if height != common["ceiling"]:
+        out["ceiling"] = height
+    merged = {**common.get("material", {}), **materials}
+    if merged != common.get("material", {}):
+        out["material"] = merged
+    return out
 
 
 def appliance_size(kind: str, width: float, niche: float | None = None) -> str | None:
@@ -201,4 +235,4 @@ def build_layout(raw: Any) -> Layout | None:
             notes.append(f"the corner between {a} and {b} is not a right angle ({angle!r}); the two runs are not joined")
             continue
         joints.append((str(a), str(b)))
-    return Layout(tuple(runs), tuple(joints), tuple(rejected), tuple(notes))
+    return Layout(tuple(runs), tuple(joints), tuple(rejected), tuple(notes), _levels(raw.get("common")))

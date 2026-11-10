@@ -181,22 +181,34 @@ class TestAnchoredLayout(unittest.TestCase):
         self.assertEqual(sorted(run.yaw for run in after.runs), [0.0, 90.0])
         self.assertTrue(all(run.z == 0.0 for run in after.runs if run.yaw == 0.0))
 
-    def test_a_flat_draft_without_an_anchor_is_still_placed_by_walls(self):
+    def test_a_flat_draft_is_written_by_runs_and_placed_the_same_way(self):
         class Flat:
             def recognize(self, source):
-                return {"modules": [{"type": "base", "wall": "back", "width": 600, "fromCorner": 0}]}
+                return {"modules": [{"type": "base", "wall": "back", "width": 600, "fromCorner": 0}, {"type": "base", "wall": "back", "width": 900},
+                                    {"type": "base", "wall": "right", "width": 600, "fromCorner": 600}, {"type": "base", "wall": "left", "width": 500, "fromCorner": 600}],
+                        "room": {"ceiling": 2900}, "materials": {"countertop": "black granite"}}
         self.svc.recognizers["fake"] = Flat()
-        r = self.svc.recognize(self.did, self.source, "fake")
-        self.assertEqual((r["status"], r["operation"]["op"]), ("ok", "replace"))
+        for anchor in (None, self.anchor):
+            with self.subTest(anchored=anchor is not None):
+                r = self.svc.recognize(self.did, self.source, "fake", anchor=anchor)
+                self.assertEqual(r["status"], "ok")
+                self.assertEqual([run["id"] for run in r["layout"]["runs"]], ["left", "back", "right"])
+                back = next(run for run in r["layout"]["runs"] if run["id"] == "back")
+                self.assertEqual(sorted((m["s"], m["width"]) for m in back["modules"]), [(0.0, 900.0), (900.0, 600.0)], "mirrored: fromCorner 0 is the right-hand end")
+                self.assertEqual(r["layout"]["joints"], [["left", "back"], ["back", "right"]])
+                self.assertEqual(sum(1 for o in r["operation"]["ops"] if o["op"] == "add"), 4)
 
-    def test_a_recogniser_without_a_layout_keeps_the_single_run_path(self):
-        class Flat:
-            def recognize(self, source):
-                return {"modules": [{"type": "base", "wall": "back", "width": 600, "fromCorner": 0}]}
-        self.svc.recognizers["fake"] = Flat()
-        r = self.svc.recognize(self.did, self.source, "fake", anchor=self.anchor)
-        self.assertEqual(r["status"], "ok")
-        self.assertNotIn("layout", r)
+    def test_replacing_takes_the_levels_ceiling_and_materials_that_were_seen(self):
+        doc = json.loads(json.dumps(self.doc))
+        doc["common"] = {**doc.get("common", {}), "baseTop": 820, "countertop": 850, "countertopThickness": 30, "cabinetTop": 2400, "plinthHeight": "x"}
+        self.svc.recognizers["fake"] = Fake(doc)
+        r = self.svc.recognize(self.did, self.source, "fake")
+        first = r["operation"]["ops"][0]
+        self.assertEqual(first["op"], "common")
+        self.assertEqual((first["changes"]["baseTop"], first["changes"]["countertop"], first["changes"]["cabinetTop"]), (820.0, 850.0, 2400.0))
+        self.assertNotIn("plinthHeight", first["changes"])
+        added = self.svc.recognize(self.did, self.source, "fake", anchor=self.anchor)
+        self.assertFalse([o for o in added["operation"]["ops"] if o["op"] == "common"], "adding beside the cabinets already there changes no level")
 
 
 if __name__ == "__main__":

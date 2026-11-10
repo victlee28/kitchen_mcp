@@ -14,7 +14,7 @@ from typing import Any
 
 MAX_NOTE = 500
 # a module the recognizer had to approximate or could not place gets a confidence below ``draft.MIN_CONFIDENCE`` so the preview flags it
-REVIEW_CODES = ("type-approximated", "unknown-type", "outside-wall", "tall-sections-simplified", "blind-moved-to-left-run", "corner-gap",
+REVIEW_CODES = ("type-approximated", "unknown-type", "outside-wall", "tall-sections-simplified", "blind-moved-to-left-run", "blind-moved-to-next-run", "corner-gap",
                 "corner-shelf-split")
 REVIEW_CONFIDENCE = 0.4
 MATERIAL_SLOTS = ("base", "upper", "tall", "countertop")        # the slots of ``common.material`` that the draft also knows
@@ -76,30 +76,42 @@ def _list(value: Any) -> list[Any]:
     return value if isinstance(value, list) else []
 
 
-def draft_from_kitchen_spec(payload: Any) -> dict[str, Any] | None:
-    """The raw draft (what ``Recognizer.recognize`` returns) from a service answer; None when the answer has no kitchen spec."""
-    kitchen = _dict(_dict(payload).get("kitchen"))
-    spec = kitchen.get("spec")
-    if not isinstance(spec, dict):
+def _number(value: Any) -> float | None:
+    return float(value) if isinstance(value, (int, float)) and not isinstance(value, bool) else None
+
+
+def draft_from_runs(payload: Any) -> dict[str, Any] | None:
+    """The raw draft (what ``Recognizer.recognize`` returns: a flat list the user reviews) from the service's kitchen by runs; None when the
+    answer has none. Each cabinet names its run as its wall and gets the ``fromCorner`` the walls use (back and left runs: from their
+    right-hand / corner end, so mirrored; right run: as given). Cabinets the service had to approximate are marked for review."""
+    doc = layout_from_runs(payload)
+    if doc is None:
         return None
-    issues = [i for i in _list(kitchen.get("issues")) if isinstance(i, dict)]
+    issues = [i for i in _list(doc.get("issues")) if isinstance(i, dict)]
     flagged = {i.get("module") for i in issues if i.get("code") in REVIEW_CODES and isinstance(i.get("module"), str)}
     modules: list[Any] = []
-    for m in _list(spec.get("module")):
-        if not isinstance(m, dict):
-            modules.append(m)                  # build_draft lists it under ``rejected``
+    for run in _list(doc.get("runs")):
+        if not isinstance(run, dict):
             continue
-        item: dict[str, Any] = {k: m[k] for k in MODULE_FIELDS if m.get(k) is not None}
-        if m.get("name"):
-            item["label"] = m["name"]
-        if m.get("id") in flagged:
-            item["confidence"] = REVIEW_CONFIDENCE
-        modules.append(item)
-    common = _dict(spec.get("common"))
+        rid, length = run.get("id"), run.get("length")
+        for m in _list(run.get("modules")):
+            if not isinstance(m, dict):
+                modules.append(m)                  # build_draft lists it under ``rejected``
+                continue
+            item: dict[str, Any] = {k: m[k] for k in MODULE_FIELDS if k not in ("wall", "fromCorner") and m.get(k) is not None}
+            item["wall"] = rid
+            at, width, total = _number(m.get("s")), _number(m.get("width")), _number(length)
+            if at is not None and width is not None and total is not None:
+                item["fromCorner"] = at if rid == "right" else total - at - width
+            if m.get("name"):
+                item["label"] = m["name"]
+            if m.get("id") in flagged:
+                item["confidence"] = REVIEW_CONFIDENCE
+            elif m.get("confidence") is not None:
+                item["confidence"] = m["confidence"]
+            modules.append(item)
+    common = _dict(doc.get("common"))
     draft: dict[str, Any] = {"modules": modules, "notes": [t for t in (_issue_text(i) for i in issues) if t]}
-    ceiling = common.get("ceiling")
-    if isinstance(ceiling, (int, float)) and not isinstance(ceiling, bool):
-        draft["room"] = {"ceiling": ceiling}
     draft["materials"] = {k: v for k, v in _dict(common.get("material")).items() if k in MATERIAL_SLOTS and isinstance(v, str)}
     return draft
 

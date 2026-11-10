@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from kitchen import edit, floorplan, geometry, layers, moldings, numeric, proposal, rules, run_line, structure_mesh  # noqa: E402
-from kitchen.recognition import build_draft, build_layout, choose_recognizer, gemini_wire, line_modules, recognizer_wire  # noqa: E402
+from kitchen.recognition import build_draft, build_layout, choose_recognizer, gemini_wire, recognizer_wire, runs_from_draft  # noqa: E402
 from kitchen import intent, run_template  # noqa: E402
 from kitchen.placement import Placement  # noqa: E402
 from kitchen.spec import load_spec, to_data  # noqa: E402
@@ -148,8 +148,8 @@ def recognizer_wire_response_error(i):
     return {"error": recognizer_wire.response_error(i["payload"])}
 
 
-def recognizer_wire_draft_from_kitchen_spec(i):
-    return {"draft": recognizer_wire.draft_from_kitchen_spec(i["payload"])}
+def recognizer_wire_draft_from_runs(i):
+    return {"draft": recognizer_wire.draft_from_runs(i["payload"])}
 
 
 def recognizer_wire_clean_job_id(i):
@@ -179,9 +179,8 @@ def run_line_run_lines(i):
     return {"placed": [{"run": r["id"], **run_line.run_frame(line)} for r, line in placed], "skipped": skipped}
 
 
-def recognition_line_modules(i):
-    modules, dropped = line_modules(build_draft(i["raw"]), i["common"], i.get("wall", "back"))
-    return {"modules": modules, "dropped": dropped}
+def recognition_runs_from_draft(i):
+    return {"runs": runs_from_draft(build_draft(i["raw"]), i["common"])}
 
 
 def run_template_run_from_template(i):
@@ -212,11 +211,11 @@ FUNCTIONS = {
     "recognition.recognizer_wire.clean_note": recognizer_wire_clean_note,
     "recognition.recognizer_wire.request_body": recognizer_wire_request_body,
     "recognition.recognizer_wire.response_error": recognizer_wire_response_error,
-    "recognition.recognizer_wire.draft_from_kitchen_spec": recognizer_wire_draft_from_kitchen_spec,
+    "recognition.recognizer_wire.draft_from_runs": recognizer_wire_draft_from_runs,
     "run_line.run_frame": run_line_run_frame,
     "run_template.run_from_template": run_template_run_from_template,
     "run_line.edge_line": run_line_edge_line,
-    "recognition.line_modules": recognition_line_modules,
+    "recognition.runs_from_draft": recognition_runs_from_draft,
     "recognition.build_layout": recognition_build_layout,
     "run_line.run_lines": run_line_run_lines,
     "recognition.recognizer_wire.clean_job_id": recognizer_wire_clean_job_id,

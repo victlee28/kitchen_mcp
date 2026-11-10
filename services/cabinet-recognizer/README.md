@@ -77,6 +77,8 @@ cabinet-recognize anh.png --inbox inbox -o tu.json --debug-dir out/
 
 ## Tương thích với kitchen service (KitchenSpec của mcp-imagev2)
 
+> **Đường cũ.** Từ 10/11/2026 kitchen service chỉ đọc `runs` (`recognized-runs/1`, mục bên dưới): bản nháp để người dùng duyệt và hệ tủ được đặt đều lấy từ đó. Trường `kitchen` (KitchenSpec kiểu tường, `to_kitchen.py`) vẫn được trả về cho trang Xem 3D và để đối chiếu, nhưng không còn ai trong kitchen dùng; phần mô tả dưới đây giữ lại để tra cứu.
+
 JSON của recognizer **không** nạp thẳng vào kitchen service được: `load_spec` vẫn chạy (spec cho phép trường lạ) nhưng ra bếp **không có module nào**, vì recognizer dùng `modules` còn KitchenSpec dùng `module`. Luôn đi qua bộ chuyển `cabinet_recognizer.to_kitchen.to_kitchen_spec(result)` → `{"spec": KitchenSpec, "issues": [...]}`.
 
 | Recognizer 0.2 | KitchenSpec 2 | Ghi chú |
