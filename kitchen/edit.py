@@ -115,6 +115,17 @@ def move_run(spec: KitchenSpec, id: str, changes: dict[str, Any]) -> KitchenSpec
     return from_data(KitchenSpec, to_data(s))
 
 
+def set_run_system(spec: KitchenSpec, id: str, system: Any) -> KitchenSpec:
+    """Say which cabinet system a run belongs to (``Run.system``); None or "" lets it be worked out from the runs it touches again."""
+    s = _clone(spec)
+    run = _run(s, id)
+    if system not in (None, "") and not isinstance(system, str):
+        raise InvalidInput("system phải là chuỗi hoặc null", code="bad-run-system")
+    data = {**to_data(run), "system": system or None}
+    s.runs = [from_data(Run, data) if r.id == id else r for r in s.runs]
+    return from_data(KitchenSpec, to_data(s))
+
+
 def remove_run(spec: KitchenSpec, id: str) -> KitchenSpec:
     """Remove an explicit run with every cabinet and appliance standing in it."""
     s = _clone(spec)
@@ -235,6 +246,7 @@ def apply_op(spec: KitchenSpec, op: dict[str, Any]) -> KitchenSpec:
     """Lệnh dạng dữ liệu (dùng chung cho MCP và HTTP).
     {"op": "add-run", "run": {"id"?, "x", "z", "yaw"}}  — an explicit run at any angle; modules join it with wall="island", run=<id>
     {"op": "move-run", "id": "R1", "changes": {"x"?, "z"?, "yaw"?}} | {"op": "remove-run", "id": "R1"}  — the run with all its cabinets
+    {"op": "set-run-system", "id": "R1", "system": "furniture_003" | null}  — the cabinet system of a run (null: work it out)
     {"op": "stretch-run", "id": "R1", "end": "start"|"end", "delta": mm}  — drag one end; the cabinets at that end take the change
     {"op": "add", "module": {...}, "afterModule": "TD3"} | {"op": "remove", "id": "TD3"}
     {"op": "update", "id": "TD3", "changes": {...}} | {"op": "common", "changes": {...}}
@@ -251,6 +263,8 @@ def apply_op(spec: KitchenSpec, op: dict[str, Any]) -> KitchenSpec:
         return add_run(spec, op["run"])
     if kind == "move-run":
         return move_run(spec, op["id"], op.get("changes", {}))
+    if kind == "set-run-system":
+        return set_run_system(spec, op["id"], op.get("system"))
     if kind == "remove-run":
         return remove_run(spec, op["id"])
     if kind == "stretch-run":

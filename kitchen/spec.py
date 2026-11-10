@@ -113,6 +113,9 @@ class Run(_Base):
     x: float = Field(default=0, description="World x of the run origin (s = 0, d = 0), mm, kitchen frame")
     z: float = Field(default=0, description="World z of the run origin, mm, kitchen frame")
     yaw: float = Field(default=0, description="Degrees, three.js rotation.y; the doors look along (sin yaw, cos yaw)")
+    system: str | None = Field(default=None, pattern=r"^[A-Za-z0-9_.-]+$", max_length=80,
+                               description="Cabinet system the run belongs to: the id of the floorplan element (elements[].id, e.g. furniture_003) it was made "
+                                           "against. Unset: the system is worked out from which runs touch (runs.systems)")
 
 
 class FrontSection(_Base):

@@ -117,7 +117,21 @@ class TestService(unittest.TestCase):
         spec, rev = self.svc.store.get(self.did)
         self.assertEqual(rev, self.rev + 1)
         run = [m for m in spec.module if m.wall == "island"]
-        self.assertEqual([(m.facing, m.width) for m in run], [("-z", 400.0)])
+        self.assertEqual([(m.run, m.width) for m in run], [("R1", 400.0)], "always an explicit run now")
+        (r1,) = spec.runs
+        self.assertEqual((r1.yaw, r1.system), (180.0, "column_a"), "doors look -z; the run belongs to the column's system (its element id)")
+
+    def test_every_run_made_against_one_element_is_in_its_system(self):
+        for point in ((-2300.0, 1990.0), (-2300.0, 2410.0)):          # two edges of the same column: one system
+            r = self.svc.template(self.did, self.click(*point))
+            spec, rev = self.svc.store.get(self.did)
+            self.svc.apply(self.did, r["operation"], rev, "test", r["proposal"]["opHash"])
+        spec, _ = self.svc.store.get(self.did)
+        self.assertEqual([r.system for r in spec.runs], ["column_a", "column_a"])
+        from kitchen import runs
+        made = {m.id for m in spec.module if m.run}
+        self.assertEqual({runs.systems(spec)[m] for m in made}, {"column_a"})
+        self.assertNotIn("STRUCT-column_a", runs.systems(spec).values())
 
     def test_confirm_survives_a_browser_round_trip(self):
         """JSON.parse turns 600.0 into 600; the opHash of the preview must still match what the browser sends back."""

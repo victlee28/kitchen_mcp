@@ -13,7 +13,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from kitchen import edit, floorplan, geometry, layers, moldings, numeric, proposal, rules, run_line, structure_mesh  # noqa: E402
+from kitchen.spec import KitchenSpec  # noqa: E402
+from kitchen import edit, floorplan, geometry, layers, moldings, numeric, proposal, rules, run_line, runs, structure_mesh  # noqa: E402
 from kitchen.recognition import build_draft, build_layout, choose_recognizer, gemini_wire, recognizer_wire, runs_from_draft  # noqa: E402
 from kitchen import intent, run_template  # noqa: E402
 from kitchen.placement import Placement  # noqa: E402
@@ -169,6 +170,11 @@ def run_line_edge_line(i):
     return {"a": list(line.a), "b": list(line.b), "normal": [round(line.normal[0], 6), round(line.normal[1], 6)]}
 
 
+def runs_systems(i):
+    spec = KitchenSpec.model_validate(i["spec"])
+    return {"systems": runs.systems(spec), "tiers": {m.id: runs.tier_of(m) for m in spec.module}}
+
+
 def recognition_build_layout(i):
     layout = build_layout(i["raw"])
     return {"layout": None if layout is None else layout.to_data()}
@@ -218,6 +224,7 @@ FUNCTIONS = {
     "recognition.runs_from_draft": recognition_runs_from_draft,
     "recognition.build_layout": recognition_build_layout,
     "run_line.run_lines": run_line_run_lines,
+    "runs.systems": runs_systems,
     "recognition.recognizer_wire.clean_job_id": recognizer_wire_clean_job_id,
     "recognition.recognizer_wire.job_progress": recognizer_wire_job_progress,
 }

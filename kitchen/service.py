@@ -209,22 +209,22 @@ class KitchenService:
             color, notes = intent.parse_prompt(prompt)
             if not color.country and country:
                 color = color.model_copy(update={'country': country})
-            planner = lambda outline, click: self._plan_described(spec, color, notes, outline, click)
+            planner = lambda outline, click, system: self._plan_described(spec, color, notes, outline, click, system)
         else:
-            planner = lambda outline, click: cabinet_run.plan_i_run(spec, outline, click)
+            planner = lambda outline, click, system: cabinet_run.plan_i_run(spec, outline, click, system=system)
         struct, plan = self._plan_at_object(spec, str(template.get('structureId')), point, planner)
         preview = self.propose(design_id, plan['operation'], current, None, country)
         return {'id': design_id, 'baseRev': current, 'status': 'ok', 'structureId': struct['id'], 'facing': plan['facing'], 'length': plan['length'],
                 'summary': plan['summary'], 'operation': plan['operation'], 'proposal': preview}
 
     @staticmethod
-    def _plan_described(spec: KitchenSpec, color: KitchenTemplate, notes: list[str], outline: list, click: tuple) -> dict:
+    def _plan_described(spec: KitchenSpec, color: KitchenTemplate, notes: list[str], outline: list, click: tuple, system: str | None = None) -> dict:
         """The cabinets a sentence describes, in a run along the edge of the object nearest to ``click`` (kitchen frame). The run is as long as
         the edge unless the sentence gives a length; what the sentence says about materials and handles joins the design's own."""
-        return KitchenService._plan_described_line(spec, color, notes, run_line.edge_line(outline, click))
+        return KitchenService._plan_described_line(spec, color, notes, run_line.edge_line(outline, click), system)
 
     @staticmethod
-    def _plan_described_line(spec: KitchenSpec, color: KitchenTemplate, notes: list[str], line: Any) -> dict:
+    def _plan_described_line(spec: KitchenSpec, color: KitchenTemplate, notes: list[str], line: Any, system: str | None = None) -> dict:
         """The cabinets a sentence describes, in a run on ``line`` (kitchen frame)."""
         length = float(color.backWallLength) if 'backWallLength' in color.model_fields_set else run_line.run_frame(line)['length'] // 10 * 10
         if length < 600:
@@ -234,7 +234,7 @@ class KitchenService:
         if 'material' in changes:
             changes['material'] = {**spec.common.material, **changes['material']}
         after = [{'op': 'common', 'changes': changes}] if changes else []
-        plan = run_line.plan_on_line(spec, line, built['modules'], after=after)
+        plan = run_line.plan_on_line(spec, line, built['modules'], after=after, system=system)
         made = sorted({m['type'] for m in built['modules']})
         explicit = 'backWallLength' in color.model_fields_set
         kept = [n for n in notes if explicit or 'chiều dài' not in n]          # the "no length given, 3000 mm" note does not apply: the edge sets it
@@ -262,9 +262,11 @@ class KitchenService:
             place = place_after
         return plan
 
-    def _plan_at_object(self, spec: Any, structure_id: str, point: dict[str, Any], planner: Callable[[list[tuple[float, float]], tuple[float, float]], dict]) -> tuple[dict, dict]:
-        """``(object, plan)``: ``planner(outline, click)`` run with the object's outline and the click in the KITCHEN frame (see ``_settle``).
-        ``point`` is in the room frame (mm)."""
+    def _plan_at_object(self, spec: Any, structure_id: str, point: dict[str, Any],
+                        planner: Callable[[list[tuple[float, float]], tuple[float, float], str | None], dict]) -> tuple[dict, dict]:
+        """``(object, plan)``: ``planner(outline, click, system)`` run with the object's outline and the click in the KITCHEN frame (see ``_settle``)
+        and the cabinet system of what stands against it: the id of the floorplan element (``elements[].id``, the structure's ``sourceElement``),
+        the same each time something is made against that element. ``point`` is in the room frame (mm)."""
         from .placement import IDENTITY
         scene = geometry.compile_spec(spec)
         ctx = roomctx.for_spec(spec, scene.lsau, scene.lphai)
@@ -274,7 +276,8 @@ class KitchenService:
         if struct is None:
             raise NotFound(f"No such object: {structure_id}", code='structure-not-found')
         click = (float(point['x']), float(point['z']))
-        plan = self._settle(spec, lambda place: planner([place.to_kitchen(float(p['x']), float(p['z'])) for p in struct['outline']], place.to_kitchen(*click)),
+        system = runs.system_id(struct.get('sourceElement') or str(struct['id']).removeprefix('STRUCT-'))
+        plan = self._settle(spec, lambda place: planner([place.to_kitchen(float(p['x']), float(p['z'])) for p in struct['outline']], place.to_kitchen(*click), system),
                             ctx.placement if ctx.placement is not None else IDENTITY)
         return struct, plan
 
@@ -425,7 +428,7 @@ class KitchenService:
             plan = run_line.plan_runs(base, run_line.back_wall_line(base, runs), runs, joints, clear)
         else:
             struct, plan = self._plan_at_object(base, anchor['structureId'], anchor['point'],
-                                                lambda outline, click: run_line.plan_runs(base, run_line.edge_line(outline, click), runs, joints, clear))
+                                                lambda outline, click, system: run_line.plan_runs(base, run_line.edge_line(outline, click), runs, joints, clear, system))
             place = {'structureId': struct['id']}
         if before:
             plan = {**plan, 'operation': edit.combine_ops([*before, plan['operation']])}

@@ -107,11 +107,12 @@ EXTRA_FIELDS = ("name", "niche", "appliance", "appliances", "doors", "frontSecti
 
 
 def plan_on_line(spec: KitchenSpec, line: Line, modules: list[dict[str, Any]], clear: list[str] | None = None,
-                 after: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+                 after: list[dict[str, Any]] | None = None, system: str | None = None) -> dict[str, Any]:
     """The operation that puts ``modules`` in a new run on ``line``. Each module is ``{"type", "width", "s", "y", "height", "depth", "name"?}`` with
-    ``s`` measured along the run from its start. ``clear``: ids of cabinets to remove first (replace instead of add); ``after``: operations to run once the cabinets are in."""
+    ``s`` measured along the run from its start. ``clear``: ids of cabinets to remove first (replace instead of add); ``after``: operations to run once the cabinets are in.
+    ``system``: the cabinet system the run belongs to (``Run.system``), None to let it be worked out."""
     frame = run_frame(line)
-    run = {"id": next_run_id(spec), "x": frame["x"], "z": frame["z"], "yaw": frame["yaw"]}
+    run = {"id": next_run_id(spec), "x": frame["x"], "z": frame["z"], "yaw": frame["yaw"], **({"system": system} if system else {})}
     ops: list[dict[str, Any]] = [{"op": "remove", "id": module_id, "closeGap": False} for module_id in clear or []]
     ops.append({"op": "add-run", "run": run})
     reach = 0.0
@@ -170,7 +171,8 @@ def back_wall_line(spec: KitchenSpec, runs: list[dict[str, Any]]) -> Line:
     return Line((-length, 0.0), (0.0, 0.0), (0.0, 1.0))
 
 
-def plan_runs(spec: KitchenSpec, line: Line, runs: list[dict[str, Any]], joints: list[tuple[str, str]], clear: list[str] | None = None) -> dict[str, Any]:
+def plan_runs(spec: KitchenSpec, line: Line, runs: list[dict[str, Any]], joints: list[tuple[str, str]], clear: list[str] | None = None,
+              system: str | None = None) -> dict[str, Any]:
     """The operation that puts a whole recognised kitchen (one run, an L or a U) on ``line``: one explicit run per recognised run, see ``run_lines``.
     ``clear``: ids of cabinets to remove first. Returns what ``plan_on_line`` returns, plus ``runs`` (``[{"source", "run"}]``)."""
     if not runs:
@@ -181,7 +183,7 @@ def plan_runs(spec: KitchenSpec, line: Line, runs: list[dict[str, Any]], joints:
     made: list[dict[str, Any]] = []
     current = spec
     for index, (run, at) in enumerate(placed):
-        plan = plan_on_line(current, at, [dict(m) for m in run["modules"]], clear if index == 0 else None)
+        plan = plan_on_line(current, at, [dict(m) for m in run["modules"]], clear if index == 0 else None, system=system)
         ops.append(plan["operation"])
         summary.extend(plan["summary"] if index == 0 else [f"{run['id']}: {plan['summary'][0]}"])
         made.append({"source": run["id"], "run": plan["run"]})

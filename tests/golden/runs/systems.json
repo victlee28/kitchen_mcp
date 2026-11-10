@@ -1,0 +1,513 @@
+{
+ "function": "runs.systems",
+ "cases": [
+  {
+   "name": "an L with nothing recorded is one system; loft shares the upper tier",
+   "input": {
+    "spec": {
+     "runs": [
+      {
+       "id": "R1",
+       "x": -3000,
+       "z": 0,
+       "yaw": 0
+      },
+      {
+       "id": "R2",
+       "x": -3000,
+       "z": 2400,
+       "yaw": 90
+      }
+     ],
+     "module": [
+      {
+       "id": "A1",
+       "type": "base",
+       "wall": "island",
+       "run": "R1",
+       "fromCorner": 0,
+       "width": 600,
+       "y": 0,
+       "height": 840,
+       "depth": 600
+      },
+      {
+       "id": "A2",
+       "type": "base",
+       "wall": "island",
+       "run": "R1",
+       "fromCorner": 600,
+       "width": 600,
+       "y": 0,
+       "height": 840,
+       "depth": 600
+      },
+      {
+       "id": "U1",
+       "type": "upper",
+       "wall": "island",
+       "run": "R1",
+       "fromCorner": 0,
+       "width": 600,
+       "y": 1500,
+       "height": 700,
+       "depth": 350
+      },
+      {
+       "id": "H1",
+       "type": "upper-loft",
+       "wall": "island",
+       "run": "R1",
+       "fromCorner": 600,
+       "width": 600,
+       "y": 1500,
+       "height": 700,
+       "depth": 350
+      },
+      {
+       "id": "B1",
+       "type": "base",
+       "wall": "island",
+       "run": "R2",
+       "fromCorner": 1200,
+       "width": 600,
+       "y": 0,
+       "height": 840,
+       "depth": 600
+      },
+      {
+       "id": "B2",
+       "type": "base",
+       "wall": "island",
+       "run": "R2",
+       "fromCorner": 1800,
+       "width": 600,
+       "y": 0,
+       "height": 840,
+       "depth": 600
+      }
+     ]
+    }
+   },
+   "expected": {
+    "systems": {
+     "A1": "auto-R1",
+     "A2": "auto-R1",
+     "U1": "auto-R1",
+     "H1": "auto-R1",
+     "B1": "auto-R1",
+     "B2": "auto-R1"
+    },
+    "tiers": {
+     "A1": "base",
+     "A2": "base",
+     "U1": "upper",
+     "H1": "upper",
+     "B1": "base",
+     "B2": "base"
+    }
+   }
+  },
+  {
+   "name": "an L and an island: two systems",
+   "input": {
+    "spec": {
+     "runs": [
+      {
+       "id": "R1",
+       "x": -3000,
+       "z": 0,
+       "yaw": 0
+      },
+      {
+       "id": "R2",
+       "x": -3000,
+       "z": 2400,
+       "yaw": 90
+      },
+      {
+       "id": "R3",
+       "x": -2500,
+       "z": 2500,
+       "yaw": 180
+      }
+     ],
+     "module": [
+      {
+       "id": "A1",
+       "type": "base",
+       "wall": "island",
+       "run": "R1",
+       "fromCorner": 0,
+       "width": 600,
+       "y": 0,
+       "height": 840,
+       "depth": 600
+      },
+      {
+       "id": "A2",
+       "type": "base",
+       "wall": "island",
+       "run": "R1",
+       "fromCorner": 600,
+       "width": 600,
+       "y": 0,
+       "height": 840,
+       "depth": 600
+      },
+      {
+       "id": "U1",
+       "type": "upper",
+       "wall": "island",
+       "run": "R1",
+       "fromCorner": 0,
+       "width": 600,
+       "y": 1500,
+       "height": 700,
+       "depth": 350
+      },
+      {
+       "id": "H1",
+       "type": "upper-loft",
+       "wall": "island",
+       "run": "R1",
+       "fromCorner": 600,
+       "width": 600,
+       "y": 1500,
+       "height": 700,
+       "depth": 350
+      },
+      {
+       "id": "B1",
+       "type": "base",
+       "wall": "island",
+       "run": "R2",
+       "fromCorner": 1200,
+       "width": 600,
+       "y": 0,
+       "height": 840,
+       "depth": 600
+      },
+      {
+       "id": "B2",
+       "type": "base",
+       "wall": "island",
+       "run": "R2",
+       "fromCorner": 1800,
+       "width": 600,
+       "y": 0,
+       "height": 840,
+       "depth": 600
+      },
+      {
+       "id": "C1",
+       "type": "base",
+       "wall": "island",
+       "run": "R3",
+       "fromCorner": 0,
+       "width": 600,
+       "y": 0,
+       "height": 840,
+       "depth": 600
+      }
+     ]
+    }
+   },
+   "expected": {
+    "systems": {
+     "A1": "auto-R1",
+     "A2": "auto-R1",
+     "U1": "auto-R1",
+     "H1": "auto-R1",
+     "B1": "auto-R1",
+     "B2": "auto-R1",
+     "C1": "auto-R3"
+    },
+    "tiers": {
+     "A1": "base",
+     "A2": "base",
+     "U1": "upper",
+     "H1": "upper",
+     "B1": "base",
+     "B2": "base",
+     "C1": "base"
+    }
+   }
+  },
+  {
+   "name": "a recorded floorplan element spreads to the run it touches, not to the island",
+   "input": {
+    "spec": {
+     "runs": [
+      {
+       "id": "R1",
+       "x": -3000,
+       "z": 0,
+       "yaw": 0,
+       "system": "furniture_003"
+      },
+      {
+       "id": "R2",
+       "x": -3000,
+       "z": 2400,
+       "yaw": 90
+      },
+      {
+       "id": "R3",
+       "x": -2500,
+       "z": 2500,
+       "yaw": 180
+      }
+     ],
+     "module": [
+      {
+       "id": "A1",
+       "type": "base",
+       "wall": "island",
+       "run": "R1",
+       "fromCorner": 0,
+       "width": 600,
+       "y": 0,
+       "height": 840,
+       "depth": 600
+      },
+      {
+       "id": "A2",
+       "type": "base",
+       "wall": "island",
+       "run": "R1",
+       "fromCorner": 600,
+       "width": 600,
+       "y": 0,
+       "height": 840,
+       "depth": 600
+      },
+      {
+       "id": "U1",
+       "type": "upper",
+       "wall": "island",
+       "run": "R1",
+       "fromCorner": 0,
+       "width": 600,
+       "y": 1500,
+       "height": 700,
+       "depth": 350
+      },
+      {
+       "id": "H1",
+       "type": "upper-loft",
+       "wall": "island",
+       "run": "R1",
+       "fromCorner": 600,
+       "width": 600,
+       "y": 1500,
+       "height": 700,
+       "depth": 350
+      },
+      {
+       "id": "B1",
+       "type": "base",
+       "wall": "island",
+       "run": "R2",
+       "fromCorner": 1200,
+       "width": 600,
+       "y": 0,
+       "height": 840,
+       "depth": 600
+      },
+      {
+       "id": "B2",
+       "type": "base",
+       "wall": "island",
+       "run": "R2",
+       "fromCorner": 1800,
+       "width": 600,
+       "y": 0,
+       "height": 840,
+       "depth": 600
+      },
+      {
+       "id": "C1",
+       "type": "base",
+       "wall": "island",
+       "run": "R3",
+       "fromCorner": 0,
+       "width": 600,
+       "y": 0,
+       "height": 840,
+       "depth": 600
+      }
+     ]
+    }
+   },
+   "expected": {
+    "systems": {
+     "A1": "furniture_003",
+     "A2": "furniture_003",
+     "U1": "furniture_003",
+     "H1": "furniture_003",
+     "B1": "furniture_003",
+     "B2": "furniture_003",
+     "C1": "auto-R3"
+    },
+    "tiers": {
+     "A1": "base",
+     "A2": "base",
+     "U1": "upper",
+     "H1": "upper",
+     "B1": "base",
+     "B2": "base",
+     "C1": "base"
+    }
+   }
+  },
+  {
+   "name": "two recorded systems that touch stay apart",
+   "input": {
+    "spec": {
+     "runs": [
+      {
+       "id": "R1",
+       "x": -3000,
+       "z": 0,
+       "yaw": 0,
+       "system": "furniture_003"
+      },
+      {
+       "id": "R2",
+       "x": -3000,
+       "z": 2400,
+       "yaw": 90,
+       "system": "furniture_017"
+      }
+     ],
+     "module": [
+      {
+       "id": "A1",
+       "type": "base",
+       "wall": "island",
+       "run": "R1",
+       "fromCorner": 0,
+       "width": 600,
+       "y": 0,
+       "height": 840,
+       "depth": 600
+      },
+      {
+       "id": "A2",
+       "type": "base",
+       "wall": "island",
+       "run": "R1",
+       "fromCorner": 600,
+       "width": 600,
+       "y": 0,
+       "height": 840,
+       "depth": 600
+      },
+      {
+       "id": "U1",
+       "type": "upper",
+       "wall": "island",
+       "run": "R1",
+       "fromCorner": 0,
+       "width": 600,
+       "y": 1500,
+       "height": 700,
+       "depth": 350
+      },
+      {
+       "id": "H1",
+       "type": "upper-loft",
+       "wall": "island",
+       "run": "R1",
+       "fromCorner": 600,
+       "width": 600,
+       "y": 1500,
+       "height": 700,
+       "depth": 350
+      },
+      {
+       "id": "B1",
+       "type": "base",
+       "wall": "island",
+       "run": "R2",
+       "fromCorner": 1200,
+       "width": 600,
+       "y": 0,
+       "height": 840,
+       "depth": 600
+      },
+      {
+       "id": "B2",
+       "type": "base",
+       "wall": "island",
+       "run": "R2",
+       "fromCorner": 1800,
+       "width": 600,
+       "y": 0,
+       "height": 840,
+       "depth": 600
+      }
+     ]
+    }
+   },
+   "expected": {
+    "systems": {
+     "A1": "furniture_003",
+     "A2": "furniture_003",
+     "U1": "furniture_003",
+     "H1": "furniture_003",
+     "B1": "furniture_017",
+     "B2": "furniture_017"
+    },
+    "tiers": {
+     "A1": "base",
+     "A2": "base",
+     "U1": "upper",
+     "H1": "upper",
+     "B1": "base",
+     "B2": "base"
+    }
+   }
+  },
+  {
+   "name": "a cabinet in no run: the whole design",
+   "input": {
+    "spec": {
+     "module": [
+      {
+       "id": "TD1",
+       "type": "base",
+       "wall": "back",
+       "fromCorner": 0,
+       "width": 600,
+       "y": 0,
+       "height": 840,
+       "depth": 600
+      },
+      {
+       "id": "KG1",
+       "type": "corner-shelf",
+       "wall": "corner",
+       "y": 1500,
+       "height": 700,
+       "depth": 320,
+       "backLength": 600,
+       "rightLength": 600
+      }
+     ]
+    }
+   },
+   "expected": {
+    "systems": {
+     "TD1": "design",
+     "KG1": "design"
+    },
+    "tiers": {
+     "TD1": "base",
+     "KG1": "corner"
+    }
+   }
+  }
+ ]
+}

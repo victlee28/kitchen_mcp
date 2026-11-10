@@ -337,3 +337,106 @@ def strip_extent(poly: list[Point], frame: RunFrame, d_max: float) -> tuple[floa
         if not pts:
             return None
     return min(p[0] for p in pts), max(p[0] for p in pts)
+
+
+# ---- cabinet systems: which runs belong together (a kitchen against one floorplan element, an L, an island)
+
+SYSTEM_TOUCH = 50.0          # mm: runs whose cabinets come this close belong to the same system
+NO_RUN_SYSTEM = "design"     # cabinets standing in no run (old revisions by walls): one system, the whole design
+TIER_OF_STOREY = {"base": "base", "upper": "upper", "loft": "upper", "tall": "tall", "corner": "corner"}   # loft shares the upper tier
+
+
+def system_id(raw: str) -> str:
+    """A cabinet system id from a floorplan element id: kept as it is when it is a valid id, otherwise the characters a system id cannot
+    hold (anything but letters, digits, ``_ . -``; ``:`` and ``,`` separate selection-group ids) become ``_``."""
+    out = "".join(ch if ch.isascii() and (ch.isalnum() or ch in "_.-") else "_" for ch in raw)[:80]
+    return out or "element"
+
+
+def _segment_gap(a: Point, b: Point, c: Point, d: Point) -> float:
+    def to_segment(p: Point, s0: Point, s1: Point) -> float:
+        ex, ez = s1[0] - s0[0], s1[1] - s0[1]
+        n2 = ex * ex + ez * ez
+        t = 0.0 if n2 < EPS else max(0.0, min(1.0, ((p[0] - s0[0]) * ex + (p[1] - s0[1]) * ez) / n2))
+        return math.hypot(p[0] - (s0[0] + t * ex), p[1] - (s0[1] + t * ez))
+    return min(to_segment(a, c, d), to_segment(b, c, d), to_segment(c, a, b), to_segment(d, a, b))
+
+
+def polygon_gap(a: list[Point], b: list[Point]) -> float:
+    """Distance (mm) between two convex polygons; 0 when they touch or overlap."""
+    if penetration(a, b) > 0:
+        return 0.0
+    return min(_segment_gap(a[i], a[(i + 1) % len(a)], b[j], b[(j + 1) % len(b)]) for i in range(len(a)) for j in range(len(b)))
+
+
+def _run_order(run_id: str) -> tuple[int, str]:
+    tail = run_id.lstrip("R")
+    return (int(tail), run_id) if tail.isdigit() else (1 << 30, run_id)
+
+
+def run_systems(spec: KitchenSpec) -> dict[str, str]:
+    """The cabinet system of every run that has cabinets (run id -> system).
+
+    1. A run with ``Run.system`` belongs to that system (the floorplan element it was made against).
+    2. The others are grouped by touch: two runs touch when cabinets of the two come within ``SYSTEM_TOUCH`` mm, when they meet in an inside
+       corner (``corner_joints``, any angle, even with the corner left empty), or when a corner shelf turns from one into the other. Runs that touch, directly or through other runs, form one group.
+    3. In a group with exactly one recorded system, the unrecorded runs take it; with several, each unrecorded run takes the system of
+       the nearest recorded run. Recorded systems are never merged.
+    4. A group with none is ``auto-<its lowest run id>``."""
+    feet: dict[str, list[list[Point]]] = {}
+    for run in spec.runs:
+        fr = RunFrame(run.id, run.x, run.z, run.yaw)
+        mods = [m for m in spec.module if m.run == run.id]
+        if mods:
+            feet[run.id] = [module_footprint(fr, m) for m in mods]
+    ids = sorted(feet, key=_run_order)
+    if not ids:
+        return {}
+    recorded = {run.id: run.system for run in spec.runs if run.id in feet and run.system}
+
+    def gap(a: str, b: str) -> float:
+        return min(polygon_gap(p, q) for p in feet[a] for q in feet[b])
+    links = {(m.run, m.turnsInto) for m in spec.module if m.run in feet and m.turnsInto in feet} | {(j.a, j.b) for j in corner_joints(spec)}
+    near: dict[tuple[str, str], float] = {}
+    for i, a in enumerate(ids):
+        for b in ids[i + 1:]:
+            near[(a, b)] = 0.0 if (a, b) in links or (b, a) in links else gap(a, b)
+    parent = {r: r for r in ids}
+
+    def root(r: str) -> str:
+        while parent[r] != r:
+            parent[r] = parent[parent[r]]
+            r = parent[r]
+        return r
+    for (a, b), d in near.items():
+        if d <= SYSTEM_TOUCH:
+            parent[root(b)] = root(a)
+    groups: dict[str, list[str]] = {}
+    for r in ids:
+        groups.setdefault(root(r), []).append(r)
+    out: dict[str, str] = dict(recorded)
+    for members in groups.values():
+        named = [r for r in members if r in recorded]
+        systems = {recorded[r] for r in named}
+        for r in members:
+            if r in recorded:
+                continue
+            if not named:
+                out[r] = f"auto-{min(members, key=_run_order)}"
+            elif len(systems) == 1:
+                out[r] = next(iter(systems))
+            else:
+                closest = min(named, key=lambda n: (near.get((r, n), near.get((n, r), math.inf)), _run_order(n)))
+                out[r] = recorded[closest]
+    return out
+
+
+def systems(spec: KitchenSpec) -> dict[str, str]:
+    """The cabinet system of every module (module id -> system id). See ``run_systems``; a module in no run is in ``NO_RUN_SYSTEM``."""
+    by_run = run_systems(spec)
+    return {m.id: by_run.get(m.run or "", NO_RUN_SYSTEM) for m in spec.module}
+
+
+def tier_of(m: Module) -> str:
+    """The tier Shift-selection groups by: base, upper (with loft), tall, corner."""
+    return TIER_OF_STOREY[m.storey]

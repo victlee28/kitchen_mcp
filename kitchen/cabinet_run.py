@@ -29,7 +29,7 @@ def _is_diagonal(a: Pt, b: Pt) -> bool:
     return AXIS_TOLERANCE_DEG < angle < 90 - AXIS_TOLERANCE_DEG
 
 
-def _plan_angled(spec: KitchenSpec, outline: list[Pt], a: Pt, b: Pt, module_type: str) -> dict[str, Any]:
+def _plan_angled(spec: KitchenSpec, outline: list[Pt], a: Pt, b: Pt, module_type: str, system: str | None = None) -> dict[str, Any]:
     """A run along an edge at any angle: one explicit run (origin on the edge, doors along the outward normal) and the cabinets in it."""
     line = Line(a, b, _outward(outline, a, b))
     widths = split_widths(run_frame(line)["length"])
@@ -38,7 +38,7 @@ def _plan_angled(spec: KitchenSpec, outline: list[Pt], a: Pt, b: Pt, module_type
     for w in widths:
         modules.append({"type": module_type, "width": w, "s": at, "y": 0, "height": float(c.baseTop), "depth": float(c.baseDepth)})
         at += w
-    plan = plan_on_line(spec, line, modules)
+    plan = plan_on_line(spec, line, modules, system=system)
     return {"operation": plan["operation"], "facing": None, "run": plan["run"], "yaw": plan["run"]["yaw"], "length": sum(widths), "widths": widths,
             "summary": [f"{len(widths)} base cabinets, {sum(widths):g} mm, along an edge at {plan['run']['yaw']:g}° (run {plan['run']['id']})"]}
 
@@ -83,43 +83,19 @@ def split_widths(length: float) -> list[float]:
     return widths
 
 
-def plan_i_run(spec: KitchenSpec, outline: list[Pt], point: Pt, module_type: str = "base") -> dict[str, Any]:
-    """An I-shaped run along the edge of ``outline`` nearest to ``point`` (both in the kitchen frame, mm)."""
+def plan_i_run(spec: KitchenSpec, outline: list[Pt], point: Pt, module_type: str = "base", system: str | None = None) -> dict[str, Any]:
+    """An I-shaped run along the edge of ``outline`` nearest to ``point`` (both in the kitchen frame, mm): always one explicit run, its back on
+    the edge, doors looking away from the object. ``facing`` (-z / +z / -x / +x) is reported for an edge parallel to a wall, None otherwise.
+    ``system``: the cabinet system the new run belongs to (the floorplan element the edge belongs to)."""
     if len(outline) < 3:
         raise InvalidInput("The object has no outline", code="no-outline")
     a, b = _nearest_edge(outline, point)
-    if _is_diagonal(a, b):
-        return _plan_angled(spec, outline, a, b, module_type)
-    facing = _facing(outline, a, b)
-    c = spec.common
-    depth = float(c.baseDepth)
-    along_x = facing in ("-z", "+z")
-    lo, hi = (min(a[0], b[0]), max(a[0], b[0])) if along_x else (min(a[1], b[1]), max(a[1], b[1]))
-    fixed = a[1] if along_x else a[0]                       # z of the edge for runs along x, x of the edge for runs along z
-    notes: list[str] = []
-    if along_x:                                             # fromCorner counts from x = 0 towards -x
-        start, end = -hi, -lo
-    else:                                                   # fromCorner counts from the back wall (z = 0)
-        start, end = lo, hi
-    if start < 0:
-        notes.append(f"Trimmed {-start:g} mm that lies behind the kitchen's origin")
-        start = 0.0
-    offset = {"-z": fixed - depth, "+z": fixed + depth, "-x": depth - fixed, "+x": -(fixed + depth)}[facing]
-    if end - start < MIN_WIDTH or offset < 0:
-        # fromCorner and offset cannot be negative, so the wall-parallel form only covers the quadrant left of the right-hand corner and in
-        # front of the back wall. Anywhere else (beside the kitchen, behind it) the same cabinets stand in an explicit run at that place.
-        plan = _plan_angled(spec, outline, a, b, module_type)
-        return {**plan, "facing": facing, "summary": [*plan["summary"], "This edge lies outside the area measured from the kitchen's corner, so the cabinets stand in a free run"]}
-    widths = split_widths(end - start)
-    ops: list[dict[str, Any]] = []
-    at = float(round_half_away(start, 0))
-    for w in widths:
-        ops.append({"op": "add", "closeGap": False, "module": {"type": module_type, "wall": "island", "facing": facing, "offset": float(round_half_away(offset, 0)),
-                                                                "fromCorner": at, "width": w, "y": 0, "height": float(c.baseTop), "depth": depth}})
-        at += w
-    where = {"-z": "-z (towards the back wall)", "+z": "+z (into the room)", "-x": "-x", "+x": "+x"}[facing]
-    return {"operation": combine_ops(ops), "facing": facing, "length": sum(widths), "widths": widths,
-            "summary": [f"{len(widths)} base cabinets, {sum(widths):g} mm, doors facing {where}", *notes]}
+    plan = _plan_angled(spec, outline, a, b, module_type, system)
+    if not _is_diagonal(a, b):
+        facing = _facing(outline, a, b)
+        where = {"-z": "-z (towards the back wall)", "+z": "+z (into the room)", "-x": "-x", "+x": "+x"}[facing]
+        plan = {**plan, "facing": facing, "summary": [f"{len(plan['widths'])} base cabinets, {plan['length']:g} mm, doors facing {where} (run {plan['run']['id']})"]}
+    return plan
 
 
 def _meet(fa: runmod.RunFrame, fb: runmod.RunFrame) -> Pt:
