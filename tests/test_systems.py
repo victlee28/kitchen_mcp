@@ -107,5 +107,80 @@ class TestRecorded(unittest.TestCase):
         self.assertTrue(runs.systems(KitchenSpec.model_validate(old)))
 
 
+class TestSelectionGroups(unittest.TestCase):
+    """The layers catalogue carries each part's system; Shift groups exist per system when there are several."""
+
+    def two(self):
+        """furniture_003: an L (back run + left run). furniture_017: an island. Both with doors, drawers and wall cabinets."""
+        rs = [{**L[0], "system": "furniture_003"}, L[1], {**ISLAND, "system": "furniture_017"}]
+        ms = [mod("A1", "R1", 0, doors=[300, 300]), mod("A2", "R1", 600, frontSections=[{"type": "drawer", "height": 300}, {"type": "drawer", "height": 440}]),
+              mod("U1", "R1", 0, 600, "upper"), mod("B1", "R2", 1200), mod("B2", "R2", 1800), mod("C1", "R3", 0), mod("C2", "R3", 600)]
+        return spec(rs, ms)
+
+    def catalogue(self, s):
+        from kitchen import geometry, layers
+        scene = geometry.compile_spec(s)
+        return scene, layers.catalogue(s, scene)
+
+    def test_every_cabinet_part_knows_its_system(self):
+        _, cat = self.catalogue(self.two())
+        parts = [x for x in cat if x["variant"] == "part" and x["module"]]
+        self.assertEqual({x["module"]: x["cabinetSystemId"] for x in parts if x["module"] in ("A1", "B1", "C1")},
+                         {"A1": "furniture_003", "B1": "furniture_003", "C1": "furniture_017"})
+        tops = {x["cabinetSystemId"] for x in cat if x["variant"] == "part" and x["type"] == "countertop"}
+        self.assertEqual(tops, {"furniture_003", "furniture_017"}, "a worktop belongs to the system of its run")
+
+    def test_groups_per_system_besides_the_old_ones(self):
+        _, cat = self.catalogue(self.two())
+        ids = {x["id"]: x for x in cat if x["variant"] == "group"}
+        door = ids["sys:furniture_003:tier:base:door"]
+        members = {c.split("-")[0] for c in door["component"]}
+        self.assertEqual(members, {"A1", "B1", "B2"}, "base doors of the L only: not the island's, not the drawers")
+        self.assertEqual({c.split("-")[0] for c in ids["sys:furniture_017:tier:base:door"]["component"]}, {"C1", "C2"})
+        self.assertEqual({c.split("-")[0] for c in ids["tier:base:door"]["component"]}, {"A1", "B1", "B2", "C1", "C2"}, "the old group is unchanged")
+        self.assertIn("sys:furniture_003:tier:upper:door", ids)
+        self.assertNotIn("sys:furniture_017:tier:upper:door", ids, "the island has no wall cabinets")
+
+    def test_one_system_has_no_extra_groups(self):
+        _, cat = self.catalogue(spec(L, L_MODS))
+        self.assertFalse([x for x in cat if x["id"].startswith("sys:")])
+
+    def test_a_material_for_one_system_stays_in_that_system(self):
+        from kitchen import layers
+        s = self.two()
+        scene, cat = self.catalogue(s)
+        layer, _ = layers.resolve(cat, "sys:furniture_003:tier:base:door")
+        op, scope = layers.design_op(s, layer, "Laminate xanh", scene)
+        self.assertEqual((op["op"], sorted(o["id"] for o in op["ops"])), ("multi", ["A1", "B1", "B2"]))
+        after = edit.apply_op(s, op)
+        self.assertEqual({m.id: m.material for m in after.module if m.material}, {"A1": "Laminate xanh", "B1": "Laminate xanh", "B2": "Laminate xanh"})
+        self.assertIn("vật liệu riêng", scope)
+        whole, _ = layers.resolve(cat, "tier:base:front")
+        self.assertEqual(layers.design_op(s, whole, "Laminate xanh", scene)[0]["op"], "common", "every base front: the shared material, as before")
+
+    def test_a_hand_picked_selection_changes_only_its_modules(self):
+        from kitchen import layers
+        s = self.two()
+        scene, cat = self.catalogue(s)
+        doors = [x["id"] for x in cat if x["variant"] == "part" and x["module"] == "C1" and x["type"] == "door"]
+        layer, _ = layers.resolve(cat, "parts:" + ",".join(doors))
+        op, _ = layers.design_op(s, layer, "Sồi", scene)
+        self.assertEqual((op["op"], op["id"]), ("update", "C1"))
+
+    def test_the_page_gets_system_and_tier_of_each_module(self):
+        import shutil
+        import tempfile
+        from kitchen.service import KitchenService
+        tmp = Path(tempfile.mkdtemp(prefix="systems-"))
+        try:
+            svc = KitchenService(tmp / "k.db", tmp / "r")
+            did = svc.create_from_spec(json.loads(json.dumps(self.two().model_dump(mode="json"))))["id"]
+            got = svc.get(did)["systems"]
+            self.assertEqual((got["A1"], got["U1"], got["C1"]), ({"system": "furniture_003", "tier": "base"}, {"system": "furniture_003", "tier": "upper"},
+                                                                {"system": "furniture_017", "tier": "base"}))
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+
 if __name__ == "__main__":
     unittest.main()

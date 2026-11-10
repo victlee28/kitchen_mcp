@@ -87,6 +87,10 @@ def design_op(spec: KitchenSpec, layer: dict, material: str, scene: Scene | None
     if type in FRONT_SECTIONS and type != "glass-door" and module and module in {m.id for m in spec.module}:
         return {"op": "update", "id": module, "changes": {"material": material}}, f"cả mặt trước module {module}"
     kind, _, ref = key.partition(":")
+    if kind == "common" and type in FRONT_SECTIONS and scene is not None:
+        partial = _front_updates(spec, scene, layer, ref, material)
+        if partial is not None:
+            return partial
     if kind == "module":
         return {"op": "update", "id": ref, "changes": {"material": material}}, f"cả mặt trước module {ref}"
     if kind == "molding":
@@ -106,12 +110,16 @@ def catalogue(spec: KitchenSpec, scene: Scene) -> list[dict]:
     """Mọi chi tiết đơn + layer nhóm. Không gồm số pixel (phụ thuộc góc nhìn)."""
     out = []
     storey_of = {m.id: m.storey for m in spec.module}
+    from . import runs
+    system_of: dict[str, str] = runs.systems(spec)
+    run_system = runs.run_systems(spec)
     for p in list(scene.parts) + list(scene.meshes):
         key, name = material_slot(spec, p.module, p.type)
         vt = ROLES.get(p.type, (p.type, p.type))
         out.append({"id": p.id, "variant": "part", "module": p.module, "type": p.type, "semanticClass": SEMANTIC.get(p.type, "structure" if p.type.startswith("structure-") else "custom"),
                     "name": f"{vt[0]} {p.module or ''}".strip(), "material": name, "materialLocked": key,
                     "storey": storey_of.get(p.module or ""), "parent": getattr(p, "parent", None),
+                    "cabinetSystemId": system_of.get(p.module or "") or run_system.get(getattr(p, "run", None) or ""),
                     "selectable": True, "allowAppearanceChange": not p.type.startswith("structure-"),
                     "allowGeometryChange": False, "allowPositionChange": False})
     by_id = {x["id"]: x for x in out}
@@ -157,7 +165,19 @@ TIER_OF = {"base": "base", "upper": "upper", "loft": "upper", "tall": "tall", "c
 
 
 def _tier_groups(parts: list[dict]) -> list[dict]:
-    """Groups of one role within one tier: handle, door (door + glass door), drawer, front (all fronts), all (fronts + handles)."""
+    """Groups of one role within one tier: handle, door (door + glass door), drawer, front (all fronts), all (fronts + handles).
+
+    ``tier:<tier>:<role>`` covers the whole design (saved image jobs refer to these ids). When the design has more than one cabinet system
+    (``runs.systems``), the same groups are made once more per system: ``sys:<system>:tier:<tier>:<role>``, what Shift-click selects."""
+    out = _role_groups(parts, "tier", "")
+    systems = sorted({x["cabinetSystemId"] for x in parts if x.get("storey") and x.get("cabinetSystemId")})
+    if len(systems) > 1:
+        for system in systems:
+            out += _role_groups([x for x in parts if x.get("cabinetSystemId") == system], f"sys:{system}:tier", f" · hệ {system}", system)
+    return out
+
+
+def _role_groups(parts: list[dict], prefix: str, suffix: str, system: str | None = None) -> list[dict]:
     out = []
     for tier, tname in TIER_NAME.items():
         members = [x for x in parts if x.get("storey") and TIER_OF[x["storey"]] == tier]
@@ -174,11 +194,33 @@ def _tier_groups(parts: list[dict]) -> list[dict]:
                 continue
             seen.append(frozenset(ids))
             keys, mats = {x["materialLocked"] for x in xs}, {x["material"] for x in xs}
-            out.append({"id": f"tier:{tier}:{role}", "variant": "group", "module": None, "type": type, "semanticClass": SEMANTIC.get(type, "cabinet"),
-                        "name": name, "material": mats.pop() if len(mats) == 1 else None,
+            out.append({"id": f"{prefix}:{tier}:{role}", "variant": "group", "module": None, "type": type, "semanticClass": SEMANTIC.get(type, "cabinet"),
+                        "name": name + suffix, "material": mats.pop() if len(mats) == 1 else None, **({"cabinetSystemId": system} if system else {}),
                         "materialLocked": "common:handle" if type == "handle" else (keys.pop() if len(keys) == 1 and type != "module" else ""),
                         "component": ids})
     return out
+
+
+def _front_updates(spec: KitchenSpec, scene: Scene, layer: dict, slot: str, material: str) -> tuple[dict, str] | None:
+    """The fronts of a group that covers the fronts of only SOME of the modules using a common material slot (one cabinet system of
+    several, a hand-picked selection): a material of their own on each of those modules, so the other modules keep theirs. The spec keeps
+    a front material per module, so a module with doors and drawers gets it on both. None when the group reaches every module of the slot:
+    changing ``common`` then changes exactly those modules, as before."""
+    chosen = set(layer.get("component") or [layer["id"]])
+    touched: set[str] = set()
+    users: set[str] = set()
+    for p in list(scene.parts):
+        if not (p.module and p.type in FRONT_SECTIONS and p.type != "glass-door"):
+            continue
+        if material_slot(spec, p.module, p.type)[0] == f"common:{slot}":
+            users.add(p.module)
+            if p.id in chosen:
+                touched.add(p.module)
+    if not touched or users <= touched:
+        return None
+    mods = sorted(touched)
+    ops = [{"op": "update", "id": m, "changes": {"material": material}, "closeGap": False} for m in mods]
+    return (ops[0] if len(ops) == 1 else {"op": "multi", "ops": ops}), f"mặt trước {len(mods)} module ({', '.join(mods)}); các module này có vật liệu riêng"
 
 
 def changed_parts(old: KitchenSpec, new: KitchenSpec, scene: Scene) -> list[str]:
