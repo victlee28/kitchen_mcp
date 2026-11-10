@@ -97,13 +97,22 @@ class KitchenService:
         revision = self.store.add_revision(design_id, base_revision, spec, {'op': 'bind-floorplan', 'back': binding['back'], 'source': binding['source']}, 'bind-floorplan')
         return {'id': design_id, 'rev': revision, 'binding': binding}
 
+    @staticmethod
+    def _by_runs(spec: KitchenSpec) -> KitchenSpec:
+        """A newly generated kitchen written by explicit runs (``rows_to_runs``): the generator still thinks in walls, a design is stored by runs.
+        Kept as generated if the rewritten kitchen would not compile to the very same boxes."""
+        from . import rows_to_runs
+        data, _ = rows_to_runs.convert(spec)
+        after = KitchenSpec.model_validate(data)
+        return spec if rows_to_runs.equivalent(spec, after) else after
+
     def create_from_template(self, template: dict | KitchenTemplate, name: str='Kitchen design', **legacy: Any) -> dict:
         """Generate and persist a design from a structured template."""
         name = legacy.pop('name', name)
         if legacy:
             raise TypeError(f"Unexpected options: {', '.join(legacy)}")
         parsed_template = template if isinstance(template, KitchenTemplate) else KitchenTemplate.model_validate(template)
-        spec = intent.from_template(parsed_template, name, self.store.rule_rows())
+        spec = self._by_runs(intent.from_template(parsed_template, name, self.store.rule_rows()))
         record = self.store.create_design(spec, 'template')
         return self._summary(record['id'], 1, spec, color=parsed_template.model_dump())
 
@@ -120,7 +129,7 @@ class KitchenService:
             parser_source = 'regex'
         else:  # DeepSeek không biết các trường mới (phong cách, kiểu cánh, tay nắm, ốp): bổ sung từ bảng thuật ngữ
             template, notes = intent.merge_lexicon(template, prompt)
-        spec = intent.from_template(template, name or prompt[:60], self.store.rule_rows())
+        spec = self._by_runs(intent.from_template(template, name or prompt[:60], self.store.rule_rows()))
         record = self.store.create_design(spec, f'prompt:{parser_source}')
         return self._summary(record['id'], 1, spec, color=template.model_dump(), analysis={'source': parser_source, 'note': notes, 'interpretation': template.promptInterpretation, 'deepseek': llm_result})
 

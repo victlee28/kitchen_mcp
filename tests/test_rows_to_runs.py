@@ -94,5 +94,45 @@ class TestConvert(unittest.TestCase):
         self.assertEqual({tuple(m.wall) for m in after.moldings}, {("R1",)})
 
 
+class TestNewKitchens(unittest.TestCase):
+    """What the generator makes is stored by runs, and the everyday edits still work on it."""
+
+    def setUp(self):
+        import tempfile
+        from kitchen.service import KitchenService
+        self.tmp = Path(tempfile.mkdtemp(prefix="byruns-"))
+        self.svc = KitchenService(self.tmp / "k.db", self.tmp / "renders")
+        self.svc.config = self.svc.config.__class__.from_env({})          # no LLM: the regex parser
+
+    def tearDown(self):
+        import shutil
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_a_described_l_kitchen_is_stored_by_runs_and_reads_like_the_walled_one(self):
+        from kitchen import intent
+        did = self.svc.create_from_prompt("tủ bếp chữ L dài 3m cạnh phải 2.4m có tủ lạnh")["id"]
+        spec, _ = self.svc.store.get(did)
+        self.assertTrue(spec.runs and all(m.run for m in spec.module if m.wall != "corner"))
+        template, _ = intent.parse_prompt("tủ bếp chữ L dài 3m cạnh phải 2.4m có tủ lạnh")
+        walled = intent.from_template(template, "x", self.svc.store.rule_rows())
+        self.assertEqual(rows_to_runs.equivalent(walled, spec), [])
+        self.assertTrue({"back-wall", "right-wall"} <= set(geometry.default_views(spec)))
+        self.assertEqual({(i["rule"], i["severity"]) for i in rules.validate(walled)["issues"]}, {(i["rule"], i["severity"]) for i in rules.validate(spec)["issues"]})
+
+    def test_adding_and_removing_a_cabinet_still_works(self):
+        did = self.svc.create_from_prompt("tủ bếp chữ I dài 3m")["id"]
+        spec, rev = self.svc.store.get(did)
+        first = next(m for m in spec.module if m.storey == "base")
+        preview = self.svc.propose(did, {"op": "add", "afterModule": first.id, "module": {"type": "base", "width": 400}}, rev)
+        self.assertTrue(preview["applicable"], preview.get("error"))
+        self.svc.apply(did, preview["operation"], rev, "test", preview["opHash"])
+        after, rev2 = self.svc.store.get(did)
+        new = next(m for m in after.module if m.id not in {x.id for x in spec.module})
+        self.assertEqual((new.run, new.wall), (first.run, "island"), "it joins the run of the cabinet it stands beside")
+        self.assertFalse([i for i in rules.validate(after)["issues"] if i["rule"] == "GEO-COLLISION"])
+        gone = self.svc.propose(did, {"op": "remove", "id": new.id}, rev2)
+        self.assertTrue(gone["applicable"])
+
+
 if __name__ == "__main__":
     unittest.main()
