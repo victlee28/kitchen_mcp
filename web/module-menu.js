@@ -342,6 +342,7 @@ export function createModuleMenu(ctx) {
       busy = false;
       if (status === 409) return stale('cmd');
       if (!data || data.error) return redraw(text, data?.error || `Lỗi ${status}`);
+      ctx.setStatus(`${data.models?.length || 0} mẫu ${APPLIANCE_VI[data.appliance?.type] || ''} có thể thay`, 'ok');
       chooseModel(data, text);
     } catch (e) { busy = false; redraw(text, e.message); }
   }
@@ -415,7 +416,7 @@ export function createModuleMenu(ctx) {
       const swapped = action === 'appliance' ? lastAppliance : null;
       close(); await ctx.afterChange(data); ctx.setStatus(`Đã áp dụng: rev ${data.rev}`, 'ok');
       if (swapped) {        // the picture follows: the image tab opens on that appliance with the model's description filled in (nothing sent yet)
-        ctx.imageEdit({ layer: applianceLayer(swapped.id, swapped.type), module: swapped.id, material: swapped.facts?.name || swapped.model,
+        ctx.imageEdit({ layer: applianceLayer(swapped.id, swapped.type), module: swapped.id, material: '',     // not a material: the model goes in the request
           instruction: swapped.facts?.prompt || '', mode: 'quick', preview: true });
       }
     } catch (e) { busy = false; if (['cmd', 'appliance'].includes(action)) ctx.setStatus(e.message, 'warn'); else form(action, e.message); }

@@ -79,8 +79,9 @@ async function renderSwap(layer) {
   const pick = el('select', {}, ...choices.map((c) => el('option', { value: c.id, disabled: !c.pickable }, c.label)));
   const widen = el('input', { type: 'checkbox' });
   const out = el('ul', { class: 'small' });
-  const apply = el('button', { type: 'button', hidden: true }, 'Áp dụng mẫu này + điền job');
+  const apply = el('button', { type: 'button' }, 'Áp dụng mẫu này + điền job'); apply.hidden = true;
   let preview = null;
+  for (const input of [pick, widen]) input.addEventListener('change', () => { apply.hidden = true; out.replaceChildren(); });   // another choice: preview again
   const show = () => run('xem trước mẫu', async () => {
     preview = await api(`/api/designs/${S.id}/template`, 'POST', { template: { kind: 'replace-appliance', id, model: pick.value, resizeHost: widen.checked } });
     out.replaceChildren(...(preview.summary || []).map((t) => el('li', { textContent: t })));
@@ -90,7 +91,7 @@ async function renderSwap(layer) {
     const p = preview.proposal;
     await api(`/api/designs/${p.id}/ops`, 'POST', { op: p.operation, baseRev: p.baseRev, expect: p.opHash });
     window.dispatchEvent(new CustomEvent('design-reload-request', { detail: { id: S.id } }));
-    $('jItem').value = preview.aiFacts?.name || pick.value; $('jInstr').value = preview.aiFacts?.prompt || ''; $('jMode').value = 'quick';
+    $('jItem').value = ''; $('jInstr').value = preview.aiFacts?.prompt || ''; $('jMode').value = 'quick';      // the model is described in the request itself
     status(`Đã đổi ${id} sang ${preview.aiFacts?.name || pick.value}. Ảnh nền sẽ được render lại; bấm "Tạo job sửa" để AI vẽ mẫu mới`, 'ok');
     out.replaceChildren(); apply.hidden = true;
   }));
