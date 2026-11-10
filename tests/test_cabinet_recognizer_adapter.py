@@ -143,15 +143,20 @@ class TestEndToEnd(unittest.TestCase):
         before, rev = self.svc.store.get(self.did)
         r = self.svc.recognize(self.did, {"kind": "photo", "imageBase64": base64.b64encode(IMAGE).decode(), "name": "kitchen.png", "note": "white doors"})
         self.assertEqual((r["status"], r["recognizer"]), ("ok", "cabinet"))
-        self.assertEqual(r["operation"]["op"], "replace")
-        new = r["operation"]["spec"]
+        total = sum(len(run["modules"]) for run in r["layout"]["runs"])
+        kinds = [o["op"] for o in r["operation"]["ops"]]
+        self.assertEqual((kinds.count("remove"), kinds.count("add-run"), kinds.count("add")), (len(before.module), 2, total),
+                         "no edge picked: the old cabinets go, the whole L comes by runs")
         self.assertTrue(r["draft"]["modules"])
         self.assertTrue(r["proposal"]["applicable"])
-        self.assertEqual(new["room"], json.loads(json.dumps(before.model_dump(mode="json")["room"])), "the design's own room is kept")
         self.assertEqual(len(self.svc.history(self.did)), rev)                             # nothing was written
         self.svc.apply(self.did, r["operation"], r["baseRev"], "test", r["proposal"]["opHash"])
         after, rev2 = self.svc.store.get(self.did)
-        self.assertEqual((rev2, len(after.module)), (rev + 1, len(r["operation"]["spec"]["module"])))
+        self.assertEqual((rev2, len(after.module)), (rev + 1, total))
+        self.assertEqual(after.model_dump(mode="json")["room"], before.model_dump(mode="json")["room"], "the design's own room is kept")
+        self.assertTrue(any(m.doors for m in after.module) and any(m.frontSections for m in after.module), "doors and drawers are kept")
+        back = next(run for run in after.runs if run.yaw == 0)
+        self.assertEqual(back.z, 0.0, "the main run stands on the back wall of the kitchen frame")
 
     def test_on_a_picked_edge_the_whole_l_is_placed_by_runs_with_its_doors(self):
         sys.path.insert(0, str(ROOT / "tests"))
@@ -217,7 +222,7 @@ class TestInbox(unittest.TestCase):
             (answers / f"{step}.json").write_text(answer if isinstance(answer, str) else json.dumps(answer), encoding="utf-8")
         done = self.svc.recognize_collect(self.did, job, r["baseRev"])
         self.assertEqual(done["status"], "ok")
-        self.assertEqual(done["operation"]["op"], "replace")
+        self.assertEqual([o["op"] for o in done["operation"]["ops"]].count("add-run"), 2)
         self.assertTrue(done["proposal"]["applicable"])
         self.assertEqual(len(self.svc.history(self.did)), r["baseRev"], "nothing is saved before the user applies it")
 

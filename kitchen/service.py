@@ -270,9 +270,10 @@ class KitchenService:
 
         ``anchor`` (``{"structureId", "point": {"x", "z"}}``, room frame, mm): stand the recognised run along the edge of that floor-plan object nearest
         to the point, doors facing away from it, ADDING it to the cabinets already there (``mode="replace"``: instead of them). Without an anchor the whole
-        design's cabinets are replaced and placed on the back wall of the kitchen frame. With an anchor, a recognizer that gives the kitchen by runs
-        (cabinet-recognizer: recognized-runs/1) has ALL its runs placed (an L or U: the side runs square to the main one), with each cabinet's doors,
-        drawers and appliances; a recognizer that gives only a flat draft has its back-wall run placed.
+        design's cabinets are replaced and the main run stands along the back wall of the kitchen frame. A recognizer that gives the kitchen by runs
+        (cabinet-recognizer: recognized-runs/1) has ALL its runs placed as explicit runs (an L or U: the side runs square to the main one), with each
+        cabinet's doors, drawers and appliances, with or without an anchor; a recognizer that gives only a flat draft is placed by walls (no anchor)
+        or has its back-wall run placed (anchor).
 
         ``status``: ``ok`` (``draft`` + ``operation`` + the :meth:`propose` result under ``proposal``; confirm with :meth:`apply` and its opHash),
         ``empty`` (nothing usable was recognised), ``unavailable`` (no recognizer plugged in) or ``failed`` (the recognizer raised).
@@ -343,13 +344,13 @@ class KitchenService:
         draft = recognition.build_draft(raw)
         if not draft.modules:
             return {**out, 'status': 'empty', 'recognizer': name, 'draft': draft.to_data()}
-        if anchor is None:
-            operation = recognition.draft_operation(spec, draft)
-            preview = self.propose(design_id, operation, current, None, country)
-            return {**out, 'status': 'ok', 'recognizer': name, 'draft': draft.to_data(), 'operation': operation, 'proposal': preview}
         layout = recognition.build_layout(raw.get('layout')) if isinstance(raw, dict) else None
         if layout is not None:                      # the recognizer gave the kitchen by runs: every run (an L, a U) goes on its own line
             return self._place_layout(design_id, spec, current, out, name, draft, layout, country, anchor, mode)
+        if anchor is None:                          # a flat draft (wall + fromCorner only): the old wall-keyed replacement
+            operation = recognition.draft_operation(spec, draft)
+            preview = self.propose(design_id, operation, current, None, country)
+            return {**out, 'status': 'ok', 'recognizer': name, 'draft': draft.to_data(), 'operation': operation, 'proposal': preview}
         modules, dropped = recognition.line_modules(draft, to_data(spec)['common'])
         if not modules:
             return {**out, 'status': 'empty', 'recognizer': name, 'draft': draft.to_data(), 'message': 'No run on the back wall was recognised'}
@@ -364,18 +365,26 @@ class KitchenService:
                 'structureId': struct['id'], 'mode': mode, 'proposal': preview}
 
     def _place_layout(self, design_id: str, spec: Any, current: int, out: dict[str, Any], name: str, draft: Any, layout: Any, country: str | None,
-                      anchor: dict[str, Any], mode: str) -> dict:
-        """A kitchen recognised BY RUNS, standing on the edge the user picked: its main run along the edge, the runs joined to it square to it."""
+                      anchor: dict[str, Any] | None, mode: str) -> dict:
+        """A kitchen recognised BY RUNS: its main run along the edge the user picked (no edge picked: along the back wall of the kitchen frame,
+        instead of the cabinets already there), the runs joined to it square to it."""
         runs = [{'id': r.id, 'length': r.length, 'modules': list(r.modules)} for r in layout.runs]
-        clear = [m.id for m in spec.module] if mode == 'replace' else None
-        struct, plan = self._plan_at_object(spec, anchor['structureId'], anchor['point'],
-                                            lambda outline, click: run_line.plan_runs(spec, run_line.edge_line(outline, click), runs, list(layout.joints), clear))
+        joints = list(layout.joints)
+        place: dict[str, Any] = {}
+        if anchor is None:
+            mode = 'replace'
+            plan = run_line.plan_runs(spec, run_line.back_wall_line(spec, runs), runs, joints, [m.id for m in spec.module])
+        else:
+            clear = [m.id for m in spec.module] if mode == 'replace' else None
+            struct, plan = self._plan_at_object(spec, anchor['structureId'], anchor['point'],
+                                                lambda outline, click: run_line.plan_runs(spec, run_line.edge_line(outline, click), runs, joints, clear))
+            place = {'structureId': struct['id']}
         summary = [*plan['summary'], *layout.notes]
         if layout.rejected:
             summary.append(f'{len(layout.rejected)} recognised cabinets could not be used')
         preview = self.propose(design_id, plan['operation'], current, None, country)
         return {**out, 'status': 'ok', 'recognizer': name, 'draft': draft.to_data(), 'layout': layout.to_data(), 'operation': plan['operation'],
-                'summary': summary, 'structureId': struct['id'], 'mode': mode, 'runs': plan['runs'], 'proposal': preview}
+                'summary': summary, **place, 'mode': mode, 'runs': plan['runs'], 'proposal': preview}
 
     def propose(self, design_id: str, operation: dict[str, Any], base_revision: int | None=None, scope: list[str] | None=None,
                 country: str | None=None) -> dict:

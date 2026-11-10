@@ -78,6 +78,48 @@ class TestPlanRuns(unittest.TestCase):
         self.assertEqual(len(spec.appliances), want_apps)
 
 
+class TestBackWall(unittest.TestCase):
+    """No edge picked: the kitchen stands on the back wall of the kitchen frame, and a kitchen made only of runs still gets its room."""
+
+    def build(self, name, room=None):
+        from kitchen import edit
+        layout = build_layout(fixture(name))
+        runs = [{"id": r.id, "length": r.length, "modules": list(r.modules)} for r in layout.runs]
+        spec = KitchenSpec.model_validate({"common": {"material": {"wallTile": "white"}}, **({"room": room} if room else {})})
+        line = run_line.back_wall_line(spec, runs)
+        after = edit.apply_op(spec, run_line.plan_runs(spec, line, runs, list(layout.joints))["operation"])
+        return runs, line, after, geometry.compile_spec(after)
+
+    def test_the_line_is_the_back_wall_as_long_as_the_main_run_or_the_room(self):
+        runs, line, _, _ = self.build("l-shape")
+        main = next(r for r in runs if r["id"] == "back")
+        self.assertEqual((line.a, line.b, line.normal), ((-main["length"], 0.0), (0.0, 0.0), (0.0, 1.0)))
+        _, wide, _, _ = self.build("l-shape", {"wall": [{"id": "back", "length": 6000}, {"id": "right", "length": 4000}]})
+        self.assertEqual(wide.a, (-6000.0, 0.0))
+
+    def test_walls_and_tiles_follow_the_runs(self):
+        for name, walls in (("straight", 2), ("l-shape", 3), ("u-shape", 3)):
+            with self.subTest(fixture=name):
+                runs, _, after, scene = self.build(name)
+                main = next((r for r in runs if r["id"] == "back"), runs[0])
+                self.assertEqual(scene.lsau, main["length"], "the back wall is as long as the main run, so a left run stands against the left wall")
+                self.assertEqual(sum(1 for p in scene.parts if p.type == "wall"), walls)
+                tiled = sum(1 for p in scene.parts if p.type == "wall-tile")
+                tops = sum(1 for p in scene.parts if p.type == "countertop")
+                self.assertEqual(tiled, tops, "every worktop of a run that stands against a wall has its tiles")
+                for p in scene.parts:
+                    if p.module:
+                        self.assertTrue(-scene.lsau - 1 <= p.min[0] and p.max[0] <= 1 and p.min[2] >= -1, f"{p.id} is inside the room")
+
+    def test_a_run_standing_free_or_in_an_imported_plan_has_no_wall_tiles(self):
+        from kitchen import edit
+        spec = KitchenSpec.model_validate({"common": {"material": {"wallTile": "white"}}})
+        free = run_line.plan_on_line(spec, run_line.Line((-3000.0, 1500.0), (0.0, 1500.0), (0.0, 1.0)),
+                                     [{"type": "base", "s": 0, "width": 600, "y": 0, "height": 840, "depth": 600}])
+        scene = geometry.compile_spec(edit.apply_op(spec, free["operation"]))
+        self.assertFalse([p for p in scene.parts if p.type == "wall-tile"])
+
+
 class TestWire(unittest.TestCase):
     def test_layout_is_taken_only_from_a_recognized_runs_payload(self):
         doc = fixture("l-shape")
@@ -129,7 +171,21 @@ class TestAnchoredLayout(unittest.TestCase):
         after, _ = self.svc.store.get(self.did)
         self.assertEqual(len(after.module), self.total)
 
-    def test_without_an_anchor_the_old_wall_path_still_answers(self):
+    def test_without_an_anchor_the_runs_replace_the_cabinets_along_the_back_wall(self):
+        r = self.svc.recognize(self.did, self.source, "fake")
+        self.assertEqual((r["status"], r["mode"]), ("ok", "replace"))
+        self.assertNotIn("structureId", r)
+        self.svc.apply(self.did, r["operation"], r["baseRev"], "test", r["proposal"]["opHash"])
+        after, _ = self.svc.store.get(self.did)
+        self.assertEqual(len(after.module), self.total)
+        self.assertEqual(sorted(run.yaw for run in after.runs), [0.0, 90.0])
+        self.assertTrue(all(run.z == 0.0 for run in after.runs if run.yaw == 0.0))
+
+    def test_a_flat_draft_without_an_anchor_is_still_placed_by_walls(self):
+        class Flat:
+            def recognize(self, source):
+                return {"modules": [{"type": "base", "wall": "back", "width": 600, "fromCorner": 0}]}
+        self.svc.recognizers["fake"] = Flat()
         r = self.svc.recognize(self.did, self.source, "fake")
         self.assertEqual((r["status"], r["operation"]["op"]), ("ok", "replace"))
 

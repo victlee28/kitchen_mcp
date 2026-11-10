@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 
 from .numeric import round_half_away
 from . import camera_plan, roomctx, runs as runmod, structure_mesh
-from .spec import ORIENT_OF_FACING, ViewAngle, KitchenSpec, Module, effective_handle, to_data
+from .spec import ViewAngle, KitchenSpec, Module, effective_handle, to_data
 from .errors import InvalidInput, require
 
 COLORS = {  # màu hiển thị theo loại chi tiết (viewer 3D, mask ngữ nghĩa)
@@ -112,9 +112,19 @@ def _wall_length(spec: KitchenSpec) -> tuple[float, float]:
         if wall == "right":
             vals += [m.rightLength or 0 for m in spec.module if m.type == "corner-shelf"]
         return max(vals, default=0)
-    lsau = (spec.room.length("back") if spec.room else None) or endAt("back") + 600
-    lphai = (spec.room.length("right") if spec.room else None) or max(endAt("right"), endAt("left"), *[m.offset + m.depth for m in spec.module if m.wall == "island" and not m.run and (m.facing or "-z") in ("-z", "+z")], 0) + 600
+    reach_x, reach_z = _run_reach(spec)
+    lsau = (spec.room.length("back") if spec.room else None) or max(endAt("back") + 600, reach_x)
+    lphai = (spec.room.length("right") if spec.room else None) or max(endAt("right"), endAt("left"), reach_z, *[m.offset + m.depth for m in spec.module if m.wall == "island" and not m.run and (m.facing or "-z") in ("-z", "+z")], 0) + 600
     return lsau, lphai
+
+
+def _run_reach(spec: KitchenSpec) -> tuple[float, float]:
+    """How far the explicit runs reach along the back wall (-x) and into the room (+z), so a kitchen made only of runs still gets walls and a
+    floor that hold it. (0, 0) with an imported floor plan: there the room is the plan's, and the walls' lengths anchor the kitchen in it."""
+    if isinstance(getattr(spec, "floorplan", None), dict):
+        return 0.0, 0.0
+    pts = [p for m in spec.module if (fr := runmod.frame_of(spec, m)) is not None for p in fr.footprint(m.fromCorner, m.endAt, 0.0, m.depth)]
+    return max((-x for x, _ in pts), default=0.0), max((z for _, z in pts), default=0.0)
 
 
 class _Builder:
@@ -127,11 +137,19 @@ class _Builder:
         self._isl = {m.id: (m.offset, m.depth, m.facing or "-z") for m in spec.module if m.wall == "island" and not m.run}  # free run: (door face position, depth, facing)
         self._run = {m.id: fr for m in spec.module if (fr := runmod.frame_of(spec, m)) is not None}   # explicit run frames by module (or appliance) id
 
-    # ---- toạ độ tường -> thế giới
+    # ---- row coordinates (s, d) -> world
+    def seat(self, wall: str, module: str | None = None, isl: tuple[float, float, str] | None = None) -> "runmod.Seat":
+        """The seat of an axis-aligned row: a wall's, or a legacy free run's (``isl`` = (door face position, depth, facing), else that of ``module``)."""
+        if wall == "island":
+            return runmod.free_seat(*(isl or self._isl[require(module, "island part module")]))
+        seat = runmod.wall_seat(wall, self.lsau)
+        if seat is None:
+            raise InvalidInput(wall)
+        return seat
+
     def box(self, module: str | None, type: str, wall: str, s0, s1, d0, d1, y0, y1, isl: tuple[float, float, str] | None = None, fr: "runmod.RunFrame | None" = None):
         if s1 - s0 <= 0.01 or d1 - d0 <= 0.01 or y1 - y0 <= 0.01:
             return
-        face = None
         fr = fr or self._run.get(module or "")
         if fr is not None:                     # explicit run at any angle: keep the local box, store its world AABB
             lmn, lmx = (s0, y0, d0), (s1, y1, d1)
@@ -141,28 +159,25 @@ class _Builder:
             self._n[key] = self._n.get(key, 0) + 1
             self.parts.append(Part(f"{key}-{self._n[key]}", module, type, (ax, y0, az), (bx, y1, bz), wall, frame=(fr.x, fr.z, fr.yaw), lmin=lmn, lmax=lmx, run=fr.id))
             return
-        if wall == "back":
-            mn, mx = (-s1, y0, d0), (-s0, y1, d1)
-        elif wall == "right":
-            mn, mx = (-d1, y0, s0), (-d0, y1, s1)
-        elif wall == "left":
-            mn, mx = (-self.lsau + d0, y0, s0), (-self.lsau + d1, y1, s1)
-        elif wall == "island":  # free run: s along x (facing -z / +z) or along z (facing -x / +x); d runs from the back of the cabinet to its door face
-            pos, depth, facing = isl or self._isl[require(module, "island part module")]
-            if facing == "-z":      # doors look at the back wall, so depth is mirrored
-                mn, mx = (-s1, y0, pos + depth - d1), (-s0, y1, pos + depth - d0)
-            elif facing == "+z":    # like the back wall, standing at z = pos - depth
-                mn, mx = (-s1, y0, pos - depth + d0), (-s0, y1, pos - depth + d1)
-            elif facing == "-x":    # like the right wall, door face at x = -pos
-                mn, mx = (-pos + depth - d1, y0, s0), (-pos + depth - d0, y1, s1)
-            else:                   # "+x": like the left wall, door face at x = -pos
-                mn, mx = (-pos - depth + d0, y0, s0), (-pos - depth + d1, y1, s1)
-            face = ORIENT_OF_FACING[facing]
-        else:
-            raise InvalidInput(wall)
+        seat = self.seat(wall, module, isl)
+        mn, mx = seat.box(s0, s1, d0, d1, y0, y1)
+        face = seat.front if wall == "island" else None
         key = f"{module or 'room'}-{type}"
         self._n[key] = self._n.get(key, 0) + 1
         self.parts.append(Part(f"{key}-{self._n[key]}", module, type, mn, mx, wall, face=face if wall == "island" else None))
+
+    def wall_behind(self, fr: "runmod.RunFrame") -> str | None:
+        """The wall of the drawn room (back / right / left) an explicit run has its back against, None when it stands free or the room is an imported plan."""
+        if isinstance(getattr(self.spec, "floorplan", None), dict):
+            return None
+        nx, nz = fr.normal()
+        if abs(nx) < 1e-6 and nz > 0 and abs(fr.z) < 1.0:
+            return "back"
+        if abs(nz) < 1e-6 and nx < 0 and abs(fr.x) < 1.0:
+            return "right"
+        if abs(nz) < 1e-6 and nx > 0 and abs(fr.x + self.lsau) < 1.0:
+            return "left"
+        return None
 
     def door_widths(self, m: Module, s0, s1, y0, y1, type="door"):
         """Chia dải mặt trước [s0,s1]x[y0,y1] thành cánh theo tỉ lệ m.canh, chừa khe."""
@@ -275,7 +290,10 @@ class _Builder:
                     run.append([m.fromCorner, m.endAt, m.depth])
             for s0, s1, depth in run:
                 if isinstance(z, str):
-                    self.box(None, "countertop", wall, s0, s1, 0, depth + c.countertopOverhang, c.baseTop, c.countertop, fr=self._run[ms[0].id])
+                    fr = self._run[ms[0].id]
+                    self.box(None, "countertop", wall, s0, s1, 0, depth + c.countertopOverhang, c.baseTop, c.countertop, fr=fr)
+                    if c.material.get("wallTile") and self.wall_behind(fr):     # a run standing against a wall of the room is tiled like a wall row
+                        self.box(None, "wall-tile", wall, s0, s1, 0, 8, c.countertop, c.countertop + backsplash_height(self.spec, wall), fr=fr)
                     continue
                 self.box(None, "countertop", wall, s0, s1, 0, depth + c.countertopOverhang,
                          c.baseTop, c.countertop, isl=(z[0], depth, z[1]) if z is not None else None)
@@ -334,7 +352,7 @@ class _Builder:
         if not isinstance(getattr(self.spec, "floorplan", None), dict):  # an imported plan brings its own (real) walls
             self.box(None, "wall", "back", -100, self.lsau, -100, 0, 0, ceiling)
             self.box(None, "wall", "right", 0, self.lphai, -100, 0, 0, ceiling)
-            if any(m.wall == "left" for m in self.spec.module):
+            if any(m.wall == "left" for m in self.spec.module) or any(self.wall_behind(fr) == "left" for fr in runmod.frames(self.spec).values()):
                 self.box(None, "wall", "left", 0, self.lphai, -100, 0, 0, ceiling)
         self.parts.append(Part("room-floor-1", None, "floor", (-self.lsau - 100, -40, -100), (100, 0, self.lphai + 1500)))
 
@@ -343,13 +361,8 @@ class _Builder:
         """(x0, x1, y0, y1, mặt trước) của cánh trong hệ 'nhìn từ phía trước'."""
         if p.frame is not None and p.lmin is not None and p.lmax is not None:
             return p.lmin[0], p.lmax[0], p.lmin[1], p.lmax[1], p.lmax[2]
-        if p.orient == "right":
-            return p.min[2], p.max[2], p.min[1], p.max[1], p.min[0]
-        if p.orient == "left":
-            return -p.max[2], -p.min[2], p.min[1], p.max[1], p.max[0]
-        if p.orient == "island":
-            return -p.max[0], -p.min[0], p.min[1], p.max[1], p.min[2]
-        return p.min[0], p.max[0], p.min[1], p.max[1], p.max[2]
+        u0, u1, f = runmod.front_span(p.orient, p.min, p.max)
+        return u0, u1, p.min[1], p.max[1], f
 
     def handle(self, m: Module):
         from . import hardware
@@ -375,14 +388,7 @@ class _Builder:
                 self.parts.append(Part(f"{key}-{self._n[key]}", m.id, "handle", (ax, v0, az), (bx, v0 + hh, bz), p.wall, parent=p.id,
                                        frame=p.frame, lmin=lmn, lmax=lmx, run=p.run))
                 continue
-            if p.orient == "right":
-                mn, mx = (f - dd, v0, u0), (f, v0 + hh, u0 + hw)
-            elif p.orient == "left":
-                mn, mx = (f, v0, -(u0 + hw)), (f + dd, v0 + hh, -u0)
-            elif p.orient == "island":
-                mn, mx = (-(u0 + hw), v0, f - dd), (-u0, v0 + hh, f)
-            else:
-                mn, mx = (u0, v0, f), (u0 + hw, v0 + hh, f + dd)
+            mn, mx = runmod.front_box(p.orient, u0, u0 + hw, v0, v0 + hh, f, dd)
             key = f"{m.id}-handle"
             self._n[key] = self._n.get(key, 0) + 1
             self.parts.append(Part(f"{key}-{self._n[key]}", m.id, "handle", mn, mx, p.wall, parent=p.id, face=p.face))
@@ -420,15 +426,11 @@ def cabinet_faces(spec: KitchenSpec, scene: Scene) -> list[camera_plan.Face]:
         lo, hi = min(m.fromCorner for m in mods), max(m.endAt for m in mods)
         faces.append(camera_plan.Face(key, name, center(lo, hi, max(m.depth for m in mods)), normal, hi - lo, max(m.y + m.height for m in mods)))
 
-    back = [m for m in spec.module if m.wall == "back"]
-    if back:
-        face("back-wall", "Chính diện tường sau", back, lambda lo, hi, d: (-(lo + hi) / 2, d), (0.0, 1.0))
-    right = [m for m in spec.module if m.wall == "right"]
-    if right:
-        face("right-wall", "Chính diện tường phải", right, lambda lo, hi, d: (-d, (lo + hi) / 2), (-1.0, 0.0))
-    left = [m for m in spec.module if m.wall == "left"]
-    if left:
-        face("left-wall", "Chính diện tường trái", left, lambda lo, hi, d: (-scene.lsau + d, (lo + hi) / 2), (1.0, 0.0))
+    for wall, name in (("back", "Chính diện tường sau"), ("right", "Chính diện tường phải"), ("left", "Chính diện tường trái")):
+        mods = [m for m in spec.module if m.wall == wall]
+        seat = runmod.wall_seat(wall, scene.lsau)
+        if mods and seat is not None:
+            face(f"{wall}-wall", name, mods, lambda lo, hi, d, seat=seat: seat.to_world((lo + hi) / 2, d), seat.normal())
     for run in spec.runs:
         mods = [m for m in spec.module if m.run == run.id]
         if mods:

@@ -106,24 +106,12 @@ def _module_frame(m: Module, lsau: float, fr: "runs.RunFrame | None" = None) -> 
     if m.type == "corner-shelf":
         bl, rl = require(m.backLength, f"{m.id}.backLength"), require(m.rightLength, f"{m.id}.rightLength")
         return Frame((-bl, m.y, 0), 0.0), (bl, m.height, rl)
-    if m.wall == "back":
-        return Frame((-(m.fromCorner + m.width), m.y, 0), 0.0), (m.width, m.height, m.depth)
-    if m.wall == "right":
-        return Frame((0, m.y, m.fromCorner), -90.0), (m.width, m.height, m.depth)
-    if m.wall == "island":  # free run; anchor = back-left corner seen from the front, one frame per facing
-        size = (m.width, m.height, m.depth)
-        facing = m.facing or "-z"
-        if facing == "-z":      # faces the back wall: local +z points to world -z
-            return Frame((-m.fromCorner, m.y, m.offset + m.depth), 180.0), size
-        if facing == "+z":      # like the back wall, standing at z = offset - depth
-            return Frame((-(m.fromCorner + m.width), m.y, m.offset - m.depth), 0.0), size
-        if facing == "-x":      # like the right wall, door face at x = -offset
-            return Frame((-m.offset + m.depth, m.y, m.fromCorner), -90.0), size
-        return Frame((-m.offset - m.depth, m.y, m.fromCorner + m.width), 90.0), size
-    return Frame((-lsau, m.y, m.fromCorner + m.width), 90.0), (m.width, m.height, m.depth)
+    seat = runs.seat_of(m, lsau) or runs.wall_seat("left", lsau)   # anchor = the back-left corner seen from the front, whatever seats the cabinet
+    assert seat is not None
+    x, z = seat.to_world(seat.left_end(m.fromCorner, m.fromCorner + m.width), 0)
+    return Frame((x, m.y, z), seat.yaw), (m.width, m.height, m.depth)
 
 
-# ------------------------------------------------------------------ vật liệu
 def _guess(text: str) -> dict:
     g = _guess_base(text)
     w = vocab._find(text, vocab.WOOD)  # loài gỗ nêu rõ (óc chó, teak…) quyết định màu gỗ

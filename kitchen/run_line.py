@@ -134,6 +134,18 @@ def run_lines(line: Line, runs: list[dict[str, Any]], joints: list[tuple[str, st
     return placed, [r["id"] for r in runs if r["id"] not in used]
 
 
+def back_wall_line(spec: KitchenSpec, runs: list[dict[str, Any]]) -> Line:
+    """The line of the kitchen frame's back wall (z = 0, from the back-left corner to the back-right corner at the origin, doors looking into
+    the room), long enough for the main run: where a recognised kitchen stands when the user picked no edge. With a wider room the rules of
+    ``run_lines`` decide the end it starts from (a left run: the left corner; only a right run: the right corner)."""
+    if not runs:
+        raise InvalidInput("No run to place", code="no-run")
+    main = next((r for r in runs if r["id"] == "back"), runs[0])
+    wall = (spec.room.length("back") if spec.room else None) or 0.0
+    length = max(float(wall), float(main["length"]))
+    return Line((-length, 0.0), (0.0, 0.0), (0.0, 1.0))
+
+
 def plan_runs(spec: KitchenSpec, line: Line, runs: list[dict[str, Any]], joints: list[tuple[str, str]], clear: list[str] | None = None) -> dict[str, Any]:
     """The operation that puts a whole recognised kitchen (one run, an L or a U) on ``line``: one explicit run per recognised run, see ``run_lines``.
     ``clear``: ids of cabinets to remove first. Returns what ``plan_on_line`` returns, plus ``runs`` (``[{"source", "run"}]``)."""

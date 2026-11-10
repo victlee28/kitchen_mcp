@@ -2,7 +2,7 @@
 
 A run has its own frame (``spec.Run``): s along the row, d from the back of the cabinets to their door face, world
 (x, z) = origin + s * u + d * n with u = (cos yaw, -sin yaw) and n = (sin yaw, cos yaw), yaw as in three.js ``rotation.y``.
-Everything here is pure plane math in mm; the wall-keyed code paths (back / right / left / island facings) are untouched.
+Rows that follow the walls or a legacy free run are axis-aligned and may be mirrored: ``Seat``. Everything here is pure plane math in mm.
 """
 from __future__ import annotations
 
@@ -60,6 +60,110 @@ class RunFrame:
             x, z = self.to_world(s, d)
             out.append((x, y, z))
         return out
+
+
+@dataclass(frozen=True)
+class Seat:
+    """Where an axis-aligned row of cabinets stands, whatever placed it there (a wall, a legacy free run): the row's own (s, d)
+    plane laid on the world. s runs along the row and d from the back of the cabinets to their door face, each along one world
+    axis (x = 0, z = 2), forwards or backwards from an offset. A seat may be MIRRORED (the walls measure s from the back-right
+    corner, so s on the back wall runs to the viewer's left), which a ``RunFrame`` (a pure rotation) cannot say.
+
+    ``front`` names the way the doors look, in the words the exporters already use: ``back`` (+z), ``island`` (-z),
+    ``right`` (-x), ``left`` (+x). An offset of None means "no offset": the value is only negated, never added to, so the
+    numbers are bit-for-bit those of the wall-keyed code this replaces."""
+    front: str
+    s_axis: int
+    s_sign: int
+    s_from: float | None
+    d_sign: int
+    d_from: float | None
+
+    @staticmethod
+    def _at(origin: float | None, sign: int, v: float) -> float:
+        return sign * v if origin is None else origin + sign * v
+
+    def to_world(self, s: float, d: float) -> Point:
+        a, b = self._at(self.s_from, self.s_sign, s), self._at(self.d_from, self.d_sign, d)
+        return (a, b) if self.s_axis == 0 else (b, a)
+
+    def normal(self) -> Point:
+        """Unit vector the doors look along (world x, z)."""
+        return (0.0, float(self.d_sign)) if self.s_axis == 0 else (float(self.d_sign), 0.0)
+
+    @property
+    def yaw(self) -> float:
+        """three.js ``rotation.y`` of a frame whose local +z is the door normal."""
+        return FRONT_YAW[self.front]
+
+    def left_end(self, s0: float, s1: float) -> float:
+        """Which end of [s0, s1] is on the left of someone looking at the doors (where the exporters anchor a cabinet)."""
+        return s1 if self.s_sign != FRONT_AXES[self.front][1] else s0
+
+    def box(self, s0: float, s1: float, d0: float, d1: float, y0: float, y1: float) -> tuple[tuple[float, float, float], tuple[float, float, float]]:
+        """World (min, max) of the box [s0, s1] x [d0, d1] x [y0, y1] of the row."""
+        sa, sb = (s0, s1) if self.s_sign > 0 else (s1, s0)
+        da, db = (d0, d1) if self.d_sign > 0 else (d1, d0)
+        s_lo, s_hi = self._at(self.s_from, self.s_sign, sa), self._at(self.s_from, self.s_sign, sb)
+        d_lo, d_hi = self._at(self.d_from, self.d_sign, da), self._at(self.d_from, self.d_sign, db)
+        if self.s_axis == 0:
+            return (s_lo, y0, d_lo), (s_hi, y1, d_hi)
+        return (d_lo, y0, s_lo), (d_hi, y1, s_hi)
+
+
+WALL_SEATS = {"back": Seat("back", 0, -1, None, 1, None), "right": Seat("right", 2, 1, None, -1, None)}
+
+
+def wall_seat(wall: str, back_length: float) -> Seat | None:
+    """Seat of a wall's row in the kitchen frame (origin at the back-right corner); None for a name that is not a wall."""
+    if wall == "left":
+        return Seat("left", 2, 1, None, 1, -back_length)
+    return WALL_SEATS.get(wall)
+
+
+def free_seat(offset: float, depth: float, facing: str) -> Seat:
+    """Seat of a legacy free run (``wall = "island"``): its door face at ``offset`` from the wall it looks away from or at."""
+    if facing == "-z":      # doors look at the back wall
+        return Seat("island", 0, -1, None, -1, offset + depth)
+    if facing == "+z":      # like the back wall, standing at z = offset - depth
+        return Seat("back", 0, -1, None, 1, offset - depth)
+    if facing == "-x":      # like the right wall, door face at x = -offset
+        return Seat("right", 2, 1, None, -1, -offset + depth)
+    return Seat("left", 2, 1, None, 1, -offset - depth)   # "+x": like the left wall
+
+
+# The way the doors look -> (axis the row is seen along from the front, its sign, axis of the door normal, its sign); x = 0, z = 2.
+FRONT_AXES = {"back": (0, 1, 2, 1), "island": (0, -1, 2, -1), "right": (2, 1, 0, -1), "left": (2, -1, 0, 1)}
+
+
+FRONT_YAW = {"back": 0.0, "island": 180.0, "right": -90.0, "left": 90.0}
+
+
+def seat_of(m: Module, back_length: float) -> Seat | None:
+    """Seat of a cabinet that follows a wall or stands in a legacy free run; None for anything else (explicit runs have a ``RunFrame``)."""
+    if m.run:
+        return None
+    if m.wall == "island":
+        return free_seat(m.offset, m.depth, m.facing or "-z")
+    return wall_seat(m.wall, back_length)
+
+
+def front_span(front: str, mn: tuple[float, float, float], mx: tuple[float, float, float]) -> tuple[float, float, float]:
+    """An axis-aligned front panel seen from the front: (u0, u1, f) with u growing to the viewer's right and f the world
+    coordinate of its outer face."""
+    u_axis, u_sign, n_axis, n_sign = FRONT_AXES[front]
+    u0, u1 = (mn[u_axis], mx[u_axis]) if u_sign > 0 else (-mx[u_axis], -mn[u_axis])
+    return u0, u1, (mx[n_axis] if n_sign > 0 else mn[n_axis])
+
+
+def front_box(front: str, u0: float, u1: float, v0: float, v1: float, f: float, out: float) -> tuple[tuple[float, float, float], tuple[float, float, float]]:
+    """World (min, max) of a box standing ``out`` proud of a front face at ``f`` (the inverse of ``front_span``)."""
+    u_axis, u_sign, n_axis, n_sign = FRONT_AXES[front]
+    ua, ub = (u0, u1) if u_sign > 0 else (-u1, -u0)
+    na, nb = (f, f + out) if n_sign > 0 else (f - out, f)
+    mn, mx = [0.0, v0, 0.0], [0.0, v1, 0.0]
+    mn[u_axis], mx[u_axis], mn[n_axis], mx[n_axis] = ua, ub, na, nb
+    return (mn[0], mn[1], mn[2]), (mx[0], mx[1], mx[2])
 
 
 def frame_of(spec: KitchenSpec, module: Module) -> RunFrame | None:
