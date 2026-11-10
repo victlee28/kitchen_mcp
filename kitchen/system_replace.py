@@ -3,7 +3,7 @@
 Two ways, both one operation the page previews before it is saved, and both touching that system only (never ``common``):
 
 * **restyle** (``style_ops``): the cabinets stay; every one of them takes a style preset (front material, door style, handle).
-* **relayout** (``relayout_ops``): the runs of the system stay where they are (place, angle, length); their cabinets are removed and new
+* **relayout** (``relayout_ops``): the runs of the system stay where they are (place, angle, length, base depth); their cabinets are removed and new
   ones laid along them. The caller builds the new cabinets (from a sentence, in the shell: ``intent`` + ``run_template``) for the lengths
   ``run_slots`` gives; here they are placed, storeys the system never had are left out (no wall cabinets over an island), and what the sentence
   did not say about the fronts is taken from the old cabinets.
@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from . import runs
+from .cabinet_run import fit_depth
 from .errors import InvalidInput
 from .spec import KitchenSpec, Module
 
@@ -97,6 +98,7 @@ class Slot:
     start: float
     length: float
     storeys: frozenset[str]
+    depth: float | None = None        # the depth most of its base / tall cabinets have: the new ones keep it
 
 
 def run_slots(spec: KitchenSpec, mods: list[Module]) -> list[Slot]:
@@ -111,7 +113,9 @@ def run_slots(spec: KitchenSpec, mods: list[Module]) -> list[Slot]:
     for run_id, ms in by_run.items():
         body = [m for m in ms if m.storey in ("base", "tall")] or ms
         start = min(m.fromCorner for m in body)
-        slots.append(Slot(run_id, start, max(m.endAt for m in body) - start, frozenset(m.storey for m in ms)))
+        depths = Counter(m.depth for m in ms if m.storey in ("base", "tall"))
+        slots.append(Slot(run_id, start, max(m.endAt for m in body) - start, frozenset(m.storey for m in ms),
+                          depths.most_common(1)[0][0] if depths else None))
     order = [r.id for r in spec.runs]
     return sorted(slots, key=lambda s: (-s.length, order.index(s.run) if s.run in order else len(order)))
 
@@ -183,6 +187,8 @@ def relayout_ops(spec: KitchenSpec, mods: list[Module], laid: dict[str, list[dic
     for run_id, modules in laid.items():
         slot = slots[run_id]
         added = 0
+        if slot.depth is not None:                     # as deep as the run was (plan 10/11/2026, D3)
+            modules = fit_depth(modules, slot.depth)
         for m in sorted(modules, key=lambda item: item["s"]):
             storey = storey_of(str(m["type"]))
             if storey in refused or (storey not in slot.storeys and storey not in ("base", "tall") and storey not in asked):

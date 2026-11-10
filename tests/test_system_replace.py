@@ -17,8 +17,8 @@ from test_systems import ISLAND, L, L_MODS, mod, spec  # noqa: E402
 KITCHEN = spec([*L, {**ISLAND, "system": "furniture_003"}],
                [*L_MODS, mod("U1", "R1", 0, kind="upper"), mod("K1", "R3", 0, material="Acrylic xám đậm", doorStyle="flat"),
                 mod("K2", "R3", 600, material="Acrylic xám đậm", doorStyle="flat", handle={"variant": "knob", "material": "Đồng", "length": 128})])
-NEW = [{"type": "base-sink", "width": 800.0, "s": 0.0, "y": 0.0, "height": 840.0, "depth": 600.0, "name": "Tủ chậu"},
-       {"type": "base", "width": 400.0, "s": 800.0, "y": 0.0, "height": 840.0, "depth": 600.0},
+NEW = [{"type": "base-sink", "width": 800.0, "s": 0.0, "y": 0.0, "height": 840.0, "depth": 580.0, "name": "Tủ chậu"},
+       {"type": "base", "width": 400.0, "s": 800.0, "y": 0.0, "height": 840.0, "depth": 580.0},
        {"type": "upper", "width": 600.0, "s": 0.0, "y": 1500.0, "height": 700.0, "depth": 350.0}]
 
 
@@ -60,6 +60,7 @@ class TestRelayout(unittest.TestCase):
         after = edit.apply_op(KITCHEN, edit.combine_ops(ops))
         island = [m for m in after.module if m.run == "R3"]
         self.assertEqual([m.type for m in island], ["base-sink", "base"])      # the upper is left out: the island had none
+        self.assertEqual({m.depth for m in island}, {600.0}, "as deep as the island was, not the template's 580")
         self.assertTrue(all(m.material == "Acrylic xám đậm" and m.doorStyle == "flat" for m in island))
         self.assertEqual({(m.handle.variant, m.handle.material) for m in island}, {("knob", "Đồng")})
         self.assertIn("1 upper cabinets left out: the system had none on that storey", summary)

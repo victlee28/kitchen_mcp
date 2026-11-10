@@ -8,7 +8,7 @@ import re
 import os
 from pathlib import Path
 from typing import Any, Callable
-from . import cabinet_run, run_line, run_template, runs, system_replace, edit, edit_intent, geometry, intent, llm, recognition, regions, roomctx, render, rules, threejs_export
+from . import cabinet_run, run_line, run_template, runs, system_replace, wall_line, edit, edit_intent, geometry, intent, llm, recognition, regions, roomctx, render, rules, threejs_export
 from .intent import KitchenTemplate as KitchenTemplate
 from .spec import Common, KitchenSpec, Room, Wall, dump_spec, load_spec, to_data
 from .store import ConflictError, Store
@@ -218,6 +218,21 @@ class KitchenService:
         if not isinstance(point, dict) or not all(isinstance(point.get(k), (int, float)) for k in ('x', 'z')):
             raise InvalidInput('template.point needs numeric x and z (mm, room frame)', code='bad-template-point')
         prompt = template.get('prompt')
+        element = str(template.get('structureId') or '').removeprefix('STRUCT-')
+        if isinstance(spec.floorplan, dict) and element in roomctx.replaced(spec.floorplan):
+            raise InvalidInput(f"{element} has already been replaced by cabinets (system {element}); change them with \"thay cả hệ tủ …\"",
+                               code='element-replaced')
+        if self._structure_kind(spec, str(template.get('structureId'))) == 'furniture':     # a piece of furniture is replaced, never stood beside
+            back = template.get('backEdge')
+            if back is not None and (isinstance(back, bool) or not isinstance(back, int)):
+                raise InvalidInput('template.backEdge must be the index of an edge of the object', code='bad-back-edge')
+            struct, plan = self._replace_object(spec, str(template.get('structureId')), prompt if isinstance(prompt, str) else None, back, country)
+            if plan.get('status') == 'choose-edge':
+                return {'id': design_id, 'baseRev': current, 'status': 'choose-edge', 'structureId': struct['id'], 'edges': plan['edges'],
+                        'summary': ['No edge of this object lies against a wall: pick the edge the backs of the cabinets go on']}
+            preview = self.propose(design_id, plan['operation'], current, None, country)
+            return {'id': design_id, 'baseRev': current, 'status': 'ok', 'structureId': struct['id'], 'facing': None, 'replaces': plan['element'],
+                    'length': plan['length'], 'summary': plan['summary'], 'operation': plan['operation'], 'proposal': preview}
         if isinstance(prompt, str) and prompt.strip():      # a described kitchen: fridge, loft row, worktop colour, door colours...
             color, notes = intent.parse_prompt(prompt)
             if not color.country and country:
@@ -229,6 +244,98 @@ class KitchenService:
         preview = self.propose(design_id, plan['operation'], current, None, country)
         return {'id': design_id, 'baseRev': current, 'status': 'ok', 'structureId': struct['id'], 'facing': plan['facing'], 'length': plan['length'],
                 'summary': plan['summary'], 'operation': plan['operation'], 'proposal': preview}
+
+    def _recognised_on_object(self, spec: KitchenSpec, outline: list, click: tuple, system: str | None, found: list, joints: list,
+                              clear: list[str] | None) -> dict:
+        """A recognised kitchen stood on an object of the floorplan (kitchen frame). Against a wall, a column...: its main run's back on the
+        edge nearest the click, the doors away from the object. On a piece of furniture: the object is replaced — the main run's back on the
+        object's longest edge against a wall, the doors into the object; the cabinets made against it before go, the object is no longer drawn
+        (with no edge against a wall the nearest edge is used)."""
+        kind = None
+        scene = geometry.compile_spec(spec)
+        ctx = roomctx.for_spec(spec, scene.lsau, scene.lphai)
+        if ctx is not None and system is not None:
+            kind = next((st['kind'] for st in ctx.structures if st.get('sourceElement') == system), None)
+        if kind != 'furniture' or ctx is None:
+            return run_line.plan_runs(spec, run_line.edge_line(outline, click), found, joints, clear, system)
+        place = ctx.placement
+        where = wall_line.replace_lines(outline, self._walls(ctx, place) if place is not None else [])
+        if where['status'] == 'ok' and where['runs']:
+            p = where['runs'][0]
+            line = run_line.Line(p.a, p.b, p.doors)
+        else:
+            line = run_line.edge_line(outline, click)
+            line = run_line.Line(line.a, line.b, (-line.normal[0], -line.normal[1]))     # still into the object, not away from it
+        by_system = runs.systems(spec)
+        old = [m.id for m in spec.module if by_system.get(m.id) == system and m.id not in (clear or [])]
+        plan = run_line.plan_runs(spec, line, found, joints, [*(clear or []), *old], system)
+        operation = edit.combine_ops([plan['operation'], {'op': 'replace-element', 'id': system, 'replaced': True}])
+        return {**plan, 'operation': operation, 'summary': [*plan['summary'], f'{system} is replaced by the recognised cabinets and is no longer drawn']}
+
+    @staticmethod
+    def _walls(ctx: Any, place: Any) -> list[tuple[tuple[float, float], tuple[float, float]]]:
+        """The room's walls in the kitchen frame: the edges of the room outline and of every wall element (``wall_line`` segments)."""
+        k = lambda pts: [place.to_kitchen(float(q['x']), float(q['z'])) for q in pts]
+        room = ctx.floorplan.get('outline') or []
+        polys = ([k(room)] if len(room) >= 3 else []) + [k(st['outline']) for st in ctx.structures if st['kind'] == 'wall']
+        return [seg for poly in polys for seg in wall_line.segments(poly)]
+
+    @staticmethod
+    def _structure_kind(spec: KitchenSpec, structure_id: str) -> str | None:
+        scene = geometry.compile_spec(spec)
+        ctx = roomctx.for_spec(spec, scene.lsau, scene.lphai)
+        if ctx is None:
+            return None
+        return next((st['kind'] for st in ctx.structures if st['id'] == structure_id), None)
+
+    def _replace_object(self, spec: KitchenSpec, structure_id: str, prompt: str | None, back_edge: int | None, country: str | None) -> tuple[dict, dict]:
+        """``(object, plan)``: the runs that replace a piece of furniture (``wall_line.replace_lines`` + ``cabinet_run.plan_replace``), in the
+        kitchen frame the design will have (see ``_settle``). Without a sentence the runs hold base cabinets, with one the cabinets it describes
+        (the longest run all of it, the others plain cabinets). Base and tall cabinets are as deep as the object (``cabinet_run.fit_depth``).
+        With no edge against a wall and no ``back_edge``: ``plan = {"status": "choose-edge", "edges": [...]}`` (room frame) to ask the user."""
+        from .placement import IDENTITY
+        scene = geometry.compile_spec(spec)
+        ctx = roomctx.for_spec(spec, scene.lsau, scene.lphai)
+        if ctx is None:
+            raise InvalidInput('This design has no imported floorplan, so there is no object to replace', code='no-floorplan')
+        struct = next((st for st in ctx.structures if st['id'] == structure_id), None)
+        if struct is None:
+            raise NotFound(f"No such object: {structure_id}", code='structure-not-found')
+        element = runs.system_id(struct.get('sourceElement') or str(struct['id']).removeprefix('STRUCT-'))
+        described = intent.parse_prompt(prompt) if prompt and prompt.strip() else None
+
+        def planner(place: Any) -> dict:
+            walls = self._walls(ctx, place)
+            where = wall_line.replace_lines([place.to_kitchen(float(q['x']), float(q['z'])) for q in struct['outline']], walls, back_edge)
+            if where['status'] == 'choose-edge':
+                room_pt = lambda p: dict(zip(('x', 'z'), (round(v, 1) for v in place.to_room(*p))))
+                return {'status': 'choose-edge', 'edges': [{'index': e.index, 'length': round(e.length), 'gapToWall': None if e.gap is None else round(e.gap),
+                                                             'a': room_pt(e.a), 'b': room_pt(e.b)} for e in where['edges']]}
+            placed = where['runs']
+            laid: list[list[dict[str, Any]]] = []
+            after: list[dict[str, Any]] = []
+            for i, p in enumerate(placed):
+                length = p.length // 10 * 10
+                if described is None:
+                    modules = run_line.base_cabinets(length, to_data(spec)['common'])
+                else:
+                    color, _ = described
+                    if not color.country and country:
+                        color = color.model_copy(update={'country': country})
+                    built = run_template.run_from_template(color if i == 0 else color.model_copy(update={'fridge': False}), length)
+                    modules = built['modules'] if i == 0 else system_replace.plain_cabinets(built['modules'])
+                    if i == 0 and built['common']:
+                        changes = dict(built['common'])
+                        if 'material' in changes:
+                            changes['material'] = {**spec.common.material, **changes['material']}
+                        after = [{'op': 'common', 'changes': changes}]
+                laid.append(cabinet_run.fit_depth(modules, round(p.depth)))
+            plan = cabinet_run.plan_replace(spec, element, placed, laid, after)
+            notes = [n for n in (described[1] if described else []) if 'chiều dài' not in n]
+            return {**plan, 'element': element, 'summary': [*plan['summary'], *notes]}
+
+        plan = self._settle(spec, planner, ctx.placement if ctx.placement is not None else IDENTITY)
+        return struct, plan
 
     @staticmethod
     def _replace_system(spec: KitchenSpec, system: str, prompt: Any, style: Any, country: str | None) -> dict:
@@ -344,17 +451,26 @@ class KitchenService:
         prompt = template.get('prompt')
         described = intent.parse_prompt(prompt) if isinstance(prompt, str) and prompt.strip() else None
 
+        scene = geometry.compile_spec(spec)
+        ctx = roomctx.for_spec(spec, scene.lsau, scene.lphai)
+
         def planner(place: Any) -> dict:
             line = run_line.drawn_line(place.to_kitchen(*pts['a']), place.to_kitchen(*pts['b']), place.to_kitchen(*pts['front']))
+            note: list[str] = []
+            if ctx is not None:                                      # a line along a wall: the backs go to the wall, whichever side was asked
+                doors, against = wall_line.back_to_wall(line.a, line.b, line.normal, self._walls(ctx, place))
+                if against:
+                    note = ['The line runs along a wall: the backs of the cabinets face the wall'] if doors != line.normal else []
+                    line = run_line.Line(line.a, line.b, doors)
             if described is not None:
                 color, notes = described
                 if not color.country and country:
                     color = color.model_copy(update={'country': country})
-                return self._plan_described_line(spec, color, notes, line)
-            return run_line.plan_on_line(spec, line, run_line.base_cabinets(run_line.run_frame(line)['length'], to_data(spec)['common']))
+                plan = self._plan_described_line(spec, color, notes, line)
+            else:
+                plan = run_line.plan_on_line(spec, line, run_line.base_cabinets(run_line.run_frame(line)['length'], to_data(spec)['common']))
+            return {**plan, 'summary': [*plan['summary'], *note]}
 
-        scene = geometry.compile_spec(spec)
-        ctx = roomctx.for_spec(spec, scene.lsau, scene.lphai)
         return self._settle(spec, planner, ctx.placement if ctx is not None and ctx.placement is not None else IDENTITY)
 
     def _wire_recognizers(self) -> None:
@@ -478,7 +594,7 @@ class KitchenService:
             plan = run_line.plan_runs(base, run_line.back_wall_line(base, runs), runs, joints, clear)
         else:
             struct, plan = self._plan_at_object(base, anchor['structureId'], anchor['point'],
-                                                lambda outline, click, system: run_line.plan_runs(base, run_line.edge_line(outline, click), runs, joints, clear, system))
+                                                lambda outline, click, system: self._recognised_on_object(base, outline, click, system, runs, joints, clear))
             place = {'structureId': struct['id']}
         if before:
             plan = {**plan, 'operation': edit.combine_ops([*before, plan['operation']])}

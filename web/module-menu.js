@@ -3,7 +3,7 @@
 import { el } from './dom.js';
 import { request } from './api-client.js';
 import { interpretBody, describeInterpret, templateIntent, systemIntent, mentionsReference, checkUpload, recognizeBody, recognizeJobBody, anchorFor, describeRecognition, recognitionLines } from './assist-logic.js';
-import { actionsFor, buildGroupOp, buildOp, describeProposal, groupActions, layerFor, lineTemplate, menuPosition, DOOR_STYLES, HANDLE_VARIANTS, MATERIAL_PRESETS, RUN_ACTIONS, RUN_TURNS, systemTemplate } from './menu-logic.js';
+import { actionsFor, buildGroupOp, buildOp, describeProposal, groupActions, layerFor, lineTemplate, menuPosition, DOOR_STYLES, HANDLE_VARIANTS, MATERIAL_PRESETS, RUN_ACTIONS, RUN_TURNS, systemTemplate, edgeChoices } from './menu-logic.js';
 import { groupLabel, groupLayerIds, manySystems } from './design-logic.js';
 
 const call = (path, body) => request(path, 'POST', body);
@@ -313,13 +313,14 @@ export function createModuleMenu(ctx) {
   }
 
   // A cabinet run against the clicked edge of a floorplan object: the server picks the edge and the facing, the preview shows the result.
-  async function runI(text = '') {
+  async function runI(text = '', backEdge = null) {
     if (busy) return; const { id, rev } = ctx.getState();
-    busy = true; ctx.setStatus('Tính dãy tủ dọc cạnh vật thể…');
+    busy = true; ctx.setStatus(target.structureKind === 'furniture' ? 'Tính dãy tủ thay vật này…' : 'Tính dãy tủ dọc cạnh vật thể…');
     try {
-      const { status, data } = await call(`/api/designs/${id}/template`, { template: { kind: 'run-i', structureId: target.id, point: target.point, ...(text.trim() ? { prompt: text.trim() } : {}) }, baseRev: rev });
+      const { status, data } = await call(`/api/designs/${id}/template`, { template: { kind: 'run-i', structureId: target.id, point: target.point, ...(text.trim() ? { prompt: text.trim() } : {}), ...(backEdge != null ? { backEdge } : {}) }, baseRev: rev });
       busy = false;
       if (status === 409) return stale('run-i');
+      if (data?.status === 'choose-edge') return chooseEdge(data, text);
       if (!data || data.error || !data.proposal) {
         box.replaceChildren(header(`Dãy tủ · ${target.id.replace(/^STRUCT-/, '')}`), err(data?.error || `Lỗi ${status}`),
           el('div', { class: 'row' }, el('button', { type: 'button', class: 'ghost', onclick: list }, 'Quay lại')));
@@ -327,6 +328,19 @@ export function createModuleMenu(ctx) {
       }
       showPreview('run-i', data.proposal, null, data.summary || []);
     } catch (e) { busy = false; ctx.setStatus(e.message, 'warn'); }
+  }
+
+  // No edge of the object lies against a wall: the user picks the edge the backs go on (hovering one draws it in the 3D view).
+  function chooseEdge(data, text) {
+    const choices = edgeChoices(data.edges);
+    box.replaceChildren(header(`Chọn hướng dãy tủ · ${target.id.replace(/^STRUCT-/, '')}`),
+      el('p', { class: 'ctx-msg' }, 'Vật này không có cạnh nào sát tường. Chọn cạnh đặt lưng tủ; cánh tủ quay vào phía trong vật.'),
+      el('ul', { class: 'ctx-list' }, ...choices.map((c) => el('li', {}, el('button', { type: 'button',
+        onmouseenter: () => ctx.guide?.(c.a, c.b), onfocus: () => ctx.guide?.(c.a, c.b), onmouseleave: () => ctx.guide?.(null),
+        onclick: () => { ctx.guide?.(null); runI(text, c.index); } }, c.label)))),
+      el('div', { class: 'row' }, el('button', { type: 'button', class: 'ghost', onclick: () => { ctx.guide?.(null); list(); } }, 'Quay lại')));
+    if (!choices.length) box.append(err('Không có cạnh nào dài từ 600 mm'));
+    box.querySelector('.ctx-list button')?.focus();
   }
 
   function showPreview(action, p, read, extra = []) {

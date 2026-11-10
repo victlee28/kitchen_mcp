@@ -168,3 +168,54 @@ def plan_corner(spec: KitchenSpec, run_a: str, run_b: str, width: float = 900.0,
     return {"operation": combine_ops(ops), "run": run, "angle": float(round_half_away(math.degrees(phi), 1)),
             "clearance": {"aMaxEnd": a_max, "bMinStart": b_min},
             "summary": [f"Corner cabinet {width:g} mm at {math.degrees(phi):.1f}° (run {run['id']})", *notes]}
+
+
+# ---- replacing a floorplan object (furniture) with cabinets: the runs stand on the object's edges against a wall (wall_line.replace_lines)
+
+SHALLOW = 350.0      # mm: an object this shallow or shallower also sets the depth of wall cabinets and the loft row
+
+
+def fit_depth(modules: list[dict[str, Any]], depth: float) -> list[dict[str, Any]]:
+    """The cabinets made as deep as the object they replace: base and tall cabinets always; wall cabinets and the loft row only when the
+    object is ``SHALLOW`` or shallower (otherwise they keep their own depth)."""
+    out = []
+    for m in modules:
+        t = str(m["type"])
+        upper = t.startswith("upper")
+        out.append({**m, "depth": float(depth)} if not upper or depth <= SHALLOW else dict(m))
+    return out
+
+
+def plan_replace(spec: KitchenSpec, element: str, placed: list[Any], laid: list[list[dict[str, Any]]],
+                 after: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+    """The operation that replaces floorplan element ``element`` with cabinets: one run per ``placed`` (``wall_line.Placed``) holding
+    ``laid[i]`` (cabinets as ``plan_on_line`` takes them, already as deep as they should be), each run in system ``element``; then the
+    cabinets made against that element before (its old system) are removed, and the element is marked replaced (no longer built).
+    The new cabinets go in before the old ones go out (a run left empty is removed with its last cabinet)."""
+    from .edit import apply_op
+    from .run_line import Line
+    if not placed:
+        raise InvalidInput("No edge of this object is long enough for a run (600 mm)", code="edge-too-short")
+    ops: list[dict[str, Any]] = []
+    made: list[dict[str, Any]] = []
+    summary: list[str] = []
+    current = spec
+    for p, modules in zip(placed, laid):
+        plan = plan_on_line(current, Line(p.a, p.b, p.doors), modules, system=element)
+        ops.append(plan["operation"])
+        made.append(plan["run"])
+        summary.append(f"Run {plan['run']['id']}: {len(modules)} cabinets, {p.length:.0f} mm long, {p.depth:.0f} mm deep, back on edge {p.edge} against the wall")
+        current = apply_op(current, {"op": "add-run", "run": plan["run"]})
+    old_system = runmod.systems(spec)
+    old = [m.id for m in spec.module if old_system.get(m.id) == element]
+    gone = [a.name or a.id for a in spec.appliances if a.module in set(old)]
+    ops.extend({"op": "remove", "id": i, "closeGap": False} for i in old)
+    ops.extend(after or [])
+    ops.append({"op": "replace-element", "id": element, "replaced": True})
+    summary.insert(0, f"{element} is replaced by {len(made)} run(s) of cabinets and is no longer drawn")
+    if old:
+        summary.append(f"The cabinets made against {element} before are removed: {', '.join(old)}")
+    if gone:
+        summary.append(f"Appliances removed with them: {', '.join(gone)}")
+    return {"operation": combine_ops(ops), "runs": made, "removed": old, "appliancesRemoved": gone, "summary": summary,
+            "length": float(round_half_away(sum(p.length for p in placed), 1))}

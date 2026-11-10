@@ -27,6 +27,13 @@ class RoomContext:
     structures: list
 
 
+def replaced(fp: dict) -> list[str]:
+    """Ids of the floorplan elements the design has replaced with cabinets (``floorplan.replaced``): they are no longer built, drawn or
+    rendered. The imported floorplan itself is never changed; going back a revision brings them back."""
+    raw = fp.get("replaced") or []
+    return [str(x) for x in raw] if isinstance(raw, list) else []
+
+
 def need_for(spec: Any, back: float, side: float) -> dict | None:
     """Run lengths the kitchen needs from the room: back wall, and each side wall it uses; None for a design without cabinets."""
     mods = spec.module
@@ -50,7 +57,8 @@ def for_spec(spec: Any, back: float, side: float) -> RoomContext | None:
         return hit
     binding = fpmod.resolve_binding(fp, need)
     placement = Placement.from_transform(binding.get("transform") or fpmod.kitchen_transform(fp, binding)) if binding else IDENTITY
-    ctx = RoomContext(fp, binding, placement, fpmod.structures(fp))
+    gone = set(replaced(fp))
+    ctx = RoomContext(fp, binding, placement, [st for st in fpmod.structures(fp) if st["sourceElement"] not in gone])   # replaced by cabinets: not built
     if len(_CACHE) >= _MAX:
         _CACHE.pop(next(iter(_CACHE)))
     _CACHE[key] = ctx

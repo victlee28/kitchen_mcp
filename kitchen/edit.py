@@ -126,6 +126,24 @@ def set_run_system(spec: KitchenSpec, id: str, system: Any) -> KitchenSpec:
     return from_data(KitchenSpec, to_data(s))
 
 
+def replace_element(spec: KitchenSpec, element: str, replaced: Any = True) -> KitchenSpec:
+    """Mark a floorplan element (``elements[].id``, e.g. furniture_003) as replaced by cabinets, or bring it back (``replaced`` false): it is
+    listed in ``floorplan.replaced`` and no longer built. The imported floorplan's elements are left as they are."""
+    if not isinstance(spec.floorplan, dict):
+        raise InvalidInput("This design has no imported floorplan", code="no-floorplan")
+    ids = {str(e.get("id")) for e in spec.floorplan.get("elements") or [] if isinstance(e, dict)}
+    if element not in ids:
+        raise NotFound(f"No floorplan element {element!r}", code="element-not-found")
+    if not isinstance(replaced, bool):
+        raise InvalidInput("replaced must be true or false", code="bad-replaced")
+    data = to_data(spec)
+    now = [x for x in data["floorplan"].get("replaced") or [] if x != element]
+    data["floorplan"]["replaced"] = [*now, element] if replaced else now
+    if not data["floorplan"]["replaced"]:
+        data["floorplan"].pop("replaced")
+    return from_data(KitchenSpec, data)
+
+
 def remove_run(spec: KitchenSpec, id: str) -> KitchenSpec:
     """Remove an explicit run with every cabinet and appliance standing in it."""
     s = _clone(spec)
@@ -247,6 +265,7 @@ def apply_op(spec: KitchenSpec, op: dict[str, Any]) -> KitchenSpec:
     {"op": "add-run", "run": {"id"?, "x", "z", "yaw"}}  — an explicit run at any angle; modules join it with wall="island", run=<id>
     {"op": "move-run", "id": "R1", "changes": {"x"?, "z"?, "yaw"?}} | {"op": "remove-run", "id": "R1"}  — the run with all its cabinets
     {"op": "set-run-system", "id": "R1", "system": "furniture_003" | null}  — the cabinet system of a run (null: work it out)
+    {"op": "replace-element", "id": "furniture_003", "replaced": true|false}  — a floorplan element replaced by cabinets (no longer built) / back
     {"op": "stretch-run", "id": "R1", "end": "start"|"end", "delta": mm}  — drag one end; the cabinets at that end take the change
     {"op": "add", "module": {...}, "afterModule": "TD3"} | {"op": "remove", "id": "TD3"}
     {"op": "update", "id": "TD3", "changes": {...}} | {"op": "common", "changes": {...}}
@@ -265,6 +284,8 @@ def apply_op(spec: KitchenSpec, op: dict[str, Any]) -> KitchenSpec:
         return move_run(spec, op["id"], op.get("changes", {}))
     if kind == "set-run-system":
         return set_run_system(spec, op["id"], op.get("system"))
+    if kind == "replace-element":
+        return replace_element(spec, str(op.get("id") or ""), op.get("replaced", True))
     if kind == "remove-run":
         return remove_run(spec, op["id"])
     if kind == "stretch-run":

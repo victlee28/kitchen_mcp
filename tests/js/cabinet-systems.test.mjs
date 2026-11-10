@@ -2,9 +2,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { groupLabel, groupLayerIds, groupRole, manySystems, shiftGroup } from '../../web/design-logic.js';
-import { buildGroupOp, groupActions, SYSTEM_STYLES, systemTemplate } from '../../web/menu-logic.js';
+import { actionsFor, buildGroupOp, edgeChoices, groupActions, pickTarget, SYSTEM_STYLES, systemTemplate } from '../../web/menu-logic.js';
 import { shiftGroupId } from '../../web/selection.js';
-import { systemIntent } from '../../web/assist-logic.js';
+import { systemIntent, templateIntent } from '../../web/assist-logic.js';
 
 // furniture_003: A1, A2 (base), U1 (upper), H1 (loft). furniture_017: C1, C2 (base).
 const systems = {
@@ -90,4 +90,15 @@ test('"thay cả hệ tủ" in the command box: a description lays the system ou
   assert.deepEqual(systemIntent('thay hệ tủ đang có bằng tủ lạnh bên trái'), { prompt: 'tủ lạnh bên trái' });
   assert.equal(systemIntent('đổi màu cánh tủ sang trắng'), null);
   assert.equal(systemIntent('hệ tủ này dài bao nhiêu'), null);
+});
+
+test('a piece of furniture is replaced by cabinets: its menu says so, and an object far from the walls asks for the back edge', () => {
+  const hit = [{ object: { userData: { structureId: 'STRUCT-furniture_003', kind: 'furniture' } }, point: { x: 1, z: 2 } }];
+  const t = pickTarget(hit, []);
+  assert.equal(t.structureKind, 'furniture');
+  assert.equal(actionsFor(t, { module: [] })[0].label, 'Thay vật này bằng dãy tủ');
+  assert.equal(actionsFor({ ...t, structureKind: 'wall' }, { module: [] })[0].label, 'Tạo dãy tủ chữ I dọc cạnh này');
+  const c = edgeChoices([{ index: 2, length: 1500.4, gapToWall: null, a: { x: 0, z: 0 }, b: { x: 1500, z: 0 } }, { index: 1, length: 900, gapToWall: 1210.6, a: {}, b: {} }]);
+  assert.deepEqual(c.map((x) => [x.index, x.label]), [[2, 'Lưng tủ trên cạnh dài 1500 mm'], [1, 'Lưng tủ trên cạnh dài 900 mm · cách tường 1211 mm']]);
+  assert.deepEqual(templateIntent('thay vật này bằng tủ bếp có chậu rửa'), { kind: 'run-i', described: true });
 });

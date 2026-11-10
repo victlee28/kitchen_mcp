@@ -31,6 +31,17 @@ returns `systems: {module: {system, tier, storey}}`; the page never works them o
   cabinets). With nothing after it, "phong cách khác", or a preset's name ("đổi cả hệ sang Gỗ sồi ấm"), the cabinets stay and take a style
   preset (front, door style, handle; `kitchen/system_replace.STYLES`). Server: template `{"kind": "replace-system", "system", "prompt"?, "style"?}`.
 
+## Replacing furniture, backs to the wall (plan `claude/ke-hoach-thay-vat-bang-he-tu.md`)
+- Right click a **furniture** element of the floorplan: "Thay vật này bằng dãy tủ" (the old "Tạo dãy tủ chữ I" entry), or a sentence in the
+  command box ("thay vật này bằng tủ bếp có chậu rửa…"). The object is **replaced**: one run per edge lying against a wall (an L or an
+  object in a corner gives two runs of one system meeting in the corner), the backs on that edge, the doors into the object, base and tall
+  cabinets as deep as the object (wall cabinets too when it is 350 mm deep or less). The object is listed in `floorplan.replaced` and no
+  longer drawn, rendered or used by the cameras; going back a revision brings it back. Cabinets made against it before are removed.
+- An object with **no edge against a wall** opens a popup listing its edges (hover draws the edge in the 3D view): the one picked is the back.
+- Walls and columns keep "standing beside": the backs lean on them.
+- **Drawn runs:** a line along a wall turns the backs to the wall whichever side was asked; away from walls the side asked is kept.
+- A recognised kitchen anchored on furniture also replaces it.
+
 ## Tests of the web app
 - `tests/js/*.test.mjs` (run by `test_web_logic`): pure logic (`menu-logic`, `assist-logic`, `design-logic`) and `web-architecture` (no module imports `app.js`, no import cycles, `window.kitchen` only assigned by `app.js`).
 - `tests/browser/smoke_web.py`: real-Chromium smoke test of the main flows (open, select, edit, undo, add/remove, right-click menu, free command, render, AI JSON, image tab). Needs `pip install playwright` and a launchable Chromium; prints SKIP and exits 0 without Playwright. Run it before and after every step of splitting `app.js` (plan: `claude/ke-hoach-tach-app-js.md` in the project docs).

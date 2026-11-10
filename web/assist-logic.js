@@ -101,12 +101,12 @@ const plain = (t) => String(t ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g
  */
 export function templateIntent(text) {
   const f = plain(text);
-  if (!/\b(tao|lam|dung|ve|dat|them|xep|cho|can|thiet\s+ke|xay|lap)\b/.test(f)) return null;
+  if (!/\b(tao|lam|dung|ve|dat|them|xep|cho|can|thiet\s+ke|xay|lap|thay)\b/.test(f)) return null;
   const shape = /\b(?:tu\s+)?(?:bep\s+)?chu\s+([lu])\b/.exec(f);
   if (shape) return { kind: 'shape', shape: shape[1].toUpperCase() };
   if (/\b(?:tu\s+)?(?:bep\s+)?chu\s+i\b|\bday\s+tu\b|\btu\s+doc\b/.test(f)) return { kind: 'run-i' };
   // A described kitchen ("tạo tủ bếp có tủ lạnh, mặt đá đen"): only with a clear "make it" verb, so edit sentences ("cánh kính cho tủ trên") stay edits.
-  if (/\b(tao|lam|dung|thiet\s+ke|xay|lap|ve|dat|xep)\b/.test(f) && /\btu\s+bep\b|\btu\s+lanh\b|\bmat\s+da\b|\btu\s+(duoi|tren|nong)\b/.test(f)) return { kind: 'run-i', described: true };
+  if (/\b(tao|lam|dung|thiet\s+ke|xay|lap|ve|dat|xep|thay)\b/.test(f) && /\btu\s+bep\b|\btu\s+lanh\b|\bmat\s+da\b|\btu\s+(duoi|tren|nong|noc)\b|\bday\s+tu\b|\bhe\s+tu\b/.test(f)) return { kind: 'run-i', described: true };
   return null;
 }
 
