@@ -218,6 +218,7 @@ class _Builder:
         if not m.frontSections:
             self.box(m.id, "carcass", m.wall, fs0, fs1, 0, m.depth - dc, y_than, top)
             self.door_widths(m, fs0, fs1, y_than, top)
+            self._back_panel(m)
             return
         cur = top
         for i, t in enumerate(m.frontSections):
@@ -236,10 +237,17 @@ class _Builder:
                     self.box(m.id, "drawer", m.wall, fs0 + c.doorGap / 2, fs1 - c.doorGap / 2, m.depth - dc, m.depth,
                              y0 + c.doorGap / 2, cur - c.doorGap / 2)
             cur = y0
+        self._back_panel(m)
         if cur - y_than > 30:  # phần còn lại phía dưới: một ngăn kéo
             self.box(m.id, "carcass", m.wall, fs0, fs1, 0, m.depth - dc, y_than, cur)
             self.box(m.id, "drawer", m.wall, fs0 + c.doorGap / 2, fs1 - c.doorGap / 2, m.depth - dc, m.depth,
                      y_than + c.doorGap / 2, cur - c.doorGap / 2)
+
+    def _back_panel(self, m: Module) -> None:
+        """A TV unit's panel on the wall behind the TV (``backPanel``: from / to along the run relative to the cabinet, y0 / y1)."""
+        bp = getattr(m, "backPanel", None)
+        if isinstance(bp, dict) and all(isinstance(bp.get(k), (int, float)) for k in ("from", "to", "y0", "y1")) and bp["to"] > bp["from"]:
+            self.box(m.id, "side-panel", m.wall, m.fromCorner + bp["from"], m.fromCorner + bp["to"], 0, tv_system.PANEL_THICKNESS, bp["y0"], bp["y1"])
 
     def upper(self, m: Module):
         dc = self.c.doorThickness
@@ -405,7 +413,8 @@ class _Builder:
                 sc = tb.center if tb.center is not None else m.fromCorner + m.width / 2
                 d = k[2] if len(k) >= 3 else tv_system.TV_DEPTH
                 y0 = max(m.y + m.height + 100.0, tv_system.TV_CENTER - h / 2)
-                self.box(tb.id, "tv", m.wall, sc - w / 2, sc + w / 2, 0, d, y0, y0 + h)
+                d0 = tv_system.PANEL_THICKNESS + 2      # in front of the panel behind it, if any
+                self.box(tb.id, "tv", m.wall, sc - w / 2, sc + w / 2, d0, d0 + d, y0, y0 + h)
             elif tb.type in ("sink", "cooktop", "faucet") and (at := runmod.spot(self.spec, tb)) is not None:
                 host = m if tb.wall is None else None                      # placed by its module: it stands in that module's row
                 wall = tb.wall or (host.wall if host else "back")

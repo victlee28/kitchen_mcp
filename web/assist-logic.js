@@ -119,10 +119,10 @@ export function systemIntent(text) {
   const words = String(text ?? '').trim().split(/\s+/).filter(Boolean);
   const flat = words.map((w) => plain(w).replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, ''));
   const f = flat.join(' ');
-  if (!/\bhe\s+tu\b|\b(ca|cho|cua|toan|nguyen)\s+he\b/.test(f)) return null;
+  if (!/\bhe\s+tu\b|\bhe\s+(?:tivi|tv)\b|\b(ca|cho|cua|toan|nguyen)\s+he\b/.test(f)) return null;
   if (!/\b(thay|doi|chuyen|sua|lam\s+lai|xep\s+lai|tao\s+lai|them|bo|bot)\b/.test(f)) return null;
   // take out the system phrase: [cả / cho / của / toàn / nguyên] hệ [tủ] [này / hiện tại / cũ / đang có / đó]
-  const at = flat.findIndex((w, k) => w === 'he' && (flat[k + 1] === 'tu' || ['ca', 'cho', 'cua', 'toan', 'nguyen'].includes(flat[k - 1])));
+  const at = flat.findIndex((w, k) => w === 'he' && (['tu', 'tivi', 'tv'].includes(flat[k + 1]) || ['ca', 'cho', 'cua', 'toan', 'nguyen'].includes(flat[k - 1])));
   if (at < 0) return null;
   let from = at;
   while (from > 0 && ['ca', 'cho', 'cua', 'toan', 'nguyen'].includes(flat[from - 1])) from -= 1;     // "cho cả hệ", "của toàn hệ"…

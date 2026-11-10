@@ -17,3 +17,8 @@ test('the TV stand-in box draws its screen on the front', () => {
   assert.equal(d[0].kind, 'slot');
   assert.equal(d[0].z, 31);
 });
+
+test('a sentence about the TV system goes to the whole system, the TV words kept for the server', () => {
+  assert.deepEqual(systemIntent('đổi hệ tivi sang kín cả vách'), { prompt: 'tivi sang kín cả vách' });
+  assert.deepEqual(systemIntent('thay cả hệ tủ thành tủ tivi kệ treo'), { prompt: 'tủ tivi kệ treo' });
+});

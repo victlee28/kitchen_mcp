@@ -103,17 +103,17 @@ def run_frame(line: Line) -> dict[str, float]:
             "length": math.hypot(end[0] - start[0], end[1] - start[1])}
 
 
-EXTRA_FIELDS = ("name", "niche", "appliance", "appliances", "doors", "frontSections", "hingeSides", "doorStyle", "blindCorner", "blindSide", "shelfCount")   # what a module may carry besides its box
+EXTRA_FIELDS = ("name", "niche", "appliance", "appliances", "doors", "frontSections", "hingeSides", "doorStyle", "blindCorner", "blindSide", "shelfCount", "backPanel")   # what a module may carry besides its box
 
 
 def plan_on_line(spec: KitchenSpec, line: Line, modules: list[dict[str, Any]], clear: list[str] | None = None,
-                 after: list[dict[str, Any]] | None = None, system: str | None = None, purpose: str | None = None) -> dict[str, Any]:
+                 after: list[dict[str, Any]] | None = None, system: str | None = None, run_fields: dict[str, Any] | None = None) -> dict[str, Any]:
     """The operation that puts ``modules`` in a new run on ``line``. Each module is ``{"type", "width", "s", "y", "height", "depth", "name"?}`` with
     ``s`` measured along the run from its start. ``clear``: ids of cabinets to remove first (replace instead of add); ``after``: operations to run once the cabinets are in.
-    ``system``: the cabinet system the run belongs to (``Run.system``), None to let it be worked out. ``purpose``: ``"tv"`` for a TV unit."""
+    ``system``: the cabinet system the run belongs to (``Run.system``), None to let it be worked out. ``run_fields``: more fields of the run (a TV unit: ``tv_system.run_fields``)."""
     frame = run_frame(line)
     run = {"id": next_run_id(spec), "x": frame["x"], "z": frame["z"], "yaw": frame["yaw"], **({"system": system} if system else {}),
-           **({"purpose": purpose} if purpose else {})}
+           **(run_fields or {})}
     ops: list[dict[str, Any]] = [{"op": "remove", "id": module_id, "closeGap": False} for module_id in clear or []]
     ops.append({"op": "add-run", "run": run})
     reach = 0.0

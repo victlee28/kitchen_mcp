@@ -23,14 +23,29 @@ def global_prompt(spec: KitchenSpec) -> str:
         mats = ", ".join(x for x in (mats, f"backsplash {vocab.to_english(wall_tile)}") if x)
     extra = ", ".join(dict.fromkeys([*lexicon.tag_phrases(spec.styleTags), *(spec.aiHints or [])]))
     only_tv = bool(spec.module) and all(m.id in tv_system.tv_modules(spec) for m in spec.module)
-    tv = (TV_UNIT + ", ") if tv_system.tv_runs(spec) else ""
+    tv = (tv_text(spec) + ", ") if tv_system.tv_runs(spec) else ""
     room = f"a {style} living room with " if only_tv else f"a {style} kitchen, "
     return (f"photorealistic interior photograph of {room}{tv}{mats}, "
             + (f"{extra}, " if extra else "") + "realistic materials, sharp details, architectural photography").replace(", ,", ",")
 
 
-TV_UNIT = ("a built-in TV wall unit: a low wall-to-wall media console with drawers and no stone top, an open TV niche above it "
-           "with a flat TV mounted on the wall, tall storage columns at both ends and a slim floating open shelf above the TV")
+TV_UNIT = {
+    "columns": "a built-in TV wall unit: a low wall-to-wall media console with drawers and no stone top, an open TV niche above it with a flat TV "
+               "mounted on the wall, tall storage columns at both ends and a slim floating open shelf above the TV",
+    "shelves": "a built-in TV wall unit: a low wall-to-wall media console with drawers and no stone top, a flat TV mounted on the wall above it "
+               "and slim open floating shelves on the wall beside the TV",
+    "full": "a built-in TV wall unit closed from floor to ceiling: tall cabinets on both sides and wall cabinets above an open TV niche, a low "
+            "media console with drawers in the niche and a flat TV mounted on the wall",
+}
+
+
+def tv_text(spec: KitchenSpec) -> str:
+    """What the TV units of the design look like, for the prompt (the layout of the first one; the panel behind the TV when there is one)."""
+    first = sorted(tv_system.tv_runs(spec))[0]
+    text = TV_UNIT.get(tv_system.layout_of(spec, first) or "columns", TV_UNIT["columns"])
+    if any(isinstance(getattr(m, "backPanel", None), dict) for m in spec.module if m.run == first):
+        text += ", a smooth panel in the cabinet finish on the wall behind the TV"
+    return text
 
 
 def layer_prompt(spec: KitchenSpec, layer: dict, instruction: str = "", material: str | None = None) -> str:

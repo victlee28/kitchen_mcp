@@ -148,7 +148,7 @@ def storey_of(module_type: str) -> str:
     return "tall" if module_type.startswith("tall") else "upper" if module_type.startswith("upper") else "base"
 
 
-EXTRA_FIELDS = ("name", "niche", "appliance", "appliances", "doors", "frontSections", "hingeSides", "doorStyle", "blindCorner", "blindSide", "shelfCount")
+EXTRA_FIELDS = ("name", "niche", "appliance", "appliances", "doors", "frontSections", "hingeSides", "doorStyle", "blindCorner", "blindSide", "shelfCount", "backPanel")
 
 
 def _handle_of(m: Module) -> tuple[tuple[str, Any], ...]:

@@ -66,6 +66,13 @@ returns `systems: {module: {system, tier, storey}}`; the page never works them o
 - The run carries `purpose: "tv"` (`kitchen/tv_system.py`): no worktop or wall tile, kitchen rules skip it, the TV is an appliance of type
   `tv` (catalog `tv-65/55/43`, exported as `Television`, `wall_mounted`), and the image prompt describes a TV wall unit (a living room when
   the design holds nothing else). Swapping the TV size goes through the appliance popup ("đổi sang tivi 55").
+- Three layouts, picked from the sentence: `columns` (default: console + niche + two columns + shelf over the TV), `shelves` ("kệ treo",
+  "không có cột": console the whole length, open shelves beside the TV) and `full` ("kín cả vách": tall cabinets each side, wall cabinets
+  over the niche). A panel in the cabinet finish covers the wall behind the TV (`backPanel` on the console cabinet) unless the sentence says
+  "không ốp". The run carries `tvLayout`; op `set-run-tv` marks / clears a TV run.
+- Whole system: on a TV unit "đổi hệ tivi sang kín cả vách" (or "thay cả hệ …") lays it out again as a TV unit (the layout named, else the
+  one it has); a sentence about a kitchen ("thành tủ bếp có chậu rửa") makes it a kitchen again; "thay cả hệ tủ thành tủ tivi" turns a
+  kitchen system into a TV unit.
 
 ## Tests of the web app
 - `tests/js/*.test.mjs` (run by `test_web_logic`): pure logic (`menu-logic`, `assist-logic`, `design-logic`) and `web-architecture` (no module imports `app.js`, no import cycles, `window.kitchen` only assigned by `app.js`).

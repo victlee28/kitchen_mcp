@@ -21,6 +21,10 @@ COLUMNS_FROM = 2400.0      # a line at least this long gets a tall column at eac
 COLUMN_MIN, COLUMN_MAX = 400.0, 600.0
 SHELF_Y, SHELF_HEIGHT, SHELF_DEPTH = 1850.0, 250.0, 300.0
 TV_CENTER = 1100.0         # height of the middle of the screen (seated eye level)
+FULL_UPPER_Y = 1750.0      # "full" layout: bottom of the wall cabinets over the niche; also the top of the panel behind the TV
+SIDE_SHELF_Y, SIDE_GAP = 1300.0, 300.0      # "shelves" layout: open shelves beside the TV, this far from it
+PANEL_THICKNESS = 18.0
+STYLES = ("columns", "shelves", "full")
 TV_DEPTH = 30.0
 TVS = ((1700.0, "65", 1450.0, 830.0), (1400.0, "55", 1230.0, 710.0), (0.0, "43", 960.0, 560.0))   # (niche from, inches, w, h)
 
@@ -43,34 +47,115 @@ def tv_for(niche: float) -> dict[str, Any]:
     return {"type": "tv", "name": f"Tivi {inch} inch treo tường", "dimensions": f"{w:g}x{h:g}x{TV_DEPTH:g}", "model": f"tv-{inch}"}
 
 
-def _split(length: float) -> list[float]:
-    n = max(1, math.ceil(length / CONSOLE_MAX - 1e-9))
+def _split(length: float, most: float = CONSOLE_MAX) -> list[float]:
+    n = max(1, math.ceil(length / most - 1e-9))
     w = float(round_int(length / n / 10) * 10)
     return [w] * (n - 1) + [length - w * (n - 1)]
 
 
-def layout(length: float, common: dict[str, Any]) -> list[dict[str, Any]]:
-    """The cabinets of a TV unit ``length`` mm long. ``common``: the design's ``common`` (its ``cabinetTop`` sets the columns' height)."""
+def style_of(text: str | None) -> str:
+    """Which layout a sentence asks for: ``full`` ("kín cả vách", "tủ kín"), ``shelves`` ("kệ treo", "không có cột") or ``columns``
+    (the default: low console + niche + two columns)."""
+    t = _plain(str(text or ""))
+    if re.search(r"\bkin\s+(?:ca\s+|het\s+)?(?:vach|tuong)\b|\btu\s+kin\b|\bkin\s+tu\s+san\b", t):
+        return "full"
+    if re.search(r"\bke\s+(?:treo|ho)\b|\bkhong\s+(?:co\s+|can\s+|lam\s+)?cot\b|\bbo\s+cot\b", t):
+        return "shelves"
+    return "columns"
+
+
+def explicit_style(text: str | None) -> str | None:
+    """The layout the sentence names, None when it names none ("thay cả hệ tivi" keeps the layout the unit has)."""
+    style = style_of(text)
+    if style != "columns":
+        return style
+    return "columns" if re.search(r"\b(?:2|hai)\s+cot\b|\bcot\s+tu\b|\bhoc\s+tivi\b", _plain(str(text or ""))) else None
+
+
+def wants_panel(text: str | None) -> bool:
+    """A panel behind the TV unless the sentence refuses it ("không ốp", "bỏ tấm ốp")."""
+    return not re.search(r"\b(?:khong|bo|bot)\s+(?:can\s+|co\s+)?(?:tam\s+)?op\b", _plain(str(text or "")))
+
+
+def run_fields(style: str) -> dict[str, Any]:
+    """What a TV unit's run carries besides its place."""
+    return {"purpose": PURPOSE, "tvLayout": style if style in STYLES else "columns"}
+
+
+def _console(at: float, length: float) -> list[dict[str, Any]]:
+    out = []
+    for w in _split(length):
+        out.append({"type": "base", "s": at, "width": w, "y": 0.0, "height": CONSOLE_HEIGHT, "depth": 400.0, "name": "Kệ tivi",
+                    "frontSections": [{"type": "drawer", "height": CONSOLE_HEIGHT}]})
+        at += w
+    return out
+
+
+def _put_tv(console: list[dict[str, Any]], center: float, width: float, panel: tuple[float, float, float] | None) -> None:
+    """The TV (sized for ``width``) on the console cabinet under ``center``; the panel behind it (``(width, y0, y1)``) on the same cabinet."""
+    host = next((c for c in console if c["s"] <= center < c["s"] + c["width"]), console[0])
+    tv = tv_for(width)
+    tv["center"] = center                   # along the run (it may straddle two console cabinets)
+    host["appliance"] = tv
+    if panel is not None:
+        pw, y0, y1 = panel
+        host["backPanel"] = {"from": center - pw / 2 - host["s"], "to": center + pw / 2 - host["s"], "y0": y0, "y1": y1}
+
+
+def layout(length: float, common: dict[str, Any], style: str = "columns", panel: bool = True) -> list[dict[str, Any]]:
+    """The cabinets of a TV unit ``length`` mm long. ``common``: the design's ``common`` (``cabinetTop`` sets the tall cabinets' height).
+    ``style``: ``columns`` (low console + niche + a tall column at each end from ``COLUMNS_FROM``, a floating shelf over the TV),
+    ``shelves`` (low console the whole length, open shelves on the wall beside the TV, no columns) or ``full`` (closed from floor to top
+    but for the TV niche: tall cabinets each side, wall cabinets over the niche). ``panel``: a panel on the wall behind the TV."""
     length = float(int(length // 10) * 10)
+    top = float(common.get("cabinetTop") or 2400.0)
+    out: list[dict[str, Any]] = []
+    if style == "full":
+        niche = length if length < 2000 else min(length - 800.0, max(1200.0, float(round_int(length * 0.45 / 10) * 10)))
+        side = (length - niche) / 2
+        at = 0.0
+        for w in (_split(side, COLUMN_MAX) if side > 0 else []):
+            out.append({"type": "tall", "s": at, "width": w, "y": 0.0, "height": top, "depth": 400.0, "name": "Tủ cao vách tivi"})
+            at += w
+        console = _console(side, niche)
+        out += console
+        at = side + niche
+        for w in (_split(side, COLUMN_MAX) if side > 0 else []):
+            out.append({"type": "tall", "s": at, "width": w, "y": 0.0, "height": top, "depth": 400.0, "name": "Tủ cao vách tivi"})
+            at += w
+        if top - FULL_UPPER_Y >= 250:
+            at = side
+            for w in _split(niche, 900.0):
+                out.append({"type": "upper", "s": at, "width": w, "y": FULL_UPPER_Y, "height": top - FULL_UPPER_Y, "depth": SHELF_DEPTH,
+                            "name": "Tủ trên hốc tivi"})
+                at += w
+        _put_tv(console, side + niche / 2, niche, (niche, CONSOLE_HEIGHT, FULL_UPPER_Y) if panel else None)
+        return out
+    if style == "shelves":
+        console = _console(0.0, length)
+        out += console
+        center = length / 2
+        tv_w = float(tv_for(length - 900.0)["dimensions"].split("x")[0])
+        _put_tv(console, center, length - 900.0, (tv_w + 400.0, CONSOLE_HEIGHT, FULL_UPPER_Y) if panel else None)
+        side = (length - tv_w) / 2 - SIDE_GAP
+        if side >= 450:
+            w = float(min(900.0, int(side // 10) * 10))
+            for s in (center - tv_w / 2 - SIDE_GAP - w, center + tv_w / 2 + SIDE_GAP):
+                out.append({"type": "upper-open", "s": s, "width": w, "y": SIDE_SHELF_Y, "height": SHELF_HEIGHT, "depth": 250.0,
+                            "name": "Kệ treo cạnh tivi", "shelfCount": 1})
+        elif length >= 600:
+            out.append({"type": "upper-open", "s": 0.0, "width": length, "y": SHELF_Y, "height": SHELF_HEIGHT, "depth": SHELF_DEPTH,
+                        "name": "Kệ treo trên tivi", "shelfCount": 1})
+        return out
     col = 0.0
     if length >= COLUMNS_FROM:
         col = min(COLUMN_MAX, max(COLUMN_MIN, float(round_int(length * 0.15 / 50) * 50)))
     niche = length - 2 * col
-    top = float(common.get("cabinetTop") or 2400.0)
-    out: list[dict[str, Any]] = []
-    for s in ((0.0, length - col) if col else ()):
-        out.append({"type": "tall", "s": s, "width": col, "y": 0.0, "height": top, "depth": 400.0, "name": "Cột tủ tivi"})
-    at = col
-    widths = _split(niche)
-    for i, w in enumerate(widths):
-        cabinet: dict[str, Any] = {"type": "base", "s": at, "width": w, "y": 0.0, "height": CONSOLE_HEIGHT, "depth": 400.0, "name": "Kệ tivi",
-                                   "frontSections": [{"type": "drawer", "height": CONSOLE_HEIGHT}]}
-        if i == 0:
-            tv = tv_for(niche)
-            tv["center"] = col + niche / 2          # along the run, the middle of the niche (it may straddle two console cabinets)
-            cabinet["appliance"] = tv
-        out.append(cabinet)
-        at += w
+    for s0 in ((0.0, length - col) if col else ()):
+        out.append({"type": "tall", "s": s0, "width": col, "y": 0.0, "height": top, "depth": 400.0, "name": "Cột tủ tivi"})
+    console = _console(col, niche)
+    out += console
+    _put_tv(console, col + niche / 2, niche, (niche, CONSOLE_HEIGHT, SHELF_Y) if panel else None)
     if niche >= 600:
         out.append({"type": "upper-open", "s": col, "width": niche, "y": SHELF_Y, "height": SHELF_HEIGHT, "depth": SHELF_DEPTH,
                     "name": "Kệ treo trên tivi", "shelfCount": 1})
@@ -79,13 +164,13 @@ def layout(length: float, common: dict[str, Any]) -> list[dict[str, Any]]:
 
 def console(length: float) -> list[dict[str, Any]]:
     """Only the low console (a second edge of the same object: the TV and the columns stand on the first)."""
-    length = float(int(length // 10) * 10)
-    out, at = [], 0.0
-    for w in _split(length):
-        out.append({"type": "base", "s": at, "width": w, "y": 0.0, "height": CONSOLE_HEIGHT, "depth": 400.0, "name": "Kệ tivi",
-                    "frontSections": [{"type": "drawer", "height": CONSOLE_HEIGHT}]})
-        at += w
-    return out
+    return _console(0.0, float(int(length // 10) * 10))
+
+
+def layout_of(spec: Any, run_id: str) -> str | None:
+    """The layout a TV run was made with (None: not a TV run)."""
+    r = next((r for r in spec.runs if r.id == run_id), None)
+    return (getattr(r, "tvLayout", None) or "columns") if r is not None and is_tv_run(r) else None
 
 
 def is_tv_run(run: Any) -> bool:

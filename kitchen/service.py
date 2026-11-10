@@ -365,7 +365,8 @@ class KitchenService:
             for i, p in enumerate(placed):
                 length = p.length // 10 * 10
                 if tv:
-                    modules = tv_system.layout(length, to_data(spec)['common']) if i == 0 else tv_system.console(length)
+                    modules = (tv_system.layout(length, to_data(spec)['common'], tv_system.style_of(prompt), tv_system.wants_panel(prompt))
+                               if i == 0 else tv_system.console(length))
                 elif described is None:
                     modules = run_line.base_cabinets(length, to_data(spec)['common'])
                 else:
@@ -380,7 +381,7 @@ class KitchenService:
                             changes['material'] = {**spec.common.material, **changes['material']}
                         after = [{'op': 'common', 'changes': changes}]
                 laid.append(cabinet_run.fit_depth(modules, round(p.depth)))
-            plan = cabinet_run.plan_replace(spec, element, placed, laid, after, purpose=tv_system.PURPOSE if tv else None)
+            plan = cabinet_run.plan_replace(spec, element, placed, laid, after, run_fields=tv_system.run_fields(tv_system.style_of(prompt)) if tv else None)
             notes = [n for n in (described[1] if described else []) if 'chiều dài' not in n]
             return {**plan, 'element': element, 'summary': [*plan['summary'], *notes]}
 
@@ -398,6 +399,13 @@ class KitchenService:
             ops = system_replace.style_ops(spec, mods, chosen)
             return {'operation': edit.combine_ops(ops), 'system': system, 'mode': 'restyle', 'style': chosen.id,
                     'summary': [f"System {system}: {len(ops)} cabinets take the style \"{chosen.name}\" ({chosen.front}, {chosen.door} doors, {chosen.handle} handles)"]}
+        tv_runs = tv_system.tv_runs(spec)
+        own_runs = sorted({m.run for m in mods if m.run})
+        was_tv = bool(own_runs) and all(r in tv_runs for r in own_runs)
+        kitchen_asked = bool(re.search(r"tủ\s*bếp|chậu|bếp\s*(?:từ|gas|nấu)|tủ\s*lạnh|mặt\s*đá", prompt.lower()))
+        if tv_system.asks_tv(prompt) or (was_tv and not kitchen_asked):
+            return KitchenService._relayout_tv(spec, system, mods, prompt)
+        undo_tv = [{'op': 'set-run-tv', 'id': r, 'layout': None} for r in own_runs if r in tv_runs]     # a TV unit made a kitchen again
         color, notes = intent.parse_prompt(prompt)
         if not color.country and country:
             color = color.model_copy(update={'country': country})
@@ -421,8 +429,31 @@ class KitchenService:
         if re.search(r"tủ\s*(?:trên|treo)", re.sub(no + r"tủ\s*(?:trên|treo)", "", said)):
             asked.add('upper')
         ops, summary = system_replace.relayout_ops(spec, mods, laid, fronts, frozenset(asked - refused), frozenset(refused))
+        ops = [*undo_tv, *ops]
         kept = [n for n in notes if 'chiều dài' not in n]          # the run keeps its length: the "no length given" note does not apply
         return {'operation': edit.combine_ops(ops), 'system': system, 'mode': 'relayout', 'summary': [f"System {system} laid out again", *summary, *kept]}
+
+    @staticmethod
+    def _relayout_tv(spec: KitchenSpec, system: str, mods: list, prompt: str) -> dict:
+        """A system laid out again as a TV unit (``tv_system.layout``): the layout the sentence names, else the one the unit has, else
+        ``columns``; the longest run gets the TV, the others only a console. Its runs are marked as TV units."""
+        slots = [s for s in system_replace.run_slots(spec, mods) if s.length >= 600]
+        if not slots:
+            raise InvalidInput(f"System {system} has no run long enough for a TV unit (600 mm)", code='run-too-short')
+        style = tv_system.explicit_style(prompt) or tv_system.layout_of(spec, slots[0].run) or 'columns'
+        common = to_data(spec)['common']
+        laid: dict[str, list[dict[str, Any]]] = {}
+        for i, slot in enumerate(slots):
+            modules = tv_system.layout(slot.length, common, style, tv_system.wants_panel(prompt)) if i == 0 else tv_system.console(slot.length)
+            for m in modules:                                     # the TV's centre is along the run: the slot starts at slot.start
+                if isinstance(m.get('appliance'), dict) and 'center' in m['appliance']:
+                    m['appliance'] = {**m['appliance'], 'center': m['appliance']['center'] + slot.start}
+            laid[slot.run] = modules
+        ops, summary = system_replace.relayout_ops(spec, mods, laid, {}, frozenset({'upper', 'loft'}), frozenset())
+        marks = [{'op': 'set-run-tv', 'id': s.run, 'layout': style} for s in slots]
+        names = {'columns': 'low console, TV niche, two columns', 'shelves': 'low console and open shelves', 'full': 'closed wall with a TV niche'}
+        return {'operation': edit.combine_ops([*marks, *ops]), 'system': system, 'mode': 'relayout',
+                'summary': [f"System {system} laid out again as a TV unit ({names[style]})", *summary]}
 
     @staticmethod
     def _plan_described(spec: KitchenSpec, color: KitchenTemplate, notes: list[str], outline: list, click: tuple, system: str | None = None) -> dict:
@@ -514,8 +545,9 @@ class KitchenService:
                     note = ['The line runs along a wall: the backs of the cabinets face the wall'] if doors != line.normal else []
                     line = run_line.Line(line.a, line.b, doors)
             if tv:
-                plan = run_line.plan_on_line(spec, line, tv_system.layout(run_line.run_frame(line)['length'], to_data(spec)['common']),
-                                             purpose=tv_system.PURPOSE)
+                style = tv_system.style_of(prompt)
+                plan = run_line.plan_on_line(spec, line, tv_system.layout(run_line.run_frame(line)['length'], to_data(spec)['common'], style,
+                                                                          tv_system.wants_panel(prompt)), run_fields=tv_system.run_fields(style))
             elif described is not None:
                 color, notes = described
                 if not color.country and country:
