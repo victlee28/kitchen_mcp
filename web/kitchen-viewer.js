@@ -69,7 +69,7 @@ export function createViewer(opts) {
   // Three handles in front of the run of the selected cabinet: its two ends (drag along the run) and its middle (drag the whole run).
   function refreshHandles() {
     handleGroup.clear(); handleAxes = null;
-    const ids = selected && opts.runModules ? opts.runModules(selected) : null;
+    const ids = typeof selected === 'string' && opts.runModules ? opts.runModules(selected) : null;      // a group shows no run handles
     const groups = (ids || []).map((id) => byModule.get(id)).filter((g) => g && g.userData.width > 0);
     if (!groups.length) return;
     scene3.updateMatrixWorld(true);
@@ -115,13 +115,16 @@ export function createViewer(opts) {
     controls.enabled = true; renderer.domElement.style.cursor = ''; suppressClick = true; setTimeout(() => { suppressClick = false; }, 80);   // released outside the view: no click follows
     d.mesh.position.copy(d.mesh.userData.home);
     const change = dragChange(d.mesh.userData.handle, (d.d.x * u.x + d.d.z * u.z) / k, (d.d.x * n.x + d.d.z * n.z) / k);
-    if (change && selected) opts.onRunDrag?.({ module: selected, ...change }, { x: ev.clientX, y: ev.clientY });
+    if (change && typeof selected === 'string') opts.onRunDrag?.({ module: selected, ...change }, { x: ev.clientX, y: ev.clientY });
   });
 
+  // a Shift-selected group lights only its role's parts: doors (glass ones too), drawer fronts, handles, or all three
+  const ROLE_PARTS = { door: ['door'], drawer: ['drawer'], handle: ['handle'], all: ['door', 'drawer', 'handle'] };
+  const inRole = (part, role) => (ROLE_PARTS[role] || []).includes(part);
   const selMats = new WeakMap();
   function highlight() {
     for (const m of meshes) {
-      const sel = selected && m.userData.module === selected;
+      const sel = typeof selected === 'string' ? m.userData.module === selected : !!selected && selected.modules.includes(m.userData.module) && inRole(m.userData.role, selected.role);
       if (!m.userData.baseMat) m.userData.baseMat = m.material;
       if (sel) {
         if (!selMats.has(m.userData.baseMat)) {
@@ -142,6 +145,7 @@ export function createViewer(opts) {
   // left click: the nearest thing under the pointer wins: a cabinet module or a visible floorplan element
   renderer.domElement.addEventListener('click', (ev) => {
     if (suppressClick) { suppressClick = false; return; }      // the release of a handle drag is not a click on what lies under it
+    if (ev.shiftKey && opts.onShiftPick) { opts.onShiftPick(contextTarget(ev)); return; }   // Shift: the same role in the same tier of the same system
     const ids = opts.moduleIds() || [];
     const hit = hitsAt(ev).find((h) => h.object.userData.structureId || (h.object.userData.module && ids.includes(h.object.userData.module)));
     const at = { x: ev.clientX, y: ev.clientY };
@@ -185,7 +189,10 @@ export function createViewer(opts) {
       opts.onSceneBuilt(k);
       highlight(); refreshHandles(); drawGuide(guide?.to ? { x: guide.to.x * unit(), z: guide.to.z * unit() } : null);
     },
-    setSelected(id) { selected = id || null; highlight(); refreshHandles(); },
+    /** One module (its id), a Shift-selected group ({ modules, role }), or nothing. */
+    setSelected(sel) { selected = sel || null; highlight(); refreshHandles(); },
+    /** Whether the view shows a part of `role` (door / drawer / handle / all) on `module`. */
+    hasRole(module, role) { return meshes.some((m) => m.userData.module === module && inRole(m.userData.role, role)); },
     /** The line of a run being drawn: `from` (mm) alone follows the pointer, with `to` it is fixed; null removes it. */
     setGuide(from, to = null) {
       guide = from ? { from, to } : null;

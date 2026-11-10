@@ -140,10 +140,10 @@ class KitchenService:
 
     @staticmethod
     def module_systems(spec: KitchenSpec) -> dict[str, dict[str, str]]:
-        """``{module id: {"system", "tier"}}``: the cabinet system each module belongs to (``runs.systems``) and the tier Shift-selection groups
+        """``{module id: {"system", "tier", "storey"}}``: the cabinet system each module belongs to (``runs.systems``) and the tier Shift-selection groups
         it by (base, upper with loft, tall, corner). The page reads both from here and never works them out itself."""
         by_module = runs.systems(spec)
-        return {m.id: {'system': by_module[m.id], 'tier': runs.tier_of(m)} for m in spec.module}
+        return {m.id: {'system': by_module[m.id], 'tier': runs.tier_of(m), 'storey': m.storey} for m in spec.module}
 
     def apply(self, design_id: str, operation: dict[str, Any], base_revision: int | None, source: str='', expect: str | None=None, **legacy: Any) -> dict:
         """Apply one operation and append a revision, rejecting stale base revisions.

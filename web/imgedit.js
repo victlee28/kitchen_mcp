@@ -145,8 +145,8 @@ $('imgBase').addEventListener('click', (ev) => {
     if (!p.part) return status('Không có chi tiết ở điểm này');
     const idx = partIndex(S.data.layers); const part = idx.get(p.part.id);
     if (!part) return selectLayer(p.layers[0], p.layers);
-    if (shift) {  // cả nhóm cùng vai trò, cùng tầng
-      const gid = shiftGroupId(part); const g = S.data.layers.find((l) => l.id === gid);
+    if (shift) {  // cả nhóm cùng vai trò, cùng tầng, cùng hệ tủ
+      const gid = shiftGroupId(part, S.data.layers); const g = gid && S.data.layers.find((l) => l.id === gid);
       if (!g) throw new Error('Không có nhóm cùng loại để chọn');
       return setSel([...(g.component || [])], []);
     }
@@ -389,13 +389,13 @@ function showCheck(box, kt, title, file = false) {
 
 // "Sửa ảnh của module này" from the 3D context menu: open this tab on the layer, in the view where it shows most pixels.
 const MIN_VISIBLE_PX = 400;   // below this the model tends to skip the region (kitchen/request_check.py MIN_PIXELS)
-async function bestView(id, layer) {
+async function bestView(id, layer, alts = []) {
   const views = [...$('viewSelect').options].map((o) => o.value);
   const cur = $('viewSelect').value; const order = [cur, ...views.filter((v) => v !== cur)];
   let best = { view: cur, px: -1 };
   for (const v of order) {
     const d = await api(`/api/designs/${id}/layers?view=${encodeURIComponent(v)}`);
-    const px = d.layers.find((x) => x.id === layer)?.pixels ?? 0;
+    const px = [layer, ...alts].map((l) => d.layers.find((x) => x.id === l)).find(Boolean)?.pixels ?? 0;
     if (px > best.px) best = { view: v, px };
     if (px >= MIN_VISIBLE_PX && v === cur) break;      // the view already on screen is good enough: keep it
     if (px >= MIN_VISIBLE_PX * 4) break;
@@ -403,14 +403,15 @@ async function bestView(id, layer) {
   return best;
 }
 window.addEventListener('image-edit-request', async (ev) => { try {
-  // detail: { layer, module?, material?, instruction?, mode? ('quick'|'design'), preview? (bool) } — prefilled, never submitted from here
-  const { layer, module, material, instruction, mode, preview } = ev.detail || {}; const id = $('designSelect').value;
+  // detail: { layer, alts?, module?, material?, instruction?, mode? ('quick'|'design'), preview? (bool) } — prefilled, never submitted from here
+  const { module, material, instruction, mode, preview, alts } = ev.detail || {}; let { layer } = ev.detail || {}; const id = $('designSelect').value;
   if (!id || !layer) return;
   status('Tìm góc nhìn thấy rõ module…');
-  const best = await bestView(id, layer);
+  const best = await bestView(id, layer, alts || []);
   $('viewSelect').value = best.view;
   showTab(true, true);
   await load();
+  layer = [layer, ...(alts || [])].find((l) => S.data?.layers.some((x) => x.id === l)) || layer;   // the first of the candidates the catalogue has
   if (S.data?.layers.some((x) => x.id === layer)) await selectLayer(layer, []);
   if (typeof material === 'string') $('jItem').value = material;
   if (typeof instruction === 'string') $('jInstr').value = instruction;

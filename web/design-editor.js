@@ -1,7 +1,7 @@
 // Design editor: issue list, module list, module form and the add/remove/undo buttons.
-// Owns the module selection (state.selected). Receives its dependencies; never imports app.js.
+// Owns the module selection (state.selected) and the Shift-selected group (state.multi). Receives its dependencies; never imports app.js.
 import { $, el } from './dom.js';
-import { FIELDS, moduleOrder, moduleLabel, formChanges } from './design-logic.js';
+import { FIELDS, moduleOrder, moduleLabel, formChanges, groupLabel, shiftGroup } from './design-logic.js';
 
 export function createDesignEditor({ state, api, run, setStatus, afterChange, setViewerSelected }) {
   const post = (path, body) => api(`/api/designs/${state.id}/${path}`, 'POST', body);
@@ -29,13 +29,34 @@ export function createDesignEditor({ state, api, run, setStatus, afterChange, se
 
   function renderModuleList() {
     const ul = $('moduleList'); ul.replaceChildren();
+    const g = state.multi;
+    if (g) ul.append(el('li', { class: 'muted' }, `Đang chọn ${groupLabel(g)} — chuột phải vào một tủ đã chọn để đổi cả nhóm, Esc để bỏ`));
     for (const m of moduleOrder(state.spec.module)) {
-      ul.append(el('li', { class: m.id === state.selected ? 'sel' : '', onclick: () => selectModule(m.id) },
+      ul.append(el('li', { class: m.id === state.selected || g?.modules.includes(m.id) ? 'sel' : '', onclick: () => selectModule(m.id) },
         el('b', {}, m.id), ` ${moduleLabel(m)}`));
     }
   }
 
+  // Shift+click in the 3D view: the same role in the same tier of the same cabinet system (has: does the view show such a part on a module).
+  function shiftPick(target, has) {
+    const g = shiftGroup(target, state.systems, has);
+    if (!g) return setStatus('Shift+bấm vào cánh, mặt ngăn kéo, tay nắm hoặc thân tủ để chọn cả nhóm cùng loại', 'warn');
+    state.selected = null; state.multi = g; setViewerSelected(g);
+    $('moduleForm').hidden = true; renderModuleList();
+    setStatus(`Đã chọn ${groupLabel(g)}`, 'ok');
+  }
+
+  function clearGroup() {
+    if (!state.multi) return;
+    state.multi = null; setViewerSelected(state.selected);
+    if (state.spec) renderModuleList();
+  }
+
+  /** Whether a picked target is one of the Shift-selected modules (a right click there opens the group's menu). */
+  const inGroup = (t) => !!state.multi && !!t && (t.kind === 'module' || (t.kind === 'part' && t.part !== 'countertop')) && state.multi.modules.includes(t.id);
+
   function selectModule(id) {
+    state.multi = null;
     state.selected = id; setViewerSelected(id); renderModuleList();
     const m = findModule(id); if (!m) return;
     const f = $('moduleForm'); f.hidden = false;
@@ -49,14 +70,15 @@ export function createDesignEditor({ state, api, run, setStatus, afterChange, se
 
   // Drop the selection (another design opened, a structure was picked, ...).
   function clearSelection({ redraw = false } = {}) {
-    const had = state.selected;
-    state.selected = null; setViewerSelected(null);
+    const had = state.selected || state.multi;
+    state.selected = null; state.multi = null; setViewerSelected(null);
     $('moduleForm').hidden = true;
     if (redraw && had && state.spec) renderModuleList();
   }
 
   // A design was (re)loaded: redraw the panels and keep the selection if the module still exists.
   function onDesignOpened(validation) {
+    if (state.multi) { state.multi = null; setViewerSelected(null); }      // the systems may have changed with the design
     renderIssues(validation); renderModuleList();
     if (state.selected && !findModule(state.selected)) state.selected = null;
     if (state.selected) selectModule(state.selected); else $('moduleForm').hidden = true;
@@ -85,5 +107,5 @@ export function createDesignEditor({ state, api, run, setStatus, afterChange, se
     run('hoàn tác', async () => afterChange(await post('revert', { baseRev: state.rev, rev: state.rev - 1 })));
   });
 
-  return { renderIssues, renderModuleList, selectModule, clearSelection, onDesignOpened };
+  return { renderIssues, renderModuleList, selectModule, clearSelection, onDesignOpened, shiftPick, clearGroup, inGroup };
 }

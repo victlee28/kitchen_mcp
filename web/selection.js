@@ -9,14 +9,18 @@ const ROLE_VI = { handle: 'tay nắm', door: 'cánh tủ', 'glass-door': 'cánh 
 export const roleName = (type) => ROLE_VI[type] || type;
 export const partIndex = (layers) => new Map(layers.filter((l) => l.variant === 'part').map((l) => [l.id, l]));
 
-/** Group a Shift+click selects for a clicked part: the same role within the same tier. */
-export function shiftGroupId(part) {
+/** Group a Shift+click selects for a clicked part: the same role within the same tier, within the part's cabinet system when the design
+ *  has several (the catalogue then has sys:<system>:tier:… groups). `layers`: the catalogue; null when no such group exists. */
+export function shiftGroupId(part, layers = []) {
   const tier = TIER_OF[part.storey];
-  if (!tier) return `type:${part.type}`;
-  if (part.type === 'handle') return `tier:${tier}:handle`;
-  if (part.type === 'door' || part.type === 'glass-door') return `tier:${tier}:door`;
-  if (part.type === 'drawer') return `tier:${tier}:drawer`;
-  return `tier:${tier}:all`;  // cabinet body clicked: fronts and handles of the tier
+  if (!tier) return layers.some((l) => l.id === `type:${part.type}`) || !layers.length ? `type:${part.type}` : null;
+  const role = part.type === 'handle' ? 'handle' : part.type === 'door' || part.type === 'glass-door' ? 'door' : part.type === 'drawer' ? 'drawer' : 'all';
+  const roles = { door: ['door', 'front', 'all'], drawer: ['drawer', 'front', 'all'], handle: ['handle'], all: ['all', 'front', 'door', 'drawer'] }[role];
+  const bySystem = part.cabinetSystemId && layers.some((l) => l.id.startsWith(`sys:${part.cabinetSystemId}:`));
+  const prefix = bySystem ? `sys:${part.cabinetSystemId}:tier` : 'tier';
+  const ids = roles.map((r) => `${prefix}:${tier}:${r}`);
+  if (!layers.length) return ids[0];
+  return ids.find((id) => layers.some((l) => l.id === id)) || null;
 }
 
 /** Part IDs a Ctrl+click adds or removes. With a handle selected, a door/drawer stands for its own handle(s), and the reverse. */

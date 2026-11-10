@@ -4,7 +4,7 @@
 // A load that is overtaken by a newer one (the user switched design quickly) is dropped before it touches the state or the page.
 
 export function createDesignController({ api, renderList, onOpened }) {
-  const state = { id: null, rev: null, spec: null, scene: null, doc: null, selected: null, views: {}, qg: '' };
+  const state = { id: null, rev: null, spec: null, systems: {}, scene: null, doc: null, selected: null, multi: null, views: {}, qg: '' };   // multi: a Shift-selected group
   let openSeq = 0;
 
   const countryQuery = () => (state.qg ? `?country=${state.qg}` : '');
@@ -15,7 +15,7 @@ export function createDesignController({ api, renderList, onOpened }) {
     const [d, scene, validation, doc] = await Promise.all([api(`/api/designs/${id}`), api(`/api/designs/${id}/scene`),
       api(`/api/designs/${id}/validate${countryQuery()}`), api(`/api/designs/${id}/threejs${countryQuery()}`)]);
     if (seq !== openSeq) return false;
-    Object.assign(state, { id, rev: d.rev, spec: d.spec, scene, doc, views: scene.views });
+    Object.assign(state, { id, rev: d.rev, spec: d.spec, systems: d.systems || {}, scene, doc, views: scene.views });
     await onOpened({ id, rev: d.rev, spec: d.spec, scene, validation, doc, keepView });
     return true;
   }

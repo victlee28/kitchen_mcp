@@ -24,7 +24,7 @@ const openDesign = (id, keepView = false) => controller.open(id, { keepView });
 const viewer = createViewer({
   container: $('viewport'),
   moduleIds: () => (state.spec ? state.spec.module.map((m) => m.id) : null),
-  extraPickables: () => structSel.pickables(),
+  extraPickables: () => structSel.pickables(), onShiftPick: (t) => editor.shiftPick(t, viewer.hasRole),
   onSceneBuilt: (k) => structSel.setScene(k.structures, k.structurePickables),
   // the handles of the selected cabinet's run; a drag of one becomes a previewed change, like the menu's
   runModules: (id) => runModulesOf(state.spec, id), onRunDrag: (change, at) => moduleMenu.runDrag(change, at), onGuide: (mm) => setStatus(guideText(mm)),
@@ -36,7 +36,7 @@ const viewer = createViewer({
   },
   onContext: (target, at) => {
     if (!target) { moduleMenu.close(); return; }
-    applyTarget(target);
+    if (!editor.inGroup(target)) applyTarget(target);           // a right click on the Shift-selected group keeps it: the menu acts on all of it
     moduleMenu.open(target, at.x, at.y);
   },
 });
@@ -50,10 +50,10 @@ function applyTarget(target) {
   if (effect.clearStructure) structSel.clear();
   if (effect.selectModule) editor.selectModule(effect.selectModule);
 }
-window.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && !moduleMenu.isOpen && !/INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName || '')) structSel.clear(); });
+window.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && !moduleMenu.isOpen && !/INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName || '')) { structSel.clear(); editor.clearGroup(); } });
 const moduleMenu = createModuleMenu({
   box: $('ctxMenu'), setStatus, keepOpenOn: (node) => $('viewport').contains(node),   // a press in the 3D view is decided by the click handler above
-  getState: () => ({ id: state.id, rev: state.rev, spec: state.spec }),
+  getState: () => ({ id: state.id, rev: state.rev, spec: state.spec, systems: state.systems, multi: state.multi }),
   afterChange: (res) => afterChange(res), reload: () => openDesign(state.id, true),
   structure: { hide: () => structSel.hideSelected(), isolate: () => structSel.isolateSelected(), showAll: () => structSel.showAll() },
   imageEdit: (detail) => window.dispatchEvent(new CustomEvent('image-edit-request', { detail })), guide: (from, to) => viewer.setGuide(from, to),

@@ -208,3 +208,26 @@ export function sceneToMm(point, units) {
   const k = { mm: 0.001, cm: 0.01, m: 1 }[units || 'mm'];
   return { x: point.x / k, z: point.z / k };
 }
+
+/** What the menu offers on a Shift-selected group (shiftGroup in design-logic.js): the changes that make sense for every module of it. */
+export function groupActions(g) {
+  if (!g) return [];
+  const out = [];
+  if (g.role !== 'handle') out.push({ id: 'material', label: 'Đổi vật liệu mặt trước (cả nhóm)' });
+  if (g.role === 'door' || g.role === 'all') out.push({ id: 'doorStyle', label: 'Đổi kiểu cánh (cả nhóm)' });
+  out.push({ id: 'handleVariant', label: 'Đổi kiểu tay nắm (cả nhóm)' }, { id: 'handleMaterial', label: 'Đổi vật liệu tay nắm (cả nhóm)' },
+    { id: 'image', label: 'Sửa ảnh của vùng chọn này' });
+  return out;
+}
+
+/** One operation for a group: the menu's own operation for each module (buildOp), together. A module the change does nothing to (it
+ *  already has that material) is left out; when it does nothing to any, the first reason is the error. */
+export function buildGroupOp(action, g, form, spec) {
+  if (!groupActions(g).some((a) => a.id === action) || action === 'image') throw new Error(`Hành động không hỗ trợ cho nhóm: ${action}`);
+  const ops = []; const reasons = [];
+  for (const id of g.modules) {
+    try { ops.push(buildOp(action, id, form, spec)); } catch (e) { reasons.push(e.message); }
+  }
+  if (!ops.length) throw new Error(reasons[0] || 'Không có thay đổi');
+  return ops.length === 1 ? ops[0] : { op: 'multi', ops };
+}

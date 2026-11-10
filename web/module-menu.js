@@ -3,7 +3,8 @@
 import { el } from './dom.js';
 import { request } from './api-client.js';
 import { interpretBody, describeInterpret, templateIntent, mentionsReference, checkUpload, recognizeBody, recognizeJobBody, anchorFor, describeRecognition, recognitionLines } from './assist-logic.js';
-import { actionsFor, buildOp, describeProposal, layerFor, lineTemplate, menuPosition, DOOR_STYLES, HANDLE_VARIANTS, MATERIAL_PRESETS, RUN_ACTIONS, RUN_TURNS } from './menu-logic.js';
+import { actionsFor, buildGroupOp, buildOp, describeProposal, groupActions, layerFor, lineTemplate, menuPosition, DOOR_STYLES, HANDLE_VARIANTS, MATERIAL_PRESETS, RUN_ACTIONS, RUN_TURNS } from './menu-logic.js';
+import { groupLabel, groupLayerIds, manySystems } from './design-logic.js';
 
 const call = (path, body) => request(path, 'POST', body);
 const JOB_KEY = 'recogJob';
@@ -32,7 +33,18 @@ export function createModuleMenu(ctx) {
     box.style.left = `${left}px`; box.style.top = `${top}px`;
   }
 
+  // The menu of a Shift-selected group: changes for every module of it, and the image tab with the same group.
+  function listGroup() {
+    const g = target.group;
+    box.onkeydown = null;
+    box.replaceChildren(header(`Nhóm · ${groupLabel(g)}`), el('ul', { class: 'ctx-list' }, ...groupActions(g).map((a) =>
+      el('li', {}, el('button', { type: 'button', onclick: () => choose(a.id) }, a.label)))));
+  }
+
+  const actionList = (spec) => (target.group ? groupActions(target.group) : actionsFor(target, spec));
+
   function list() {
+    if (target.group) return listGroup();
     const { spec } = ctx.getState();
     const partName = { door: 'Cánh', drawer: 'Mặt ngăn kéo', handle: 'Tay nắm', countertop: 'Mặt bàn' }[target.part];
     const title = target.kind === 'part' ? (target.part === 'countertop' ? 'Mặt bàn' : `${partName} · ${target.id}`)
@@ -166,6 +178,10 @@ export function createModuleMenu(ctx) {
     if (action === 'struct-hide') { ctx.structure.hide(); return close(); }
     if (action === 'struct-isolate') { ctx.structure.isolate(); return close(); }
     if (action === 'struct-all') { ctx.structure.showAll(); return close(); }
+    if (action === 'image' && target.group) {
+      const ids = groupLayerIds(target.group, manySystems(ctx.getState().systems)); close();
+      return ctx.imageEdit({ layer: ids[0], alts: ids.slice(1) });
+    }
     if (action === 'image') { const id = target.id; close(); return ctx.imageEdit({ layer: layerFor('image', id), module: id }); }
     form(action);
   }
@@ -212,7 +228,8 @@ export function createModuleMenu(ctx) {
       f.overhang = el('input', { type: 'number', min: 0, max: 100, step: 5, value: spec.common?.countertopOverhang ?? 20 });
       fields.push(el('label', {}, 'Độ nhô phía trước (mm)', f.overhang));
     } else if (action === 'handleVariant') {
-      const current = m?.handle?.variant || spec.common?.handleByStorey?.[m?.storey]?.variant || spec.common?.handle?.variant;
+      const storey = ctx.getState().systems?.[m?.id]?.storey;      // the spec JSON has no storey: the server sends it with the systems
+      const current = m?.handle?.variant || spec.common?.handleByStorey?.[storey]?.variant || spec.common?.handle?.variant;
       f.variant = el('select', {}, ...HANDLE_VARIANTS.map(([v, t]) => el('option', { value: v, selected: v === current }, t)));
       fields.push(el('label', {}, 'Kiểu tay nắm', f.variant));
     } else if (action === 'material') {
@@ -254,11 +271,11 @@ export function createModuleMenu(ctx) {
     const read = () => Object.fromEntries(Object.entries(f).map(([k, n]) => [k, n.type === 'checkbox' ? n.checked : n.value]));
     const go = el('button', { type: 'button', class: 'primary', onclick: () => preview(action, read) }, 'Xem trước');
     const extra = [];
-    if (action === 'material') {   // same material, but as a picture first: opens the image tab with the job form filled (quick mode, preview on)
+    if (action === 'material' && !target.group) {   // same material, but as a picture first: opens the image tab with the job form filled (quick mode, preview on)
       extra.push(el('button', { type: 'button', class: 'ghost', title: 'Mở tab sửa ảnh với vật liệu này; chưa đổi thiết kế',
         onclick: () => { const material = read().material.trim(); if (!material) return form(action, 'Nhập tên vật liệu'); const id = target.id; close(); ctx.imageEdit({ layer: layerFor('material', id), module: id, material, mode: 'quick', preview: true }); } }, 'Tạo ảnh với vật liệu này'));
     }
-    box.replaceChildren(header(`${target.part === 'countertop' ? 'Mặt bàn' : target.id}: ${actionsFor(target, spec).find((a) => a.id === action)?.label}`), ...fields, out,
+    box.replaceChildren(header(`${target.group ? groupLabel(target.group) : target.part === 'countertop' ? 'Mặt bàn' : target.id}: ${actionList(spec).find((a) => a.id === action)?.label}`), ...fields, out,
       el('div', { class: 'row' }, go, ...extra, el('button', { type: 'button', class: 'ghost', onclick: list }, 'Quay lại')));
     (f.material || f.style || f.width || f.along || f.delta || go).focus?.();
     box.onkeydown = (e) => { if (e.key === 'Enter' && e.target.tagName !== 'BUTTON') { e.preventDefault(); go.click(); } };
@@ -267,10 +284,10 @@ export function createModuleMenu(ctx) {
   async function preview(action, read) {
     if (busy) return; const { id, rev, spec } = ctx.getState();
     let op;
-    try { op = buildOp(action, target.id, read(), spec); } catch (e) { return form(action, e.message); }
+    try { op = target.group ? buildGroupOp(action, target.group, read(), spec) : buildOp(action, target.id, read(), spec); } catch (e) { return form(action, e.message); }
     busy = true; ctx.setStatus('Xem trước thay đổi…');
     try {
-      const { status, data } = await call(`/api/designs/${id}/propose`, { op, baseRev: rev, ...(target.part === 'countertop' || RUN_ACTIONS.includes(action) ? {} : { scope: [target.id] }) });   // a run action is meant to touch the whole run
+      const { status, data } = await call(`/api/designs/${id}/propose`, { op, baseRev: rev, ...(target.group ? { scope: target.group.modules } : target.part === 'countertop' || RUN_ACTIONS.includes(action) ? {} : { scope: [target.id] }) });   // a run action is meant to touch the whole run
       busy = false;
       if (status === 409) return stale(action);
       if (!data || data.error) return form(action, data?.error || `Lỗi ${status}`);
@@ -299,7 +316,7 @@ export function createModuleMenu(ctx) {
     const lines = [...extra.map((x) => (typeof x === 'string' ? { kind: 'info', text: x } : x)), ...describeProposal(p)];
     const confirm = el('button', { type: 'button', class: p.validation?.introducesErrors ? 'danger' : 'primary', disabled: !p.applicable || p.unchanged,
       onclick: () => apply(action, p) }, p.validation?.introducesErrors ? 'Vẫn áp dụng' : 'Áp dụng');
-    box.replaceChildren(header(`Xem trước · ${action === 'run-line' ? 'dãy tủ mới' : target.id}`), el('ul', { class: 'ctx-preview' }, ...lines.map((l) => el('li', { class: l.kind }, l.text))),
+    box.replaceChildren(header(`Xem trước · ${action === 'run-line' ? 'dãy tủ mới' : target.group ? groupLabel(target.group) : target.id}`), el('ul', { class: 'ctx-preview' }, ...lines.map((l) => el('li', { class: l.kind }, l.text))),
       el('div', { class: 'row' }, confirm, el('button', { type: 'button', class: 'ghost', onclick: () => (['run-i', 'run-line', 'cmd'].includes(action) ? list() : form(action)) }, ['run-i', 'run-line', 'cmd'].includes(action) ? 'Quay lại' : 'Sửa lại'), el('button', { type: 'button', class: 'ghost', onclick: close }, 'Hủy')));
     confirm.focus();
   }
@@ -329,7 +346,12 @@ export function createModuleMenu(ctx) {
   window.addEventListener('design-opened', () => { lineFrom = null; ctx.guide?.(null); if (!busy) close(); });
 
   return {
-    open(t, x, y) { target = t; list(); place(x, y); box.querySelector('button:not(.ctx-x)')?.focus(); },
+    open(t, x, y) {
+      const g = ctx.getState().multi;      // a right click on a module of the Shift-selected group: the group's menu
+      const onGroup = g && t && (t.kind === 'module' || (t.kind === 'part' && t.part !== 'countertop')) && g.modules.includes(t.id);
+      target = onGroup ? { kind: 'group', id: t.id, group: g } : t;
+      list(); place(x, y); box.querySelector('button:not(.ctx-x)')?.focus();
+    },
     /** A run handle was dragged in the 3D view: the same previewed change the menu would make, shown where the drag ended. */
     runDrag(change, at) { if (busy) return; target = { kind: 'module', id: change.module }; place(at.x, at.y); preview(change.action, () => change.form); },
     close, get isOpen() { return !box.hidden; },
