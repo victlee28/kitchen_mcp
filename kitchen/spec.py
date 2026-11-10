@@ -142,6 +142,7 @@ class Module(_Base):
     niche: float | None = Field(default=None, description="Tủ cao: chiều cao hốc thiết bị tính từ sàn (mm)")
     backLength: float | None = None   # corner-shelf: length of the leg along the back wall
     rightLength: float | None = None  # corner-shelf: length of the leg along the right wall
+    turnsInto: str | None = Field(default=None, description="corner-shelf standing in explicit runs: id of the run its SECOND leg lies in. The first leg is the cabinet's own place (run, fromCorner, width) at the END of its run; the second, rightLength long, lies at the START of this run, the two runs meeting in a square inside corner")
     shelfCount: int = 3
     hingeSides: list[Literal["left", "right", "upper", "base"]] = Field(default_factory=list,
         description="Bản lề từng cánh theo thứ tự từ trái sang (nhìn từ trước); trống = tự suy")
@@ -181,9 +182,12 @@ class Module(_Base):
             raise ValueError(f"{self.id}: facing only applies to wall='island'")
         if self.type not in MODULE_TYPES:
             raise ValueError(f"loai '{self.type}' không hỗ trợ; dùng một trong: {', '.join(MODULE_TYPES)}")
+        if self.turnsInto and (self.type != "corner-shelf" or not self.run):
+            raise ValueError(f"{self.id}: turnsInto only applies to a corner-shelf standing in a run")
         if self.type == "corner-shelf":
-            if self.wall != "corner" or not self.backLength or not self.rightLength:
-                raise ValueError(f"{self.id}: corner-shelf needs wall='corner', backLength and rightLength")
+            by_runs = bool(self.run and self.turnsInto and self.width > 0 and self.rightLength)
+            if not by_runs and (self.wall != "corner" or not self.backLength or not self.rightLength):
+                raise ValueError(f"{self.id}: corner-shelf needs wall='corner', backLength and rightLength; or run, width, turnsInto and rightLength")
         elif self.wall == "corner":
             raise ValueError(f"{self.id}: only corner-shelf may be placed at wall='corner'")
         elif self.width <= 0:

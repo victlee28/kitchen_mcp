@@ -2,8 +2,8 @@
 
 A run is a pure rotation: its s grows to the right of someone looking at the doors. The rows of the back wall, the left wall and the free runs
 facing +z / +x measure the other way, so their cabinets are mirrored along the row: ``s = length - fromCorner - width``, door widths in
-reverse order. A blind corner or an end panel changes ends with them (``blindSide``). What a run cannot say is left as it is and
-reported: a corner shelf. The kitchen frame is kept by writing the wall lengths down (``room``), since a kitchen without
+reverse order. A blind corner or an end panel changes ends with them (``blindSide``). A corner shelf becomes a cabinet at the end of the back run that
+turns into the right run (``turnsInto``); without both runs it is left on its walls and reported. The kitchen frame is kept by writing the wall lengths down (``room``), since a kitchen without
 wall cabinets no longer implies them. Pure: data in, data out; ``equivalent`` tells whether two kitchens compile to the same boxes.
 """
 from __future__ import annotations
@@ -23,6 +23,16 @@ def _row_key(m: Module) -> tuple[Any, ...] | None:
     if m.wall == "island":
         return ("island", m.offset, m.facing or "-z", m.depth)        # the depth is part of a free run's seat
     return (m.wall,)
+
+
+def _wall_run(spec: KitchenSpec, scene: Any, wall: str) -> tuple[str, float, bool] | None:
+    """An explicit run that already stands for ``wall`` (a kitchen converted earlier): (run id, the s of the back-right corner along it, mirrored)."""
+    for r in spec.runs:
+        fr = runs.RunFrame(r.id, r.x, r.z, r.yaw)
+        if runs.run_wall(fr, scene.lsau) == wall and any(m.run == r.id for m in spec.module):
+            s, _ = fr.to_local(0.0, 0.0)
+            return r.id, float(round_half_away(s, 3)), wall == "back"
+    return None
 
 
 _SIDE = {"Left": "left", "Right": "right", "Top": "upper", "Bottom": "base"}
@@ -49,8 +59,6 @@ def convert(spec: KitchenSpec) -> tuple[dict[str, Any], list[str]]:
     for m in spec.module:
         key = _row_key(m)
         if key is None:
-            if m.wall == "corner":
-                notes.append(f"{m.id}: a corner shelf has no run form; left on its walls")
             continue
         rows.setdefault(key, []).append(m)
     taken = {r.id for r in spec.runs}
@@ -81,7 +89,16 @@ def convert(spec: KitchenSpec) -> tuple[dict[str, Any], list[str]]:
                 out["blindSide"] = "end" if m.blindSide == "start" else "start"
             if mirrored:                                  # door widths are listed along the row; hinge sides are told as seen from the front, which stays
                 out["doors"] = list(reversed(out.get("doors") or []))
-    if not made:
+    for m in spec.module:                                              # a corner shelf: first leg at the end of the back run, second at the start of the right run
+        if m.wall != "corner":
+            continue
+        back, right = made.get(("back",)) or _wall_run(spec, scene, "back"), made.get(("right",)) or _wall_run(spec, scene, "right")
+        if back is None or right is None or (m.backLength or 0) > back[1]:
+            notes.append(f"{m.id}: a corner shelf needs a run along the back wall (at least as long as its leg) and one along the right wall; left on its walls")
+            continue
+        notes = [n for n in notes if not n.startswith(f"{m.id}:")]
+        by_id[m.id].update(wall="island", run=back[0], turnsInto=right[0], fromCorner=back[1] - (m.backLength or 0), width=m.backLength)
+    if not made and not any(m.get("turnsInto") for m in data["module"]):
         return data, notes
     for tb in data.get("appliances", []):                                # a worktop appliance given by wall + centre joins the cabinet under it
         wall, center = tb.get("wall"), tb.get("center")

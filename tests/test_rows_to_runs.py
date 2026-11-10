@@ -53,7 +53,7 @@ class TestConvert(unittest.TestCase):
         self.assertEqual((r1.fromCorner, r1.hingeSides), (600.0, ["right"]), "the right wall is not mirrored; its lone door keeps the hinge it had")
         self.assertEqual((after.room.length("back"), after.room.length("right")), geometry._wall_length(before), "the kitchen frame is written down")
 
-    def test_a_blind_corner_changes_ends_with_its_row_and_a_corner_shelf_stays(self):
+    def test_a_blind_corner_changes_ends_with_its_row(self):
         mods = [box("B1", "back", 0, 1000, blindCorner=600, doors=[400]), box("B2", "back", 1000, 600), box("R1x", "right", 600, 600, blindCorner=0),
                 box("L1", "left", 600, 900, blindCorner=300, endPanel=18, doors=[582]),
                 {"id": "KG1", "type": "corner-shelf", "wall": "corner", "y": 1500, "height": 700, "depth": 320, "backLength": 600, "rightLength": 600}]
@@ -61,12 +61,55 @@ class TestConvert(unittest.TestCase):
         after, notes = converted(before)
         self.assertEqual(rows_to_runs.equivalent(before, after), [])
         got = {m.id: (m.wall, bool(m.run), m.blindSide) for m in after.module}
-        self.assertEqual(got, {"B1": ("island", True, "end"), "B2": ("island", True, "start"), "L1": ("island", True, "end"), "KG1": ("corner", False, "start"),
+        self.assertEqual(got, {"B1": ("island", True, "end"), "B2": ("island", True, "start"), "L1": ("island", True, "end"), "KG1": ("island", True, "start"),
                                "R1x": ("island", True, "start")})
         b1 = next(m for m in after.module if m.id == "B1")
         self.assertEqual((b1.fromCorner, b1.fronts, b1.blind_span), (600.0, (600.0, 1000.0), (1000.0, 1600.0)), "the blind part is at the corner end of the run")
-        self.assertEqual(len(notes), 1, "only the corner shelf is left on its walls")
+        self.assertEqual(notes, [])
         self.assertEqual(threejs_export.integrity(threejs_export.export(after)), [])
+
+    def corner_kitchen(self, **extra):
+        from kitchen import moldings
+        mods = [box("B0", "back", 0, 600), box("B1", "back", 600, 900), box("B2", "back", 1500, 900), box("U1", "back", 600, 900, "upper"), box("U2", "back", 1500, 900, "upper"),
+                box("R1x", "right", 600, 900), box("U3", "right", 600, 900, "upper"),
+                {"id": "KG1", "type": "corner-shelf", "wall": "corner", "y": 1500, "height": 700, "depth": 350, "backLength": 600, "rightLength": 600}]
+        return spec_of(mods, moldings=[m.model_dump() for m in moldings.default_moldings(True, True)], **extra)
+
+    def test_a_corner_shelf_becomes_a_cabinet_that_turns_from_the_back_run_into_the_right_run(self):
+        from kitchen import moldings
+        before = self.corner_kitchen()
+        after, notes = converted(before)
+        self.assertEqual((rows_to_runs.equivalent(before, after), notes), ([], []))
+        shelf = next(m for m in after.module if m.id == "KG1")
+        back, right = (next(r.id for r in after.runs if r.yaw == yaw) for yaw in (0.0, -90.0))
+        self.assertEqual((shelf.wall, shelf.run, shelf.turnsInto, shelf.fromCorner, shelf.width, shelf.rightLength), ("island", back, right, 1800.0, 600.0, 600.0))
+        chain = lambda sp: sorted((r.molding.variant, len(r.points), round(r.length)) for r in moldings.compute_runs(sp))
+        self.assertEqual(chain(before), chain(after), "the crown still goes round the corner over the shelf")
+        self.assertFalse([i for i in rules.validate(after)["issues"] if i["rule"] in ("GEO-COLLISION", "GEO-CORNER")])
+
+    def test_the_exported_corner_shelf_is_the_same_object(self):
+        before = self.corner_kitchen()
+        after, _ = converted(before)
+        docs = [threejs_export.export(sp) for sp in (before, after)]
+        self.assertEqual(threejs_export.integrity(docs[1]), [])
+        text = [json.dumps(d, sort_keys=True) for d in docs]
+        a, b = (next(m for m in d["modules"] if m["id"] == "MOD-KG1") for d in docs)
+        self.assertEqual((a["dimensions"], a["transform"]["position"]), (b["dimensions"], b["transform"]["position"]))
+        self.assertEqual(len(a.get("components", [])), len(b.get("components", [])))
+        self.assertEqual(sorted(json.dumps(c.get("transform", {}).get("position"), sort_keys=True) for c in a.get("components", [])),
+                         sorted(json.dumps(c.get("transform", {}).get("position"), sort_keys=True) for c in b.get("components", [])), "every board where it was")
+        self.assertTrue(text)
+
+    def test_a_corner_shelf_whose_runs_part_is_reported_and_one_without_both_runs_stays_on_its_walls(self):
+        after, _ = converted(self.corner_kitchen())
+        right = next(r.id for r in after.runs if r.yaw == -90.0)
+        apart = edit.apply_op(after, {"op": "move-run", "id": right, "changes": {"z": 800}})
+        self.assertIn("GEO-CORNER", {i["rule"] for i in rules.validate(apart)["issues"]})
+        alone = spec_of([box("B1", "back", 600, 900),
+                         {"id": "KG1", "type": "corner-shelf", "wall": "corner", "y": 1500, "height": 700, "depth": 350, "backLength": 600, "rightLength": 600}])
+        kept, notes = converted(alone)
+        self.assertEqual((next(m for m in kept.module if m.id == "KG1").wall, len(notes)), ("corner", 1))
+        self.assertEqual(rows_to_runs.equivalent(alone, kept), [])
 
     def test_a_sink_given_by_wall_and_centre_joins_its_cabinet_and_then_follows_it(self):
         before = spec_of([box("B1", "back", 0, 600), box("B2", "back", 600, 800, "base-sink"), box("B3", "back", 1400, 600)],

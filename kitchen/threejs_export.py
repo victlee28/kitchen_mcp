@@ -56,15 +56,16 @@ def _rot(v, deg):
 class Frame:
     """Khung cục bộ (anchor bottom-back-left) của module hoặc vật đặt theo tường."""
 
-    def __init__(self, pos, rot_y, origin=(0.0, 0.0, 0.0)):
+    def __init__(self, pos, rot_y, origin=(0.0, 0.0, 0.0), run=None):
         self.pos, self.rot = tuple(pos), rot_y
+        self.run = run                   # id of the run whose coordinates ``origin`` is in (None: any part with run coordinates is in this frame's run)
         self.origin = tuple(origin)      # run coordinates (s, y, d) of ``pos`` for a frame inside an angled run; unused otherwise
 
     def part_box(self, p):
         """Local box of a part: from its run coordinates when it stands in an angled run, else from its world AABB."""
-        if p.frame is not None and p.lmin is not None and p.lmax is not None:
+        if p.frame is not None and p.lmin is not None and p.lmax is not None and (self.run is None or p.run == self.run):
             return [p.lmin[i] - self.origin[i] for i in range(3)], [p.lmax[i] - self.origin[i] for i in range(3)]
-        return self.box_local(p.min, p.max)
+        return self.box_local(p.min, p.max)                               # a part of another run (the far leg of a corner shelf): from its world box
 
     @staticmethod
     def for_part(p, wall):
@@ -102,6 +103,8 @@ class Frame:
 def _module_frame(m: Module, lsau: float, fr: "runs.RunFrame | None" = None) -> tuple[Frame, tuple[float, float, float]]:
     if fr is not None:               # explicit run at any angle: the module frame is the run frame moved to s = fromCorner
         x, z = fr.to_world(m.fromCorner, 0.0)
+        if m.turnsInto:                  # a corner shelf by runs: as wide as its first leg, as deep as its second leg is long
+            return Frame((x, m.y, z), fr.yaw, (m.fromCorner, m.y, 0.0), fr.id), (m.width, m.height, require(m.rightLength, f"{m.id}.rightLength"))
         return Frame((x, m.y, z), fr.yaw, (m.fromCorner, m.y, 0.0)), (m.width, m.height, m.depth)
     if m.type == "corner-shelf":
         bl, rl = require(m.backLength, f"{m.id}.backLength"), require(m.rightLength, f"{m.id}.rightLength")

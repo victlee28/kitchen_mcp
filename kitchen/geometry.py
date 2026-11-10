@@ -108,9 +108,9 @@ def _wall_length(spec: KitchenSpec) -> tuple[float, float]:
     def endAt(wall: str) -> float:
         vals = [m.endAt for m in spec.module if m.wall == wall]
         if wall == "back":
-            vals += [m.backLength or 0 for m in spec.module if m.type == "corner-shelf"]
+            vals += [m.backLength or 0 for m in spec.module if m.type == "corner-shelf" and not m.run]
         if wall == "right":
-            vals += [m.rightLength or 0 for m in spec.module if m.type == "corner-shelf"]
+            vals += [m.rightLength or 0 for m in spec.module if m.type == "corner-shelf" and not m.run]
         return max(vals, default=0)
     reach_x, reach_z = _run_reach(spec)
     lsau = (spec.room.length("back") if spec.room else None) or max(endAt("back") + 600, reach_x)
@@ -273,13 +273,27 @@ class _Builder:
             self.door_widths(m, m.fromCorner + dc, m.endAt - dc, max(m.y, self.c.plinthHeight), top)
 
     def corner_shelf(self, m: Module):
+        """Open shelves round an inside corner: two legs, each with its boards and a side panel at the end away from the corner. On the walls
+        the legs lie along the back and the right wall from their corner; by runs, the first leg is the cabinet's own place at the end of its
+        run and the second lies at the start of the run it turns into."""
         dc = self.c.doorThickness
         n = max(1, m.shelfCount)
-        for wall, length in (("back", require(m.backLength, f"{m.id}.backLength")), ("right", require(m.rightLength, f"{m.id}.rightLength"))):
+        legs: list[tuple[str, float, float, bool, "runmod.RunFrame | None"]] = []     # (wall, s0, s1, panel at the low end, run frame)
+        if m.run:
+            other = runmod.frames(self.spec).get(m.turnsInto or "")
+            legs.append(("island", m.fromCorner, m.endAt, True, self._run.get(m.id)))
+            if other is not None:
+                legs.append(("island", 0.0, require(m.rightLength, f"{m.id}.rightLength"), False, other))
+        else:
+            legs = [("back", 0, require(m.backLength, f"{m.id}.backLength"), False, None), ("right", 0, require(m.rightLength, f"{m.id}.rightLength"), False, None)]
+        for wall, s0, s1, low, fr in legs:
             for i in range(n + 1):
                 yb = m.y + i * (m.height - dc) / n
-                self.box(m.id, "shelf", wall, 0, length, 0, m.depth, yb, yb + dc)
-            self.box(m.id, "side-panel", wall, length - dc, length, 0, m.depth, m.y, m.y + m.height)
+                self.box(m.id, "shelf", wall, s0, s1, 0, m.depth, yb, yb + dc, fr=fr)
+            if low:
+                self.box(m.id, "side-panel", wall, s0, s0 + dc, 0, m.depth, m.y, m.y + m.height, fr=fr)
+            else:
+                self.box(m.id, "side-panel", wall, s1 - dc, s1, 0, m.depth, m.y, m.y + m.height, fr=fr)
 
     def countertop(self):
         c = self.c
@@ -492,7 +506,7 @@ def cabinet_faces(spec: KitchenSpec, scene: Scene) -> list[camera_plan.Face]:
         if mods and seat is not None:
             face(f"{wall}-wall", name, mods, lambda lo, hi, d, seat=seat: seat.to_world((lo + hi) / 2, d), seat.normal())
     for run in spec.runs:
-        mods = [m for m in spec.module if m.run == run.id]
+        mods = [m for m in spec.module if m.run == run.id and m.storey != "corner"]      # a corner shelf is not a front
         if mods:
             fr = runmod.RunFrame(run.id, run.x, run.z, run.yaw)
             (ox, oz), (nx, nz) = fr.to_world(0, 0), fr.to_world(0, 1)

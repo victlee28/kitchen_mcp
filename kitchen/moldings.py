@@ -122,9 +122,17 @@ def _intervals(spec: KitchenSpec, variant: str) -> tuple[dict[str, list[tuple[fl
         for m in cands:
             if abs(_top(m) - y) > 1:
                 continue
-            if m.type == "corner-shelf":
+            if m.type == "corner-shelf" and not m.run:
                 iv["back"].append((0.0, m.backLength, m.depth, m.id))
                 iv["right"].append((0.0, m.rightLength, m.depth, m.id))
+            elif m.type == "corner-shelf":             # by runs: each leg belongs to the wall its run stands against
+                if (at := _place(spec, m, on_wall)) is not None:
+                    iv[at[0]].append((at[1], at[2], m.depth, m.id))
+                other = runmod.frames(spec).get(m.turnsInto or "")
+                wall = on_wall.get(m.turnsInto or "")
+                if other is not None and wall is not None and m.rightLength:
+                    s0, s1 = runmod.along_wall(other, wall, 0.0, m.rightLength)
+                    iv[wall].append((s0, s1, m.depth, m.id))
             elif (at := _place(spec, m, on_wall)) is not None:
                 iv[at[0]].append((at[1], at[2], m.depth, m.id))
         return iv, y
@@ -157,7 +165,9 @@ def _end_depth(seg, neighbor, ho: str) -> float | None:
 def _run_items(spec: KitchenSpec, mol: Molding, run_id: str, y: float) -> list[tuple[float, float, float, str]]:
     if mol.variant == "crown":
         return [(m.fromCorner, m.endAt, m.depth, m.id) for m in spec.module
-                if m.run == run_id and m.storey in ("upper", "loft", "tall", "corner") and abs(_top(m) - y) <= 1]
+                if m.run == run_id and m.storey in ("upper", "loft", "tall", "corner") and abs(_top(m) - y) <= 1] + \
+               [(0.0, float(m.rightLength or 0.0), m.depth, m.id) for m in spec.module
+                if m.turnsInto == run_id and m.rightLength and abs(_top(m) - y) <= 1]     # the second leg of a corner shelf by runs
     return [(m.fromCorner, m.endAt, m.depth, m.id) for m in spec.module
             if m.run == run_id and m.y == 0 and (m.storey == "base" or (m.storey == "tall" and not m.niche))]
 

@@ -34,6 +34,10 @@ def _envelopes(spec: KitchenSpec) -> list[tuple[str, tuple, tuple]]:
         if fr is not None:             # angled run: the axis-aligned bounding box of its footprint (exact overlap is checked on polygons)
             (ax, az), (bx, bz) = runs.aabb(runs.module_footprint(fr, m))
             out.append((m.id, (ax, y0, az), (bx, y1, bz)))
+            other = runs.frames(spec).get(m.turnsInto or "")
+            if other is not None and m.rightLength:      # a corner shelf by runs: its second leg, at the start of the run it turns into
+                (ax, az), (bx, bz) = runs.aabb(other.footprint(0.0, m.rightLength, 0.0, m.depth))
+                out.append((m.id, (ax, y0, az), (bx, y1, bz)))
         elif m.type == "corner-shelf":
             out.append((m.id, (-require(m.backLength, f"{m.id}.backLength"), y0, 0), (0, y1, m.depth)))
             out.append((m.id, (-m.depth, y0, 0), (0, y1, require(m.rightLength, f"{m.id}.rightLength"))))
@@ -56,7 +60,7 @@ def check_geometry(spec: KitchenSpec) -> list[dict]:
     c = spec.common
     issues = []
     env = _envelopes(spec)
-    angled = {m.id: runs.module_footprint(fr, m) for m in spec.module if (fr := runs.frame_of(spec, m)) is not None}
+    angled = {m.id: runs.module_footprint(fr, m) for m in spec.module if (fr := runs.frame_of(spec, m)) is not None and not m.turnsInto}   # two-legged: by its boxes
     for (id, mn, mx), (mb, nn, nx) in combinations(env, 2):
         if id == mb:
             continue
@@ -97,6 +101,10 @@ def check_geometry(spec: KitchenSpec) -> list[dict]:
             over = max(over, max(x for x, _ in pts), max(-z for _, z in pts))
             if over > TOL:
                 issues.append(_issue("GEO-WALL", "error", [m.id], f"{m.id} vượt ra ngoài phòng {over:g} mm (dãy {m.run})", over, 0))
+    joints = {(j.a, j.b) for j in runs.corner_joints(spec) if j.square}
+    for m in spec.module:
+        if m.turnsInto and (m.run, m.turnsInto) not in joints:
+            issues.append(_issue("GEO-CORNER", "warning", [m.id], f"{m.id}: kệ góc nối dãy {m.run} với dãy {m.turnsInto}, nhưng hai dãy không còn gặp nhau ở góc vuông"))
     if c.cabinetTop > c.ceiling + TOL:
         issues.append(_issue("GEO-CEILING", "error", [], f"Đỉnh tủ {c.cabinetTop:g} cao hơn trần {c.ceiling:g}", c.cabinetTop, c.ceiling))
     if abs(c.countertop - (c.baseTop + c.countertopThickness)) > TOL:
