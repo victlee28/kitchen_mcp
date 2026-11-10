@@ -49,6 +49,35 @@ class TestWallEdges(unittest.TestCase):
         self.assertEqual(w.back_to_wall((500.0, 1500.0), (3000.0, 1500.0), (0.0, 1.0), WALLS), ((0.0, 1.0), False))
 
 
+class TestLayoutRules(unittest.TestCase):
+    """Rules of 10/11/2026: with a fridge the sink stands nearer to it than the hob; the hood always stands over the hob."""
+
+    def _check(self, prompt):
+        from kitchen import intent
+        color, _ = intent.parse_prompt(prompt)
+        spec = intent.from_template(color)
+        hob = next(m for m in spec.module if m.type == "base-cooktop")
+        hoods = [m for m in spec.module if m.type == "upper-hood"]
+        self.assertEqual([(h.wall, h.fromCorner, h.width) for h in hoods], [(hob.wall, hob.fromCorner, hob.width)], prompt)
+        return spec
+
+    def test_sink_nearer_the_fridge_than_the_hob(self):
+        from kitchen import geometry
+        for prompt in ("bếp chữ I dài 3m có tủ lạnh", "bếp chữ I dài 4.5m có tủ lạnh", "bếp chữ L 3m và 2.4m có tủ lạnh", "bếp chữ U có tủ lạnh"):
+            spec = self._check(prompt)
+            scene = geometry.compile_spec(spec)
+            centre = {m.id: next(((p.min[0] + p.max[0]) / 2, (p.min[2] + p.max[2]) / 2) for p in scene.parts if p.module == m.id) for m in spec.module}
+            fridge = centre[next(m.id for m in spec.module if m.type == "tall-fridge")]
+            sink = centre[next(m.id for m in spec.module if m.type == "base-sink")]
+            hob = centre[next(m.id for m in spec.module if m.type == "base-cooktop")]
+            dist = lambda a, b: ((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2) ** 0.5
+            self.assertLess(dist(sink, fridge), dist(hob, fridge), prompt)
+
+    def test_hood_over_the_hob_without_a_fridge_too(self):
+        for prompt in ("bếp chữ I dài 3m", "bếp chữ L 3m và 2.4m", "bếp chữ U"):
+            self._check(prompt)
+
+
 class TestFitDepth(unittest.TestCase):
     def test_base_and_tall_follow_the_object_wall_cabinets_only_when_shallow(self):
         mods = [{"type": "base", "depth": 580.0}, {"type": "tall-fridge", "depth": 640.0}, {"type": "upper", "depth": 320.0}, {"type": "upper-loft", "depth": 320.0}]

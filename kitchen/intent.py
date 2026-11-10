@@ -162,8 +162,13 @@ def _split(length: float, priority: list[float]) -> list[float]:
     return [round(w) for w in out]
 
 
-def _layout(length: float, appliance: list[str], front: float = 450) -> list[tuple[float, str]]:
-    """Trả [(rộng, loại)] cho một dãy. Thiết bị chiếm module 800 (co về 600 nếu chật)."""
+# Quy ước bố trí (người dùng, 10/11/2026): có tủ lạnh thì chậu rửa đứng gần tủ lạnh hơn bếp nấu; hút mùi luôn ở tủ trên ngay trên bếp nấu.
+SINK_NEAR_FRIDGE = ["cooktop", "sink"]     # thứ tự từ đầu dãy; tủ lạnh ở cuối dãy
+
+
+def _layout(length: float, appliance: list[str], front: float = 450, toward_end: bool = False) -> list[tuple[float, str]]:
+    """Trả [(rộng, loại)] cho một dãy. Thiết bị chiếm module 800 (co về 600 nếu chật).
+    ``toward_end``: chỗ thừa dồn về đầu dãy thay vì cuối, để thiết bị cuối danh sách đứng sát cuối dãy (vd chậu sát tủ lạnh)."""
     appliance_type = {"sink": "base-sink", "cooktop": "base-cooktop"}
     for w_tb, gap_mid, gap_end, gap_start in ((800, 600, 450, front), (800, 450, 450, min(front, 450)), (600, 450, 400, min(front, 400)),
                                               (600, 300, 300, min(front, 300)), (600, 300, 0, 0), (600, 0, 0, 0)):
@@ -173,7 +178,7 @@ def _layout(length: float, appliance: list[str], front: float = 450) -> list[tup
     else:
         return [(w, "base") for w in _split(length, [])] if length >= 300 else []
     extra = length - need
-    gaps = [gap_start] + [gap_mid] * max(0, len(appliance) - 1) + [gap_end + extra]
+    gaps = ([gap_start + extra] if toward_end else [gap_start]) + [gap_mid] * max(0, len(appliance) - 1) + [gap_end + (0 if toward_end else extra)]
     out: list[tuple[float, str]] = []
     for i, g in enumerate(gaps):
         if g >= 300:
@@ -281,7 +286,8 @@ def from_template(color: KitchenTemplate, name: str = "Thiết kế tủ bếp",
                                width=700, y=0, height=c.cabinetTop, depth=640, doors=[350, 350], niche=1650))
             tb.append(Appliance(id=f"TB{len(tb)+1}", type="fridge", name="Tủ lạnh", dimensions="600 × 1600 × 620", module=mods[-1].id))
             length -= 700
-        plan = _layout(length, appliance, front)
+        near_fridge = color.fridge and wall == "back"
+        plan = _layout(length, appliance, front, toward_end=near_fridge)      # với tủ lạnh: chậu (cuối danh sách) sát tủ lạnh
         for w, type in plan:
             doors = [w / 2, w / 2] if w >= 600 else [w]
             m = Module(id=id("TD"), type=type, name={"base-sink": "Tủ chậu", "base-cooktop": "Tủ dưới bếp"}.get(type, "Tủ dưới"),
@@ -329,7 +335,7 @@ def from_template(color: KitchenTemplate, name: str = "Thiết kế tủ bếp",
     lr = 700 if color.fridge else 0
     room = None
     if color.geometry_edit == "I":
-        thickness("back", 0, color.backWallLength, ["sink", "cooktop"])
+        thickness("back", 0, color.backWallLength, SINK_NEAR_FRIDGE if color.fridge else ["sink", "cooktop"])
         upper("back", 0, color.backWallLength - lr)
     elif color.geometry_edit == "U":
         g = c.baseDepth
@@ -338,11 +344,11 @@ def from_template(color: KitchenTemplate, name: str = "Thiết kế tủ bếp",
         Lf = color.leftWallLength or R
         mods.append(Module(id=id("TD"), type="base-corner-sink", name="Tủ góc khuất", wall="right", fromCorner=0, width=g + 450, y=0,
                            height=c.baseTop, depth=c.baseDepth, doors=[450], blindCorner=g))
-        thickness("right", g + 450, R - g - 450, ["sink"], front=0)
+        thickness("right", g + 450, R - g - 450, ["cooktop"] if color.fridge else ["sink"], front=0)   # tủ lạnh ở tường sau: chậu sang đó
         mods.append(Module(id=id("TD"), type="base", name="Tủ góc khuất", wall="left", fromCorner=0, width=g + 450, y=0,
                            height=c.baseTop, depth=c.baseDepth, doors=[450], blindCorner=g))
         thickness("left", g + 450, Lf - g - 450, [], front=0)
-        thickness("back", g, W - 2 * g, ["cooktop"])
+        thickness("back", g, W - 2 * g, ["sink"] if color.fridge else ["cooktop"])
         mods.append(Module(id="KG1", type="corner-shelf", name="Kệ góc mở", wall="corner", backLength=600, rightLength=600, y=c.upperBottom,
                            height=c.upperTierSplit - c.upperBottom, depth=upper_depth, shelfCount=3))
         upper("back", 600, W - (g + lr if color.fridge else 0))
@@ -355,8 +361,8 @@ def from_template(color: KitchenTemplate, name: str = "Thiết kế tủ bếp",
         # tường phải: tủ góc khuất đầu dãy + chậu; tường sau: bếp (+ tủ lạnh cuối dãy)
         mods.append(Module(id=id("TD"), type="base-corner-sink", name="Tủ góc khuất", wall="right", fromCorner=0, width=g + 450, y=0,
                            height=c.baseTop, depth=c.baseDepth, doors=[450], blindCorner=g))
-        thickness("right", g + 450, L2 - g - 450, ["sink"], front=0)  # tủ góc phía trước đã là mặt bàn thao tác
-        thickness("back", g, color.backWallLength - g, ["cooktop"])
+        thickness("right", g + 450, L2 - g - 450, ["cooktop"] if color.fridge else ["sink"], front=0)  # tủ góc phía trước đã là mặt bàn thao tác
+        thickness("back", g, color.backWallLength - g, ["sink"] if color.fridge else ["cooktop"])      # tủ lạnh ở cuối tường sau: chậu sát nó
         mods.append(Module(id="KG1", type="corner-shelf", name="Kệ góc mở", wall="corner", backLength=600, rightLength=600, y=c.upperBottom,
                            height=c.upperTierSplit - c.upperBottom, depth=upper_depth, shelfCount=3))
         upper("back", 600, color.backWallLength - lr)

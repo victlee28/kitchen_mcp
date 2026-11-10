@@ -147,10 +147,13 @@ class TestService(unittest.TestCase):
         self.svc.apply(self.did, r["operation"], r["baseRev"], "test", r["proposal"]["opHash"])
         spec, _ = self.svc.store.get(self.did)
         island = [m for m in spec.module if m.run == "R3"]
-        self.assertTrue(island and all(m.storey == "base" for m in island))
+        self.assertTrue(island and all(m.storey == "base" for m in island if m.type != "upper-hood"), "no wall cabinets on an island…")
+        hob = next(m for m in island if m.type == "base-cooktop")
+        hood = next(m for m in island if m.type == "upper-hood")
+        self.assertEqual((hood.fromCorner, hood.width), (hob.fromCorner, hob.width), "…but the hood always stands over the hob")
         self.assertIn("base-sink", {m.type for m in island})
-        self.assertEqual({m.doorStyle for m in island}, {"frame"})
-        self.assertEqual(sum(m.width for m in island), 1200.0)
+        self.assertEqual({m.doorStyle for m in island if m.type != "upper-hood"}, {"frame"})
+        self.assertEqual(sum(m.width for m in island if m.storey == "base"), 1200.0)
 
 
 if __name__ == "__main__":

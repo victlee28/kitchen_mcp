@@ -191,7 +191,8 @@ def relayout_ops(spec: KitchenSpec, mods: list[Module], laid: dict[str, list[dic
             modules = fit_depth(modules, slot.depth)
         for m in sorted(modules, key=lambda item: item["s"]):
             storey = storey_of(str(m["type"]))
-            if storey in refused or (storey not in slot.storeys and storey not in ("base", "tall") and storey not in asked):
+            hood = m["type"] == "upper-hood"             # the hood always stands over the hob (rule of 10/11/2026), wall cabinets or not
+            if not hood and (storey in refused or (storey not in slot.storeys and storey not in ("base", "tall") and storey not in asked)):
                 dropped[storey] += 1
                 continue
             entry: dict[str, Any] = {"type": m["type"], "wall": "island", "run": run_id, "fromCorner": slot.start + float(m["s"]),
