@@ -2,8 +2,8 @@
 
 A run is a pure rotation: its s grows to the right of someone looking at the doors. The rows of the back wall, the left wall and the free runs
 facing +z / +x measure the other way, so their cabinets are mirrored along the row: ``s = length - fromCorner - width``, door widths in
-reverse order. What a run cannot say is left as it is, row by row, and reported: a corner shelf, a blind corner or an end panel on a
-mirrored row (a run has them at its start only). The kitchen frame is kept by writing the wall lengths down (``room``), since a kitchen without
+reverse order. A blind corner or an end panel changes ends with them (``blindSide``). What a run cannot say is left as it is and
+reported: a corner shelf. The kitchen frame is kept by writing the wall lengths down (``room``), since a kitchen without
 wall cabinets no longer implies them. Pure: data in, data out; ``equivalent`` tells whether two kitchens compile to the same boxes.
 """
 from __future__ import annotations
@@ -61,9 +61,6 @@ def convert(spec: KitchenSpec) -> tuple[dict[str, Any], list[str]]:
         if seat is None:
             continue
         mirrored = seat.left_end(0.0, 1.0) == 1.0
-        if any(m.endPanel for m in mods) or (mirrored and any(m.blindCorner for m in mods)):
-            notes.append(f"row {key[0]}: a blind corner or end panel on a mirrored row has no run form; left on its wall")
-            continue
         length = max(m.endAt for m in mods)
         n = 1
         while f"R{n}" in taken:
@@ -80,6 +77,8 @@ def convert(spec: KitchenSpec) -> tuple[dict[str, Any], list[str]]:
                 sides = _hinge_sides(m, scene)
                 if sides:
                     out["hingeSides"] = sides
+            if mirrored and (m.blindCorner or m.endPanel):   # the corner end of a mirrored row is the END of its run
+                out["blindSide"] = "end" if m.blindSide == "start" else "start"
             if mirrored:                                  # door widths are listed along the row; hinge sides are told as seen from the front, which stays
                 out["doors"] = list(reversed(out.get("doors") or []))
     if not made:

@@ -32,7 +32,9 @@ def need_for(spec: Any, back: float, side: float) -> dict | None:
     mods = spec.module
     if not mods:
         return None
-    return {"back": back, "right": side if any(m.wall == "right" for m in mods) else 0, "left": side if any(m.wall == "left" for m in mods) else 0}
+    from . import runs
+    used = runs.walls_used(spec, back)             # cabinets that follow a side wall, or a run standing against it
+    return {"back": back, "right": side if "right" in used else 0, "left": side if "left" in used else 0}
 
 
 def for_spec(spec: Any, back: float, side: float) -> RoomContext | None:

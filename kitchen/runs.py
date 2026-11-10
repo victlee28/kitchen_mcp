@@ -254,6 +254,36 @@ def front_cross(fa: RunFrame, da: float, fb: RunFrame, db: float) -> tuple[float
     return s, t, (ax + s * ux, az + s * uz)
 
 
+def run_wall(fr: RunFrame, back_length: float) -> str | None:
+    """The wall of the kitchen frame (back / right / left) an explicit run has its back against, None when it stands free."""
+    nx, nz = fr.normal()
+    if abs(nx) < 1e-6 and nz > 0 and abs(fr.z) < 1.0:
+        return "back"
+    if abs(nz) < 1e-6 and nx < 0 and abs(fr.x) < 1.0:
+        return "right"
+    if abs(nz) < 1e-6 and nx > 0 and abs(fr.x + back_length) < 1.0:
+        return "left"
+    return None
+
+
+def walls_used(spec: KitchenSpec, back_length: float) -> set[str]:
+    """The walls of the kitchen frame that have cabinets: those that follow the wall and explicit runs standing against it."""
+    out = {m.wall for m in spec.module if not m.run and m.wall in ("back", "right", "left")}
+    for r in spec.runs:
+        wall = run_wall(RunFrame(r.id, r.x, r.z, r.yaw), back_length)
+        if wall is not None and any(m.run == r.id for m in spec.module):
+            out.add(wall)
+    return out
+
+
+def along_wall(fr: RunFrame, wall: str, s0: float, s1: float) -> tuple[float, float]:
+    """The stretch [s0, s1] of a run standing against ``wall``, measured the way that wall is (from the back corner; the back wall from its
+    right-hand end)."""
+    pts = [fr.to_world(s0, 0.0), fr.to_world(s1, 0.0)]
+    vals = [-x for x, _ in pts] if wall == "back" else [z for _, z in pts]
+    return min(vals), max(vals)
+
+
 def frames(spec: KitchenSpec) -> dict[str, RunFrame]:
     return {r.id: RunFrame(r.id, r.x, r.z, r.yaw) for r in spec.runs}
 

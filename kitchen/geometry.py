@@ -128,15 +128,7 @@ def _run_reach(spec: KitchenSpec) -> tuple[float, float]:
 
 
 def run_wall(fr: "runmod.RunFrame", lsau: float) -> str | None:
-    """The wall of the kitchen frame (back / right / left) an explicit run has its back against, None when it stands free."""
-    nx, nz = fr.normal()
-    if abs(nx) < 1e-6 and nz > 0 and abs(fr.z) < 1.0:
-        return "back"
-    if abs(nz) < 1e-6 and nx < 0 and abs(fr.x) < 1.0:
-        return "right"
-    if abs(nz) < 1e-6 and nx > 0 and abs(fr.x + lsau) < 1.0:
-        return "left"
-    return None
+    return runmod.run_wall(fr, lsau)
 
 
 def wall_reach(spec: KitchenSpec, lsau: float) -> dict[str, float]:
@@ -215,13 +207,14 @@ class _Builder:
         c, dc = self.c, self.c.doorThickness
         top = m.y + m.height
         y_than = max(m.y, c.plinthHeight) if m.y == 0 else m.y
-        fs0, fs1 = m.fromCorner + m.blindCorner, m.endAt - m.endPanel
+        fs0, fs1 = m.fronts
+        (p0, p1), (b0, b1) = m.panel_span, m.blind_span
         if m.y == 0:
-            self.box(m.id, "plinth", m.wall, m.fromCorner, m.endAt - m.endPanel, 0, m.depth - dc - 50, 0, c.plinthHeight)
+            self.box(m.id, "plinth", m.wall, min(fs0, b0), max(fs1, b1), 0, m.depth - dc - 50, 0, c.plinthHeight)      # under all but the end panel
         if m.endPanel:
-            self.box(m.id, "side-panel", m.wall, m.endAt - m.endPanel, m.endAt, 0, m.depth, 0, top)
+            self.box(m.id, "side-panel", m.wall, p0, p1, 0, m.depth, 0, top)
         if m.blindCorner:  # phần góc khuất: thân kín, không cánh
-            self.box(m.id, "carcass", m.wall, m.fromCorner, fs0, 0, m.depth, y_than, top)
+            self.box(m.id, "carcass", m.wall, b0, b1, 0, m.depth, y_than, top)
         if not m.frontSections:
             self.box(m.id, "carcass", m.wall, fs0, fs1, 0, m.depth - dc, y_than, top)
             self.door_widths(m, fs0, fs1, y_than, top)
@@ -250,7 +243,7 @@ class _Builder:
 
     def upper(self, m: Module):
         dc = self.c.doorThickness
-        fs0, fs1 = m.fromCorner + m.blindCorner, m.endAt - m.endPanel
+        fs0, fs1 = m.fronts
         if m.type == "upper-open":  # open shelving: two sides, a thin back and n+1 boards, no doors
             top = m.y + m.height
             self.box(m.id, "side-panel", m.wall, m.fromCorner, m.fromCorner + dc, 0, m.depth, m.y, top)
@@ -263,7 +256,7 @@ class _Builder:
             return
         self.box(m.id, "carcass", m.wall, m.fromCorner, m.endAt, 0, m.depth - dc, m.y, m.y + m.height)
         if m.endPanel:
-            self.box(m.id, "side-panel", m.wall, fs1, m.endAt, 0, m.depth, m.y, m.y + m.height)
+            self.box(m.id, "side-panel", m.wall, *m.panel_span, 0, m.depth, m.y, m.y + m.height)
         self.door_widths(m, fs0, fs1, m.y, m.y + m.height, "glass-door" if m.type == "upper-glass" else "door")
 
     def tall(self, m: Module):
@@ -383,7 +376,7 @@ class _Builder:
             elif tb.type == "oven" and m and len(k) >= 2:
                 w, h = k[:2]
                 niche_top = m.y + m.height - c.doorThickness
-                sc = m.fromCorner + m.blindCorner + (m.width - m.blindCorner - m.endPanel) / 2
+                sc = m.fronts[0] + (m.width - m.blindCorner - m.endPanel) / 2
                 niche = next((t for t in m.frontSections if t.type == "niche"), None)
                 y0 = niche_top - (niche.height if niche else h) + 2 * c.doorThickness
                 self.box(tb.id, "oven", m.wall, sc - w / 2, sc + w / 2, 80, m.depth - 25, y0, y0 + h)

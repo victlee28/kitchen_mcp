@@ -231,7 +231,7 @@ class TestAngledMoldings(unittest.TestCase):
     def test_run_equal_to_the_right_wall_gives_the_same_moldings(self):
         from kitchen import moldings
         wall = {(r.molding.variant): r.points for r in moldings.compute_runs(self._spec(False)) if r.wall == ["right"]}
-        run = {(r.molding.variant): r.points for r in moldings.compute_runs(self._spec(True)) if r.wall == ["R1"]}
+        run = {(r.molding.variant): r.points for r in moldings.compute_runs(self._spec(True)) if r.wall == ["right"]}   # a run against a wall is walked as that wall's row
         self.assertEqual(sorted(wall), ["base", "crown"])
         for variant, pts in wall.items():
             self.assertEqual(len(pts), len(run[variant]), variant)

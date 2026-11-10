@@ -103,7 +103,7 @@ def run_frame(line: Line) -> dict[str, float]:
             "length": math.hypot(end[0] - start[0], end[1] - start[1])}
 
 
-EXTRA_FIELDS = ("name", "niche", "appliance", "appliances", "doors", "frontSections", "hingeSides", "doorStyle", "blindCorner", "shelfCount")   # what a module may carry besides its box
+EXTRA_FIELDS = ("name", "niche", "appliance", "appliances", "doors", "frontSections", "hingeSides", "doorStyle", "blindCorner", "blindSide", "shelfCount")   # what a module may carry besides its box
 
 
 def plan_on_line(spec: KitchenSpec, line: Line, modules: list[dict[str, Any]], clear: list[str] | None = None,

@@ -66,7 +66,8 @@ class Run:
 
 
 def _lsau(spec: KitchenSpec) -> float:
-    return (spec.room.length("back") if spec.room else None) or max([m.endAt for m in spec.module if m.wall == "back"] + [0]) + 600
+    from .geometry import _wall_length            # the one length of the back wall: what the kitchen is drawn with
+    return _wall_length(spec)[0]
 
 
 def _wall_pt(wall: str, s: float, d: float, lsau: float) -> tuple[float, float]:
@@ -81,9 +82,38 @@ def _top(m: Module) -> float:
     return m.y + m.height
 
 
+def _on_wall(spec: KitchenSpec) -> dict[str, str]:
+    """Explicit runs standing against a wall of the kitchen frame: run id -> wall. Their cabinets are that wall's row for the moldings, so a
+    kitchen written by runs gets the moldings of the same kitchen written by walls (corners, corner shelf and all)."""
+    lsau = _lsau(spec)
+    out: dict[str, str] = {}
+    for r in spec.runs:
+        wall = runmod.run_wall(runmod.RunFrame(r.id, r.x, r.z, r.yaw), lsau)
+        if wall is not None:
+            out[r.id] = wall
+    for joint in runmod.corner_joints(spec):      # a corner with a run that is not on a wall (or not square) is turned run by run, both of them
+        if not (joint.square and joint.a in out and joint.b in out):
+            out.pop(joint.a, None)
+            out.pop(joint.b, None)
+    return out
+
+
+def _place(spec: KitchenSpec, m: Module, on_wall: dict[str, str]) -> tuple[str, float, float] | None:
+    """(wall, s0, s1) of a cabinet that follows a wall, itself or through its run; None for the others."""
+    if m.run:
+        wall = on_wall.get(m.run)
+        fr = runmod.frame_of(spec, m)
+        if wall is None or fr is None:
+            return None
+        s0, s1 = runmod.along_wall(fr, wall, m.fromCorner, m.endAt)
+        return wall, s0, s1
+    return (m.wall, m.fromCorner, m.endAt) if m.wall in ("back", "right", "left") else None
+
+
 def _intervals(spec: KitchenSpec, variant: str) -> tuple[dict[str, list[tuple[float, float, float, str]]], float]:
     """Đoạn (s0, s1, độ sâu mặt trước, mã module) theo từng tường + cao độ đường chạy."""
     iv: dict[str, list] = {"back": [], "right": [], "left": []}
+    on_wall = _on_wall(spec)
     if variant == "crown":
         cands = [m for m in spec.module if m.storey in ("upper", "loft", "tall", "corner")]
         if not cands:
@@ -95,12 +125,12 @@ def _intervals(spec: KitchenSpec, variant: str) -> tuple[dict[str, list[tuple[fl
             if m.type == "corner-shelf":
                 iv["back"].append((0.0, m.backLength, m.depth, m.id))
                 iv["right"].append((0.0, m.rightLength, m.depth, m.id))
-            elif m.wall in iv:
-                iv[m.wall].append((m.fromCorner, m.endAt, m.depth, m.id))
+            elif (at := _place(spec, m, on_wall)) is not None:
+                iv[at[0]].append((at[1], at[2], m.depth, m.id))
         return iv, y
     for m in spec.module:  # phào chân: tủ đặt sàn, bỏ tủ cao có hốc thiết bị sát sàn (tủ lạnh)
-        if m.y == 0 and m.wall in iv and (m.storey == "base" or (m.storey == "tall" and not m.niche)):
-            iv[m.wall].append((m.fromCorner, m.endAt, m.depth, m.id))
+        if m.y == 0 and (m.storey == "base" or (m.storey == "tall" and not m.niche)) and (at := _place(spec, m, on_wall)) is not None:
+            iv[at[0]].append((at[1], at[2], m.depth, m.id))
     return iv, 0.0
 
 
@@ -150,8 +180,9 @@ def _angled_runs(spec: KitchenSpec, mol: Molding, prof: MoldingProfile, y: float
     chains: dict[tuple[str, int], dict] = {}
     order: list[tuple[str, int]] = []
     segs_of: dict[str, list[dict]] = {}
+    on_wall = _on_wall(spec)
     for r in spec.runs:
-        if mol.wall and r.id not in mol.wall:
+        if r.id in on_wall or (mol.wall and r.id not in mol.wall):   # a run against a wall is walked as that wall's row (``_intervals``)
             continue
         fr = runmod.RunFrame(r.id, r.x, r.z, r.yaw)
         segs = _segments(_run_items(spec, mol, r.id, y), mol.joinGap)
@@ -217,7 +248,8 @@ def compute_runs(spec: KitchenSpec) -> list[Run]:
         if prof is None:
             continue
         iv, y = _intervals(spec, mol.variant)
-        walls = mol.wall or ["right", "back", "left"]
+        on_wall = _on_wall(spec)
+        walls = [on_wall.get(w, w) for w in mol.wall] or ["right", "back", "left"]      # a run named in mol.wall stands for the wall it is against
         segs = {w: (_segments(iv[w], mol.joinGap) if w in walls else []) for w in ("right", "back", "left")}
         # nối góc: đoạn đầu tường phải/trái chạm đoạn đầu (cuối) tường sau
         join_r = bool(segs["right"] and segs["back"] and segs["right"][0]["s0"] <= segs["back"][0]["d"] + 1

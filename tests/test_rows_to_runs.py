@@ -53,14 +53,20 @@ class TestConvert(unittest.TestCase):
         self.assertEqual((r1.fromCorner, r1.hingeSides), (600.0, ["right"]), "the right wall is not mirrored; its lone door keeps the hinge it had")
         self.assertEqual((after.room.length("back"), after.room.length("right")), geometry._wall_length(before), "the kitchen frame is written down")
 
-    def test_what_a_run_cannot_say_stays_on_its_wall(self):
+    def test_a_blind_corner_changes_ends_with_its_row_and_a_corner_shelf_stays(self):
         mods = [box("B1", "back", 0, 1000, blindCorner=600, doors=[400]), box("B2", "back", 1000, 600), box("R1x", "right", 600, 600, blindCorner=0),
+                box("L1", "left", 600, 900, blindCorner=300, endPanel=18, doors=[582]),
                 {"id": "KG1", "type": "corner-shelf", "wall": "corner", "y": 1500, "height": 700, "depth": 320, "backLength": 600, "rightLength": 600}]
         before = spec_of(mods)
         after, notes = converted(before)
         self.assertEqual(rows_to_runs.equivalent(before, after), [])
-        self.assertEqual({m.id: (m.wall, m.run) for m in after.module}, {"B1": ("back", None), "B2": ("back", None), "KG1": ("corner", None), "R1x": ("island", "R1")})
-        self.assertEqual(len(notes), 2)
+        got = {m.id: (m.wall, bool(m.run), m.blindSide) for m in after.module}
+        self.assertEqual(got, {"B1": ("island", True, "end"), "B2": ("island", True, "start"), "L1": ("island", True, "end"), "KG1": ("corner", False, "start"),
+                               "R1x": ("island", True, "start")})
+        b1 = next(m for m in after.module if m.id == "B1")
+        self.assertEqual((b1.fromCorner, b1.fronts, b1.blind_span), (600.0, (600.0, 1000.0), (1000.0, 1600.0)), "the blind part is at the corner end of the run")
+        self.assertEqual(len(notes), 1, "only the corner shelf is left on its walls")
+        self.assertEqual(threejs_export.integrity(threejs_export.export(after)), [])
 
     def test_a_sink_given_by_wall_and_centre_joins_its_cabinet_and_then_follows_it(self):
         before = spec_of([box("B1", "back", 0, 600), box("B2", "back", 600, 800, "base-sink"), box("B3", "back", 1400, 600)],

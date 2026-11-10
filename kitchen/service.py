@@ -7,7 +7,7 @@ import json
 import os
 from pathlib import Path
 from typing import Any, Callable
-from . import cabinet_run, run_line, run_template, edit, edit_intent, geometry, intent, llm, recognition, regions, roomctx, render, rules, threejs_export
+from . import cabinet_run, run_line, run_template, runs, edit, edit_intent, geometry, intent, llm, recognition, regions, roomctx, render, rules, threejs_export
 from .intent import KitchenTemplate as KitchenTemplate
 from .spec import Common, KitchenSpec, Room, Wall, dump_spec, load_spec, to_data
 from .store import ConflictError, Store
@@ -90,8 +90,8 @@ class KitchenService:
         if not spec.module:
             raise InvalidInput('The design has no cabinets to place')
         scene = geometry.compile_spec(spec)
-        need = {'back': scene.lsau, 'right': scene.lphai if any(m.wall == 'right' for m in spec.module) else 0,
-                'left': scene.lphai if any(m.wall == 'left' for m in spec.module) else 0}
+        used = runs.walls_used(spec, scene.lsau)
+        need = {'back': scene.lsau, 'right': scene.lphai if 'right' in used else 0, 'left': scene.lphai if 'left' in used else 0}
         binding = bind_kitchen(fp, need, back_edge, offset)
         spec.floorplan = {**fp, 'binding': binding}
         revision = self.store.add_revision(design_id, base_revision, spec, {'op': 'bind-floorplan', 'back': binding['back'], 'source': binding['source']}, 'bind-floorplan')

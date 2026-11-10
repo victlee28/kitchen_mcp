@@ -276,9 +276,9 @@ def _module_entry(spec: KitchenSpec, m: Module, parts: list[Part], frame: Frame,
         "doors": [], "drawers": [], "shelves": [], "parts": [], "visible": True,
     }
     if m.blindCorner:
-        entry["blindCorner"] = {"side": "left", "width": m.blindCorner}
+        entry["blindCorner"] = {"side": "left" if m.blindSide == "start" else "right", "width": m.blindCorner}
     if m.endPanel:
-        entry["endPanel"] = {"side": "right", "thickness": m.endPanel}
+        entry["endPanel"] = {"side": "right" if m.blindSide == "start" else "left", "thickness": m.endPanel}
     if led and storey in ("upper", "corner"):
         entry["led"] = True
     t = c.doorThickness
@@ -316,7 +316,7 @@ def _module_entry(spec: KitchenSpec, m: Module, parts: list[Part], frame: Frame,
             }.get(p.type, (None, None, None, None))
             if p.type == "side-panel":
                 sz = size[0]
-                if m.endPanel and openings[0] >= sz - m.endPanel - 1:
+                if m.endPanel and (openings[0] >= sz - m.endPanel - 1 if m.blindSide == "start" else hi[0] <= m.endPanel + 1):
                     role, crole, material_text = "custom", "end_panel", mats[front]
                 elif openings[0] <= 1:
                     role, material_text = "left_side", mats[front] if storey in ("tall", "corner") else mats["carcass"]

@@ -137,6 +137,7 @@ class Module(_Base):
     doors: list[float] = Field(default_factory=list)
     blindCorner: float = Field(default=0, ge=0, description="Phần góc khuất không có cánh, tính từ phía góc (mm)")
     endPanel: float = Field(default=0, ge=0, description="Tấm hông hoàn thiện ở đầu xa góc (mm)")
+    blindSide: Literal["start", "end"] = Field(default="start", description="Which end of the cabinet the blind corner is at: start = the low-fromCorner end (the corner of a wall row), end = the other one (a run that ENDS in a corner). The end panel is at the opposite end")
     frontSections: list[FrontSection] = Field(default_factory=list)
     niche: float | None = Field(default=None, description="Tủ cao: chiều cao hốc thiết bị tính từ sàn (mm)")
     backLength: float | None = None   # corner-shelf: length of the leg along the back wall
@@ -148,6 +149,22 @@ class Module(_Base):
     material: str | None = Field(default=None, description="Vật liệu mặt trước riêng của module (ghi đè chung.vatLieu theo tầng)")
     handle: HandleOverride | None = Field(default=None, description="Handle settings of this module only; overrides the storey and common handle")
     note: str | None = None
+
+    @property
+    def fronts(self) -> tuple[float, float]:
+        """The stretch of the cabinet that has doors or drawers, along its row: all of it but the blind corner and the end panel."""
+        at_start, at_end = (self.blindCorner, self.endPanel) if self.blindSide == "start" else (self.endPanel, self.blindCorner)
+        return self.fromCorner + at_start, self.fromCorner + self.width - at_end
+
+    @property
+    def blind_span(self) -> tuple[float, float]:
+        f0, f1 = self.fronts
+        return (self.fromCorner, f0) if self.blindSide == "start" else (f1, self.fromCorner + self.width)
+
+    @property
+    def panel_span(self) -> tuple[float, float]:
+        f0, f1 = self.fronts
+        return (f1, self.fromCorner + self.width) if self.blindSide == "start" else (self.fromCorner, f0)
 
     @property
     def orient(self) -> str:
