@@ -122,13 +122,14 @@ export function createViewer(opts) {
   const ROLE_PARTS = { door: ['door'], drawer: ['drawer'], handle: ['handle'], all: ['door', 'drawer', 'handle'] };
   const inRole = (part, role) => (ROLE_PARTS[role] || []).includes(part);
   const selMats = new WeakMap();
+  const SEL_TINT = new THREE.Color(0x2f6bff);
   function highlight() {
     for (const m of meshes) {
       const sel = typeof selected === 'string' ? m.userData.module === selected : !!selected && selected.modules.includes(m.userData.module) && inRole(m.userData.role, selected.role);
       if (!m.userData.baseMat) m.userData.baseMat = m.material;
       if (sel) {
         if (!selMats.has(m.userData.baseMat)) {
-          const c = m.userData.baseMat.clone(); c.emissive = new THREE.Color(0x2f6bff); c.emissiveIntensity = 0.35; selMats.set(m.userData.baseMat, c);
+          const c = m.userData.baseMat.clone(); c.color?.lerp(SEL_TINT, 0.45); c.emissive = SEL_TINT.clone(); c.emissiveIntensity = 0.25; selMats.set(m.userData.baseMat, c);   // tint the colour too: emissive alone vanishes on white fronts
         }
         m.material = selMats.get(m.userData.baseMat);
       } else m.material = m.userData.baseMat;
