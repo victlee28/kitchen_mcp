@@ -9,7 +9,7 @@ import shutil
 from PIL import Image
 import numpy as np
 
-from .. import view_sync, edit, geometry, geometry_edit, imaging, layers, prompts, render, vocab
+from .. import appliance_models, view_sync, edit, geometry, geometry_edit, imaging, layers, prompts, render, vocab
 from ..errors import InvalidInput
 if TYPE_CHECKING:
     from .jobs import ImageJobs
@@ -118,6 +118,10 @@ class RequestBuilder(Component):
                 rec["remaining"] = self._others(cat, visible, ids, type)
                 rec["typeEn"] = layers.ROLES.get(type, (None, "element"))[1]
                 rec["materialText"] = " ".join(x for x in (vocab.to_english(material_text), material_text and f"({material_text})") if x)
+                touched = self._appliances_in(d, imaging.grow(tmask, GROW_PX), cur)      # plan A5: the AI must know the appliances it redraws
+                if touched:
+                    rec["appliances"] = touched
+                    rec["prompt"] = f"{rec['prompt']} " + " ".join(appliance_models.sentence(f) for f in touched)
                 recs.append(rec)
             ref_path, ref_info = self.base.pick_reference(did, view, man["renderKey"], d, reference)
             ref, _ = imaging.load_rgb(ref_path, (W, H))
@@ -243,6 +247,22 @@ class RequestBuilder(Component):
         req["instruction"] = ""
         if instruction:
             task["instruction"] = instruction
+
+    @staticmethod
+    def _appliances_in(d: Path, region: Any, spec: Any) -> list[dict[str, Any]]:
+        """``appliance_models.ai_facts`` of every appliance the region of the picture covers (its pixels in instances.png)."""
+        try:
+            inst, meta = imaging.load_instances(d)
+        except (OSError, ValueError, KeyError):
+            return []
+        values = set(int(v) for v in np.unique(inst[region]))
+        modules = {x.get("module") for x in meta.get("instances", []) if int(x.get("value", -1)) in values}
+        out = []
+        for a in spec.appliances:
+            if a.id in modules:
+                rendering = "model-3d" if appliance_models.BY_ID.get(appliance_models.model_id(a) or "", {}).get("asset3d") else "box-placeholder"
+                out.append(appliance_models.ai_facts(spec, a, rendering))
+        return out
 
     @staticmethod
     def _color_mask(jdir: Path, n: int) -> None:

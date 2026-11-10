@@ -177,8 +177,20 @@ export function buildKitchen(doc, THREE, opts = {}) {
       group.name = a.id; group.add(mesh); root.add(group); pickables.push(mesh);
       continue;
     }
-    const { group, mesh } = box(a.dimensions, material_text(a.materialId), a.transform, { module: a.sourceRef || a.id, role: a.type, part: a.partRef });
+    const isAppliance = !!a.sourceRef && /^(APP|ACC)-/.test(a.id) && (a.rendering || /^(Sink|Faucet)/.test(a.type) || (doc.appliances || []).includes(a));
+    const info = { module: a.sourceRef || a.id, role: a.type, part: a.partRef, ...(isAppliance ? { appliance: a.sourceRef } : {}) };
+    const material = a.box?.finish ? finishMaterial(material_text(a.materialId), a.box.finish, THREE) : material_text(a.materialId);
+    const { group, mesh } = box(a.dimensions, material, a.transform, info);
     group.name = a.id; root.add(group); pickables.push(mesh);
+    if (isAppliance && a.box) for (const d of applianceDecor(a.box, a.dimensions)) group.add(decorMesh(d, s, THREE));      // the stand-in box shows its model
+    if (isAppliance && a.modelUrl && opts.loadModel) {                                                                         // a real 3D model replaces the box once loaded
+      opts.loadModel(a.modelUrl).then((obj) => {
+        const k = obj.clone(true); k.traverse((o) => { if (o.isMesh) { o.userData = info; o.castShadow = o.receiveShadow = true; pickables.push(o); } });
+        const size = new THREE.Box3().setFromObject(k).getSize(new THREE.Vector3());
+        if (size.x > 0) k.scale.setScalar((a.dimensions.width * s) / size.x);
+        group.clear(); group.add(k); const i = pickables.indexOf(mesh); if (i >= 0) pickables.splice(i, 1);
+      }).catch(() => { /* no model: the box stays */ });
+    }
   }
 
   // đèn
@@ -297,4 +309,49 @@ function openDoor(group, d, s) {
   holder.add(mesh);
   if (d.hingeSide === 'Left') holder.rotation.y = -a; else if (d.hingeSide === 'Right') holder.rotation.y = a;
   else if (d.hingeSide === 'Top') holder.rotation.x = -a; else holder.rotation.x = a;
+}
+
+// ---- appliance stand-ins: what a plain box draws of its model (``box`` in the export: hob zones / burners, sink bowls, fridge doors)
+const FINISH = { 'black-glass': 0x141414, black: 0x1e1e1e, white: 0xf1f1ee, steel: null, panel: null };
+
+function finishMaterial(base, finish, THREE) {
+  const c = FINISH[finish];
+  if (c == null) return base;
+  const m = base.clone(); m.color = new THREE.Color(c); if (finish === 'black-glass') { m.roughness = 0.15; m.metalness = 0.1; }
+  return m;
+}
+
+/** Shapes drawn on an appliance box (mm, in the box's own frame: x across, y up, z from back to front). Pure, for tests. */
+export function applianceDecor(box, dims) {
+  const out = []; const w = dims.width, h = dims.height, d = dims.depth;
+  const ring = (x, z, r, color) => out.push({ kind: 'disc', x, y: h + 1, z, r, color });
+  if (box.zones || box.burners) {
+    const n = (box.zones || 0) + (box.burners || 0);
+    const cols = n <= 2 ? n : Math.ceil(n / 2); const rows = n <= 2 ? 1 : 2;
+    let k = 0;
+    for (let r = 0; r < rows; r += 1) {
+      for (let c = 0; c < cols && k < n; c += 1, k += 1) {
+        const gas = k >= (box.zones || 0);
+        ring(w * (c + 0.5) / cols, d * (r + 0.5) / rows, Math.min(w / cols, d / rows) * (gas ? 0.28 : 0.38), gas ? 0x3a3a3a : 0x8a2a1a);
+      }
+    }
+  }
+  if (box.basins) {
+    const n = box.basins; const gap = 40; const bw = (w - 60 - gap * (n - 1)) / n;
+    for (let i = 0; i < n; i += 1) out.push({ kind: 'rect', x: 30 + i * (bw + gap) + bw / 2, y: h + 1, z: d / 2, w: bw * (i === 0 && n === 2 ? 1.15 : 1) * (n === 2 && i === 1 ? 0.85 : 1), d: d - 60, color: 0x6e7378 });
+  }
+  if (box.doors === 2) out.push({ kind: 'slot', x: w / 2, y: h * 0.38, z: d + 1, w: w - 20, h: 8, color: 0x2a2a2a });
+  if (box.doors === 'sbs') out.push({ kind: 'slot', x: w / 2, y: h / 2, z: d + 1, w: 8, h: h - 20, color: 0x2a2a2a });
+  if (box.kind === 'oven' || box.kind === 'microwave') out.push({ kind: 'slot', x: w / 2, y: h * 0.45, z: d + 1, w: w * 0.8, h: h * 0.55, color: 0x050505 });
+  return out;
+}
+
+function decorMesh(dd, s, THREE) {
+  const mat = new THREE.MeshStandardMaterial({ color: dd.color, roughness: 0.5 });
+  let mesh;
+  if (dd.kind === 'disc') { mesh = new THREE.Mesh(new THREE.RingGeometry(dd.r * 0.75 * s, dd.r * s, 32), mat); mesh.rotation.x = -Math.PI / 2; }
+  else if (dd.kind === 'rect') { mesh = new THREE.Mesh(new THREE.PlaneGeometry(dd.w * s, dd.d * s), mat); mesh.rotation.x = -Math.PI / 2; }
+  else mesh = new THREE.Mesh(new THREE.PlaneGeometry(dd.w * s, dd.h * s), mat);
+  mesh.position.set(dd.x * s, dd.y * s, dd.z * s);
+  return mesh;
 }

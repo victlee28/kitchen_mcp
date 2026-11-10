@@ -15,7 +15,7 @@ import re
 from collections import defaultdict
 
 from .numeric import round_half_away, round_int
-from . import runs, floorplan as fpmod, roomctx, hardware, regions, vocab
+from . import appliance_models, runs, floorplan as fpmod, roomctx, hardware, regions, vocab
 from .geometry import Part, backsplash_height, compile_spec, views_of
 from .errors import InvalidInput, require
 from .palette import SEGMENT_COLORS, module_color as _module_color
@@ -449,7 +449,7 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
     run_docs = _run_docs(spec, modules)
 
     # thiết bị & phụ kiện
-    app_type = {"fridge": "Refrigerator", "hood": "Range_Hood_Insert", "oven": "Microwave"}
+    app_type = {"fridge": "Refrigerator", "hood": "Range_Hood_Insert", "oven": "BuiltIn_Oven"}
     appliances, accessories = [], []
     for tb in spec.appliances:
         ps = by_mod.get(tb.id, [])
@@ -462,20 +462,27 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
         fr = Frame.for_part(p, wall)
         openings, hi = fr.part_box(p)
         dims = _dims(*(hi[i] - openings[i] for i in range(3)))
-        name = (tb.name or "").lower()
+        mid = appliance_models.model_id(tb)                       # its model, or (old designs) the guess from its name
+        cat = appliance_models.BY_ID.get(mid or "", {})
+        energy = tb.energy or cat.get("energy")
+        look = {k: v for k, v in (("model", mid), ("rendering", "model-3d" if cat.get("asset3d") else "box-placeholder"),
+                                  ("box", cat.get("box"))) if v is not None}
         if tb.type in app_type or tb.type == "cooktop":
-            t = "Cooktop_Gas" if "gas" in name else "Cooktop_Induction" if tb.type == "cooktop" else app_type[tb.type]
+            t = ("Cooktop_Gas" if energy in ("gas", "mixed") else "Cooktop_Induction") if tb.type == "cooktop" else \
+                ("Microwave" if cat.get("box", {}).get("kind") == "microwave" else "BuiltIn_Oven") if tb.type == "oven" else app_type[tb.type]
             a = {"id": f"APP-{tb.id}", "type": t, "name": tb.name or tb.id, "assetId": "ASSET-APPLIANCE-BOX", "dimensions": dims,
                  "transform": _tf(fr.pos, fr.rot), "materialId": mats["cooktop"] if tb.type == "cooktop" else mats["inox"], "sourceRef": tb.id,
-                 "energy": "gas" if "gas" in name else ("induction" if tb.type == "cooktop" else "electric"),
-                 "installation": {"mountType": {"fridge": "freestanding", "cooktop": "built_in", "hood": "built_in", "oven": "built_in"}[tb.type]}}
+                 "energy": energy or ("induction" if tb.type == "cooktop" else "electric"),
+                 "installation": {"mountType": {"fridge": "freestanding", "cooktop": "built_in", "hood": "built_in", "oven": "built_in"}[tb.type]}, **look}
+            if cat.get("asset3d"):
+                a["modelUrl"] = cat["asset3d"]
             if host:
                 a["parentModuleId"] = f"MOD-{host.id}"
             if tb.type == "cooktop" and "hood" in sel:
                 a["clearances"] = {"top": sel["hood"]["params"].get("gap_min", 650)}
             appliances.append(a)
         elif tb.type in ("sink", "faucet"):
-            accessories.append({"id": f"ACC-{tb.id}", "type": ("Sink_Double" if "đôi" in name else "Sink_Single") if tb.type == "sink" else "Faucet_Classic",
+            accessories.append({"id": f"ACC-{tb.id}", "type": ("Sink_Double" if cat.get("box", {}).get("basins") == 2 else "Sink_Single") if tb.type == "sink" else "Faucet_Classic", **look,
                                 "assetId": "ASSET-SINK" if tb.type == "sink" else "ASSET-FAUCET",
                                 **({"parentId": f"MOD-{host.id}"} if host else {}), "dimensions": dims, "transform": _tf(fr.pos, fr.rot),
                                 "materialId": mats["sink"] if tb.type == "sink" else mats["inox"], "sourceRef": tb.id})
@@ -494,6 +501,13 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
                 (src.wall == p.wall and src.frame is None and all(p.min[k] - 1 <= src.min[k] and src.max[k] <= p.max[k] + 1 for k in (0, 2)))
             if inside:
                 llo, lhi = fr.part_box(src)
+                own = next((a.cutout for a in spec.appliances if a.id == tgt["sourceRef"] and a.cutout), None)
+                if own:                                            # the model's own hole, centred on the appliance
+                    cw, cd = float(own["w"]), float(own["d"])
+                    cx, cz = (llo[0] + lhi[0]) / 2, (llo[2] + lhi[2]) / 2
+                    cutouts.append({"forId": tgt["id"], "type": "cooktop" if tgt["id"].startswith("APP") else "sink",
+                                    "dimensions": _dims(cw, h, cd), "transform": _tf((cx - cw / 2, 0, cz - cd / 2)), "estimated": False})
+                    continue
                 cw, cd = lhi[0] - llo[0] - 20, lhi[2] - llo[2] - 20
                 cutouts.append({"forId": tgt["id"], "type": "cooktop" if tgt["id"].startswith("APP") else "sink",
                                 "dimensions": _dims(cw, h, cd), "transform": _tf((llo[0] + 10, 0, llo[2] + 10)), "estimated": True})

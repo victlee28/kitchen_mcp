@@ -10,7 +10,7 @@ KITCHEN = ROOT / "kitchen"
 # R1: modules that must stay free of I/O, clocks, randomness and Pydantic behaviour.
 CORE_MODULES = (
     "placement", "roomctx", "rules", "rules_kb", "rules_nkba", "edit", "proposal", "geometry", "moldings", "handles", "hardware",
-    "structure_mesh", "camera_plan", "layers", "threejs_export", "lexicon", "vocab", "edit_intent", "cabinet_run", "run_line", "runs", "rows_to_runs", "system_replace", "wall_line", "regions", "errors", "palette", "numeric",
+    "structure_mesh", "camera_plan", "layers", "threejs_export", "lexicon", "vocab", "edit_intent", "cabinet_run", "run_line", "runs", "rows_to_runs", "system_replace", "wall_line", "appliance_models", "regions", "errors", "palette", "numeric",
 )
 CORE_PACKAGES = ("prompts", "floorplan", "recognition")                      # packages whose every file is core (the files are found on disk)
 
@@ -22,7 +22,7 @@ def _package_modules(pkg: str) -> tuple[str, ...]:
 CORE_ALL = CORE_MODULES + tuple(m for pkg in CORE_PACKAGES for m in _package_modules(pkg))   # what the core checks run over
 
 # Data-model modules a core module may import (the boundary types); everything else it imports from kitchen must be core.
-DATA_MODULES = ("spec", "knowledge_seed")   # boundary types; constant data tables (their SQL helpers take a connection argument)
+DATA_MODULES = ("spec", "knowledge_seed", "appliance_catalog")   # boundary types; constant data tables (their SQL helpers take a connection argument)
 
 SHELL_MODULES = ("store", "migrations", "service", "backends", "ai_export", "legacy", "config", "intent", "run_template", "llm", "recognizers")      # touch disk, network, env, clock
 PIXEL_MODULES = ("render", "imaging", "geometry_edit", "request_check", "view_sync")        # the image-job package kitchen/images/ is pixel zone as a whole (see test_architecture)

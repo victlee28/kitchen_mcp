@@ -13,7 +13,7 @@ import zipfile
 from collections import Counter
 from pathlib import Path
 
-from . import backends, geometry, layers, prompts, vocab
+from . import appliance_models, backends, geometry, layers, prompts, vocab
 
 SCHEMA = "kitchen-ai-image-request/1.0"
 
@@ -55,6 +55,34 @@ def _door_style(doc: dict) -> str:
     return c.most_common(1)[0][0]
 
 
+def _visible_appliances(rd, facts: dict) -> list[dict]:
+    """The appliances the render of one view shows (its instances.json): ``[{id, layer, bbox, pixels}]``. Without a render every appliance
+    is listed with ``visibility: "unknown"``."""
+    path = rd / "instances.json"
+    if not path.exists():
+        return [{"id": i, "visibility": "unknown"} for i in facts]
+    meta = json.loads(path.read_text(encoding="utf-8"))
+    out = []
+    for x in meta.get("instances", []):
+        if x.get("module") in facts and int(x.get("pixels") or 0) >= MIN_APPLIANCE_PIXELS:
+            out.append({"id": x["module"], "layer": x["id"], "bbox": x.get("bbox"), "pixels": x.get("pixels")})
+    return out
+
+
+def _appliance_text(seen: list[dict], facts: dict) -> str:
+    """Sentences for the view's prompt: one per appliance it shows (what to draw instead of the stand-in box, and where in the picture)."""
+    lines = []
+    for e in seen:
+        f = facts.get(e["id"])
+        if f is None:
+            continue
+        lines.append(appliance_models.sentence(f, e.get("bbox")))
+    return (" Appliances: " + " ".join(lines)) if lines else ""
+
+
+MIN_APPLIANCE_PIXELS = 200     # fewer pixels than this: the view hardly shows the appliance, it is not described
+
+
 def build(svc, did: str, rev: int | None = None, views: list[str] | None = None, country: str | None = None,
           with_images: bool = False, embed: bool = False, lighting: str = "daylight") -> dict:
     """with_images: chép ảnh + zip. embed: nhúng ảnh nên gửi của từng góc (base64) ngay trong JSON -> một file tự chứa."""
@@ -83,6 +111,8 @@ def build(svc, did: str, rev: int | None = None, views: list[str] | None = None,
         sync = view_sync.view_status(svc.images, did, r)
     except Exception:  # noqa: BLE001 — the package must still build
         sync = {}
+    facts = {a.id: appliance_models.ai_facts(spec, a, "model-3d" if appliance_models.BY_ID.get(appliance_models.model_id(a) or "", {}).get("asset3d")
+                                             else "box-placeholder") for a in spec.appliances}      # plan A5: the AI must know each appliance
     v_out = []
     for v in chosen:
         g = all_views[v]
@@ -103,12 +133,14 @@ def build(svc, did: str, rev: int | None = None, views: list[str] | None = None,
                     files[f.removesuffix(".png")] = f"../{v}/{f}"
         man = json.loads((rd / "manifest.json").read_text(encoding="utf-8")) if (rd / "manifest.json").exists() else {}
         camera = next((c for c in doc["cameras"] if c["id"] == f"CAM-{v}"), None)
+        seen = _visible_appliances(rd, facts)
         v_out.append({
             "id": v, "name": g.name or v, "dimensions": [man.get("width", 1280), man.get("height", 960)],
             "renderKey": man.get("renderKey"), "camera": camera,
             "suggestedInputImages": "beauty" if "beauty" in files else ("albedo" if "albedo" in files else "lines"),
-            "prompt": prompts.gemini_text("gen0", "", part, common, realism=photo_image),
+            "prompt": prompts.gemini_text("gen0", "", part, common, realism=photo_image) + _appliance_text(seen, facts),
             "image": files,
+            "appliances": seen,
             **({"approvedImage": {k: x for k, x in sync[v].items() if k in ("status", "changed", "approvedJob")}} if v in sync else {}),
         })
         if embed:
@@ -130,6 +162,7 @@ def build(svc, did: str, rev: int | None = None, views: list[str] | None = None,
         "part": part.strip(),
         "negativePrompt": negative,
         "material": _material(doc),
+        "appliances": list(facts.values()),
         "views": v_out,
         "threejs": doc,
     }
@@ -146,6 +179,7 @@ def build(svc, did: str, rev: int | None = None, views: list[str] | None = None,
             (gem / f"{x['id']}.json").write_text(json.dumps(backends.gemini_body(x["prompt"], [src], tuple(x["dimensions"])),
                                                              ensure_ascii=False), encoding="utf-8")
             lean_views.append({"id": x["id"], "name": x["name"], "dimensions": x["dimensions"], "instruction": x["prompt"],
+                               "appliances": [{**facts[e["id"]], **e} for e in x["appliances"] if e["id"] in facts],
                                "attachedImages": [{"order": 1, "role": "input-image", "type": a["type"], "file": f"gemini/{fname}",
                                                "dataUrl": a["dataUrl"]}],
                                "geminiApi": f"gemini/{x['id']}.json"})

@@ -43,6 +43,21 @@ returns `systems: {module: {system, tier, storey}}`; the page never works them o
 - **Drawn runs:** a line along a wall turns the backs to the wall whichever side was asked; away from walls the side asked is kept.
 - A recognised kitchen anchored on furniture also replaces it.
 
+## Appliance models (plan `claude/ke-hoach-thay-mau-thiet-bi.md`)
+- Catalogue: `kitchen/appliance_catalog.py` (a DRAFT list: hobs, sinks, taps, hoods, fridges, ovens; size, cut-out / niche, mount, energy,
+  `box` for the 3D stand-in, `visual` + `prompt` for the image AI, `asset3d` for a real GLB model). Logic: `kitchen/appliance_models.py`.
+- **3D:** appliances are clickable (target `appliance`). Right click one: its title and the command box only (no menu entries of their own):
+  "đổi sang bếp gas", "thay chậu đôi", or Enter on an empty box ⇒ a popup lists the models of that type with ok / cần kiểm tra / không vừa
+  / chưa hỗ trợ; a model that does not fit offers "Nới tủ đỡ" (widen the cabinet, the next ones move along) or "Giữ tủ". After Áp dụng the
+  image tab opens on that appliance with the model's description filled in. Without a real model the box draws its model (glass top with
+  zones / burners, sink bowls, fridge doors); with `asset3d` the GLB is loaded instead (GLTFLoader must be in `vendor/three/examples/jsm/loaders/`).
+- **Image tab:** selecting an appliance layer (`TBx-…`) shows "Đổi mẫu": preview, apply, and the job form filled with the model.
+- **AI requests:** every appliance is described in the JSON sent to the image AI (`appliances` in `ai-request.json`, per view the visible
+  ones with their place in the picture, a sentence in each view's prompt / Gemini text, and in layer jobs whose region covers one): for a
+  stand-in box everything about the model; for a real model what a picture cannot show.
+- Template `{"kind": "replace-appliance", "id", "model"?, "prompt"?, "resizeHost"?}`; op `update-appliance`; rules `APPLIANCE-MODEL-FIT`,
+  `HOOD-WIDTH` (only for appliances that carry a model, so old designs show nothing new).
+
 ## Tests of the web app
 - `tests/js/*.test.mjs` (run by `test_web_logic`): pure logic (`menu-logic`, `assist-logic`, `design-logic`) and `web-architecture` (no module imports `app.js`, no import cycles, `window.kitchen` only assigned by `app.js`).
 - `tests/browser/smoke_web.py`: real-Chromium smoke test of the main flows (open, select, edit, undo, add/remove, right-click menu, free command, render, AI JSON, image tab). Needs `pip install playwright` and a launchable Chromium; prints SKIP and exits 0 without Playwright. Run it before and after every step of splitting `app.js` (plan: `claude/ke-hoach-tach-app-js.md` in the project docs).

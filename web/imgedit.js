@@ -4,6 +4,7 @@ import { partIndex, shiftGroupId, ctrlIds, toggleIds, layerIdFor, partitionByTyp
 import { $, el } from './dom.js';
 import { api, createStatus } from './api-client.js';
 import { styleFromOptions, styleFromValue } from './assist-logic.js';
+import { modelChoices, APPLIANCE_VI } from './menu-logic.js';
 const S = { id: null, view: null, data: null, layer: null, job: null, jobs: [], poll: null, maskImg: null, tasks: [], maskCache: {}, sel: [], key: '' };
 const PALETTE = [[255, 0, 0], [0, 200, 0], [0, 80, 255], [255, 220, 0], [255, 0, 255], [0, 230, 230], [255, 140, 0], [140, 60, 200]];
 const MAX_TASKS = 8;
@@ -59,7 +60,43 @@ async function selectLayer(id, alts) {
   const box = $('layerAlt'); box.replaceChildren();
   for (const a of alts) box.append(el('button', { type: 'button', class: a === id ? 'on' : '', textContent: a, onclick: () => selectLayer(a, alts) }));
   renderSel();
+  renderSwap(x).catch((e) => status(e.message, "warn"));
   await drawMask();
+}
+
+// An appliance layer (TB4-cooktop-1): another model can be picked here; once applied, the job form is filled with the model's description.
+const APPLIANCE_TYPES = ['cooktop', 'sink', 'faucet', 'hood', 'fridge', 'oven'];
+function swapBox() {
+  let box = document.getElementById('applSwap');
+  if (!box) { box = el('div', { id: 'applSwap', class: 'appl-swap' }); $('layerAlt').after(box); }
+  return box;
+}
+async function renderSwap(layer) {
+  const box = swapBox(); box.replaceChildren();
+  const id = layer?.module; if (!layer || !APPLIANCE_TYPES.includes(layer.type) || !/^TB\d+$/.test(id || '')) return;
+  const r = await api(`/api/designs/${S.id}/template`, 'POST', { template: { kind: 'replace-appliance', id, prompt: '' } });
+  const choices = modelChoices(r.models);
+  const pick = el('select', {}, ...choices.map((c) => el('option', { value: c.id, disabled: !c.pickable }, c.label)));
+  const widen = el('input', { type: 'checkbox' });
+  const out = el('ul', { class: 'small' });
+  const apply = el('button', { type: 'button', hidden: true }, 'Áp dụng mẫu này + điền job');
+  let preview = null;
+  const show = () => run('xem trước mẫu', async () => {
+    preview = await api(`/api/designs/${S.id}/template`, 'POST', { template: { kind: 'replace-appliance', id, model: pick.value, resizeHost: widen.checked } });
+    out.replaceChildren(...(preview.summary || []).map((t) => el('li', { textContent: t })));
+    apply.hidden = !preview.proposal?.applicable;
+  });
+  apply.addEventListener('click', () => run('đổi mẫu thiết bị', async () => {
+    const p = preview.proposal;
+    await api(`/api/designs/${p.id}/ops`, 'POST', { op: p.operation, baseRev: p.baseRev, expect: p.opHash });
+    window.dispatchEvent(new CustomEvent('design-reload-request', { detail: { id: S.id } }));
+    $('jItem').value = preview.aiFacts?.name || pick.value; $('jInstr').value = preview.aiFacts?.prompt || ''; $('jMode').value = 'quick';
+    status(`Đã đổi ${id} sang ${preview.aiFacts?.name || pick.value}. Ảnh nền sẽ được render lại; bấm "Tạo job sửa" để AI vẽ mẫu mới`, 'ok');
+    out.replaceChildren(); apply.hidden = true;
+  }));
+  box.append(el('b', { textContent: `Đổi mẫu ${APPLIANCE_VI[layer.type] || layer.type} ${id}` }),
+    el('label', {}, 'Mẫu', pick), el('label', { class: 'inline' }, widen, ' Nới tủ đỡ nếu không vừa'),
+    el('button', { type: 'button', class: 'ghost', onclick: show }, 'Xem trước'), apply, out);
 }
 // Chọn nhiều: S.sel là danh sách id chi tiết; S.layer là tên layer tương ứng (layer có sẵn nếu khớp đúng, không thì `parts:a,b,c`).
 async function setSel(ids, alts) {

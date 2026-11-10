@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from itertools import combinations
 
-from . import knowledge_seed, moldings, regions, rules_kb, runs
+from . import appliance_models, knowledge_seed, moldings, regions, rules_kb, runs
 from .errors import require
 from .spec import KitchenSpec, Module
 
@@ -161,7 +161,7 @@ def validate(spec: KitchenSpec, kb_rules: list[dict] | None = None, country: str
     qg, kv = regions.normalize(country or spec.country, region or spec.region)
     rows = default_rows() if kb_rules is None else kb_rules
     sel = rules_kb.select(rows, qg, kv)
-    issues = check_geometry(spec) + rules_kb.check(spec, sel) + moldings.check(spec)
+    issues = check_geometry(spec) + rules_kb.check(spec, sel) + moldings.check(spec) + appliance_models.check(spec)
     if not (qg or kv):
         issues.append({"rule": "VUNG", "severity": "info", "module": [], "content": "Chưa chọn quốc gia/khu vực (spec.quocGia): "
                        "chỉ tiêu chuẩn toàn cầu được áp, tiêu chuẩn của các nước chỉ để tham khảo"})

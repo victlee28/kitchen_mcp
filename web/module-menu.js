@@ -3,7 +3,7 @@
 import { el } from './dom.js';
 import { request } from './api-client.js';
 import { interpretBody, describeInterpret, templateIntent, systemIntent, mentionsReference, checkUpload, recognizeBody, recognizeJobBody, anchorFor, describeRecognition, recognitionLines } from './assist-logic.js';
-import { actionsFor, buildGroupOp, buildOp, describeProposal, groupActions, layerFor, lineTemplate, menuPosition, DOOR_STYLES, HANDLE_VARIANTS, MATERIAL_PRESETS, RUN_ACTIONS, RUN_TURNS, systemTemplate, edgeChoices } from './menu-logic.js';
+import { actionsFor, buildGroupOp, buildOp, describeProposal, groupActions, layerFor, lineTemplate, menuPosition, DOOR_STYLES, HANDLE_VARIANTS, MATERIAL_PRESETS, RUN_ACTIONS, RUN_TURNS, systemTemplate, edgeChoices, modelChoices, APPLIANCE_VI, applianceLayer } from './menu-logic.js';
 import { groupLabel, groupLayerIds, manySystems } from './design-logic.js';
 
 const call = (path, body) => request(path, 'POST', body);
@@ -20,7 +20,8 @@ export function createModuleMenu(ctx) {
   const saved = readJob();
   let pendingJob = saved?.job ?? null; let pendingPlace = { anchor: saved?.anchor ?? null, mode: saved?.mode ?? 'add' }; let recMode = 'add';   // a recognition waiting for Claude (inbox mode): survives closing the menu and reloading the page
   let target = null; let step = null; let busy = false; let previewOfJob = null; let attached = null;   // attached: the picture chosen with 📎, sent together with the sentence when "Xem trước" is pressed   // picking: the native file dialog is open (the window blurs, the menu must stay)
-  let lineFrom = null;      // first point of a run being drawn on the floor (mm); survives closing the menu, the second right click ends the line
+  let lineFrom = null;
+  let lastAppliance = null;   // the appliance model being previewed: once applied, the image tab opens on it      // first point of a run being drawn on the floor (mm); survives closing the menu, the second right click ends the line
   box.setAttribute('role', 'dialog'); box.hidden = true;
 
   const close = () => { box.hidden = true; box.replaceChildren(); target = null; step = null; busy = false; attached = null; ctx.guide?.(lineFrom); };   // a line being drawn goes back to following the pointer
@@ -47,7 +48,8 @@ export function createModuleMenu(ctx) {
     if (target.group) return listGroup();
     const { spec } = ctx.getState();
     const partName = { door: 'Cánh', drawer: 'Mặt ngăn kéo', handle: 'Tay nắm', countertop: 'Mặt bàn' }[target.part];
-    const title = target.kind === 'part' ? (target.part === 'countertop' ? 'Mặt bàn' : `${partName} · ${target.id}`)
+    const appl = target.kind === 'appliance' ? spec.appliances?.find((a) => a.id === target.id) : null;
+    const title = appl ? `${APPLIANCE_VI[appl.type] || appl.type} ${appl.id}${appl.name ? ` · ${appl.name}` : ''}` : target.kind === 'part' ? (target.part === 'countertop' ? 'Mặt bàn' : `${partName} · ${target.id}`)
       : target.kind === 'module' ? `Module ${target.id}` : target.kind === 'floor' ? (lineFrom ? 'Sàn · đang vẽ dãy tủ' : 'Sàn')
         : `Thành phần mặt bằng ${target.id.replace(/^STRUCT-/, '')}`;
     box.onkeydown = null;
@@ -58,7 +60,7 @@ export function createModuleMenu(ctx) {
 
   // A free sentence about THIS module (a floorplan object has no module: the sentence then covers the whole design) ("đổi sang màu trắng", "rộng 800"): the server reads it, the preview shows the result, nothing is saved before Áp dụng.
   function commandBox(text = '', message = '', choices = []) {
-    const input = el('input', { type: 'text', value: text, placeholder: target.kind === 'structure' ? 'Ra lệnh cho cả thiết kế… (Enter)' : `Ra lệnh cho ${target.id}… (Enter)`, autocomplete: 'off', 'aria-label': 'Câu lệnh cho module này' });
+    const input = el('input', { type: 'text', value: text, placeholder: target.kind === 'structure' ? 'Ra lệnh cho cả thiết kế… (Enter)' : target.kind === 'appliance' ? 'vd "đổi sang bếp gas", "thay chậu đôi" · để trống rồi Enter: xem mọi mẫu' : `Ra lệnh cho ${target.id}… (Enter)`, autocomplete: 'off', 'aria-label': 'Câu lệnh cho module này' });
     const run = () => (attached ? recognizeImage(attached.file, attached.kind, input.value) : command(input.value));
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); run(); } });
     const kind = el('select', { 'aria-label': 'Loại ảnh tham chiếu', title: 'Loại ảnh tham chiếu' }, el('option', { value: 'photo' }, 'Ảnh chụp'), el('option', { value: 'drawing' }, 'Bản vẽ'));
@@ -88,6 +90,7 @@ export function createModuleMenu(ctx) {
   async function command(text) {
     if (busy) return; const { id, rev } = ctx.getState();
     if (mentionsReference(text)) return redraw(text, 'Câu lệnh nhắc tới ảnh tham chiếu: hãy bấm "📎 Ảnh tham chiếu" để chọn ảnh trước, rồi bấm "Xem trước".');
+    if (target.kind === 'appliance') return applianceModels(text);
     const wish = target.kind === 'structure' ? null : systemIntent(text);
     if (wish) return replaceSystem(text, wish);
     const intent = templateIntent(text);
@@ -330,6 +333,52 @@ export function createModuleMenu(ctx) {
     } catch (e) { busy = false; ctx.setStatus(e.message, 'warn'); }
   }
 
+  // An appliance: the sentence picks the models offered ("đổi sang bếp gas"); a popup lists them, the one picked is previewed.
+  async function applianceModels(text) {
+    if (busy) return; const { id, rev } = ctx.getState();
+    busy = true; ctx.setStatus('Tìm mẫu thiết bị…');
+    try {
+      const { status, data } = await call(`/api/designs/${id}/template`, { template: { kind: 'replace-appliance', id: target.id, prompt: text }, baseRev: rev });
+      busy = false;
+      if (status === 409) return stale('cmd');
+      if (!data || data.error) return redraw(text, data?.error || `Lỗi ${status}`);
+      chooseModel(data, text);
+    } catch (e) { busy = false; redraw(text, e.message); }
+  }
+
+  function chooseModel(data, text) {
+    const now = data.appliance;
+    const rows = modelChoices(data.models).map((c) => el('li', {}, el('button', { type: 'button', disabled: !c.pickable, title: c.reasons.join('\n'),
+      onclick: () => (c.status === 'bad' ? fitChoice(c, text) : replaceAppliance(c.id, false, text)) }, c.label),
+      ...(c.reasons.length ? [el('small', { class: 'muted' }, c.reasons[0])] : [])));
+    box.replaceChildren(header(`Đổi mẫu · ${APPLIANCE_VI[now.type] || now.type} ${now.id}`),
+      el('p', { class: 'ctx-msg' }, `Đang dùng: ${now.name || now.model}${now.size ? ` (${now.size.w}×${now.size.d} mm)` : ''}`),
+      rows.length ? el('ul', { class: 'ctx-list' }, ...rows) : err('Không có mẫu nào khác cùng loại'),
+      el('div', { class: 'row' }, el('button', { type: 'button', class: 'ghost', onclick: list }, 'Quay lại')));
+    box.querySelector('.ctx-list button:not([disabled])')?.focus();
+  }
+
+  // A model that does not fit where it is: keep the cabinet (and see the warning) or widen it.
+  function fitChoice(c, text) {
+    box.replaceChildren(header(c.label.split(' — ')[0]), el('p', { class: 'ctx-msg warn' }, c.reasons.join(' · ')),
+      el('div', { class: 'row' }, el('button', { type: 'button', class: 'primary', onclick: () => replaceAppliance(c.id, true, text) }, 'Nới tủ đỡ'),
+        el('button', { type: 'button', onclick: () => replaceAppliance(c.id, false, text) }, 'Giữ tủ'),
+        el('button', { type: 'button', class: 'ghost', onclick: () => applianceModels(text) }, 'Quay lại')));
+  }
+
+  async function replaceAppliance(model, resizeHost, text) {
+    if (busy) return; const { id, rev } = ctx.getState();
+    busy = true; ctx.setStatus('Xem trước mẫu mới…');
+    try {
+      const { status, data } = await call(`/api/designs/${id}/template`, { template: { kind: 'replace-appliance', id: target.id, model, resizeHost }, baseRev: rev });
+      busy = false;
+      if (status === 409) return stale('cmd');
+      if (!data || data.error || !data.proposal) return redraw(text, data?.error || `Lỗi ${status}`);
+      lastAppliance = { id: target.id, type: data.appliance.type, model, facts: data.aiFacts };
+      showPreview('appliance', data.proposal, null, data.summary || []);
+    } catch (e) { busy = false; redraw(text, e.message); }
+  }
+
   // No edge of the object lies against a wall: the user picks the edge the backs go on (hovering one draws it in the 3D view).
   function chooseEdge(data, text) {
     const choices = edgeChoices(data.edges);
@@ -347,9 +396,9 @@ export function createModuleMenu(ctx) {
     const lines = [...extra.map((x) => (typeof x === 'string' ? { kind: 'info', text: x } : x)), ...describeProposal(p)];
     const confirm = el('button', { type: 'button', class: p.validation?.introducesErrors ? 'danger' : 'primary', disabled: !p.applicable || p.unchanged,
       onclick: () => apply(action, p) }, p.validation?.introducesErrors ? 'Vẫn áp dụng' : 'Áp dụng');
-    const back = ['run-i', 'run-line', 'cmd'].includes(action) ? list : () => form(action);
+    const back = ['run-i', 'run-line', 'cmd', 'appliance'].includes(action) ? list : () => form(action);
     box.replaceChildren(header(`Xem trước · ${action === 'run-line' ? 'dãy tủ mới' : target.group ? groupLabel(target.group) : target.id}`), el('ul', { class: 'ctx-preview' }, ...lines.map((l) => el('li', { class: l.kind }, l.text))),
-      el('div', { class: 'row' }, confirm, el('button', { type: 'button', class: 'ghost', onclick: back }, ['run-i', 'run-line', 'cmd'].includes(action) ? 'Quay lại' : 'Sửa lại'), el('button', { type: 'button', class: 'ghost', onclick: close }, 'Hủy')));
+      el('div', { class: 'row' }, confirm, el('button', { type: 'button', class: 'ghost', onclick: back }, ['run-i', 'run-line', 'cmd', 'appliance'].includes(action) ? 'Quay lại' : 'Sửa lại'), el('button', { type: 'button', class: 'ghost', onclick: close }, 'Hủy')));
     confirm.focus();
   }
 
@@ -359,12 +408,17 @@ export function createModuleMenu(ctx) {
       const { status, data } = await call(`/api/designs/${p.id}/ops`, { op: p.operation, baseRev: p.baseRev, expect: p.opHash });
       busy = false;
       if (status === 409) return stale(action);
-      if (!data || data.error) { ctx.setStatus(data?.error || `Lỗi ${status}`, 'warn'); return action === 'cmd' ? list() : form(action, data?.error || `Lỗi ${status}`); }
+      if (!data || data.error) { ctx.setStatus(data?.error || `Lỗi ${status}`, 'warn'); return ['cmd', 'appliance'].includes(action) ? list() : form(action, data?.error || `Lỗi ${status}`); }
       if (previewOfJob && previewOfJob === pendingJob) setJob(null);
       previewOfJob = null;
       if (action === 'run-line') lineFrom = null;
+      const swapped = action === 'appliance' ? lastAppliance : null;
       close(); await ctx.afterChange(data); ctx.setStatus(`Đã áp dụng: rev ${data.rev}`, 'ok');
-    } catch (e) { busy = false; if (action === 'cmd') ctx.setStatus(e.message, 'warn'); else form(action, e.message); }
+      if (swapped) {        // the picture follows: the image tab opens on that appliance with the model's description filled in (nothing sent yet)
+        ctx.imageEdit({ layer: applianceLayer(swapped.id, swapped.type), module: swapped.id, material: swapped.facts?.name || swapped.model,
+          instruction: swapped.facts?.prompt || '', mode: 'quick', preview: true });
+      }
+    } catch (e) { busy = false; if (['cmd', 'appliance'].includes(action)) ctx.setStatus(e.message, 'warn'); else form(action, e.message); }
   }
 
   function stale(action) {

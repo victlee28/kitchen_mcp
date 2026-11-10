@@ -1683,9 +1683,26 @@
             "electric",
             "induction",
             "gas",
+            "mixed",
             "none"
           ],
           "description": "[Bổ sung v1.1 (VicKitchenCabinet)] Nguồn năng lượng"
+        },
+        "model": {
+          "type": "string",
+          "description": "[Bổ sung v1.1 (VicKitchenCabinet)] Mẫu thiết bị trong kitchen/appliance_catalog.py (thiết kế cũ: mẫu đoán theo tên)"
+        },
+        "rendering": {
+          "type": "string",
+          "enum": [
+            "box-placeholder",
+            "model-3d"
+          ],
+          "description": "[Bổ sung v1.1 (VicKitchenCabinet)] box-placeholder: chưa có model 3D thật, khung xem vẽ hộp theo `box`; model-3d: dùng modelUrl"
+        },
+        "box": {
+          "type": "object",
+          "description": "[Bổ sung v1.1 (VicKitchenCabinet)] Cách vẽ hộp thay cho model thật (mặt kính, số vùng nấu / họng, số hố chậu, số cánh…)"
         },
         "clearances": {
           "type": "object",
@@ -1746,6 +1763,22 @@
         "sourceRef": {
           "type": "string",
           "description": "[Bổ sung v1.1 (VicKitchenCabinet)] Mã trong KitchenSpec"
+        },
+        "model": {
+          "type": "string",
+          "description": "[Bổ sung v1.1 (VicKitchenCabinet)] Mẫu thiết bị trong kitchen/appliance_catalog.py (thiết kế cũ: mẫu đoán theo tên)"
+        },
+        "rendering": {
+          "type": "string",
+          "enum": [
+            "box-placeholder",
+            "model-3d"
+          ],
+          "description": "[Bổ sung v1.1 (VicKitchenCabinet)] box-placeholder: chưa có model 3D thật, khung xem vẽ hộp theo `box`; model-3d: dùng modelUrl"
+        },
+        "box": {
+          "type": "object",
+          "description": "[Bổ sung v1.1 (VicKitchenCabinet)] Cách vẽ hộp thay cho model thật (mặt kính, số vùng nấu / họng, số hố chậu, số cánh…)"
         },
         "partRef": {
           "$ref": "#/$defs/partRef",

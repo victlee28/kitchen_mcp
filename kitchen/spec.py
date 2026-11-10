@@ -224,6 +224,11 @@ class Appliance(_Base):
     module: str | None = Field(default=None, description="Module chứa thiết bị")
     wall: Literal["back", "right", "left"] | None = None
     center: float | None = Field(default=None, description="Tâm thiết bị, khoảng cách từ góc dọc theo tường (mm)")
+    model: str | None = Field(default=None, description="Model id in kitchen/appliance_catalog.py; none = read from name and dimensions")
+    energy: Literal["gas", "induction", "electric", "mixed"] | None = None
+    size: dict[str, float] | None = Field(default=None, description="Body size {w, d, h} in mm")
+    cutout: dict[str, float] | None = Field(default=None, description="Worktop hole {w, d} in mm (hobs, sinks)")
+    mount: Literal["built_in", "freestanding", "wall", "undermount", "topmount"] | None = None
 
     def numeric_dimensions(self) -> list[float]:
         return [float(x.replace(",", ".")) for x in re.findall(r"\d+(?:[.,]\d+)?", self.dimensions or "")]

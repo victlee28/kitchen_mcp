@@ -24,6 +24,7 @@ export function pickTarget(hits, moduleIds) {
   for (const h of hits) {
     const u = h.object?.userData || {};
     if (u.structureId && h.object.visible !== false) return { kind: 'structure', id: u.structureId, ...(u.kind ? { structureKind: u.kind } : {}), ...(h.point ? { point: { x: h.point.x, z: h.point.z } } : {}) };   // point: where the ray hit, scene units
+    if (u.appliance) return { kind: 'appliance', id: u.appliance, applianceType: u.role };     // a hob, sink, tap, hood, fridge or oven
     const part = u.part;   // schema 1.4 partRef: a door, drawer front, handle or countertop run
     if (part?.kind === 'countertop') return { kind: 'part', part: 'countertop', id: part.wall || 'back' };
     if (part && ['door', 'drawer', 'handle'].includes(part.kind) && moduleIds.includes(part.module)) return { kind: 'part', part: part.kind, id: part.module };
@@ -50,6 +51,7 @@ export function actionsFor(target, spec, drawing = null) {
     return [...(target.part === 'door' ? [{ id: 'doorStyle', label: 'Đổi kiểu cánh' }] : []), { id: 'material', label: 'Đổi vật liệu mặt trước' },
       { id: 'handleVariant', label: 'Đổi kiểu tay nắm' }, { id: 'image', label: 'Sửa ảnh của module này' }, ...runActions(spec?.module?.find((x) => x.id === target.id))];
   }
+  if (target.kind === 'appliance') return [];       // an appliance: its title and the command box only ("đổi sang bếp gas", "thay chậu đôi")
   if (target.kind === 'structure') return [...(target.point ? [{ id: 'run-i', label: target.structureKind === 'furniture' ? 'Thay vật này bằng dãy tủ' : 'Tạo dãy tủ chữ I dọc cạnh này' }] : []), { id: 'struct-hide', label: 'Ẩn thành phần này' }, { id: 'struct-isolate', label: 'Chỉ giữ thành phần này' }, { id: 'struct-all', label: 'Hiện tất cả' }];
   const m = spec?.module?.find((x) => x.id === target.id);
   const out = [{ id: 'material', label: 'Đổi vật liệu mặt trước' }, { id: 'doorStyle', label: 'Đổi kiểu cánh' }];
@@ -249,3 +251,15 @@ export function edgeChoices(edges) {
   return (edges || []).map((e) => ({ index: e.index, a: e.a, b: e.b,
     label: `Lưng tủ trên cạnh dài ${Math.round(e.length)} mm${e.gapToWall == null ? '' : ` · cách tường ${Math.round(e.gapToWall)} mm`}` }));
 }
+
+export const APPLIANCE_VI = { cooktop: 'Bếp nấu', sink: 'Chậu rửa', faucet: 'Vòi nước', hood: 'Hút mùi', fridge: 'Tủ lạnh', oven: 'Lò' };
+const FIT_VI = { ok: 'vừa', check: 'cần kiểm tra', bad: 'không vừa', later: 'chưa hỗ trợ (đổi loại)' };
+
+/** Lines of the model popup: label, the fit and why; `later` cannot be picked. Sizes in mm. */
+export function modelChoices(models) {
+  return (models || []).map((m) => ({ id: m.id, status: m.status, pickable: m.status !== 'later', reasons: m.reasons || [],
+    label: `${m.name} · ${m.size.w}×${m.size.d}${m.size.h ? `×${m.size.h}` : ''}${m.cutout ? ` · khoét ${m.cutout.w}×${m.cutout.d}` : ''} — ${FIT_VI[m.status] || m.status}` }));
+}
+
+/** The image-tab layer of an appliance (the server names it <id>-<type>-1), for "Sửa ảnh". */
+export const applianceLayer = (id, type) => `${id}-${type}-1`;

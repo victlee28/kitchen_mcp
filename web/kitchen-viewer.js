@@ -118,6 +118,13 @@ export function createViewer(opts) {
     if (change && typeof selected === 'string') opts.onRunDrag?.({ module: selected, ...change }, { x: ev.clientX, y: ev.clientY });
   });
 
+  // real appliance models (GLB), loaded once per URL on first use; the box stays when there is none or it fails
+  const models = new Map();
+  const loadModel = (url) => {
+    if (!models.has(url)) models.set(url, import('three/addons/loaders/GLTFLoader.js').then(({ GLTFLoader }) => new GLTFLoader().loadAsync(url)).then((g) => g.scene));
+    return models.get(url);
+  };
+
   // a Shift-selected group lights only its role's parts: doors and drawer fronts (glass doors too), handles, or all of them
   const ROLE_PARTS = { front: ['door', 'drawer'], door: ['door'], drawer: ['drawer'], handle: ['handle'], all: ['door', 'drawer', 'handle'] };
   const inRole = (part, role) => (ROLE_PARTS[role] || []).includes(part);
@@ -184,7 +191,7 @@ export function createViewer(opts) {
     setDocument(next) {
       doc = next;
       root.clear(); hiddenByView = [];
-      const k = buildKitchen(doc, THREE, { RectAreaLightUniformsLib });
+      const k = buildKitchen(doc, THREE, { RectAreaLightUniformsLib, loadModel });
       root.add(k.root);
       meshes = k.pickables; byModule = k.byModule;
       opts.onSceneBuilt(k);

@@ -260,7 +260,7 @@ console.log(JSON.stringify(out));
         out = subprocess.run([node, "--input-type=module", "-e", script, (ROOT / "web" / "selection.js").as_uri()], capture_output=True, text=True, timeout=60)
         self.assertEqual(out.returncode, 0, out.stderr)
         o = json.loads(out.stdout)
-        self.assertEqual(o["shift"], ["tier:base:handle", "tier:upper:door", "tier:upper:handle", "tier:base:drawer"])
+        self.assertEqual(o["shift"], ["tier:base:handle", "tier:upper:front", "tier:upper:handle", "tier:base:front"])   # a door or a drawer front: both (10/11/2026)
         self.assertEqual(o["ctrlSame"], {"ids": ["H2"]})
         self.assertEqual(o["ctrlDoor"], {"ids": ["H1"]})
         self.assertIn("error", o["ctrlNoHandle"])

@@ -201,11 +201,17 @@ def main():
     apply = D["appliance"]["properties"]
     apply["sourceRef"] = opt({"type": "string"}, "Mã thiết bị trong KitchenSpec")
     apply["parentModuleId"] = opt({"$ref": "#/$defs/id"}, "Module chứa thiết bị")
-    apply["energy"] = opt({"type": "string", "enum": ["electric", "induction", "gas", "none"]}, "Nguồn năng lượng")
+    apply["energy"] = opt({"type": "string", "enum": ["electric", "induction", "gas", "mixed", "none"]}, "Nguồn năng lượng")
+    look = {"model": opt({"type": "string"}, "Mẫu thiết bị trong kitchen/appliance_catalog.py (thiết kế cũ: mẫu đoán theo tên)"),
+            "rendering": opt({"type": "string", "enum": ["box-placeholder", "model-3d"]},
+                             "box-placeholder: chưa có model 3D thật, khung xem vẽ hộp theo `box`; model-3d: dùng modelUrl"),
+            "box": opt({"type": "object"}, "Cách vẽ hộp thay cho model thật (mặt kính, số vùng nấu / họng, số hố chậu, số cánh…)")}
+    apply.update(look)
     apply["clearances"] = opt({"type": "object", "properties": {"top": {"type": "number"}, "sides": {"type": "number"}, "back": {"type": "number"}}},
                            "Khoảng hở yêu cầu")
     ac = D["accessoryInstance"]["properties"]
     ac["sourceRef"] = opt({"type": "string"}, "Mã trong KitchenSpec")
+    ac.update(look)
     ac["partRef"] = PART_REF
     ac["edgeProfile"] = opt({"type": "string", "enum": ["square", "eased", "bevel", "bullnose", "ogee"]}, "Mặt đá: kiểu mép")
     ac["overhang"] = opt({"type": "number"}, "Mặt đá: độ nhô trước")

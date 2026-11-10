@@ -8,7 +8,7 @@ import re
 import os
 from pathlib import Path
 from typing import Any, Callable
-from . import cabinet_run, run_line, run_template, runs, system_replace, wall_line, edit, edit_intent, geometry, intent, llm, recognition, regions, roomctx, render, rules, threejs_export
+from . import appliance_models, cabinet_run, run_line, run_template, runs, system_replace, wall_line, edit, edit_intent, geometry, intent, llm, recognition, regions, roomctx, render, rules, threejs_export
 from .intent import KitchenTemplate as KitchenTemplate
 from .spec import Common, KitchenSpec, Room, Wall, dump_spec, load_spec, to_data
 from .store import ConflictError, Store
@@ -207,13 +207,15 @@ class KitchenService:
             preview = self.propose(design_id, plan['operation'], current, None, country)
             return {'id': design_id, 'baseRev': current, 'status': 'ok', 'facing': None, 'run': plan['run'], 'length': plan['length'],
                     'summary': plan['summary'], 'operation': plan['operation'], 'proposal': preview}
+        if template.get('kind') == 'replace-appliance':   # {"kind": "replace-appliance", "id": "TB4", "model"?, "prompt"?, "resizeHost"?}
+            return self._replace_appliance(design_id, spec, current, template, country)
         if template.get('kind') == 'replace-system':   # {"kind": "replace-system", "system": id, "prompt"?, "style"?}: a new system in place of one
             plan = self._replace_system(spec, str(template.get('system') or ''), template.get('prompt'), template.get('style'), country)
             preview = self.propose(design_id, plan['operation'], current, None, country)
             return {'id': design_id, 'baseRev': current, 'status': 'ok', 'facing': None, 'system': plan['system'], 'mode': plan['mode'], 'style': plan.get('style'),
                     'summary': plan['summary'], 'operation': plan['operation'], 'proposal': preview}
         if template.get('kind') != 'run-i':
-            raise InvalidInput("template.kind must be 'run-i', 'run-line', 'corner' or 'replace-system'", code='bad-template-kind')
+            raise InvalidInput("template.kind must be 'run-i', 'run-line', 'corner', 'replace-system' or 'replace-appliance'", code='bad-template-kind')
         point = template.get('point')
         if not isinstance(point, dict) or not all(isinstance(point.get(k), (int, float)) for k in ('x', 'z')):
             raise InvalidInput('template.point needs numeric x and z (mm, room frame)', code='bad-template-point')
@@ -279,6 +281,51 @@ class KitchenService:
         room = ctx.floorplan.get('outline') or []
         polys = ([k(room)] if len(room) >= 3 else []) + [k(st['outline']) for st in ctx.structures if st['kind'] == 'wall']
         return [seg for poly in polys for seg in wall_line.segments(poly)]
+
+    def _replace_appliance(self, design_id: str, spec: KitchenSpec, current: int, template: dict[str, Any], country: str | None) -> dict:
+        """Another model for one appliance (plan claude/ke-hoach-thay-mau-thiet-bi.md). Without ``model``: ``status: "choose-model"`` and the
+        models that could take its place (filtered by the sentence in ``prompt``), each marked ok / check / bad / later with the reasons. With
+        ``model``: the operation (``update-appliance``) and its preview, with what changes (size, fit, energy supply) in the summary."""
+        app = next((a for a in spec.appliances if a.id == str(template.get('id') or '')), None)
+        if app is None:
+            raise NotFound(f"No appliance {template.get('id')!r}", code='appliance-not-found')
+        prompt = template.get('prompt') if isinstance(template.get('prompt'), str) else ''
+        now = appliance_models.model_id(app)
+        info = {'id': app.id, 'type': app.type, 'name': app.name, 'model': now, 'size': appliance_models.size_of(app)}
+        if not template.get('model'):
+            return {'id': design_id, 'baseRev': current, 'status': 'choose-model', 'appliance': info,
+                    'models': appliance_models.candidates(spec, app, prompt)}
+        m = appliance_models.model(str(template['model']))
+        fit, reasons = appliance_models.fit(spec, app, m)
+        if fit == 'later':
+            raise InvalidInput(reasons[0], code='model-changes-type')
+        ops: list[dict[str, Any]] = [{'op': 'update-appliance', 'id': app.id, 'model': m['id']}]
+        before = appliance_models.size_of(app) or {}
+        summary = [f"{app.id}: {app.name or now} → {m['name']}",
+                   f"Size {before.get('w', 0):g} × {before.get('d', 0):g} → {m['size']['w']:g} × {m['size']['d']:g} mm"
+                   + (f"; cut-out {m['cutout']['w']:g} × {m['cutout']['d']:g} mm" if m.get('cutout') else '')]
+        summary += [f"Does not fit: {r}" if fit == 'bad' else f"Check: {r}" for r in reasons]
+        summary += appliance_models.energy_notes(app, m)
+        if template.get('resizeHost') and fit == 'bad':
+            ops += self._widen_host(spec, app, m, summary)
+        operation = edit.combine_ops(ops)
+        after = edit.apply_op(spec, operation)
+        facts = appliance_models.ai_facts(after, next(a for a in after.appliances if a.id == app.id))
+        preview = self.propose(design_id, operation, current, None, country)
+        return {'id': design_id, 'baseRev': current, 'status': 'ok', 'appliance': info, 'fit': fit, 'reasons': reasons,
+                'summary': summary, 'operation': operation, 'proposal': preview, 'aiFacts': facts}
+
+    @staticmethod
+    def _widen_host(spec: KitchenSpec, app: Any, m: dict, summary: list[str]) -> list[dict[str, Any]]:
+        """Operations that widen the cabinet under / around ``app`` so model ``m`` fits (the cabinets after it in the run move along)."""
+        h = appliance_models.host(spec, app)
+        if h is None:
+            return []
+        need = appliance_models.needed_width(m)
+        if need is None or need <= h.width:
+            return []
+        summary.append(f"{h.id} widens {h.width:g} → {need:g} mm; the cabinets after it in the row move along")
+        return [{'op': 'update', 'id': h.id, 'changes': {'width': need, 'doors': [need / 2, need / 2] if need >= 600 else [need]}, 'closeGap': True}]
 
     @staticmethod
     def _structure_kind(spec: KitchenSpec, structure_id: str) -> str | None:

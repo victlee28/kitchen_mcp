@@ -41,6 +41,7 @@ class Task(TaskInput, total=False):
     scopeNote: str
     pendingOp: dict[str, Any]
     operation: str
+    appliances: list[dict[str, Any]]     # appliance_models.ai_facts of the appliances the task's region covers (plan A5)
 
 
 class StyleReference(TypedDict):
