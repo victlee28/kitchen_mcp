@@ -1,11 +1,9 @@
-"""The wire format of the stand-alone cabinet-recognizer service, as pure functions (rule R1): what to send and how to read the answer.
+"""Wire format of the cabinet-recognizer HTTP service (services/cabinet-recognizer), pure: what to send, how to read the answer.
 
-The HTTP call itself lives in ``kitchen/recognizers.py`` (shell). The service answers ``{"kitchen": {"spec": KitchenSpec, "issues": [...]}}``
-or ``{"error": {kind, code, message}}``, and since recognized-runs/1 also ``"runs"`` (the kitchen by runs; ``layout_from_runs``), which is what
-an anchored recognition places. Of ``kitchen`` only the MODULES are used: ``draft_from_kitchen_spec`` turns them into the raw draft that
-``build_draft`` checks, and ``draft_operation`` then keeps the room, floor plan and ``common`` of the current design (the recognizer's own
-room is never applied). A Rust build ports these functions and runs the golden cases in tests/golden/recognition.
-"""
+The service answers ``{"runs": <recognized-runs/1>, ...}`` or ``{"error": {kind, code, message}}``. Only ``runs`` is read: the kitchen by runs
+(``layout_from_runs``; ``recognition.build_layout`` checks it and it is what gets placed) and, made from it, the flat draft the user reviews
+(``draft_from_runs``; ``build_draft`` checks it). The service's wall-style ``kitchen`` is not used. Job ids and progress of the inbox mode
+are read here too."""
 from __future__ import annotations
 
 import base64
