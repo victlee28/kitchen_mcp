@@ -176,8 +176,9 @@ class TestSelectionGroups(unittest.TestCase):
             svc = KitchenService(tmp / "k.db", tmp / "r")
             did = svc.create_from_spec(json.loads(json.dumps(self.two().model_dump(mode="json"))))["id"]
             got = svc.get(did)["systems"]
-            self.assertEqual((got["A1"], got["U1"], got["C1"]), ({"system": "furniture_003", "tier": "base"}, {"system": "furniture_003", "tier": "upper"},
-                                                                {"system": "furniture_017", "tier": "base"}))
+            self.assertEqual((got["A1"], got["U1"], got["C1"]), ({"system": "furniture_003", "tier": "base", "storey": "base"},
+                                                                {"system": "furniture_003", "tier": "upper", "storey": "upper"},
+                                                                {"system": "furniture_017", "tier": "base", "storey": "base"}))
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
 
