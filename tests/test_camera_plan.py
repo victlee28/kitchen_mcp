@@ -48,6 +48,14 @@ class TestCameraPlan(unittest.TestCase):
             z = views[key]["position"][2] * 1000
             self.assertTrue(1000.0 + 300.0 <= z <= 3700.0 - 300.0, (key, z))
 
+    def test_camera_never_stands_in_a_stair_or_furniture(self):
+        # a run outside the room (no room to stand in): straight in front of it lies a stair and, beyond it, a wardrobe; the camera stands in neither
+        face = Face("run-R7", "R7", (9000.0, 2300.0), (-1.0, 0.0), 1900.0, 870.0, "R7")
+        stair = Obstacle("STRUCT-stair", "stair", ((6000.0, 1000.0), (8200.0, 1000.0), (8200.0, 3600.0), (6000.0, 3600.0)), 0.0, 1800.0)
+        wardrobe = Obstacle("STRUCT-wd", "furniture", ((4000.0, 1500.0), (5600.0, 1500.0), (5600.0, 3100.0), (4000.0, 3100.0)), 0.0, 2100.0)
+        for v in camera_plan.plan_views([face], ROOM, [stair, wardrobe]).values():
+            self.assertFalse(camera_plan.in_body((v["position"][0] * 1000, v["position"][2] * 1000), [stair, wardrobe]), v)
+
 
 class TestDefaultViews(unittest.TestCase):
     def test_legacy_keys_kept_and_eye_height(self):

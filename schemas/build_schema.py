@@ -245,6 +245,7 @@ def main():
     ca["aspect"] = opt({"type": "number"}, "Tỉ lệ khung")
     ca["fovAxis"] = opt({"type": "string", "enum": ["vertical", "horizontal"], "default": "vertical"}, "fov theo trục nào (three.js: dọc)")
     ca["orthoHeight"] = opt({"type": "number"}, "Orthographic: chiều cao vùng nhìn")
+    ca["hide"] = opt({"type": "array", "items": {"type": "string"}}, "Id các vật thể mặt bằng (tường, cầu thang, đồ) chắn giữa camera và tủ: ẩn khi chụp góc này")
 
     # ràng buộc, render
     co = P["constraints"]["properties"]

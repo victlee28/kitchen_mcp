@@ -64,7 +64,10 @@ export async function renderDoc(doc, opts = {}) {
     camera.position.set(...c.position);
     camera.lookAt(new THREE.Vector3(...c.target));
     camera.updateProjectionMatrix();
+    const hidden = [];      // structures standing between this camera and the cabinets (walls, stairs, furniture) are left out of its picture
+    if (c.hide?.length) { const h = new Set(c.hide); k.root.traverse((o) => { if (o.visible && h.has(o.userData?.structureId)) { o.visible = false; hidden.push(o); } }); }
     renderer.render(scene, camera);
+    for (const o of hidden) o.visible = true;
     out.push({ cameraId, view, name: c.name, width: W, height: H, dataUrl: canvas.toDataURL('image/png') });
     if (opts.onProgress) await opts.onProgress(out[out.length - 1], out.length);
     await new Promise((r) => setTimeout(r, 0)); // nhường luồng giao diện

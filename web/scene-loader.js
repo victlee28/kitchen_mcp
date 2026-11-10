@@ -224,7 +224,7 @@ export function buildKitchen(doc, THREE, opts = {}) {
   for (const c of doc.cameras || []) {
     cameras[c.id] = { name: c.name || c.id, fov: c.fov, near: (c.near || 50) * s, far: (c.far || 50000) * s,
       position: [c.position.x * s, c.position.y * s, c.position.z * s], target: [c.target.x * s, c.target.y * s, c.target.z * s],
-      up: c.up ? [c.up.x, c.up.y, c.up.z] : [0, 1, 0] };
+      up: c.up ? [c.up.x, c.up.y, c.up.z] : [0, 1, 0], hide: c.hide || [] };
   }
   return { root, lights, cameras, byModule, runGroups, pickables, structures, structurePickables: [...structures.values()].flatMap((e) => e.meshes) };
 }

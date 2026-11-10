@@ -587,7 +587,8 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
         n = math.sqrt(sum(x * x for x in d)) or 1
         up = _v(0, 0, -1) if abs(d[1] / n) > 0.999 else _v(0, 1, 0)
         cameras.append({"id": f"CAM-{key}", "name": v.name or key, "position": _v(*pos), "target": _v(*tgt), "projection": "perspective",
-                        "fov": v.verticalFov, "fovAxis": "vertical", "near": 50, "far": 50000, "up": up, "aspect": round_half_away(4 / 3, 4)})
+                        "fov": v.verticalFov, "fovAxis": "vertical", "near": 50, "far": 50000, "up": up, "aspect": round_half_away(4 / 3, 4),
+                        **({"hide": list(v.hide)} if v.hide else {})})
 
     p_cb = (sel.get("sink-cooktop") or {}).get("params", {})
     p_ld = (sel.get("walkway") or {}).get("params", {})

@@ -29,7 +29,7 @@ export function createViewer(opts) {
   controls.enableDamping = true;
   const root = new THREE.Group(); scene3.add(root);
   const raycaster = new THREE.Raycaster(); const pointer = new THREE.Vector2();
-  let meshes = []; let doc = null; let views = {}; let hiddenByView = []; let selected = null;
+  let meshes = []; let doc = null; let views = {}; let docCams = {}; let hiddenByView = []; let selected = null;
 
   function resize() {
     const w = container.clientWidth, h = container.clientHeight;
@@ -193,7 +193,7 @@ export function createViewer(opts) {
       root.clear(); hiddenByView = [];
       const k = buildKitchen(doc, THREE, { RectAreaLightUniformsLib, loadModel });
       root.add(k.root);
-      meshes = k.pickables; byModule = k.byModule;
+      meshes = k.pickables; byModule = k.byModule; docCams = k.cameras || {};
       opts.onSceneBuilt(k);
       highlight(); refreshHandles(); drawGuide(guide?.to ? { x: guide.to.x * unit(), z: guide.to.z * unit() } : null);
     },
@@ -215,8 +215,11 @@ export function createViewer(opts) {
       for (const o of hiddenByView) o.visible = true;
       hiddenByView = [];
       if (hide.size) root.traverse((o) => { if (o.userData && hide.has(o.userData.structureId) && o.visible) { o.visible = false; hiddenByView.push(o); } });
-      camera.position.set(...v.position); camera.fov = v.verticalFov; camera.updateProjectionMatrix();
-      controls.target.set(...v.lookAt); controls.update();
+      // the document's camera is in the frame the scene is drawn in (an imported floorplan moves the kitchen into its room); the view's own numbers
+      // are in the kitchen frame and only stand in when the document has no such camera
+      const c = docCams[`CAM-${key}`];
+      camera.position.set(...(c ? c.position : v.position)); camera.fov = c ? c.fov : v.verticalFov; camera.updateProjectionMatrix();
+      controls.target.set(...(c ? c.target : v.lookAt)); controls.update();
     },
   };
 }

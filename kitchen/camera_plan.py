@@ -142,18 +142,20 @@ def in_body(p: Pt, bodies: list[Obstacle], clear: float = WALL_CLEAR) -> bool:
 
 def _best(face: Face, directions: list[Pt], width_factor: float, room: list[Pt] | None, obstacles: list[Obstacle],
           bodies: list[Obstacle]) -> tuple[Pt, float, list[str]]:
-    """Ranked: stands in the room and clear of cabinets; without a room, fewest target points seen across another run's cabinets (they cannot be hidden);
+    """Ranked: stands in the room and clear of cabinets and of other solids (stairs, columns, furniture); without a room, fewest target points seen across another run's cabinets (they cannot be hidden);
     field of view not too wide; fewest solids to hide; farthest back."""
     targets = face_targets(face)
     # seen over a run is still across it; only weighed where no room guides the camera (keeps the planned views of rooms as they were)
     others = [] if room else [Obstacle(b.id, b.kind, b.outline, -math.inf, math.inf) for b in bodies if b.kind != f"cabinet:{face.run}"]
+    # never stand inside (or within WALL_CLEAR of) a solid: a stair, a column, a piece of furniture, a wall the room outline does not cover
+    solids = [ob for ob in obstacles if ob.kind not in NON_BLOCKING and ob.y1 > 0.0 and ob.y0 < EYE]
     best: tuple[tuple, Pt, float, list[str]] | None = None
     dist = MAX_DIST
     while dist >= MIN_DIST - 1e-6:
         for direction in directions:
             pos, fov = _candidate(face, direction, dist, width_factor)
             eye = (pos[0], EYE, pos[1])
-            ok = stands_in_room(pos, room) and not in_body(pos, bodies)
+            ok = stands_in_room(pos, room) and not in_body(pos, bodies) and not in_body(pos, solids)
             hidden = blockers(eye, targets, obstacles)
             behind = sum(any(blocks(eye, t, b) for b in others) for t in targets)
             key = (not ok, behind, fov > V_MAX, len(hidden), -dist)

@@ -1999,6 +1999,13 @@
         "orthoHeight": {
           "type": "number",
           "description": "[Bổ sung v1.1 (VicKitchenCabinet)] Orthographic: chiều cao vùng nhìn"
+        },
+        "hide": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "[Bổ sung v1.1 (VicKitchenCabinet)] Id các vật thể mặt bằng (tường, cầu thang, đồ) chắn giữa camera và tủ: ẩn khi chụp góc này"
         }
       }
     },
