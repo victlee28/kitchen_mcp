@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { isClick, pickTarget, actionsFor, buildOp, layerFor, describeProposal, menuPosition, selectionEffect, sceneToMm, lineTemplate, floorPoint } from '../../web/menu-logic.js';
+import { isClick, pickTarget, actionsFor, buildOp, layerFor, describeProposal, menuPosition, selectionEffect, sceneToMm, lineTemplate, floorPoint, dragChange, runModulesOf } from '../../web/menu-logic.js';
 
 const spec = { module: [{ id: 'TD1', type: 'base', wall: 'back', y: 0, height: 720, depth: 560, fromCorner: 0, width: 600, material: 'Trắng mờ' }, { id: 'KG1', type: 'corner-shelf', wall: 'corner' }] };
 const hit = (userData, visible = true) => ({ object: { userData, visible } });
@@ -158,4 +158,17 @@ test('drawing a run on the floor: the floor is the target where nothing else is,
   assert.throws(() => lineTemplate({ x: 0, z: 0 }, { x: 100, z: 0 }, 'left'), /300/);
   assert.throws(() => lineTemplate({ x: 0, z: 0 }, { x: 1000, z: 0 }, 'up'));
   assert.deepEqual(selectionEffect({ kind: 'floor', id: 'floor' }), { clearStructure: true });
+});
+
+test('dragging a run handle: ends stretch along the run, the middle moves the run, a twitch is nothing', () => {
+  assert.deepEqual(dragChange('end', 147, 900), { action: 'runStretch', form: { end: 'end', delta: 150 } });
+  assert.deepEqual(dragChange('start', -204, 0), { action: 'runStretch', form: { end: 'start', delta: 200 } });     // pulled to the left: longer
+  assert.deepEqual(dragChange('start', 96, 0), { action: 'runStretch', form: { end: 'start', delta: -100 } });
+  assert.deepEqual(dragChange('move', 333, -58), { action: 'runMove', form: { along: 330, out: -60, turn: 0 } });
+  assert.equal(dragChange('move', 3, -4), null);
+  assert.deepEqual(runModulesOf(byRuns, 'K1'), ['A1', 'K1']);
+  assert.equal(runModulesOf(spec, 'TD1'), null);
+  assert.equal(dragChange('end', 4, 500), null);
+  const made = dragChange('move', 200, 0);
+  assert.deepEqual(buildOp(made.action, 'A1', made.form, byRuns), { op: 'move-run', id: 'R1', changes: { x: -2800, z: 0 } });
 });

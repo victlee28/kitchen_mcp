@@ -167,6 +167,28 @@ export function lineTemplate(a, b, side, prompt = '') {
   return { kind: 'run-line', a: { x: a.x, z: a.z }, b: { x: b.x, z: b.z }, front, ...(prompt.trim() ? { prompt: prompt.trim() } : {}) };
 }
 
+/** Ids of the cabinets standing in the same explicit run as cabinet `id`; null when it is in none. */
+export function runModulesOf(spec, id) {
+  const m = spec?.module?.find((x) => x.id === id);
+  return m?.run ? spec.module.filter((x) => x.run === m.run).map((x) => x.id) : null;
+}
+
+export const guideText = (mm) => `Dãy tủ đang vẽ: ${Math.round(mm)} mm. Chuột phải vào sàn ở điểm cuối.`;
+
+export const DRAG_STEP = 10, DRAG_MIN = 10;      // mm: a drag is rounded to this step; a shorter one is a click, not a drag
+
+/** What a drag of a run handle asks for, from the movement of the pointer on the floor (mm along the run and towards the room):
+ *  the form `buildOp` takes, or null when the pointer hardly moved. `handle`: 'start' | 'end' (drag an end) or 'move' (the whole run). */
+export function dragChange(handle, along, out) {
+  const snap = (v) => Math.round(v / DRAG_STEP) * DRAG_STEP;
+  if (handle === 'move') {
+    const a = snap(along), o = snap(out);
+    return Math.abs(a) < DRAG_MIN && Math.abs(o) < DRAG_MIN ? null : { action: 'runMove', form: { along: a, out: o, turn: 0 } };
+  }
+  const delta = snap(handle === 'end' ? along : -along);      // pulling the start to the left makes the run longer
+  return Math.abs(delta) < DRAG_MIN ? null : { action: 'runStretch', form: { end: handle, delta } };
+}
+
 /** Where a ray meets the floor (y = 0), or null when it points away from it. Scene units in, scene units out. */
 export function floorPoint(origin, direction) {
   if (!(direction.y < -1e-9) || !(origin.y > 0)) return null;

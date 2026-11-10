@@ -131,7 +131,7 @@ export function buildKitchen(doc, THREE, opts = {}) {
     if (m.visible === false) continue;
     const rg = m.placement?.runId && m.localTransform ? runGroups.get(m.placement.runId) : null;
     const g = place(new THREE.Group(), rg ? m.localTransform : m.transform);
-    g.name = m.id; g.userData = { module: m.sourceRef || m.id, moduleId: m.id };
+    g.name = m.id; g.userData = { module: m.sourceRef || m.id, moduleId: m.id, width: m.dimensions?.width || 0, depth: m.dimensions?.depth || 0 };   // mm: the viewer's run handles need the footprint
     const info = { module: m.sourceRef || m.id };
     for (const p of m.parts || []) {
       const { group, mesh } = box(p.dimensions, material_text(p.materialId), p.transform, { ...info, role: p.role, semanticClass: p.semanticClass });
@@ -163,6 +163,20 @@ export function buildKitchen(doc, THREE, opts = {}) {
   // thiết bị, phụ kiện, trang trí dạng hộp
   for (const a of [...(doc.appliances || []), ...(doc.accessories || []), ...(doc.decorations || []).filter((d) => !d.path)]) {
     if (!a.dimensions) continue;
+    if (a.outline?.length >= 3) {       // a worktop that is not a box (the wedge closing a corner that is not square): its plan outline, extruded
+      const shape = new THREE.Shape();
+      a.outline.forEach((p, i) => (i ? shape.lineTo(p.x * s, p.z * s) : shape.moveTo(p.x * s, p.z * s)));
+      shape.closePath();
+      const thick = a.dimensions.height * s;
+      const sideMaterial = material_text(a.materialId).clone(); sideMaterial.side = THREE.DoubleSide;
+      const mesh = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, { depth: thick, bevelEnabled: false }), sideMaterial);
+      mesh.rotation.x = Math.PI / 2; mesh.position.y = thick;       // shape (x, y) -> plan (x, z); extruded downwards, so lift it by its thickness
+      mesh.castShadow = mesh.receiveShadow = true;
+      mesh.userData = { module: a.sourceRef || a.id, role: a.type, part: a.partRef };
+      const group = place(new THREE.Group(), a.transform);
+      group.name = a.id; group.add(mesh); root.add(group); pickables.push(mesh);
+      continue;
+    }
     const { group, mesh } = box(a.dimensions, material_text(a.materialId), a.transform, { module: a.sourceRef || a.id, role: a.type, part: a.partRef });
     group.name = a.id; root.add(group); pickables.push(mesh);
   }

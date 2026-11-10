@@ -1761,6 +1761,14 @@
           "type": "number",
           "description": "[Bổ sung v1.1 (VicKitchenCabinet)] Mặt đá: độ nhô trước"
         },
+        "outline": {
+          "type": "array",
+          "minItems": 3,
+          "items": {
+            "$ref": "#/$defs/vec3"
+          },
+          "description": "[Bổ sung v1.1 (VicKitchenCabinet)] Mặt đá không phải hình hộp (miếng nêm ở góc không vuông): đường bao trên mặt bằng, toạ độ theo transform (y bỏ qua); dày = dimensions.height, đáy ở transform.position.y. Có trường này thì dimensions chỉ là khối bao"
+        },
         "cutouts": {
           "type": "array",
           "items": {

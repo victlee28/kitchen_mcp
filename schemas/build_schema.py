@@ -206,6 +206,9 @@ def main():
     ac["partRef"] = PART_REF
     ac["edgeProfile"] = opt({"type": "string", "enum": ["square", "eased", "bevel", "bullnose", "ogee"]}, "Mặt đá: kiểu mép")
     ac["overhang"] = opt({"type": "number"}, "Mặt đá: độ nhô trước")
+    ac["outline"] = opt({"type": "array", "minItems": 3, "items": {"$ref": "#/$defs/vec3"}},
+                        "Mặt đá không phải hình hộp (miếng nêm ở góc không vuông): đường bao trên mặt bằng, toạ độ theo transform (y bỏ qua); "
+                        "dày = dimensions.height, đáy ở transform.position.y. Có trường này thì dimensions chỉ là khối bao")
     ac["cutouts"] = opt({"type": "array", "items": {"type": "object", "properties": {"forId": {"$ref": "#/$defs/id"},
                                                                                        "type": {"type": "string", "enum": ["sink", "cooktop", "faucet_hole"]},
                                                                                        "dimensions": {"$ref": "#/$defs/dimensions"},

@@ -22,7 +22,7 @@ export function createModuleMenu(ctx) {
   let lineFrom = null;      // first point of a run being drawn on the floor (mm); survives closing the menu, the second right click ends the line
   box.setAttribute('role', 'dialog'); box.hidden = true;
 
-  const close = () => { box.hidden = true; box.replaceChildren(); target = null; step = null; busy = false; attached = null; };
+  const close = () => { box.hidden = true; box.replaceChildren(); target = null; step = null; busy = false; attached = null; ctx.guide?.(lineFrom); };   // a line being drawn goes back to following the pointer
   const header = (text) => el('div', { class: 'ctx-head' }, text, el('button', { type: 'button', class: 'ctx-x', title: 'Đóng (Esc)', onclick: close }, '×'));
   const err = (text) => el('p', { class: 'ctx-msg bad', role: 'alert' }, text);
 
@@ -173,6 +173,7 @@ export function createModuleMenu(ctx) {
   // The second point of a drawn run: which side the doors look at, and optionally what stands in it; the server makes the run, the preview shows it.
   function lineForm(message = '', keep = {}) {
     const from = lineFrom; const to = { ...target.point };
+    ctx.guide?.(from, to);
     const len = Math.round(Math.hypot(to.x - from.x, to.z - from.z));
     const side = el('select', {}, el('option', { value: 'left' }, 'Bên trái hướng vẽ'), el('option', { value: 'right' }, 'Bên phải hướng vẽ'));
     side.value = keep.side || 'left';
@@ -325,10 +326,12 @@ export function createModuleMenu(ctx) {
 
   document.addEventListener('pointerdown', (e) => { if (!box.hidden && !box.contains(e.target) && !ctx.keepOpenOn?.(e.target)) close(); }, true);
   window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !box.hidden) { e.stopPropagation(); close(); } }, true);
-  window.addEventListener('design-opened', () => { lineFrom = null; if (!busy) close(); });
+  window.addEventListener('design-opened', () => { lineFrom = null; ctx.guide?.(null); if (!busy) close(); });
 
   return {
     open(t, x, y) { target = t; list(); place(x, y); box.querySelector('button:not(.ctx-x)')?.focus(); },
+    /** A run handle was dragged in the 3D view: the same previewed change the menu would make, shown where the drag ended. */
+    runDrag(change, at) { if (busy) return; target = { kind: 'module', id: change.module }; place(at.x, at.y); preview(change.action, () => change.form); },
     close, get isOpen() { return !box.hidden; },
   };
 }

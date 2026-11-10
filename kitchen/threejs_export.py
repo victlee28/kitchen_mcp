@@ -505,6 +505,16 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
                                 "dimensions": _dims(w, height, 8), "materialId": mats["wallTile"],
                                 "transform": _tf((fr.pos[0], c.countertop, fr.pos[2]), fr.rot), "sourceRef": f"wall-tile-{p.run or p.wall}"})
 
+    for i, wedge in enumerate(m for m in scene.meshes if m.type == "countertop"):      # the wedge of worktop that closes a corner which is not square
+        half = len(wedge.vertices) // 2                                                # a prism: the floor polygon first, then the same polygon at the top
+        ring = wedge.vertices[:half]
+        xs, zs = [v[0] for v in ring], [v[2] for v in ring]
+        accessories.append({"id": f"ACC-COUNTERTOP-CORNER-{i + 1}", "type": "Countertop", "assetId": "ASSET-COUNTERTOP",
+                            "dimensions": _dims(max(xs) - min(xs), c.countertop - c.baseTop, max(zs) - min(zs)),
+                            "transform": _tf((0, c.baseTop, 0), 0.0), "materialId": mats["countertop"], "edgeProfile": "eased",
+                            "outline": [_v(x, 0, z) for x, _, z in ring], "sourceRef": wedge.module,
+                            "partRef": {"kind": "countertop", "wall": "island"}})
+
     # phào: mặt cắt -> assets (dùng chung), đường chạy -> decorations
     from . import moldings as _mol
     decorations, assets = [], list(ASSETS)

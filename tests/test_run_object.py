@@ -152,6 +152,22 @@ class TestOpenCorner(unittest.TestCase):
         square = edit.apply_op(self.spec, {"op": "move-run", "id": "R2", "changes": {"yaw": -90}})
         self.assertFalse([m for m in geometry.compile_spec(square).meshes if m.type == "countertop"], "a square corner needs no wedge")
 
+    def test_the_wedge_is_in_the_exported_scene_as_an_outlined_worktop(self):
+        import json
+        import jsonschema
+        from kitchen import threejs_export
+        doc = threejs_export.export(self.spec)
+        (wedge,) = [a for a in doc["accessories"] if a.get("outline")]
+        self.assertEqual((wedge["type"], wedge["id"], len(wedge["outline"]) >= 3), ("Countertop", "ACC-COUNTERTOP-CORNER-1", True))
+        self.assertEqual((wedge["transform"]["position"]["y"], wedge["dimensions"]["height"]), (self.spec.common.baseTop, self.spec.common.countertop - self.spec.common.baseTop))
+        mesh = next(m for m in geometry.compile_spec(self.spec).meshes if m.type == "countertop")
+        self.assertEqual({(round(p["x"]), round(p["z"])) for p in wedge["outline"]}, {(round(v[0]), round(v[2])) for v in mesh.vertices})
+        schema = json.loads((ROOT / "schemas" / "kitchen-threejs.schema.json").read_text(encoding="utf-8"))
+        jsonschema.Draft202012Validator(schema).validate(doc)
+        self.assertEqual(threejs_export.integrity(doc), [])
+        square = edit.apply_op(self.spec, {"op": "move-run", "id": "R2", "changes": {"yaw": -90}})
+        self.assertFalse([a for a in threejs_export.export(square)["accessories"] if a.get("outline")])
+
     def test_moldings_turn_it_as_one_piece(self):
         spec = edit.apply_op(self.spec, {"op": "set-moldings", "moldings": [m.model_dump() for m in moldings.default_moldings(True, True)], "style": "Classic"})
         chains = moldings.compute_runs(spec)

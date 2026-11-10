@@ -2,7 +2,7 @@
 import { createViewer } from './kitchen-viewer.js';
 import { createStructureSelector } from './structure-select.js';
 import { createModuleMenu } from './module-menu.js';
-import { selectionEffect } from './menu-logic.js';
+import { guideText, runModulesOf, selectionEffect } from './menu-logic.js';
 import { createAssist } from './assist.js';
 import { $, el } from './dom.js';
 import { api, createStatus } from './api-client.js';
@@ -26,6 +26,8 @@ const viewer = createViewer({
   moduleIds: () => (state.spec ? state.spec.module.map((m) => m.id) : null),
   extraPickables: () => structSel.pickables(),
   onSceneBuilt: (k) => structSel.setScene(k.structures, k.structurePickables),
+  // the handles of the selected cabinet's run; a drag of one becomes a previewed change, like the menu's
+  runModules: (id) => runModulesOf(state.spec, id), onRunDrag: (change, at) => moduleMenu.runDrag(change, at), onGuide: (mm) => setStatus(guideText(mm)),
   // a left click while the popup is open: another object -> the popup moves to it; empty space -> it closes
   onPick: (target, at, menuTarget) => {
     applyTarget(target);
@@ -54,7 +56,7 @@ const moduleMenu = createModuleMenu({
   getState: () => ({ id: state.id, rev: state.rev, spec: state.spec }),
   afterChange: (res) => afterChange(res), reload: () => openDesign(state.id, true),
   structure: { hide: () => structSel.hideSelected(), isolate: () => structSel.isolateSelected(), showAll: () => structSel.showAll() },
-  imageEdit: (detail) => window.dispatchEvent(new CustomEvent('image-edit-request', { detail })),
+  imageEdit: (detail) => window.dispatchEvent(new CustomEvent('image-edit-request', { detail })), guide: (from, to) => viewer.setGuide(from, to),
 });
 createAssist({ setStatus, getState: () => ({ id: state.id, rev: state.rev, selected: state.selected }), afterChange: (res) => afterChange(res) });
 $('moduleActions').addEventListener('click', (ev) => { const r = ev.currentTarget.getBoundingClientRect(); if (state.selected) moduleMenu.open({ kind: 'module', id: state.selected }, r.left - 260, r.bottom + 4); });
