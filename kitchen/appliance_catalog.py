@@ -105,4 +105,14 @@ MODELS: tuple[dict, ...] = (
     {"id": "mw-builtin-38", "type": "oven", "name": "Lò vi sóng âm tủ", "energy": "electric", "size": {"w": 595, "d": 400, "h": 390},
      "niche": {"w": 562, "h": 380, "d": 350}, "mount": "built_in", "box": {"finish": "black-glass", "kind": "microwave"},
      "visual": {"finish": "black glass", "features": {"controls": "side touch panel"}}, "prompt": "built-in microwave with a black glass door and side touch panel"},
+    # ---- TVs (TV wall units, tv_system)
+    {"id": "tv-65", "type": "tv", "name": "Tivi 65 inch treo tường", "energy": "electric", "size": {"w": 1450, "d": 30, "h": 830}, "mount": "wall", "default": True,
+     "box": {"finish": "black-glass", "kind": "tv"}, "visual": {"finish": "thin black bezel, dark glossy screen (switched off)", "features": {"stand": "none, wall bracket"}},
+     "prompt": "65-inch flat-screen television mounted flat on the wall, thin black bezel, screen switched off and dark"},
+    {"id": "tv-55", "type": "tv", "name": "Tivi 55 inch treo tường", "energy": "electric", "size": {"w": 1230, "d": 30, "h": 710}, "mount": "wall",
+     "box": {"finish": "black-glass", "kind": "tv"}, "visual": {"finish": "thin black bezel, dark glossy screen (switched off)", "features": {"stand": "none, wall bracket"}},
+     "prompt": "55-inch flat-screen television mounted flat on the wall, thin black bezel, screen switched off and dark"},
+    {"id": "tv-43", "type": "tv", "name": "Tivi 43 inch treo tường", "energy": "electric", "size": {"w": 960, "d": 30, "h": 560}, "mount": "wall",
+     "box": {"finish": "black-glass", "kind": "tv"}, "visual": {"finish": "thin black bezel, dark glossy screen (switched off)", "features": {"stand": "none, wall bracket"}},
+     "prompt": "43-inch flat-screen television mounted flat on the wall, thin black bezel, screen switched off and dark"},
 )

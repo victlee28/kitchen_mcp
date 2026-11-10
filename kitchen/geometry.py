@@ -8,14 +8,14 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from .numeric import round_half_away
-from . import camera_plan, roomctx, runs as runmod, structure_mesh
+from . import camera_plan, roomctx, runs as runmod, structure_mesh, tv_system
 from .spec import ViewAngle, KitchenSpec, Module, effective_handle, to_data
 from .errors import InvalidInput, require
 
 COLORS = {  # màu hiển thị theo loại chi tiết (viewer 3D, mask ngữ nghĩa)
     "carcass": "#d9c3a0", "plinth": "#5b5348", "door": "#c8a273", "glass-door": "#9fc7d8", "drawer": "#b98f5e",
     "side-panel": "#c19a6b", "shelf": "#a77f55", "countertop": "#f1f0ec", "fridge": "#c9ccd1", "sink": "#2f3236",
-    "faucet": "#8a8f96", "cooktop": "#121212", "hood": "#6f747a", "oven": "#3a3d42", "wall": "#ece7de", "floor": "#bdb4a6",
+    "faucet": "#8a8f96", "cooktop": "#121212", "tv": "#0b0d10", "hood": "#6f747a", "oven": "#3a3d42", "wall": "#ece7de", "floor": "#bdb4a6",
     "molding": "#a87542", "handle": "#2b2b2b", "wall-tile": "#dedbd4",
     "structure-wall": "#E7E2D5", "structure-column": "#F2B65D", "structure-opening": "#55C6A9", "structure-furniture": "#D38662",
     "structure-shaft": "#8C83D6", "structure-stair": "#CFAE52", "structure-area": "#7D9EAA", "structure-swing": "#9AD9C6",  # = floorplan.STRUCTURE_COLORS
@@ -301,6 +301,8 @@ class _Builder:
         for key in sorted({(m.offset, m.facing or "-z") for m in self.spec.module if m.wall == "island" and not m.run and m.storey == "base"}):
             groups.append(("island", key))
         for r in self.spec.runs:
+            if tv_system.is_tv_run(r):      # a TV unit: its console has its own top, no worktop and no wall tile
+                continue
             if any(m.run == r.id and m.storey == "base" for m in self.spec.module):
                 groups.append(("island", r.id))
         for wall, z in groups:
@@ -398,6 +400,12 @@ class _Builder:
                 w, h = k[:2]
                 sc = m.fromCorner + m.width / 2
                 self.box(tb.id, "hood", m.wall, sc - w / 2, sc + w / 2, 0, m.depth, m.y - h, m.y)
+            elif tb.type == "tv" and m and len(k) >= 2:      # a flat TV on the wall above its console, centred on ``center`` (along the run)
+                w, h = k[:2]
+                sc = tb.center if tb.center is not None else m.fromCorner + m.width / 2
+                d = k[2] if len(k) >= 3 else tv_system.TV_DEPTH
+                y0 = max(m.y + m.height + 100.0, tv_system.TV_CENTER - h / 2)
+                self.box(tb.id, "tv", m.wall, sc - w / 2, sc + w / 2, 0, d, y0, y0 + h)
             elif tb.type in ("sink", "cooktop", "faucet") and (at := runmod.spot(self.spec, tb)) is not None:
                 host = m if tb.wall is None else None                      # placed by its module: it stands in that module's row
                 wall = tb.wall or (host.wall if host else "back")

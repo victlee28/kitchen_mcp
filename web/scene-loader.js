@@ -342,6 +342,7 @@ export function applianceDecor(box, dims) {
   }
   if (box.doors === 2) out.push({ kind: 'slot', x: w / 2, y: h * 0.38, z: d + 1, w: w - 20, h: 8, color: 0x2a2a2a });
   if (box.doors === 'sbs') out.push({ kind: 'slot', x: w / 2, y: h / 2, z: d + 1, w: 8, h: h - 20, color: 0x2a2a2a });
+  if (box.kind === 'tv') out.push({ kind: 'slot', x: w / 2, y: h / 2, z: d + 1, w: w - 24, h: h - 24, color: 0x0a0d14 });   // the screen inside a thin bezel
   if (box.kind === 'oven' || box.kind === 'microwave') out.push({ kind: 'slot', x: w / 2, y: h * 0.45, z: d + 1, w: w * 0.8, h: h * 0.55, color: 0x050505 });
   return out;
 }

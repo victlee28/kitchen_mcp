@@ -187,7 +187,7 @@ def fit_depth(modules: list[dict[str, Any]], depth: float) -> list[dict[str, Any
 
 
 def plan_replace(spec: KitchenSpec, element: str, placed: list[Any], laid: list[list[dict[str, Any]]],
-                 after: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+                 after: list[dict[str, Any]] | None = None, purpose: str | None = None) -> dict[str, Any]:
     """The operation that replaces floorplan element ``element`` with cabinets: one run per ``placed`` (``wall_line.Placed``) holding
     ``laid[i]`` (cabinets as ``plan_on_line`` takes them, already as deep as they should be), each run in system ``element``; then the
     cabinets made against that element before (its old system) are removed, and the element is marked replaced (no longer built).
@@ -201,10 +201,10 @@ def plan_replace(spec: KitchenSpec, element: str, placed: list[Any], laid: list[
     summary: list[str] = []
     current = spec
     for p, modules in zip(placed, laid):
-        plan = plan_on_line(current, Line(p.a, p.b, p.doors), modules, system=element)
+        plan = plan_on_line(current, Line(p.a, p.b, p.doors), modules, system=element, purpose=purpose)
         ops.append(plan["operation"])
         made.append(plan["run"])
-        summary.append(f"Run {plan['run']['id']}: {len(modules)} cabinets, {p.length:.0f} mm long, {p.depth:.0f} mm deep, back on edge {p.edge} against the wall")
+        summary.append(f"Run {plan['run']['id']}{' (TV unit)' if purpose == 'tv' else ''}: {len(modules)} cabinets, {p.length:.0f} mm long, {p.depth:.0f} mm deep, back on edge {p.edge} against the wall")
         current = apply_op(current, {"op": "add-run", "run": plan["run"]})
     old_system = runmod.systems(spec)
     old = [m.id for m in spec.module if old_system.get(m.id) == element]

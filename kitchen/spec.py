@@ -108,7 +108,10 @@ class Room(_Base):
 class Run(_Base):
     """An explicit straight run of cabinets standing at any angle. Local axes: s along the run (fromCorner of its modules), d from the back of the
     cabinets to their door face. World = (x, z) + s * (cos yaw, -sin yaw) + d * (sin yaw, cos yaw), yaw in degrees as in three.js rotation.y
-    (yaw 0: doors look at +z, s grows towards +x; yaw 180: doors look at -z, s grows towards -x)."""
+    (yaw 0: doors look at +z, s grows towards +x; yaw 180: doors look at -z, s grows towards -x).
+
+    Optional extra field ``purpose``: ``"tv"`` for a TV wall unit (``tv_system``): no worktop, wall tile or kitchen rule. Left out (not
+    declared) for kitchen runs, so the data of existing designs does not change."""
     id: str
     x: float = Field(default=0, description="World x of the run origin (s = 0, d = 0), mm, kitchen frame")
     z: float = Field(default=0, description="World z of the run origin, mm, kitchen frame")
@@ -218,7 +221,7 @@ class Module(_Base):
 class Appliance(_Base):
     id: str
     name: str = ""
-    type: Literal["fridge", "sink", "faucet", "cooktop", "hood", "oven", "light", "other"] = "other"
+    type: Literal["fridge", "sink", "faucet", "cooktop", "hood", "oven", "light", "tv", "other"] = "other"
     dimensions: str | None = None
     position: str | None = None
     module: str | None = Field(default=None, description="Module chứa thiết bị")

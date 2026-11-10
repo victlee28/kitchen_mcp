@@ -8,7 +8,7 @@ import re
 import os
 from pathlib import Path
 from typing import Any, Callable
-from . import appliance_models, cabinet_run, run_line, run_template, runs, system_replace, wall_line, edit, edit_intent, geometry, intent, llm, recognition, regions, roomctx, render, rules, threejs_export
+from . import appliance_models, cabinet_run, run_line, run_template, runs, system_replace, tv_system, wall_line, edit, edit_intent, geometry, intent, llm, recognition, regions, roomctx, render, rules, threejs_export
 from .intent import KitchenTemplate as KitchenTemplate
 from .spec import Common, KitchenSpec, Room, Wall, dump_spec, load_spec, to_data
 from .store import ConflictError, Store
@@ -349,7 +349,8 @@ class KitchenService:
         if struct is None:
             raise NotFound(f"No such object: {structure_id}", code='structure-not-found')
         element = runs.system_id(struct.get('sourceElement') or str(struct['id']).removeprefix('STRUCT-'))
-        described = intent.parse_prompt(prompt) if prompt and prompt.strip() else None
+        tv = tv_system.asks_tv(prompt)           # "tạo hệ tủ tivi": a TV unit, not kitchen cabinets
+        described = intent.parse_prompt(prompt) if prompt and prompt.strip() and not tv else None
 
         def planner(place: Any) -> dict:
             walls = self._walls(ctx, place)
@@ -363,7 +364,9 @@ class KitchenService:
             after: list[dict[str, Any]] = []
             for i, p in enumerate(placed):
                 length = p.length // 10 * 10
-                if described is None:
+                if tv:
+                    modules = tv_system.layout(length, to_data(spec)['common']) if i == 0 else tv_system.console(length)
+                elif described is None:
                     modules = run_line.base_cabinets(length, to_data(spec)['common'])
                 else:
                     color, _ = described
@@ -377,7 +380,7 @@ class KitchenService:
                             changes['material'] = {**spec.common.material, **changes['material']}
                         after = [{'op': 'common', 'changes': changes}]
                 laid.append(cabinet_run.fit_depth(modules, round(p.depth)))
-            plan = cabinet_run.plan_replace(spec, element, placed, laid, after)
+            plan = cabinet_run.plan_replace(spec, element, placed, laid, after, purpose=tv_system.PURPOSE if tv else None)
             notes = [n for n in (described[1] if described else []) if 'chiều dài' not in n]
             return {**plan, 'element': element, 'summary': [*plan['summary'], *notes]}
 
@@ -496,7 +499,8 @@ class KitchenService:
                 raise InvalidInput(f'template.{key} needs numeric x and z (mm, room frame)', code='bad-line')
             pts[key] = (float(p['x']), float(p['z']))
         prompt = template.get('prompt')
-        described = intent.parse_prompt(prompt) if isinstance(prompt, str) and prompt.strip() else None
+        tv = isinstance(prompt, str) and tv_system.asks_tv(prompt)
+        described = intent.parse_prompt(prompt) if isinstance(prompt, str) and prompt.strip() and not tv else None
 
         scene = geometry.compile_spec(spec)
         ctx = roomctx.for_spec(spec, scene.lsau, scene.lphai)
@@ -509,7 +513,10 @@ class KitchenService:
                 if against:
                     note = ['The line runs along a wall: the backs of the cabinets face the wall'] if doors != line.normal else []
                     line = run_line.Line(line.a, line.b, doors)
-            if described is not None:
+            if tv:
+                plan = run_line.plan_on_line(spec, line, tv_system.layout(run_line.run_frame(line)['length'], to_data(spec)['common']),
+                                             purpose=tv_system.PURPOSE)
+            elif described is not None:
                 color, notes = described
                 if not color.country and country:
                     color = color.model_copy(update={'country': country})

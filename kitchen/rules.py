@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from itertools import combinations
 
-from . import appliance_models, knowledge_seed, moldings, regions, rules_kb, runs
+from . import appliance_models, knowledge_seed, moldings, regions, rules_kb, runs, tv_system
 from .errors import require
 from .spec import KitchenSpec, Module
 
@@ -74,12 +74,13 @@ def check_geometry(spec: KitchenSpec) -> list[dict]:
         elif _overlap((mn, mx), (nn, nx)) > 0:
             issues.append(_issue("GEO-COLLISION", "error", [id, mb], f"{id} và {mb} chồng lên nhau"))
     tier_level = {"base": c.baseTop, "upper": c.upperTierSplit, "loft": c.cabinetTop, "tall": c.cabinetTop, "corner": None}
+    tv = tv_system.tv_modules(spec)          # a TV unit keeps its own heights (low console, floating shelf)
     for m in spec.module:
         top = m.y + m.height
-        lim = tier_level[m.storey]
+        lim = None if m.id in tv else tier_level[m.storey]
         if lim is not None and abs(top - lim) > TOL:
             issues.append(_issue("GEO-HEIGHTS", "warning", [m.id], f"{m.id}: đỉnh {top:g} lệch cao độ tầng {m.storey} ({lim:g})", top, lim))
-        if m.storey == "upper" and m.type != "upper-hood" and abs(m.y - c.upperBottom) > TOL:
+        if m.storey == "upper" and m.type != "upper-hood" and m.id not in tv and abs(m.y - c.upperBottom) > TOL:
             issues.append(_issue("GEO-HEIGHTS", "warning", [m.id], f"{m.id}: đáy {m.y:g} khác dayTuTren {c.upperBottom:g}", m.y, c.upperBottom))
         if m.doors:
             total = sum(m.doors) + m.blindCorner + m.endPanel
@@ -161,7 +162,8 @@ def validate(spec: KitchenSpec, kb_rules: list[dict] | None = None, country: str
     qg, kv = regions.normalize(country or spec.country, region or spec.region)
     rows = default_rows() if kb_rules is None else kb_rules
     sel = rules_kb.select(rows, qg, kv)
-    issues = check_geometry(spec) + rules_kb.check(spec, sel) + moldings.check(spec) + appliance_models.check(spec)
+    kitchen = tv_system.kitchen_only(spec)       # kitchen rules (worktop, depths, appliances...) do not look at TV units
+    issues = check_geometry(spec) + rules_kb.check(kitchen, sel) + moldings.check(spec) + appliance_models.check(kitchen)
     if not (qg or kv):
         issues.append({"rule": "VUNG", "severity": "info", "module": [], "content": "Chưa chọn quốc gia/khu vực (spec.quocGia): "
                        "chỉ tiêu chuẩn toàn cầu được áp, tiêu chuẩn của các nước chỉ để tham khảo"})

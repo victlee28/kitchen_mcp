@@ -58,6 +58,15 @@ returns `systems: {module: {system, tier, storey}}`; the page never works them o
 - Template `{"kind": "replace-appliance", "id", "model"?, "prompt"?, "resizeHost"?}`; op `update-appliance`; rules `APPLIANCE-MODEL-FIT`,
   `HOOD-WIDTH` (only for appliances that carry a model, so old designs show nothing new).
 
+## TV wall units (hệ tủ tivi, 10/11/2026)
+- Right-click a piece of furniture (e.g. "Vách TV") and type "tạo hệ tủ tivi" (also "kệ tivi", "tủ TV") in the command box, or give that
+  sentence for a drawn line: the object is replaced by a TV unit along its wall edge — a low console with drawers (450 mm) between two tall
+  columns at the ends (lines from 2.4 m), the open TV niche with a wall-mounted TV (65" / 55" / 43" by the niche width) and a floating shelf
+  above it. Base and tall cabinets take the object's depth, as for kitchen cabinets.
+- The run carries `purpose: "tv"` (`kitchen/tv_system.py`): no worktop or wall tile, kitchen rules skip it, the TV is an appliance of type
+  `tv` (catalog `tv-65/55/43`, exported as `Television`, `wall_mounted`), and the image prompt describes a TV wall unit (a living room when
+  the design holds nothing else). Swapping the TV size goes through the appliance popup ("đổi sang tivi 55").
+
 ## Tests of the web app
 - `tests/js/*.test.mjs` (run by `test_web_logic`): pure logic (`menu-logic`, `assist-logic`, `design-logic`) and `web-architecture` (no module imports `app.js`, no import cycles, `window.kitchen` only assigned by `app.js`).
 - `tests/browser/smoke_web.py`: real-Chromium smoke test of the main flows (open, select, edit, undo, add/remove, right-click menu, free command, render, AI JSON, image tab). Needs `pip install playwright` and a launchable Chromium; prints SKIP and exits 0 without Playwright. Run it before and after every step of splitting `app.js` (plan: `claude/ke-hoach-tach-app-js.md` in the project docs).

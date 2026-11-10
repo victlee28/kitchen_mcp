@@ -199,6 +199,7 @@ def main():
 
     # thiết bị, phụ kiện
     apply = D["appliance"]["properties"]
+    apply["type"]["enum"] = [*apply["type"]["enum"], "Television"]          # TV wall units (kitchen/tv_system.py)
     apply["sourceRef"] = opt({"type": "string"}, "Mã thiết bị trong KitchenSpec")
     apply["parentModuleId"] = opt({"$ref": "#/$defs/id"}, "Module chứa thiết bị")
     apply["energy"] = opt({"type": "string", "enum": ["electric", "induction", "gas", "mixed", "none"]}, "Nguồn năng lượng")

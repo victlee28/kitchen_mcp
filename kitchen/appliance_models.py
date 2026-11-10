@@ -19,7 +19,7 @@ BY_ID: dict[str, dict] = {m["id"]: m for m in MODELS}
 SIDE = 18.0              # mm: cabinet side panel; a hole must fit between the two
 WORKTOP_EDGE = 50.0      # mm: worktop left in front of and behind a hole
 HOOD_SIDE = 10.0         # mm: an integrated hood needs this much room each side inside its cabinet
-TYPES = ("cooktop", "sink", "faucet", "hood", "fridge", "oven")
+TYPES = ("cooktop", "sink", "faucet", "hood", "fridge", "oven", "tv")
 
 
 def model(model_id: str) -> dict:
@@ -207,7 +207,8 @@ def energy_notes(app: Appliance, m: dict) -> list[str]:
 def where(spec: KitchenSpec, app: Appliance) -> str:
     h = host(spec, app)
     place = {"cooktop": "built into the worktop above", "sink": "set into the worktop above", "faucet": "on the worktop behind the sink above",
-             "hood": "inside the wall cabinet", "fridge": "in the tall cabinet", "oven": "built into the cabinet"}.get(app.type, "in")
+             "hood": "inside the wall cabinet", "fridge": "in the tall cabinet", "oven": "built into the cabinet",
+             "tv": "on the wall above the TV console"}.get(app.type, "in")
     return f"{place} {h.id} ({h.name or h.type})" if h is not None else "at its place in the kitchen"
 
 

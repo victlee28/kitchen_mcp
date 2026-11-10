@@ -1,7 +1,7 @@
 """Prompt text for one layer / one scene: the English style sentence of the whole kitchen and the sentence for one edited part."""
 from __future__ import annotations
 
-from .. import lexicon, vocab
+from .. import lexicon, tv_system, vocab
 from ..layers import ROLES
 from ..spec import KitchenSpec
 
@@ -22,8 +22,15 @@ def global_prompt(spec: KitchenSpec) -> str:
     if wall_tile and wall_tile != "Đá ốp tường đồng bộ mặt bàn" and vocab.to_english(wall_tile):
         mats = ", ".join(x for x in (mats, f"backsplash {vocab.to_english(wall_tile)}") if x)
     extra = ", ".join(dict.fromkeys([*lexicon.tag_phrases(spec.styleTags), *(spec.aiHints or [])]))
-    return (f"photorealistic interior photograph of a {style} kitchen, {mats}, "
+    only_tv = bool(spec.module) and all(m.id in tv_system.tv_modules(spec) for m in spec.module)
+    tv = (TV_UNIT + ", ") if tv_system.tv_runs(spec) else ""
+    room = f"a {style} living room with " if only_tv else f"a {style} kitchen, "
+    return (f"photorealistic interior photograph of {room}{tv}{mats}, "
             + (f"{extra}, " if extra else "") + "realistic materials, sharp details, architectural photography").replace(", ,", ",")
+
+
+TV_UNIT = ("a built-in TV wall unit: a low wall-to-wall media console with drawers and no stone top, an open TV niche above it "
+           "with a flat TV mounted on the wall, tall storage columns at both ends and a slim floating open shelf above the TV")
 
 
 def layer_prompt(spec: KitchenSpec, layer: dict, instruction: str = "", material: str | None = None) -> str:

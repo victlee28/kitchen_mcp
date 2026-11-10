@@ -26,7 +26,7 @@ TIER = {"base": "base", "upper": "wall", "loft": "top", "tall": "tall", "corner"
 MODULE_TYPE = {"base": "base_cabinet", "upper": "wall_cabinet", "loft": "wall_cabinet", "tall": "tall_pantry", "corner": "open_shelf"}
 SEMANTIC = {"carcass": "carcass", "plinth": "plinth", "door": "door", "glass-door": "glass_door", "drawer": "drawer", "side-panel": "panel",
             "shelf": "shelf", "countertop": "countertop", "fridge": "refrigerator", "sink": "sink", "faucet": "faucet", "cooktop": "cooktop",
-            "hood": "range_hood", "oven": "microwave", "wall": "wall", "floor": "floor", "wall-tile": "backsplash", "handle": "handle",
+            "hood": "range_hood", "oven": "microwave", "tv": "television", "wall": "wall", "floor": "floor", "wall-tile": "backsplash", "handle": "handle",
             "molding": "molding"}
 
 
@@ -449,7 +449,7 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
     run_docs = _run_docs(spec, modules)
 
     # thiết bị & phụ kiện
-    app_type = {"fridge": "Refrigerator", "hood": "Range_Hood_Insert", "oven": "BuiltIn_Oven"}
+    app_type = {"fridge": "Refrigerator", "hood": "Range_Hood_Insert", "oven": "BuiltIn_Oven", "tv": "Television"}
     appliances, accessories = [], []
     for tb in spec.appliances:
         ps = by_mod.get(tb.id, [])
@@ -471,9 +471,9 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
             t = ("Cooktop_Gas" if energy in ("gas", "mixed") else "Cooktop_Induction") if tb.type == "cooktop" else \
                 ("Microwave" if cat.get("box", {}).get("kind") == "microwave" else "BuiltIn_Oven") if tb.type == "oven" else app_type[tb.type]
             a = {"id": f"APP-{tb.id}", "type": t, "name": tb.name or tb.id, "assetId": "ASSET-APPLIANCE-BOX", "dimensions": dims,
-                 "transform": _tf(fr.pos, fr.rot), "materialId": mats["cooktop"] if tb.type == "cooktop" else mats["inox"], "sourceRef": tb.id,
+                 "transform": _tf(fr.pos, fr.rot), "materialId": mats["cooktop"] if tb.type in ("cooktop", "tv") else mats["inox"], "sourceRef": tb.id,
                  "energy": energy or ("induction" if tb.type == "cooktop" else "electric"),
-                 "installation": {"mountType": {"fridge": "freestanding", "cooktop": "built_in", "hood": "built_in", "oven": "built_in"}[tb.type]}, **look}
+                 "installation": {"mountType": {"fridge": "freestanding", "cooktop": "built_in", "hood": "built_in", "oven": "built_in", "tv": "wall_mounted"}[tb.type]}, **look}
             if cat.get("asset3d"):
                 a["modelUrl"] = cat["asset3d"]
             if host:
