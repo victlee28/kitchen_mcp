@@ -87,14 +87,14 @@ def check_geometry(spec: KitchenSpec) -> list[dict]:
             if L and m.endAt > L + TOL:
                 issues.append(_issue("GEO-WALL", "error", [m.id], f"{m.id} vượt chiều dài tường {m.wall} ({m.endAt:g} > {L:g})", m.endAt, L))
     if spec.room and not isinstance(getattr(spec, "floorplan", None), dict):      # explicit runs against the drawn room (an imported plan has its own walls)
-        back, right = spec.room.length("back"), spec.room.length("right")
+        back = spec.room.length("back")
         for m in spec.module:
             fr = runs.frame_of(spec, m)
             if fr is None:
                 continue
             pts = runs.module_footprint(fr, m)
-            over = max([-x - back for x, _ in pts] if back else [0.0]) if back else 0.0
-            over = max(over, max(z - right for _, z in pts) if right else 0.0, max(x for x, _ in pts), max(-z for _, z in pts))
+            over = max(-x - back for x, _ in pts) if back else 0.0        # along the back wall; how deep the room is, the walls' lengths do not say
+            over = max(over, max(x for x, _ in pts), max(-z for _, z in pts))
             if over > TOL:
                 issues.append(_issue("GEO-WALL", "error", [m.id], f"{m.id} vượt ra ngoài phòng {over:g} mm (dãy {m.run})", over, 0))
     if c.cabinetTop > c.ceiling + TOL:

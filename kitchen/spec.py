@@ -261,7 +261,7 @@ class Molding(_Base):
     id: str = Field(pattern=r"^[A-Za-z0-9_.:-]+$")
     variant: Literal["crown", "base"] = Field(description="crown = phào nóc theo đỉnh tủ; base = phào chân theo sàn")
     profile: str
-    wall: list[Literal["back", "right", "left"]] = Field(default_factory=list, description="Trống = mọi tường có tủ")
+    wall: list[str] = Field(default_factory=list, description="Trống = mọi tường / dãy có tủ; else wall names (back, right, left) and ids of explicit runs")
     joinGap: float = Field(default=50, ge=0, description="Khe giữa hai tủ ≤ giá trị này thì phào chạy liền qua")
     openEnd: Literal["return-to-wall", "flat-cut"] = Field(default="return-to-wall", description="Đầu hở: quay về tường hoặc cắt phẳng")
     material: str | None = Field(default=None, description="Trống = vật liệu cánh của tầng tủ tương ứng")

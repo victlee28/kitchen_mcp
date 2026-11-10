@@ -132,6 +132,14 @@ def _run_items(spec: KitchenSpec, mol: Molding, run_id: str, y: float) -> list[t
             if m.run == run_id and m.y == 0 and (m.storey == "base" or (m.storey == "tall" and not m.niche))]
 
 
+def _butts(fr: "runmod.RunFrame", s: float) -> bool:
+    """Whether a run's end at ``s`` stands in the back-right corner of the kitchen frame, against the wall it runs into (a run along the back
+    wall ending at x = 0, a run along a side wall ending at z = 0): there a molding stops at the wall instead of returning to its own."""
+    x, z = fr.to_world(s, 0.0)
+    nx, nz = fr.normal()
+    return (abs(nx) < 1e-6 and abs(x) <= 1.0 and abs(z) <= 1.0) or (abs(nz) < 1e-6 and abs(z) <= 1.0 and (abs(x) <= 1.0 or nx > 0))
+
+
 def _angled_runs(spec: KitchenSpec, mol: Molding, prof: MoldingProfile, y: float) -> list[Run]:
     """Moldings along the explicit runs (any angle). Points are walked against s (the run frame is mirror-wise like the right wall).
 
@@ -152,9 +160,9 @@ def _angled_runs(spec: KitchenSpec, mol: Molding, prof: MoldingProfile, y: float
             prev_n = segs[i - 1] if i > 0 and sg["s0"] - segs[i - 1]["s1"] <= mol.joinGap else None
             next_n = segs[i + 1] if i + 1 < len(segs) and segs[i + 1]["s0"] - sg["s1"] <= mol.joinGap else None
             d = sg["d"]
-            dr = _end_depth(sg, prev_n, mol.openEnd)
+            dr = None if prev_n is None and _butts(fr, sg["s0"]) else _end_depth(sg, prev_n, mol.openEnd)
             start = [(sg["s0"], d)] if dr is None or abs(dr - d) < 1 else [(sg["s0"], dr), (sg["s0"], d)]
-            dr = _end_depth(sg, next_n, mol.openEnd)
+            dr = None if next_n is None and _butts(fr, sg["s1"]) else _end_depth(sg, next_n, mol.openEnd)
             end = [(sg["s1"], d)] if dr is None or abs(dr - d) < 1 else [(sg["s1"], d), (sg["s1"], dr)]
             chains[(r.id, i)] = {"fr": fr, "start": start, "end": end, "mods": sg["mods"], "runs": [r.id], "d": d, "s0": sg["s0"], "s1": sg["s1"]}
             order.append((r.id, i))

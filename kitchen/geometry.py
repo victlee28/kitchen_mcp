@@ -127,6 +127,35 @@ def _run_reach(spec: KitchenSpec) -> tuple[float, float]:
     return max((-x for x, _ in pts), default=0.0), max((z for _, z in pts), default=0.0)
 
 
+def run_wall(fr: "runmod.RunFrame", lsau: float) -> str | None:
+    """The wall of the kitchen frame (back / right / left) an explicit run has its back against, None when it stands free."""
+    nx, nz = fr.normal()
+    if abs(nx) < 1e-6 and nz > 0 and abs(fr.z) < 1.0:
+        return "back"
+    if abs(nz) < 1e-6 and nx < 0 and abs(fr.x) < 1.0:
+        return "right"
+    if abs(nz) < 1e-6 and nx > 0 and abs(fr.x + lsau) < 1.0:
+        return "left"
+    return None
+
+
+def wall_reach(spec: KitchenSpec, lsau: float) -> dict[str, float]:
+    """How far the cabinets reach along each wall that has any, measured from the back corner as the walls are (mm): the cabinets that follow the
+    wall and those of explicit runs standing against it."""
+    out: dict[str, float] = {}
+    for m in spec.module:
+        if m.wall in ("back", "right", "left"):
+            out[m.wall] = max(out.get(m.wall, 0.0), m.endAt)
+    for m in spec.module:
+        fr = runmod.frame_of(spec, m)
+        wall = run_wall(fr, lsau) if fr is not None else None
+        if fr is None or wall is None:
+            continue
+        pts = fr.footprint(m.fromCorner, m.endAt, 0.0, m.depth)
+        out[wall] = max(out.get(wall, 0.0), max(-x for x, _ in pts) if wall == "back" else max(z for _, z in pts))
+    return out
+
+
 class _Builder:
     def __init__(self, spec: KitchenSpec):
         self.spec = spec
@@ -168,17 +197,7 @@ class _Builder:
         self.parts.append(Part(f"{key}-{self._n[key]}", module, type, mn, mx, wall, face=face if wall == "island" else None))
 
     def wall_behind(self, fr: "runmod.RunFrame") -> str | None:
-        """The wall of the drawn room (back / right / left) an explicit run has its back against, None when it stands free or the room is an imported plan."""
-        if isinstance(getattr(self.spec, "floorplan", None), dict):
-            return None
-        nx, nz = fr.normal()
-        if abs(nx) < 1e-6 and nz > 0 and abs(fr.z) < 1.0:
-            return "back"
-        if abs(nz) < 1e-6 and nx < 0 and abs(fr.x) < 1.0:
-            return "right"
-        if abs(nz) < 1e-6 and nx > 0 and abs(fr.x + self.lsau) < 1.0:
-            return "left"
-        return None
+        return run_wall(fr, self.lsau)
 
     def door_widths(self, m: Module, s0, s1, y0, y1, type="door"):
         """Chia dải mặt trước [s0,s1]x[y0,y1] thành cánh theo tỉ lệ m.canh, chừa khe."""
@@ -315,7 +334,7 @@ class _Builder:
             if not other or last[1] >= joint.at - 1:
                 continue
             reach = max(m.depth for m in other) + c.countertopOverhang          # how far the other run's worktop covers, measured back from the corner
-            if joint.at - last[1] <= reach + 1 and other[0].fromCorner <= last[2] + c.countertopOverhang + 1:
+            if joint.at - last[1] <= reach + 1 and 1 < other[0].fromCorner <= last[2] + c.countertopOverhang + 1:    # b starting AT the corner fills it itself
                 last[1] = joint.at
 
     def corner_tops(self) -> list:
@@ -484,7 +503,12 @@ def cabinet_faces(spec: KitchenSpec, scene: Scene) -> list[camera_plan.Face]:
         if mods:
             fr = runmod.RunFrame(run.id, run.x, run.z, run.yaw)
             (ox, oz), (nx, nz) = fr.to_world(0, 0), fr.to_world(0, 1)
-            face(f"run-{run.id}", f"Chính diện dãy tủ {run.id}", mods, lambda lo, hi, d, fr=fr: fr.to_world((lo + hi) / 2, d), (nx - ox, nz - oz))
+            wall = run_wall(fr, scene.lsau)
+            if wall is not None and not any(f.key == f"{wall}-wall" for f in faces):     # a run standing against a wall is that wall's front
+                key, name = f"{wall}-wall", {"back": "Chính diện tường sau", "right": "Chính diện tường phải", "left": "Chính diện tường trái"}[wall]
+            else:
+                key, name = f"run-{run.id}", f"Chính diện dãy tủ {run.id}"
+            face(key, name, mods, lambda lo, hi, d, fr=fr: fr.to_world((lo + hi) / 2, d), (nx - ox, nz - oz))
     return faces
 
 
@@ -520,20 +544,21 @@ def default_views(spec: KitchenSpec, scene: Scene | None = None) -> dict[str, Vi
         "overhead": ViewAngle(name="Toàn cảnh từ trên", position=(cx - span * 0.8, 3.8, cz + span * 0.9), lookAt=(cx, 0.6, cz), verticalFov=50),
         "plan": ViewAngle(name="Mặt bằng", position=(cx, 6.5, cz + 0.001), lookAt=(cx, 0, cz), verticalFov=36),
     }
-    if any(m.wall == "left" for m in spec.module):  # chữ U: ba mặt kín, máy ảnh phải đứng ở phía hở (z lớn) mới nhìn thấy cả ba dãy
+    reach = wall_reach(spec, scene.lsau)
+    if "left" in reach:  # chữ U: ba mặt kín, máy ảnh phải đứng ở phía hở (z lớn) mới nhìn thấy cả ba dãy
         zfront = hi[2] / 1000
         views["perspective"] = ViewAngle(name="Phối cảnh chéo", position=(cx + w * 0.3, 1.6, zfront + span * 0.55), lookAt=(cx, 1.0, cz * 0.8), verticalFov=70)
         views["overhead"] = ViewAngle(name="Toàn cảnh từ trên", position=(cx, 3.8, zfront + span * 0.35), lookAt=(cx, 0.6, cz * 0.8), verticalFov=70)
-    if any(m.wall == "back" for m in spec.module):
-        xs = [-(m.endAt) / 1000 for m in spec.module if m.wall == "back"] + [0]
+    if "back" in reach:
+        xs = [-reach["back"] / 1000, 0]
         mx = (min(xs) + max(xs)) / 2
         views["back-wall"] = ViewAngle(name="Chính diện tường sau", position=(mx, camera_plan.EYE / 1000, span * 1.4 + 0.6), lookAt=(mx, 1.25, 0.2), verticalFov=48)
-    if any(m.wall == "right" for m in spec.module):
-        zs = [m.endAt / 1000 for m in spec.module if m.wall == "right"] + [0]
+    if "right" in reach:
+        zs = [reach["right"] / 1000, 0]
         mz = (min(zs) + max(zs)) / 2
         views["right-wall"] = ViewAngle(name="Chính diện tường phải", position=(-(span * 1.4 + 0.6), camera_plan.EYE / 1000, mz), lookAt=(0, 1.25, mz), verticalFov=48)
-    if any(m.wall == "left" for m in spec.module):
-        zs = [m.endAt / 1000 for m in spec.module if m.wall == "left"] + [0]
+    if "left" in reach:
+        zs = [reach["left"] / 1000, 0]
         mz = (min(zs) + max(zs)) / 2
         views["left-wall"] = ViewAngle(name="Chính diện tường trái", position=(-scene.lsau / 1000 + span * 1.4 + 0.6, camera_plan.EYE / 1000, mz), lookAt=(-scene.lsau / 1000, 1.25, mz), verticalFov=48)
     room, solids = room_solids(spec, scene)
@@ -542,7 +567,7 @@ def default_views(spec: KitchenSpec, scene: Scene | None = None) -> dict[str, Vi
         planned = camera_plan.plan_views(faces, room, solids)
         views.update({key: ViewAngle(**v) for key, v in planned.items()})
         biggest = max(faces, key=lambda f: f.length)
-        if not any(m.wall == "left" for m in spec.module):  # a U sees all three runs only from the open side: keep its own overview
+        if "left" not in reach:  # a U sees all three runs only from the open side: keep its own overview
             views["perspective"] = ViewAngle(**{**planned[f"{biggest.key}-oblique"], "name": "Phối cảnh chéo"})
     if solids and faces:
         for key in ("overhead", "plan"):
