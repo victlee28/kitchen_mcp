@@ -1,0 +1,100 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "material-look",
+ "type": "object",
+ "required": [
+  "any",
+  "look"
+ ],
+ "additionalProperties": false,
+ "properties": {
+  "any": {
+   "type": "array",
+   "items": {
+    "type": "string",
+    "minLength": 1
+   },
+   "x-label": {
+    "vi": "Khớp khi tên chứa một trong các chữ (trống: luôn khớp)",
+    "en": "Matches when the name contains any of (empty: always)"
+   }
+  },
+  "all": {
+   "type": "array",
+   "items": {
+    "type": "string",
+    "minLength": 1
+   },
+   "x-label": {
+    "vi": "Và chứa đủ các chữ",
+    "en": "And contains all of"
+   }
+  },
+  "look": {
+   "type": "object",
+   "required": [
+    "color"
+   ],
+   "x-label": {
+    "vi": "Thông số vật liệu 3D (three.js)",
+    "en": "3D material parameters (three.js)"
+   },
+   "properties": {
+    "color": {
+     "type": "string",
+     "pattern": "^#[0-9a-fA-F]{6}$",
+     "x-widget": "color",
+     "x-label": {
+      "vi": "Màu",
+      "en": "Colour"
+     }
+    },
+    "roughness": {
+     "type": "number",
+     "minimum": 0,
+     "maximum": 1
+    },
+    "metalness": {
+     "type": "number",
+     "minimum": 0,
+     "maximum": 1
+    },
+    "clearcoat": {
+     "type": "number",
+     "minimum": 0,
+     "maximum": 1
+    },
+    "transmission": {
+     "type": "number",
+     "minimum": 0,
+     "maximum": 1
+    },
+    "opacity": {
+     "type": "number",
+     "minimum": 0,
+     "maximum": 1
+    },
+    "ior": {
+     "type": "number"
+    },
+    "transparent": {
+     "type": "boolean"
+    },
+    "side": {
+     "enum": [
+      "FrontSide",
+      "BackSide",
+      "DoubleSide"
+     ]
+    },
+    "threeMaterialType": {
+     "enum": [
+      "MeshStandardMaterial",
+      "MeshPhysicalMaterial"
+     ]
+    }
+   },
+   "additionalProperties": false
+  }
+ }
+}

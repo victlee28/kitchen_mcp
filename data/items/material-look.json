@@ -1,0 +1,177 @@
+[
+ {
+  "id": "glass",
+  "any": [
+   "kính",
+   "glass"
+  ],
+  "look": {
+   "threeMaterialType": "MeshPhysicalMaterial",
+   "color": "#dfe9ec",
+   "roughness": 0.05,
+   "metalness": 0,
+   "transmission": 0.9,
+   "ior": 1.5,
+   "opacity": 0.35,
+   "transparent": true,
+   "side": "DoubleSide"
+  }
+ },
+ {
+  "id": "marble",
+  "any": [
+   "marble",
+   "cẩm thạch"
+  ],
+  "look": {
+   "color": "#ecebe7",
+   "roughness": 0.2,
+   "clearcoat": 0.4,
+   "threeMaterialType": "MeshPhysicalMaterial"
+  }
+ },
+ {
+  "id": "terrazzo",
+  "any": [
+   "terrazzo"
+  ],
+  "look": {
+   "color": "#cfc9bf",
+   "roughness": 0.35,
+   "clearcoat": 0.2,
+   "threeMaterialType": "MeshPhysicalMaterial"
+  }
+ },
+ {
+  "id": "acrylic",
+  "any": [
+   "acrylic",
+   "bóng gương"
+  ],
+  "look": {
+   "color": "#e9e7e2",
+   "roughness": 0.08,
+   "clearcoat": 0.8,
+   "threeMaterialType": "MeshPhysicalMaterial"
+  }
+ },
+ {
+  "id": "zellige",
+  "any": [
+   "zellige"
+  ],
+  "look": {
+   "color": "#e4ded0",
+   "roughness": 0.25,
+   "clearcoat": 0.3,
+   "threeMaterialType": "MeshPhysicalMaterial"
+  }
+ },
+ {
+  "id": "brass",
+  "any": [
+   "đồng",
+   "brass"
+  ],
+  "look": {
+   "color": "#b5913f",
+   "roughness": 0.35,
+   "metalness": 0.9
+  }
+ },
+ {
+  "id": "metal-black",
+  "any": [
+   "inox",
+   "nhôm",
+   "thép"
+  ],
+  "all": [
+   "đen"
+  ],
+  "look": {
+   "color": "#2b2b2b",
+   "roughness": 0.35,
+   "metalness": 0.9
+  }
+ },
+ {
+  "id": "metal",
+  "any": [
+   "inox",
+   "nhôm",
+   "thép"
+  ],
+  "look": {
+   "color": "#b9bdc2",
+   "roughness": 0.35,
+   "metalness": 0.9
+  }
+ },
+ {
+  "id": "dark",
+  "any": [
+   "granite",
+   "đen",
+   "tối"
+  ],
+  "look": {
+   "color": "#3a3a3c",
+   "roughness": 0.3
+  }
+ },
+ {
+  "id": "wood",
+  "any": [
+   "sồi",
+   "oak",
+   "gỗ"
+  ],
+  "look": {
+   "color": "#c49a6c",
+   "roughness": 0.6
+  }
+ },
+ {
+  "id": "stone",
+  "any": [
+   "đá",
+   "quartz",
+   "thạch anh"
+  ],
+  "look": {
+   "color": "#f1f0ec",
+   "roughness": 0.25,
+   "clearcoat": 0.3,
+   "threeMaterialType": "MeshPhysicalMaterial"
+  }
+ },
+ {
+  "id": "tile",
+  "any": [
+   "gạch"
+  ],
+  "look": {
+   "color": "#f5f4f0",
+   "roughness": 0.4
+  }
+ },
+ {
+  "id": "white",
+  "any": [
+   "trắng"
+  ],
+  "look": {
+   "color": "#f2f2f0",
+   "roughness": 0.7
+  }
+ },
+ {
+  "id": "default",
+  "any": [],
+  "look": {
+   "color": "#d9c3a0",
+   "roughness": 0.6
+  }
+ }
+]

@@ -3,8 +3,10 @@
 import { el } from './dom.js';
 import { request } from './api-client.js';
 import { interpretBody, describeInterpret, templateIntent, systemIntent, mentionsReference, checkUpload, recognizeBody, recognizeJobBody, anchorFor, describeRecognition, recognitionLines } from './assist-logic.js';
-import { actionsFor, buildGroupOp, buildOp, describeProposal, groupActions, layerFor, lineTemplate, menuPosition, DOOR_STYLES, HANDLE_VARIANTS, MATERIAL_PRESETS, RUN_ACTIONS, RUN_TURNS, systemTemplate, edgeChoices, modelChoices, APPLIANCE_VI, applianceLayer, lineAlongWall, wallSegments } from './menu-logic.js';
+import { actionsFor, buildGroupOp, buildOp, describeProposal, groupActions, layerFor, lineTemplate, menuPosition, DOOR_STYLES, HANDLE_VARIANTS, RUN_ACTIONS, RUN_TURNS, systemTemplate, edgeChoices, modelChoices, APPLIANCE_VI, applianceLayer, lineAlongWall, wallSegments } from './menu-logic.js';
 import { groupLabel, groupLayerIds, manySystems } from './design-logic.js';
+import * as catalog from './catalog-client.js';
+import { lang } from './i18n.js';
 
 const call = (path, body) => request(path, 'POST', body);
 const JOB_KEY = 'recogJob';
@@ -256,7 +258,10 @@ export function createModuleMenu(ctx) {
       fields.push(el('label', {}, 'Kiểu tay nắm', f.variant));
     } else if (action === 'material') {
       const used = [...new Set([...Object.values(spec.common?.material || {}), ...spec.module.map((x) => x.material)].filter((v) => typeof v === 'string' && v))];
-      const dl = el('datalist', { id: 'ctxMats' }, ...[...used, ...MATERIAL_PRESETS.filter((p) => !used.includes(p))].map((v) => el('option', { value: v })));
+      const dl = el('datalist', { id: 'ctxMats' }, ...used.map((v) => el('option', { value: v })));
+      catalog.list('material', lang()).then((d) => {               // the suggested materials are catalog items (workshop + user)
+        for (const it of d.items) if (!used.includes(it.data.text)) dl.append(el('option', { value: it.data.text }));
+      }).catch(() => { /* suggestions only */ });
       f.material = el('input', { type: 'text', value: m?.material || '', placeholder: 'vd Laminate xanh rêu mờ', autocomplete: 'off' }); f.material.setAttribute('list', 'ctxMats');
       fields.push(el('label', {}, 'Vật liệu mặt trước', f.material, dl));
     } else if (action === 'doorStyle') {

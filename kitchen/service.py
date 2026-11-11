@@ -69,7 +69,8 @@ class KitchenService:
     def catalog_for_revision(self, design_id: str, rev: int) -> cat.Catalog:
         """The catalog a stored revision is built with: the items saved with it over the current catalog."""
         saved = self.store.revision_catalog(design_id, rev) or []
-        return cat.with_snapshot(self.catalog(), [cat.Item(x['kind'], x['id'], x['data'], x.get('source', 'snapshot'), x.get('version', 1)) for x in saved])
+        return cat.with_snapshot(self.catalog(), [cat.Item(x['kind'], x['id'], x['data'], x.get('source', 'snapshot'), x.get('version', 1)) for x in saved],
+                                [k for k, info in self.builtin.kinds.items() if info.whole])
 
     def _snapshot_json(self, spec: KitchenSpec) -> str | None:
         used = cat.used_items(to_data(spec), self.catalog(), self.builtin.kinds)

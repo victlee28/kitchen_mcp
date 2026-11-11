@@ -22,7 +22,7 @@ from .jsonview import as_dict, as_list
 from .lexicon import fold
 from .numeric import round_half_away
 from .spec import KitchenSpec, Module, to_data
-from .vocab import COLORS, WOOD
+from . import vocab
 
 ALLOWED_OPS = ("add", "remove", "update", "common", "lower-top", "multi")
 MAX_CHOICES = 12
@@ -82,7 +82,7 @@ def _mm(f: str, after: tuple[str, ...] = ()) -> float | None:
 
 
 def _color(f: str) -> str | None:
-    table = sorted([(v, True) for v, *_ in WOOD] + [(v, False) for v, *_ in COLORS], key=lambda t: -len(t[0]))
+    table = sorted([(v, True) for v, *_ in vocab.woods()] + [(v, False) for v, *_ in vocab.colors()], key=lambda t: -len(t[0]))
     for name, wood in table:
         if _has(f, fold(name)):
             return ("Gỗ " + name) if wood else (name[:1].upper() + name[1:])

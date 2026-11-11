@@ -13,6 +13,7 @@ import zipfile
 from collections import Counter
 from pathlib import Path
 
+from .catalog import Catalog
 from . import appliance_models, backends, geometry, layers, prompts, vocab
 
 SCHEMA = "kitchen-ai-image-request/1.0"
@@ -22,13 +23,13 @@ _HANDLE_TEXT = {"bar": "slim bar pull handles", "knob": "round knob handles", "c
 _STOREY_TEXT = {"base": "base cabinets", "upper": "wall cabinets", "loft": "top-row cabinets", "tall": "tall cabinets", "corner": "corner shelves"}
 
 
-def _hardware_text(spec) -> str:
+def _hardware_text(spec, catalog: Catalog) -> str:
     """Handle description for the prompt: one sentence when every cabinet has the same handle, otherwise one clause per storey."""
     from .spec import effective_handle
     per_storey: dict[str, list[str]] = {}
     for m in spec.module:
         h = effective_handle(spec.common, m)
-        text = _HANDLE_TEXT[h.variant] + (f" in {vocab.to_english(h.material)}" if h.variant != "none" and vocab.to_english(h.material) else "")
+        text = _HANDLE_TEXT[h.variant] + (f" in {vocab.to_english(h.material, catalog)}" if h.variant != "none" and vocab.to_english(h.material, catalog) else "")
         if text not in per_storey.setdefault(m.storey, []):
             per_storey[m.storey].append(text)
     distinct = {t for texts in per_storey.values() for t in texts}
@@ -40,10 +41,10 @@ _DOOR_STYLES = {"slab": "flat slab cabinet doors without frames or panels", "sha
               "glass": "glass-front cabinet doors"}
 
 
-def _material(doc: dict) -> list[dict]:
+def _material(doc: dict, catalog: Catalog) -> list[dict]:
     out = []
     for m in doc.get("materials", []):
-        out.append({"id": m["id"], "role": m.get("semanticClass"), "name": m.get("name"), "english": vocab.to_english(m.get("name", "")),
+        out.append({"id": m["id"], "role": m.get("semanticClass"), "name": m.get("name"), "english": vocab.to_english(m.get("name", ""), catalog),
                     "color": m.get("color"), "roughness": m.get("roughness"), "metalness": m.get("metalness")})
     return out
 
@@ -94,12 +95,13 @@ def build(svc, did: str, rev: int | None = None, views: list[str] | None = None,
     bad = [v for v in chosen if v not in all_views]
     if bad:
         raise ValueError(f"Không có góc nhìn: {bad}. Có: {list(all_views)}")
+    catalog = svc.catalog_for_revision(did, r)
     out_dir = svc.render_dir / did / f"rev{r}" / "ai"
     out_dir.mkdir(parents=True, exist_ok=True)
 
     style = _door_style(doc)
     tn = spec.common.handle
-    part = (f"Door style: {_DOOR_STYLES.get(style, style)}. Hardware: {_hardware_text(spec)}. "
+    part = (f"Door style: {_DOOR_STYLES.get(style, style)}. Hardware: {_hardware_text(spec, catalog)}. "
                 + ("Classic crown and base moldings as drawn. " if spec.moldings else "No crown molding. "))
     common = prompts.global_prompt(spec)
     negative = ", ".join(prompts.NEGATIVE_LAYER + ["changed door style", "extra cabinets", "missing cabinets", "different layout"] + prompts.NEGATIVE_PHOTO)
@@ -111,7 +113,6 @@ def build(svc, did: str, rev: int | None = None, views: list[str] | None = None,
         sync = view_sync.view_status(svc.images, did, r)
     except Exception:  # noqa: BLE001 — the package must still build
         sync = {}
-    catalog = svc.catalog_for_revision(did, r)
     by_id = appliance_models.models(catalog)
     facts = {a.id: appliance_models.ai_facts(spec, a, "model-3d" if by_id.get(appliance_models.model_id(a, catalog) or "", {}).get("asset3d")
                                              else "box-placeholder", catalog) for a in spec.appliances}      # plan A5: the AI must know each appliance
@@ -163,7 +164,7 @@ def build(svc, did: str, rev: int | None = None, views: list[str] | None = None,
         "photoRequest": photo_image,
         "part": part.strip(),
         "negativePrompt": negative,
-        "material": _material(doc),
+        "material": _material(doc, catalog),
         "appliances": list(facts.values()),
         "views": v_out,
         "threejs": doc,

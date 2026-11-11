@@ -2,7 +2,6 @@
 export const CLICK_MAX_MOVE = 4;     // px between press and context-menu event: more is a camera drag, not a click
 export const CLICK_MAX_MS = 600;
 export const DOOR_STYLES = [['flat', 'Cánh phẳng'], ['frame', 'Cánh khung (shaker)'], ['glass', 'Cánh kính']];
-export const MATERIAL_PRESETS = ['Trắng mờ', 'Laminate vân gỗ sồi sáng', 'Acrylic xám đậm', 'Laminate xanh rêu mờ', 'Melamine trắng'];
 export const MIN_ADD_WIDTH = 200, MAX_ADD_WIDTH = 1200;
 export const HANDLE_VARIANTS = [['bar', 'Tay thanh'], ['knob', 'Núm'], ['concealed', 'Tay âm'], ['none', 'Không tay (nhấn mở)']];
 export const MAX_OVERHANG = 100;

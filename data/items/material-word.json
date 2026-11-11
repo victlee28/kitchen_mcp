@@ -1,0 +1,508 @@
+[
+ {
+  "id": "color-xanh-reu",
+  "group": "color",
+  "word": "xanh rêu",
+  "hex": "#7d8a5f",
+  "en": "sage green"
+ },
+ {
+  "id": "color-xanh-olive",
+  "group": "color",
+  "word": "xanh olive",
+  "hex": "#6b6b3a",
+  "en": "olive green"
+ },
+ {
+  "id": "color-xanh-la-cay",
+  "group": "color",
+  "word": "xanh lá cây",
+  "hex": "#4f7a4a",
+  "en": "green"
+ },
+ {
+  "id": "color-xanh-la",
+  "group": "color",
+  "word": "xanh lá",
+  "hex": "#4f7a4a",
+  "en": "green"
+ },
+ {
+  "id": "color-xanh-luc",
+  "group": "color",
+  "word": "xanh lục",
+  "hex": "#3f7d4a",
+  "en": "green"
+ },
+ {
+  "id": "color-xanh-lam",
+  "group": "color",
+  "word": "xanh lam",
+  "hex": "#3c5f8a",
+  "en": "blue"
+ },
+ {
+  "id": "color-xanh-bien",
+  "group": "color",
+  "word": "xanh biển",
+  "hex": "#2f5f8a",
+  "en": "sea blue"
+ },
+ {
+  "id": "color-xanh-navy",
+  "group": "color",
+  "word": "xanh navy",
+  "hex": "#22324f",
+  "en": "navy blue"
+ },
+ {
+  "id": "color-xanh-duong",
+  "group": "color",
+  "word": "xanh dương",
+  "hex": "#3c5f8a",
+  "en": "blue"
+ },
+ {
+  "id": "color-xanh-ngoc",
+  "group": "color",
+  "word": "xanh ngọc",
+  "hex": "#3f8f8a",
+  "en": "teal"
+ },
+ {
+  "id": "color-xanh-than",
+  "group": "color",
+  "word": "xanh than",
+  "hex": "#2b3440",
+  "en": "charcoal blue"
+ },
+ {
+  "id": "color-xanh-mint",
+  "group": "color",
+  "word": "xanh mint",
+  "hex": "#a8d5c2",
+  "en": "mint green"
+ },
+ {
+  "id": "color-xanh",
+  "group": "color",
+  "word": "xanh",
+  "hex": "#5f7f8f",
+  "en": ""
+ },
+ {
+  "id": "color-trang-sua",
+  "group": "color",
+  "word": "trắng sữa",
+  "hex": "#f3efe4",
+  "en": "off-white"
+ },
+ {
+  "id": "color-trang-nga",
+  "group": "color",
+  "word": "trắng ngà",
+  "hex": "#efe8d8",
+  "en": "ivory"
+ },
+ {
+  "id": "color-trang",
+  "group": "color",
+  "word": "trắng",
+  "hex": "#f2f2f0",
+  "en": "white"
+ },
+ {
+  "id": "color-kem",
+  "group": "color",
+  "word": "kem",
+  "hex": "#eadfc8",
+  "en": "cream"
+ },
+ {
+  "id": "color-be",
+  "group": "color",
+  "word": "be",
+  "hex": "#d8c6a8",
+  "en": "beige"
+ },
+ {
+  "id": "color-ghi",
+  "group": "color",
+  "word": "ghi",
+  "hex": "#9a9a96",
+  "en": "light grey"
+ },
+ {
+  "id": "color-xam-dam",
+  "group": "color",
+  "word": "xám đậm",
+  "hex": "#4a4a4a",
+  "en": "dark grey"
+ },
+ {
+  "id": "color-xam-nhat",
+  "group": "color",
+  "word": "xám nhạt",
+  "hex": "#c4c4c0",
+  "en": "light grey"
+ },
+ {
+  "id": "color-xam",
+  "group": "color",
+  "word": "xám",
+  "hex": "#8a8a88",
+  "en": "grey"
+ },
+ {
+  "id": "color-den",
+  "group": "color",
+  "word": "đen",
+  "hex": "#2a2a2a",
+  "en": "black"
+ },
+ {
+  "id": "color-nau-dam",
+  "group": "color",
+  "word": "nâu đậm",
+  "hex": "#4e3526",
+  "en": "dark brown"
+ },
+ {
+  "id": "color-nau",
+  "group": "color",
+  "word": "nâu",
+  "hex": "#7a5538",
+  "en": "brown"
+ },
+ {
+  "id": "color-do-do",
+  "group": "color",
+  "word": "đỏ đô",
+  "hex": "#6e1f2a",
+  "en": "burgundy"
+ },
+ {
+  "id": "color-do",
+  "group": "color",
+  "word": "đỏ",
+  "hex": "#a83232",
+  "en": "red"
+ },
+ {
+  "id": "color-hong",
+  "group": "color",
+  "word": "hồng",
+  "hex": "#d9a3a8",
+  "en": "pink"
+ },
+ {
+  "id": "color-dong-vang",
+  "group": "color",
+  "word": "đồng vàng",
+  "hex": "#b5913f",
+  "en": "brushed brass"
+ },
+ {
+  "id": "color-vang-dong",
+  "group": "color",
+  "word": "vàng đồng",
+  "hex": "#b5913f",
+  "en": "brushed brass"
+ },
+ {
+  "id": "color-dong-thau",
+  "group": "color",
+  "word": "đồng thau",
+  "hex": "#b5913f",
+  "en": "brass"
+ },
+ {
+  "id": "color-dong-do",
+  "group": "color",
+  "word": "đồng đỏ",
+  "hex": "#a0583a",
+  "en": "copper"
+ },
+ {
+  "id": "color-dong",
+  "group": "color",
+  "word": "đồng",
+  "hex": "#a0703c",
+  "en": "bronze"
+ },
+ {
+  "id": "color-vang-gold",
+  "group": "color",
+  "word": "vàng gold",
+  "hex": "#c8a24a",
+  "en": "gold"
+ },
+ {
+  "id": "color-vang-mu-tat",
+  "group": "color",
+  "word": "vàng mù tạt",
+  "hex": "#c9a03a",
+  "en": "mustard yellow"
+ },
+ {
+  "id": "color-vang",
+  "group": "color",
+  "word": "vàng",
+  "hex": "#d9b84a",
+  "en": "yellow"
+ },
+ {
+  "id": "color-cam",
+  "group": "color",
+  "word": "cam",
+  "hex": "#d27a3a",
+  "en": "orange"
+ },
+ {
+  "id": "color-tim",
+  "group": "color",
+  "word": "tím",
+  "hex": "#6b4f7a",
+  "en": "purple"
+ },
+ {
+  "id": "wood-oc-cho",
+  "group": "wood",
+  "word": "óc chó",
+  "hex": "#5c3f2c",
+  "en": "walnut wood"
+ },
+ {
+  "id": "wood-soi",
+  "group": "wood",
+  "word": "sồi",
+  "hex": "#c49a6c",
+  "en": "oak wood"
+ },
+ {
+  "id": "wood-tan-bi",
+  "group": "wood",
+  "word": "tần bì",
+  "hex": "#cfb28a",
+  "en": "ash wood"
+ },
+ {
+  "id": "wood-xoan-dao",
+  "group": "wood",
+  "word": "xoan đào",
+  "hex": "#9a5a3c",
+  "en": "cherry wood"
+ },
+ {
+  "id": "wood-go-do",
+  "group": "wood",
+  "word": "gõ đỏ",
+  "hex": "#7a3a24",
+  "en": "red hardwood"
+ },
+ {
+  "id": "wood-teak",
+  "group": "wood",
+  "word": "teak",
+  "hex": "#a7774a",
+  "en": "teak wood"
+ },
+ {
+  "id": "finish-van-may",
+  "group": "finish",
+  "word": "vân mây",
+  "en": "with soft cloudy veining"
+ },
+ {
+  "id": "finish-van-da",
+  "group": "finish",
+  "word": "vân đá",
+  "en": "marble veining"
+ },
+ {
+  "id": "finish-van-go",
+  "group": "finish",
+  "word": "vân gỗ",
+  "en": "wood grain"
+ },
+ {
+  "id": "finish-mo",
+  "group": "finish",
+  "word": "mờ",
+  "en": "matte finish"
+ },
+ {
+  "id": "finish-bong-guong",
+  "group": "finish",
+  "word": "bóng gương",
+  "en": "high-gloss mirror finish"
+ },
+ {
+  "id": "finish-bong",
+  "group": "finish",
+  "word": "bóng",
+  "en": "glossy finish"
+ },
+ {
+  "id": "finish-san",
+  "group": "finish",
+  "word": "sần",
+  "en": "textured finish"
+ },
+ {
+  "id": "finish-acrylic",
+  "group": "finish",
+  "word": "acrylic",
+  "en": "acrylic"
+ },
+ {
+  "id": "finish-laminate",
+  "group": "finish",
+  "word": "laminate",
+  "en": "laminate"
+ },
+ {
+  "id": "finish-melamine",
+  "group": "finish",
+  "word": "melamine",
+  "en": "melamine"
+ },
+ {
+  "id": "finish-son",
+  "group": "finish",
+  "word": "sơn",
+  "en": "painted"
+ },
+ {
+  "id": "finish-veneer",
+  "group": "finish",
+  "word": "veneer",
+  "en": "wood veneer"
+ },
+ {
+  "id": "finish-da-nhan-tao",
+  "group": "finish",
+  "word": "đá nhân tạo",
+  "en": "engineered quartz stone"
+ },
+ {
+  "id": "finish-thach-anh",
+  "group": "finish",
+  "word": "thạch anh",
+  "en": "quartz"
+ },
+ {
+  "id": "finish-granite",
+  "group": "finish",
+  "word": "granite",
+  "en": "granite"
+ },
+ {
+  "id": "finish-marble",
+  "group": "finish",
+  "word": "marble",
+  "en": "marble"
+ },
+ {
+  "id": "finish-cam-thach",
+  "group": "finish",
+  "word": "cẩm thạch",
+  "en": "marble"
+ },
+ {
+  "id": "finish-lacquer",
+  "group": "finish",
+  "word": "lacquer",
+  "en": "lacquer"
+ },
+ {
+  "id": "finish-go-lang",
+  "group": "finish",
+  "word": "gỗ lạng",
+  "en": "wood veneer"
+ },
+ {
+  "id": "finish-da-terrazzo",
+  "group": "finish",
+  "word": "đá terrazzo",
+  "en": "terrazzo stone"
+ },
+ {
+  "id": "finish-terrazzo",
+  "group": "finish",
+  "word": "terrazzo",
+  "en": "terrazzo stone"
+ },
+ {
+  "id": "finish-zellige",
+  "group": "finish",
+  "word": "zellige",
+  "en": "handmade zellige tile"
+ },
+ {
+  "id": "finish-da",
+  "group": "finish",
+  "word": "đá",
+  "en": "stone"
+ },
+ {
+  "id": "finish-kinh",
+  "group": "finish",
+  "word": "kính",
+  "en": "glass"
+ },
+ {
+  "id": "finish-inox",
+  "group": "finish",
+  "word": "inox",
+  "en": "stainless steel"
+ },
+ {
+  "id": "finish-nhom",
+  "group": "finish",
+  "word": "nhôm",
+  "en": "aluminium"
+ },
+ {
+  "id": "finish-dong-thau-xuoc",
+  "group": "finish",
+  "word": "đồng thau xước",
+  "en": "brushed brass"
+ },
+ {
+  "id": "finish-gach-the",
+  "group": "finish",
+  "word": "gạch thẻ",
+  "en": "subway tile"
+ },
+ {
+  "id": "finish-xuong-ca",
+  "group": "finish",
+  "word": "xương cá",
+  "en": "herringbone tile pattern"
+ },
+ {
+  "id": "finish-gach",
+  "group": "finish",
+  "word": "gạch",
+  "en": "ceramic tile"
+ },
+ {
+  "id": "finish-son-mo",
+  "group": "finish",
+  "word": "sơn mờ",
+  "en": "matte lacquer"
+ },
+ {
+  "id": "finish-son-bong",
+  "group": "finish",
+  "word": "sơn bóng",
+  "en": "gloss lacquer"
+ },
+ {
+  "id": "finish-go",
+  "group": "finish",
+  "word": "gỗ",
+  "en": "wood"
+ }
+]

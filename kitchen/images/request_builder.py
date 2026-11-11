@@ -117,7 +117,7 @@ class RequestBuilder(Component):
                 rec["position"] = describe_position(tmask)
                 rec["remaining"] = self._others(cat, visible, ids, type)
                 rec["typeEn"] = layers.ROLES.get(type, (None, "element"))[1]
-                rec["materialText"] = " ".join(x for x in (vocab.to_english(material_text), material_text and f"({material_text})") if x)
+                rec["materialText"] = " ".join(x for x in (vocab.to_english(material_text, self.env.catalog()), material_text and f"({material_text})") if x)
                 touched = self._appliances_in(d, imaging.grow(tmask, GROW_PX), cur)      # plan A5: the AI must know the appliances it redraws
                 if touched:
                     rec["appliances"] = touched

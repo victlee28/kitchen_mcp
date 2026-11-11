@@ -196,5 +196,44 @@ class TestAppliancesFromTheCatalog(unittest.TestCase):
         self.assertEqual(tv_system.tv_for(2000, self.s.catalog())["model"], "tv-75")
 
 
+class TestMaterialsFromTheCatalog(unittest.TestCase):
+    """Stage 1.2: the material words (prompt English, display colours), the 3D looks and the suggested materials are catalog items."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        from kitchen.service import KitchenService
+        self.s = KitchenService(db_path=self.tmp / "k.db", render_dir=self.tmp / "r")
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_a_word_the_user_adds_is_understood(self):
+        from kitchen import vocab
+        self.assertEqual(vocab.to_english("Laminate xanh bơ"), "laminate")                       # only "xanh" alone is known: not translated
+        self.s.catalog_put("material-word", "color-xanh-bo", {"group": "color", "word": "xanh bơ", "hex": "#a8c070", "en": "avocado green"}, "user")
+        c = self.s.catalog()
+        self.assertIn("avocado green", vocab.to_english("Laminate xanh bơ", c))
+        self.assertEqual(vocab.color("xanh bơ", c), "#a8c070")
+        with self.assertRaises(InvalidInput):                                                    # a colour needs its display colour
+            self.s.catalog_put("material-word", "color-x", {"group": "color", "word": "x", "en": "x"}, "user")
+
+    def test_old_revisions_keep_their_words_and_looks(self):
+        fixture = json.loads((ROOT / "fixtures" / "l-shaped-kitchen.json").read_text(encoding="utf-8"))
+        rec = self.s.create_from_spec(fixture)
+        before = self.s.threejs(rec["id"], rec["rev"])
+        self.s.catalog_put("material-look", "wood", {"any": ["sồi", "oak", "gỗ"], "look": {"color": "#000000", "roughness": 0.6}}, "workshop")
+        self.s.catalog_put("material-word", "wood-soi", {"group": "wood", "word": "sồi", "hex": "#000001", "en": "oak wood"}, "user")
+        old = self.s.catalog_for_revision(rec["id"], rec["rev"])
+        self.assertEqual(old.data("material-look", "wood")["look"]["color"], "#c49a6c")
+        self.assertEqual(self.s.threejs(rec["id"], rec["rev"])["materials"], before["materials"])
+        new = self.s.create_from_spec(fixture)
+        mats = {m["id"]: m for m in self.s.threejs(new["id"], new["rev"])["materials"]}
+        self.assertEqual(mats["MAT-FRONT-BASE"]["color"], "#000001")                              # "Laminate vân gỗ sồi sáng": the oak word now
+
+    def test_suggested_materials(self):
+        texts = [i["data"]["text"] for i in self.s.catalog_list("material", "user")["items"]]
+        self.assertIn("Laminate xanh rêu mờ", texts)
+
+
 if __name__ == "__main__":
     unittest.main()

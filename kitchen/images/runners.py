@@ -33,8 +33,9 @@ class Runners(Component):
             if b == "recolor":
                 img = imaging.read(jdir / "reference.png", "RGB")
                 used = []
+                catalog = self.env.catalog()
                 for i, t in enumerate(req.get("tasks", []), 1):
-                    rgb = vocab.color(t.get("material") or "") or vocab.color(t.get("instruction") or "")
+                    rgb = vocab.color(t.get("material") or "", catalog) or vocab.color(t.get("instruction") or "", catalog)
                     if not rgb:
                         raise BackendError("unsupported", f"Việc {i} ({t['targetLayer']}): không suy được màu từ vật liệu/yêu cầu; "
                                                            "ghi rõ màu (vd 'xanh rêu') hoặc dùng backend AI")

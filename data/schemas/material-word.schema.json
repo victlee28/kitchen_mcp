@@ -1,0 +1,63 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "material-word",
+ "type": "object",
+ "required": [
+  "group",
+  "word",
+  "en"
+ ],
+ "additionalProperties": false,
+ "properties": {
+  "group": {
+   "enum": [
+    "color",
+    "wood",
+    "finish"
+   ],
+   "x-label": {
+    "vi": "Nhóm",
+    "en": "Group"
+   }
+  },
+  "word": {
+   "type": "string",
+   "minLength": 1,
+   "x-label": {
+    "vi": "Từ tiếng Việt",
+    "en": "Vietnamese word"
+   }
+  },
+  "hex": {
+   "type": "string",
+   "pattern": "^#[0-9a-fA-F]{6}$",
+   "x-widget": "color",
+   "x-label": {
+    "vi": "Màu hiển thị",
+    "en": "Display colour"
+   }
+  },
+  "en": {
+   "type": "string",
+   "x-label": {
+    "vi": "Cụm tiếng Anh cho prompt (để trống: không dịch)",
+    "en": "English phrase for prompts (empty: not translated)"
+   }
+  }
+ },
+ "if": {
+  "properties": {
+   "group": {
+    "enum": [
+     "color",
+     "wood"
+    ]
+   }
+  }
+ },
+ "then": {
+  "required": [
+   "hex"
+  ]
+ }
+}

@@ -125,48 +125,33 @@ def _module_frame(m: Module, lsau: float, fr: "runs.RunFrame | None" = None) -> 
     return Frame((x, m.y, z), seat.yaw), (m.width, m.height, m.depth)
 
 
-def _guess(text: str) -> dict[str, Any]:
-    g = _guess_base(text)
-    w = vocab.find(text, vocab.WOOD)  # loài gỗ nêu rõ (óc chó, teak…) quyết định màu gỗ
+def _guess(text: str, catalog: Catalog) -> dict[str, Any]:
+    g = _guess_base(text, catalog)
+    w = vocab.find(text, vocab.woods(catalog))  # loài gỗ nêu rõ (óc chó, teak…) quyết định màu gỗ
     if w and "transmission" not in g:
         g = {**g, "color": w[1]}
-    c = vocab.explicit_color(text)  # màu nêu rõ (xanh rêu, kem, xám…) ghi đè màu mặc định của chất liệu
+    c = vocab.explicit_color(text, catalog)  # màu nêu rõ (xanh rêu, kem, xám…) ghi đè màu mặc định của chất liệu
     if c and "transmission" not in g:
         g = {**g, "color": c}
     return g
 
 
-def _guess_base(text: str) -> dict[str, Any]:
+_NO_LOOK: dict[str, Any] = {"color": "#d9c3a0", "roughness": 0.6}
+
+
+def _guess_base(text: str, catalog: Catalog) -> dict[str, Any]:
+    """The 3D look of a material name: the first ``material-look`` rule whose words are in the name (plain substring, lower case)."""
     t = (text or "").lower()
-    if "kính" in t or "glass" in t:
-        return {"threeMaterialType": "MeshPhysicalMaterial", "color": "#dfe9ec", "roughness": 0.05, "metalness": 0, "transmission": 0.9,
-                "ior": 1.5, "opacity": 0.35, "transparent": True, "side": "DoubleSide"}
-    if "marble" in t or "cẩm thạch" in t:
-        return {"color": "#ecebe7", "roughness": 0.2, "clearcoat": 0.4, "threeMaterialType": "MeshPhysicalMaterial"}
-    if "terrazzo" in t:
-        return {"color": "#cfc9bf", "roughness": 0.35, "clearcoat": 0.2, "threeMaterialType": "MeshPhysicalMaterial"}
-    if "acrylic" in t or "bóng gương" in t:
-        return {"color": "#e9e7e2", "roughness": 0.08, "clearcoat": 0.8, "threeMaterialType": "MeshPhysicalMaterial"}
-    if "zellige" in t:
-        return {"color": "#e4ded0", "roughness": 0.25, "clearcoat": 0.3, "threeMaterialType": "MeshPhysicalMaterial"}
-    if "đồng" in t or "brass" in t:
-        return {"color": "#b5913f", "roughness": 0.35, "metalness": 0.9}
-    if "inox" in t or "nhôm" in t or "thép" in t:
-        return {"color": "#b9bdc2" if "đen" not in t else "#2b2b2b", "roughness": 0.35, "metalness": 0.9}
-    if "granite" in t or "đen" in t or "tối" in t:
-        return {"color": "#3a3a3c", "roughness": 0.3}
-    if "sồi" in t or "oak" in t or "gỗ" in t:
-        return {"color": "#c49a6c", "roughness": 0.6}
-    if "đá" in t or "quartz" in t or "thạch anh" in t:
-        return {"color": "#f1f0ec", "roughness": 0.25, "clearcoat": 0.3, "threeMaterialType": "MeshPhysicalMaterial"}
-    if "gạch" in t:
-        return {"color": "#f5f4f0", "roughness": 0.4}
-    if "trắng" in t:
-        return {"color": "#f2f2f0", "roughness": 0.7}
-    return {"color": "#d9c3a0", "roughness": 0.6}
+    for it in catalog.all("material-look"):
+        d = it.data
+        any_of = [str(w).lower() for w in as_list(d.get("any")) or []]
+        all_of = [str(w).lower() for w in as_list(d.get("all")) or []]
+        if (not any_of or any(w in t for w in any_of)) and all(w in t for w in all_of):
+            return dict(as_dict(d.get("look")) or _NO_LOOK)
+    return dict(_NO_LOOK)
 
 
-def _materials(spec: KitchenSpec) -> tuple[list[dict[str, Any]], dict[str, str]]:
+def _materials(spec: KitchenSpec, catalog: Catalog) -> tuple[list[dict[str, Any]], dict[str, str]]:
     vl = spec.common.material
     defs = {  # vai trò -> (id, tên, mô tả nguồn)
         "base": ("MAT-FRONT-BASE", vl.get("base", "Laminate vân gỗ sồi sáng"), "front"),
@@ -188,7 +173,7 @@ def _materials(spec: KitchenSpec) -> tuple[list[dict[str, Any]], dict[str, str]]
     out: list[dict[str, Any]] = []
     ids: dict[str, str] = {}
     for key, (mid, name, sem) in defs.items():
-        g: dict[str, Any] = {"threeMaterialType": "MeshStandardMaterial", "roughness": 0.5, "metalness": 0.0, **_guess(name)}
+        g: dict[str, Any] = {"threeMaterialType": "MeshStandardMaterial", "roughness": 0.5, "metalness": 0.0, **_guess(name, catalog)}
         if key == "sink":
             g.update(color="#2f3236", roughness=0.35, metalness=0.2)
         if key == "cooktop":
@@ -214,14 +199,14 @@ def _materials(spec: KitchenSpec) -> tuple[list[dict[str, Any]], dict[str, str]]
         if m.material:
             mid = "MAT-FRONT-" + re.sub(r"[^A-Za-z0-9_.:-]", "-", m.id)
             out.append({"id": mid, "name": m.material, "threeMaterialType": "MeshStandardMaterial", "roughness": 0.5, "metalness": 0.0,
-                        **_guess(m.material), "semanticClass": "front"})
+                        **_guess(m.material, catalog), "semanticClass": "front"})
             ids[f"module:{m.id}"] = mid
     for m in spec.module:  # handle material of a module that differs from the common one
         hm = effective_handle(spec.common, m).material
         if hm != spec.common.handle.material:
             mid = "MAT-HANDLE-" + re.sub(r"[^A-Za-z0-9_.:-]", "-", m.id)
             out.append({"id": mid, "name": hm, "threeMaterialType": "MeshStandardMaterial", "roughness": 0.5, "metalness": 0.0,
-                        **_guess(hm), "semanticClass": "handle"})
+                        **_guess(hm, catalog), "semanticClass": "handle"})
             ids[f"handle:{m.id}"] = mid
     return out, ids
 
@@ -418,7 +403,7 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
 
     scene = compile_spec(spec)
     c = spec.common
-    mats_list, mats = _materials(spec)
+    mats_list, mats = _materials(spec, catalog)
     qg, kv = regions.normalize(country or spec.country, spec.region)
     sel = select(kb_rows if kb_rows is not None else default_rows(), qg, kv)
     by_mod: defaultdict[str | None, list[Part]] = defaultdict(list)
@@ -573,7 +558,7 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
             mid = f"MAT-MOLDING-{mol.id}"
             if all(m["id"] != mid for m in mats_list):
                 mats_list.append({"id": mid, "name": mol.material, "threeMaterialType": "MeshStandardMaterial", "roughness": 0.5,
-                                  "metalness": 0.0, **_guess(mol.material), "semanticClass": "molding"})
+                                  "metalness": 0.0, **_guess(mol.material, catalog), "semanticClass": "molding"})
         else:
             mid = mats["upper"] if mol.variant == "crown" else mats["base"]
         decorations.append({

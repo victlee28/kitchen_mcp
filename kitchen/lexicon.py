@@ -234,7 +234,7 @@ BSHEIGHT = [  # value = backsplashHeight
 COLOR_WEAK = {"đỏ", "đen", "cam", "tím", "kem", "be"}  # dạng không dấu trùng từ thường
 _EN_EXTRA = {"xám": "gray"}
 COLORS = [_e(f"color.{k}", "color", "|".join([k, *([_en] if _en else []), *([_EN_EXTRA[k]] if k in _EN_EXTRA else [])]), label=k, value=hx,
-             weak=(k in COLOR_WEAK)) for k, hx, _en in vocab.COLORS]
+             weak=(k in COLOR_WEAK)) for k, hx, _en in vocab.colors()]
 
 ALL: list[E] = [*SCOPES, *STYLES, *LAYOUTS, *FEATURES, *STRUCTURE, *DOORS, *HANDLEVAR, *MATERIALS, *PATTERNS, *BSHEIGHT, *PHOTO, *FRIDGE, *COLORS]
 BY_ID = {e.id: e for e in ALL}

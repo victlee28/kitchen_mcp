@@ -10,5 +10,36 @@
   "usedBy": [
    "appliances[].model"
   ]
+ },
+ "material-word": {
+  "label": {
+   "vi": "Từ vựng màu & vật liệu",
+   "en": "Colour & material words"
+  },
+  "writers": [
+   "workshop",
+   "user"
+  ],
+  "snapshot": "whole"
+ },
+ "material-look": {
+  "label": {
+   "vi": "Hiển thị vật liệu 3D",
+   "en": "3D material looks"
+  },
+  "writers": [
+   "workshop"
+  ],
+  "snapshot": "whole"
+ },
+ "material": {
+  "label": {
+   "vi": "Vật liệu gợi ý",
+   "en": "Material presets"
+  },
+  "writers": [
+   "workshop",
+   "user"
+  ]
  }
 }

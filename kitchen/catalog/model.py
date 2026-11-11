@@ -1,9 +1,11 @@
 """``Item`` (one catalog entry after the layers are merged) and the read-only ``Catalog`` that core functions receive."""
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, TypeVar
+
+T = TypeVar("T")
 
 from ..errors import NotFound
 
@@ -27,6 +29,7 @@ class Catalog:
     """Items by kind, in a stable order (builtin order first, added items after). Never changed after it is built."""
     items: tuple[Item, ...] = ()
     _index: Mapping[tuple[str, str], Item] = field(default_factory=lambda: dict[tuple[str, str], Item](), repr=False, compare=False)
+    _memo: dict[str, Any] = field(default_factory=lambda: dict[str, Any](), repr=False, compare=False)
 
     @staticmethod
     def of(items: Iterable[Item]) -> "Catalog":
@@ -50,6 +53,13 @@ class Catalog:
 
     def ids(self, kind: str) -> list[str]:
         return [i.id for i in self.items if i.kind == kind]
+
+    def derived(self, key: str, build: "Callable[[Catalog], T]") -> T:
+        """``build(self)``, computed once per catalog (tables that core functions derive from the items, e.g. the word lists).
+        The catalog never changes, so the result never goes stale; ``key`` must name what ``build`` computes."""
+        if key not in self._memo:
+            self._memo[key] = build(self)
+        return self._memo[key]
 
     def kinds(self) -> list[str]:
         return list(dict.fromkeys(i.kind for i in self.items))

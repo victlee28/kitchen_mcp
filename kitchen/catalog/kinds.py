@@ -15,7 +15,9 @@ ROLES = ("workshop", "user")
 class KindInfo:
     """``writers``: roles that may edit it in the app (empty: builtin files only); ``locked``: no layer may override it (mask colours);
     ``refs``: (path in an item, kind it names), e.g. ``("front", "material")`` or ``("parts[].material", "material")``;
-    ``used_by``: paths in a design (spec data) that name items of this kind, e.g. ``"appliances[].model"`` (for revision snapshots)."""
+    ``used_by``: paths in a design (spec data) that name items of this kind, e.g. ``"appliances[].model"`` (for revision snapshots);
+    ``whole``: the design uses the kind as a whole table, not by id (the material words, matched in free text), so a revision keeps
+    every item of it, in order (``"snapshot": "whole"`` in ``kinds.json``)."""
     name: str
     label: Mapping[str, str]
     writers: frozenset[str]
@@ -23,6 +25,7 @@ class KindInfo:
     refs: tuple[tuple[str, str], ...] = ()
     used_by: tuple[str, ...] = ()
     schema: str = ""
+    whole: bool = False
 
 
 def kind_info(name: str, raw: Any) -> KindInfo:
@@ -42,4 +45,5 @@ def kind_info(name: str, raw: Any) -> KindInfo:
         refs.append((str(pair[0]), str(pair[1])))
     label = as_dict(d.get("label")) or {}
     return KindInfo(name, {str(k): str(v) for k, v in label.items()}, frozenset(writers), bool(d.get("locked", False)), tuple(refs),
-                    tuple(str(p) for p in as_list(d.get("usedBy")) or []), str(d.get("schema") or f"{name}.schema.json"))
+                    tuple(str(p) for p in as_list(d.get("usedBy")) or []), str(d.get("schema") or f"{name}.schema.json"),
+                    d.get("snapshot") == "whole")

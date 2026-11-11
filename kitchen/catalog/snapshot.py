@@ -10,9 +10,12 @@ from .model import Catalog, Item
 
 
 def used_items(spec_data: Mapping[str, Any], catalog: Catalog, kinds: Mapping[str, KindInfo]) -> list[Item]:
-    """Items named by the design (the ``usedBy`` paths of each kind), plus what they reference in turn (a style's material), in catalog order."""
+    """Items named by the design (the ``usedBy`` paths of each kind), plus what they reference in turn (a style's material), plus every item
+    of the ``whole`` kinds, in catalog order."""
     wanted: set[tuple[str, str]] = set()
     for info in kinds.values():
+        if info.whole:
+            wanted.update((info.name, id) for id in catalog.ids(info.name))
         for path in info.used_by:
             wanted.update((info.name, str(v)) for v in values_at(spec_data, path))
     todo = list(wanted)
@@ -31,8 +34,12 @@ def used_items(spec_data: Mapping[str, Any], catalog: Catalog, kinds: Mapping[st
     return [i for i in catalog.items if (i.kind, i.id) in wanted]
 
 
-def with_snapshot(catalog: Catalog, snapshot: Iterable[Item]) -> Catalog:
-    """The catalog an old revision is built with: its saved items replace the current ones, items it did not use stay current."""
-    saved = {(i.kind, i.id): Item(i.kind, i.id, i.data, "snapshot", i.version) for i in snapshot}
-    items = [saved.pop((i.kind, i.id), i) for i in catalog.items]
-    return Catalog.of([*items, *saved.values()])
+def with_snapshot(catalog: Catalog, snapshot: Iterable[Item], whole: Iterable[str] = ()) -> Catalog:
+    """The catalog an old revision is built with: its saved items replace the current ones, items it did not use stay current.
+    A ``whole`` kind the revision saved is taken exactly as saved (items added since are left out, removed ones come back); a revision
+    saved before the kind existed keeps the current table."""
+    saved_items = [Item(i.kind, i.id, i.data, "snapshot", i.version) for i in snapshot]
+    exact = {i.kind for i in saved_items} & set(whole)
+    saved = {(i.kind, i.id): i for i in saved_items if i.kind not in exact}
+    items = [saved.pop((i.kind, i.id), i) for i in catalog.items if i.kind not in exact]
+    return Catalog.of([*items, *saved.values(), *(i for i in saved_items if i.kind in exact)])
