@@ -1,0 +1,55 @@
+{
+ "function": "recognition.recognizer_wire.layout_from_runs",
+ "cases": [
+  {
+   "name": "runs inside the answer",
+   "input": {
+    "payload": {
+     "runs": {
+      "schema": "recognized-runs/1",
+      "runs": []
+     }
+    }
+   },
+   "expected": {
+    "layout": {
+     "schema": "recognized-runs/1",
+     "runs": []
+    }
+   }
+  },
+  {
+   "name": "older service: no runs",
+   "input": {
+    "payload": {
+     "modules": []
+    }
+   },
+   "expected": {
+    "layout": null
+   }
+  },
+  {
+   "name": "runs not a list",
+   "input": {
+    "payload": {
+     "runs": {
+      "runs": {}
+     }
+    }
+   },
+   "expected": {
+    "layout": null
+   }
+  },
+  {
+   "name": "not an object",
+   "input": {
+    "payload": "x"
+   },
+   "expected": {
+    "layout": null
+   }
+  }
+ ]
+}

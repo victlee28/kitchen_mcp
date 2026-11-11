@@ -1,0 +1,59 @@
+{
+ "function": "floorplan.outline_xy",
+ "cases": [
+  {
+   "name": "x/z objects",
+   "input": {
+    "outline": [
+     {
+      "x": 1,
+      "z": 2
+     },
+     {
+      "x": 3,
+      "z": 4
+     }
+    ]
+   },
+   "expected": {
+    "points": [
+     [
+      1,
+      2
+     ],
+     [
+      3,
+      4
+     ]
+    ]
+   }
+  },
+  {
+   "name": "pairs",
+   "input": {
+    "outline": [
+     [
+      1,
+      2
+     ],
+     [
+      3,
+      4
+     ]
+    ]
+   },
+   "expected": {
+    "points": [
+     [
+      1,
+      2
+     ],
+     [
+      3,
+      4
+     ]
+    ]
+   }
+  }
+ ]
+}

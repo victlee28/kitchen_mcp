@@ -1,0 +1,99 @@
+{
+ "function": "floorplan.document.fields",
+ "cases": [
+  {
+   "name": "fields of elements",
+   "input": {
+    "data": {
+     "elements": [
+      {
+       "id": "a",
+       "fields": {
+        "label": {
+         "value": "Bếp",
+         "status": "confirmed"
+        },
+        "tag": {
+         "value": "kitchen"
+        }
+       }
+      },
+      {
+       "id": "b"
+      },
+      {
+       "id": "c",
+       "fields": {
+        "label": "not an object"
+       }
+      }
+     ]
+    },
+    "names": [
+     "label",
+     "tag"
+    ]
+   },
+   "expected": {
+    "elements": [
+     [
+      "a",
+      {
+       "label": [
+        {
+         "value": "Bếp",
+         "status": "confirmed"
+        },
+        "Bếp"
+       ],
+       "tag": [
+        {
+         "value": "kitchen"
+        },
+        "kitchen"
+       ]
+      }
+     ],
+     [
+      "b",
+      {
+       "label": [
+        {},
+        null
+       ],
+       "tag": [
+        {},
+        null
+       ]
+      }
+     ],
+     [
+      "c",
+      {
+       "label": [
+        {},
+        null
+       ],
+       "tag": [
+        {},
+        null
+       ]
+      }
+     ]
+    ]
+   }
+  },
+  {
+   "name": "no elements",
+   "input": {
+    "data": {},
+    "names": [
+     "label"
+    ]
+   },
+   "expected": {
+    "elements": []
+   }
+  }
+ ]
+}

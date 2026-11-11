@@ -1,0 +1,104 @@
+{
+ "function": "edit_intent.check_operation",
+ "cases": [
+  {
+   "name": "allowed",
+   "input": {
+    "op": {
+     "op": "remove",
+     "id": "TD3"
+    }
+   },
+   "expected": {
+    "status": "ok",
+    "operation": {
+     "op": "remove",
+     "id": "TD3"
+    },
+    "summary": [
+     "Đề xuất từ mô hình ngôn ngữ"
+    ],
+    "targets": []
+   }
+  },
+  {
+   "name": "whole design replace refused",
+   "input": {
+    "op": {
+     "op": "replace",
+     "spec": {}
+    }
+   },
+   "expected": {
+    "status": "unsupported",
+    "message": "Thao tác 'replace' không được phép từ câu lệnh tự do."
+   }
+  },
+  {
+   "name": "nested multi refused",
+   "input": {
+    "op": {
+     "op": "multi",
+     "ops": [
+      {
+       "op": "multi",
+       "ops": []
+      }
+     ]
+    }
+   },
+   "expected": {
+    "status": "unsupported",
+    "message": "Danh sách thao tác không hợp lệ."
+   }
+  },
+  {
+   "name": "multi of allowed ops",
+   "input": {
+    "op": {
+     "op": "multi",
+     "ops": [
+      {
+       "op": "remove",
+       "id": "TD3"
+      },
+      {
+       "op": "common",
+       "changes": {}
+      }
+     ]
+    }
+   },
+   "expected": {
+    "status": "ok",
+    "operation": {
+     "op": "multi",
+     "ops": [
+      {
+       "op": "remove",
+       "id": "TD3"
+      },
+      {
+       "op": "common",
+       "changes": {}
+      }
+     ]
+    },
+    "summary": [
+     "Đề xuất từ mô hình ngôn ngữ"
+    ],
+    "targets": []
+   }
+  },
+  {
+   "name": "not an object",
+   "input": {
+    "op": "remove TD3"
+   },
+   "expected": {
+    "status": "unsupported",
+    "message": "Thao tác None không được phép từ câu lệnh tự do."
+   }
+  }
+ ]
+}

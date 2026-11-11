@@ -1,0 +1,106 @@
+{
+ "function": "rules.check_geometry",
+ "cases": [
+  {
+   "name": "L fixture",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    }
+   },
+   "expected": {
+    "issues": []
+   }
+  },
+  {
+   "name": "two cabinets in one place",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "ops": [
+     {
+      "op": "update",
+      "id": "TD3",
+      "changes": {
+       "fromCorner": 1500
+      },
+      "closeGap": false
+     }
+    ]
+   },
+   "expected": {
+    "issues": [
+     [
+      "GEO-COLLISION",
+      "error",
+      [
+       "TD3",
+       "TD4"
+      ]
+     ],
+     [
+      "GEO-GAPS",
+      "info",
+      [
+       "TD2",
+       "TD3"
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "name": "wall cabinet too low",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "ops": [
+     {
+      "op": "update",
+      "id": "TT4",
+      "changes": {
+       "y": 800
+      },
+      "closeGap": false
+     }
+    ]
+   },
+   "expected": {
+    "issues": [
+     [
+      "GEO-COLLISION",
+      "error",
+      [
+       "TD2",
+       "TT4"
+      ]
+     ],
+     [
+      "GEO-COLLISION",
+      "error",
+      [
+       "TD3",
+       "TT4"
+      ]
+     ],
+     [
+      "GEO-HEIGHTS",
+      "warning",
+      [
+       "TT4"
+      ]
+     ],
+     [
+      "GEO-HEIGHTS",
+      "warning",
+      [
+       "TT4"
+      ]
+     ]
+    ]
+   }
+  }
+ ]
+}

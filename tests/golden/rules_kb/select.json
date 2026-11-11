@@ -1,0 +1,364 @@
+{
+ "function": "rules_kb.select",
+ "cases": [
+  {
+   "name": "no country",
+   "input": {},
+   "expected": {
+    "selected": {
+     "above-cooktop": [
+      "AS-NZS-5601-1",
+      "info",
+      true
+     ],
+     "base-depth": [
+      "KITCHEN-DEFAULT-001",
+      "warning",
+      false
+     ],
+     "cabinet-plinth": [
+      "EN-1116",
+      "info",
+      true
+     ],
+     "clear-height": [
+      "GB-55038-2025",
+      "info",
+      true
+     ],
+     "cooktop-table": [
+      "NKBA-15",
+      "info",
+      true
+     ],
+     "countertop-depth": [
+      "EN-1116",
+      "info",
+      true
+     ],
+     "countertop-height": [
+      "KITCHEN-DEFAULT-001",
+      "warning",
+      false
+     ],
+     "fridge-table": [
+      "NKBA-14",
+      "info",
+      true
+     ],
+     "hood": [
+      "AS-NZS-5601-1",
+      "info",
+      true
+     ],
+     "microwave": [
+      "NKBA-19",
+      "info",
+      true
+     ],
+     "sink-cooktop": [
+      "SAFETY-001",
+      "warning",
+      false
+     ],
+     "sink-table": [
+      "NKBA-10",
+      "info",
+      true
+     ],
+     "triangle": [
+      "T-CHEAA-TAM-GIAC",
+      "info",
+      true
+     ],
+     "upper-depth": [
+      "EN-1116",
+      "info",
+      true
+     ],
+     "upper-gap": [
+      "EN-1116",
+      "info",
+      true
+     ],
+     "walkway": [
+      "CLEARANCE-001",
+      "warning",
+      false
+     ]
+    }
+   }
+  },
+  {
+   "name": "Vietnam",
+   "input": {
+    "country": "VN"
+   },
+   "expected": {
+    "selected": {
+     "above-cooktop": [
+      "AS-NZS-5601-1",
+      "info",
+      true
+     ],
+     "base-depth": [
+      "VN-KITCHEN-COMMON-PRACTICE",
+      "info",
+      false
+     ],
+     "cabinet-plinth": [
+      "VN-KITCHEN-COMMON-PRACTICE",
+      "info",
+      false
+     ],
+     "clear-height": [
+      "GB-55038-2025",
+      "info",
+      true
+     ],
+     "cooktop-table": [
+      "NKBA-15",
+      "info",
+      true
+     ],
+     "countertop-depth": [
+      "EN-1116",
+      "info",
+      true
+     ],
+     "countertop-height": [
+      "VN-KITCHEN-COMMON-PRACTICE",
+      "info",
+      false
+     ],
+     "fridge-table": [
+      "NKBA-14",
+      "info",
+      true
+     ],
+     "hood": [
+      "VN-KITCHEN-COMMON-PRACTICE",
+      "info",
+      false
+     ],
+     "microwave": [
+      "NKBA-19",
+      "info",
+      true
+     ],
+     "sink-cooktop": [
+      "SAFETY-001",
+      "warning",
+      false
+     ],
+     "sink-table": [
+      "NKBA-10",
+      "info",
+      true
+     ],
+     "triangle": [
+      "T-CHEAA-TAM-GIAC",
+      "info",
+      true
+     ],
+     "upper-depth": [
+      "VN-KITCHEN-COMMON-PRACTICE",
+      "info",
+      false
+     ],
+     "upper-gap": [
+      "VN-KITCHEN-COMMON-PRACTICE",
+      "info",
+      false
+     ],
+     "walkway": [
+      "CLEARANCE-001",
+      "warning",
+      false
+     ]
+    }
+   }
+  },
+  {
+   "name": "United States",
+   "input": {
+    "country": "US",
+    "region": "NA"
+   },
+   "expected": {
+    "selected": {
+     "above-cooktop": [
+      "NKBA-16",
+      "warning",
+      false
+     ],
+     "base-depth": [
+      "KITCHEN-DEFAULT-001",
+      "warning",
+      false
+     ],
+     "cabinet-plinth": [
+      "EN-1116",
+      "info",
+      true
+     ],
+     "clear-height": [
+      "GB-55038-2025",
+      "info",
+      true
+     ],
+     "cooktop-table": [
+      "NKBA-15",
+      "warning",
+      false
+     ],
+     "countertop-depth": [
+      "EN-1116",
+      "info",
+      true
+     ],
+     "countertop-height": [
+      "KITCHEN-DEFAULT-001",
+      "warning",
+      false
+     ],
+     "fridge-table": [
+      "NKBA-14",
+      "warning",
+      false
+     ],
+     "hood": [
+      "AS-NZS-5601-1",
+      "info",
+      true
+     ],
+     "microwave": [
+      "NKBA-19",
+      "warning",
+      false
+     ],
+     "sink-cooktop": [
+      "SAFETY-001",
+      "warning",
+      false
+     ],
+     "sink-table": [
+      "NKBA-10",
+      "warning",
+      false
+     ],
+     "triangle": [
+      "NKBA-03",
+      "warning",
+      false
+     ],
+     "upper-depth": [
+      "EN-1116",
+      "info",
+      true
+     ],
+     "upper-gap": [
+      "NKBA-22",
+      "warning",
+      false
+     ],
+     "walkway": [
+      "NKBA-06",
+      "warning",
+      false
+     ]
+    }
+   }
+  },
+  {
+   "name": "Europe only",
+   "input": {
+    "region": "EU"
+   },
+   "expected": {
+    "selected": {
+     "above-cooktop": [
+      "AS-NZS-5601-1",
+      "info",
+      true
+     ],
+     "base-depth": [
+      "KITCHEN-DEFAULT-001",
+      "warning",
+      false
+     ],
+     "cabinet-plinth": [
+      "EN-1116",
+      "warning",
+      false
+     ],
+     "clear-height": [
+      "GB-55038-2025",
+      "info",
+      true
+     ],
+     "cooktop-table": [
+      "NKBA-15",
+      "info",
+      true
+     ],
+     "countertop-depth": [
+      "EN-1116",
+      "warning",
+      false
+     ],
+     "countertop-height": [
+      "EN-1116",
+      "warning",
+      false
+     ],
+     "fridge-table": [
+      "NKBA-14",
+      "info",
+      true
+     ],
+     "hood": [
+      "HOOD-001",
+      "warning",
+      false
+     ],
+     "microwave": [
+      "NKBA-19",
+      "info",
+      true
+     ],
+     "sink-cooktop": [
+      "SAFETY-001",
+      "warning",
+      false
+     ],
+     "sink-table": [
+      "NKBA-10",
+      "info",
+      true
+     ],
+     "triangle": [
+      "T-CHEAA-TAM-GIAC",
+      "info",
+      true
+     ],
+     "upper-depth": [
+      "EN-1116",
+      "warning",
+      false
+     ],
+     "upper-gap": [
+      "EN-1116",
+      "warning",
+      false
+     ],
+     "walkway": [
+      "CLEARANCE-001",
+      "warning",
+      false
+     ]
+    }
+   }
+  }
+ ]
+}

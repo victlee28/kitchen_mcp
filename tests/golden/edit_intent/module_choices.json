@@ -1,0 +1,40 @@
+{
+ "function": "edit_intent.module_choices",
+ "cases": [
+  {
+   "name": "base cabinets",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    }
+   },
+   "expected": {
+    "choices": [
+     "TD1",
+     "TD2",
+     "TD3",
+     "TD4",
+     "TD5"
+    ]
+   }
+  },
+  {
+   "name": "tall and corner",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "storeys": [
+     "tall",
+     "corner"
+    ]
+   },
+   "expected": {
+    "choices": [
+     "TC1",
+     "KG1"
+    ]
+   }
+  }
+ ]
+}

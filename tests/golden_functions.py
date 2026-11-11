@@ -1146,7 +1146,83 @@ def appliance_kind_changes_kind(i):
     return {"changes": appliance_kind.changes_kind(_app(spec, i), appliance_models.model(i["model"]))}
 
 
+# ---- last helpers (R19): roomctx, rules, rules_kb.select, vocab, edit_intent, jsonview, floorplan readers, recognition
+def roomctx_for_spec(i):
+    """need_for, then for_spec on the design's floorplan: the binding, the placement and the structures it builds (replaced ones left out)."""
+    from kitchen import roomctx
+    spec = _ctx(i)
+    back, side = geometry.wall_length(spec)
+    ctx = roomctx.for_spec(spec, back, side)
+    return {"need": roomctx.need_for(spec, back, side),
+            "context": None if ctx is None else {"replaced": roomctx.replaced(ctx.floorplan), "back": (ctx.binding or {}).get("back"),
+                                                 "placement": [ctx.placement.yaw, ctx.placement.ox, ctx.placement.oz],
+                                                 "structures": sorted(st["sourceElement"] for st in ctx.structures)}}
+
+
+def rules_check_geometry(i):
+    return {"issues": [[x["rule"], x["severity"], list(x.get("module") or [])] for x in rules.check_geometry(_ctx(i))]}
+
+
+def rules_kb_select(i):
+    """default_rows (the seed knowledge) put through select for a country / region: topic -> [code, severity, reference]."""
+    from kitchen import rules_kb
+    sel = rules_kb.select(rules.default_rows(), i.get("country"), i.get("region"))
+    return {"selected": {t: [v["code"], v["severity"], v["reference"]] for t, v in sorted(sel.items())}}
+
+
+def vocab_words(i):
+    """norm, has (for each key), explicit_color and hex_rgb of its colour, for one text."""
+    t = i["text"]
+    c = vocab.explicit_color(t)
+    return {"norm": vocab.norm(t), "has": {k: vocab.has(vocab.norm(t), k) for k in i.get("keys", [])}, "explicitColor": c,
+            "rgb": list(vocab.hex_rgb(c)) if c else None}
+
+
+def edit_intent_check_operation(i):
+    return edit_intent.check_operation(i["op"])
+
+
+def edit_intent_module_choices(i):
+    spec = _ctx(i)
+    return {"choices": edit_intent.module_choices([m for m in spec.module if m.storey in i.get("storeys", ["base"])])}
+
+
+def jsonview_views(i):
+    from kitchen import jsonview
+    return {"asDict": [jsonview.as_dict(v) is not None for v in i["values"]], "asList": [jsonview.as_list(v) is not None for v in i["values"]]}
+
+
+def floorplan_document_fields(i):
+    """elements_of, element_field and field_value of a document: per element its ``fields`` read for the names given."""
+    els = floorplan.document.elements_of(i["data"])
+    return {"elements": [[e.get("id"), {n: [floorplan.document.element_field(e, n), floorplan.document.field_value(e, n)] for n in i["names"]}] for e in els]}
+
+
+def floorplan_outline_xy(i):
+    return {"points": _plain(floorplan.back.outline_xy(i["outline"]))}
+
+
+def recognition_draft_numbers(i):
+    from kitchen.recognition import draft
+    return {"numbers": [draft.number(v) for v in i["values"]], "confidence": [draft.confidence_of(v) for v in i["values"]]}
+
+
+def recognizer_wire_layout_from_runs(i):
+    return {"layout": recognizer_wire.layout_from_runs(i["payload"])}
+
+
 FUNCTIONS = {
+    "roomctx.for_spec": roomctx_for_spec,
+    "rules.check_geometry": rules_check_geometry,
+    "rules_kb.select": rules_kb_select,
+    "vocab.words": vocab_words,
+    "edit_intent.check_operation": edit_intent_check_operation,
+    "edit_intent.module_choices": edit_intent_module_choices,
+    "jsonview.views": jsonview_views,
+    "floorplan.document.fields": floorplan_document_fields,
+    "floorplan.outline_xy": floorplan_outline_xy,
+    "recognition.draft.numbers": recognition_draft_numbers,
+    "recognition.recognizer_wire.layout_from_runs": recognizer_wire_layout_from_runs,
     "edit.add_module": _edit_op,
     "edit.add_run": _edit_op,
     "edit.move_run": _edit_op,

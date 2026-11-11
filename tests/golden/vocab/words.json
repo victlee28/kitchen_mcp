@@ -1,0 +1,68 @@
+{
+ "function": "vocab.words",
+ "cases": [
+  {
+   "name": "sage green laminate",
+   "input": {
+    "text": "Laminate xanh rêu mờ",
+    "keys": [
+     "xanh rêu",
+     "laminate",
+     "gỗ"
+    ]
+   },
+   "expected": {
+    "norm": " laminate xanh reu mo ",
+    "has": {
+     "xanh rêu": true,
+     "laminate": true,
+     "gỗ": false
+    },
+    "explicitColor": "#7d8a5f",
+    "rgb": [
+     125,
+     138,
+     95
+    ]
+   }
+  },
+  {
+   "name": "white is not explicit",
+   "input": {
+    "text": "Trắng bóng",
+    "keys": [
+     "trắng"
+    ]
+   },
+   "expected": {
+    "norm": " trang bong ",
+    "has": {
+     "trắng": true
+    },
+    "explicitColor": null,
+    "rgb": null
+   }
+  },
+  {
+   "name": "no colour",
+   "input": {
+    "text": "Gỗ sồi",
+    "keys": [
+     "gỗ",
+     "sồi",
+     "óc chó"
+    ]
+   },
+   "expected": {
+    "norm": " go soi ",
+    "has": {
+     "gỗ": true,
+     "sồi": true,
+     "óc chó": false
+    },
+    "explicitColor": null,
+    "rgb": null
+   }
+  }
+ ]
+}

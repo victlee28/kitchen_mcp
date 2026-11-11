@@ -1,0 +1,69 @@
+{
+ "function": "jsonview.views",
+ "cases": [
+  {
+   "name": "JSON values",
+   "input": {
+    "values": [
+     {},
+     {
+      "a": 1
+     },
+     [],
+     [
+      1
+     ],
+     "x",
+     1,
+     null,
+     true
+    ]
+   },
+   "expected": {
+    "asDict": [
+     true,
+     true,
+     false,
+     false,
+     false,
+     false,
+     false,
+     false
+    ],
+    "asList": [
+     false,
+     false,
+     true,
+     true,
+     false,
+     false,
+     false,
+     false
+    ]
+   }
+  },
+  {
+   "name": "nested",
+   "input": {
+    "values": [
+     [
+      {}
+     ],
+     {
+      "l": []
+     }
+    ]
+   },
+   "expected": {
+    "asDict": [
+     false,
+     true
+    ],
+    "asList": [
+     true,
+     false
+    ]
+   }
+  }
+ ]
+}

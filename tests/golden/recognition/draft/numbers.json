@@ -1,0 +1,64 @@
+{
+ "function": "recognition.draft.numbers",
+ "cases": [
+  {
+   "name": "numbers and not",
+   "input": {
+    "values": [
+     1,
+     2.5,
+     "3",
+     true,
+     null,
+     -0.5,
+     1.7
+    ]
+   },
+   "expected": {
+    "numbers": [
+     1.0,
+     2.5,
+     null,
+     null,
+     null,
+     -0.5,
+     1.7
+    ],
+    "confidence": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     0.0,
+     1.0
+    ]
+   }
+  },
+  {
+   "name": "confidence clamped to 0..1",
+   "input": {
+    "values": [
+     5,
+     -2,
+     0.333,
+     0.335
+    ]
+   },
+   "expected": {
+    "numbers": [
+     5.0,
+     -2.0,
+     0.333,
+     0.335
+    ],
+    "confidence": [
+     1.0,
+     0.0,
+     0.33,
+     0.34
+    ]
+   }
+  }
+ ]
+}

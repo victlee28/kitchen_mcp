@@ -1,0 +1,141 @@
+{
+ "function": "roomctx.for_spec",
+ "cases": [
+  {
+   "name": "no floorplan",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    }
+   },
+   "expected": {
+    "need": {
+     "back": 2520.0,
+     "right": 3430.0,
+     "left": 0
+    },
+    "context": null
+   }
+  },
+  {
+   "name": "building plan",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "floorplan": {
+     "$fixture": "tests/data/floorplan-building.json"
+    }
+   },
+   "expected": {
+    "need": {
+     "back": 2520.0,
+     "right": 3430.0,
+     "left": 0
+    },
+    "context": {
+     "replaced": [],
+     "back": 2,
+     "placement": [
+      -180.0,
+      0.0,
+      4715.45
+     ],
+     "structures": [
+      "column_001",
+      "furniture_001",
+      "furniture_003",
+      "furniture_017",
+      "furniture_019",
+      "furniture_021",
+      "opening_002",
+      "shaft_001",
+      "stair_001",
+      "wall_002",
+      "wall_003",
+      "wall_006",
+      "wall_009",
+      "wall_010",
+      "wall_011",
+      "wall_012",
+      "wall_013",
+      "wall_015",
+      "wall_h02",
+      "wall_h03",
+      "wall_h04",
+      "wall_h05",
+      "wall_h06",
+      "wall_h07",
+      "wall_h08",
+      "wall_h09",
+      "wall_h10"
+     ]
+    }
+   }
+  },
+  {
+   "name": "an element replaced",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "floorplan": {
+     "$fixture": "tests/data/floorplan-building.json"
+    },
+    "ops": [
+     {
+      "op": "replace-element",
+      "id": "furniture_003",
+      "replaced": true
+     }
+    ]
+   },
+   "expected": {
+    "need": {
+     "back": 2520.0,
+     "right": 3430.0,
+     "left": 0
+    },
+    "context": {
+     "replaced": [
+      "furniture_003"
+     ],
+     "back": 2,
+     "placement": [
+      -180.0,
+      0.0,
+      4715.45
+     ],
+     "structures": [
+      "column_001",
+      "furniture_001",
+      "furniture_017",
+      "furniture_019",
+      "furniture_021",
+      "opening_002",
+      "shaft_001",
+      "stair_001",
+      "wall_002",
+      "wall_003",
+      "wall_006",
+      "wall_009",
+      "wall_010",
+      "wall_011",
+      "wall_012",
+      "wall_013",
+      "wall_015",
+      "wall_h02",
+      "wall_h03",
+      "wall_h04",
+      "wall_h05",
+      "wall_h06",
+      "wall_h07",
+      "wall_h08",
+      "wall_h09",
+      "wall_h10"
+     ]
+    }
+   }
+  }
+ ]
+}
