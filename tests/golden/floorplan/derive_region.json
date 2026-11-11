@@ -1,0 +1,88 @@
+{
+ "function": "floorplan.derive_region",
+ "cases": [
+  {
+   "name": "around the kitchen set",
+   "input": {
+    "floorplan": {
+     "$fixture": "tests/data/floorplan-building.json"
+    },
+    "seeds": [
+     "furniture_003"
+    ]
+   },
+   "expected": {
+    "bbox": [
+     16.0,
+     1394.0,
+     337.0,
+     1559.0
+    ],
+    "seeds": [
+     "furniture_003"
+    ],
+    "sides": {
+     "forwardMin": {
+      "face": 16.0,
+      "walls": [
+       "wall_h09"
+      ],
+      "open": false
+     },
+     "forwardMax": {
+      "face": 337.0,
+      "walls": [
+       "wall_010"
+      ],
+      "open": false
+     },
+     "rightMin": {
+      "face": 1394.0,
+      "walls": [
+       "wall_009",
+       "wall_h05"
+      ],
+      "open": false
+     },
+     "rightMax": {
+      "face": 1559.0,
+      "walls": [
+       "wall_002",
+       "wall_h08"
+      ],
+      "open": false
+     }
+    },
+    "unit": "cm"
+   }
+  },
+  {
+   "name": "unknown seed",
+   "input": {
+    "floorplan": {
+     "$fixture": "tests/data/floorplan-building.json"
+    },
+    "seeds": [
+     "nope"
+    ]
+   },
+   "error": {
+    "kind": "validation",
+    "code": "invalid-input"
+   }
+  },
+  {
+   "name": "no seed",
+   "input": {
+    "floorplan": {
+     "$fixture": "tests/data/floorplan-building.json"
+    },
+    "seeds": []
+   },
+   "error": {
+    "kind": "validation",
+    "code": "invalid-input"
+   }
+  }
+ ]
+}

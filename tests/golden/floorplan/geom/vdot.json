@@ -1,0 +1,41 @@
+{
+ "function": "floorplan.geom.vdot",
+ "cases": [
+  {
+   "name": "case 1",
+   "input": {
+    "args": [
+     [
+      1,
+      2
+     ],
+     [
+      3,
+      4
+     ]
+    ]
+   },
+   "expected": {
+    "value": 11
+   }
+  },
+  {
+   "name": "case 2",
+   "input": {
+    "args": [
+     [
+      1,
+      0
+     ],
+     [
+      0,
+      1
+     ]
+    ]
+   },
+   "expected": {
+    "value": 0
+   }
+  }
+ ]
+}

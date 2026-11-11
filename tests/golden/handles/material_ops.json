@@ -1,0 +1,93 @@
+{
+ "function": "handles.material_ops",
+ "cases": [
+  {
+   "name": "both handles of one cabinet",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "partIds": [
+     "TD1-handle-1",
+     "TD1-handle-2"
+    ],
+    "material": "Đồng"
+   },
+   "expected": {
+    "op": {
+     "op": "update",
+     "id": "TD1",
+     "changes": {
+      "handle": {
+       "material": "Đồng"
+      }
+     }
+    },
+    "scope": "tay nắm module TD1"
+   }
+  },
+  {
+   "name": "half of a cabinet's handles is refused",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "partIds": [
+     "TD1-handle-1"
+    ],
+    "material": "Đồng"
+   },
+   "error": {
+    "kind": "validation",
+    "code": "invalid-input"
+   }
+  },
+  {
+   "name": "every handle",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "partIds": [
+     "TC1-handle-1",
+     "TC1-handle-2",
+     "TD1-handle-1",
+     "TD1-handle-2",
+     "TT1-handle-1",
+     "TT1-handle-2",
+     "TT2-handle-1",
+     "TD2-handle-1",
+     "TD2-handle-2",
+     "TD3-handle-1",
+     "TD4-handle-1",
+     "TD4-handle-2",
+     "TD5-handle-1",
+     "TT3-handle-1",
+     "TT3-handle-2",
+     "TT4-handle-1",
+     "TT5-handle-1",
+     "TT5-handle-2",
+     "TT6-handle-1",
+     "TT7-handle-1",
+     "TT8-handle-1",
+     "TT9-handle-1"
+    ],
+    "material": "Inox"
+   },
+   "expected": {
+    "op": {
+     "op": "common",
+     "changes": {
+      "handle": {
+       "variant": "bar",
+       "length": 160.0,
+       "material": "Inox"
+      },
+      "handleByStorey": null
+     }
+    },
+    "scope": "mọi tay nắm"
+   }
+  }
+ ]
+}

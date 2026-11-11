@@ -1,0 +1,458 @@
+{
+ "function": "floorplan.room_section",
+ "cases": [
+  {
+   "name": "sample plan, no binding",
+   "input": {
+    "floorplan": {
+     "$fixture": "tests/data/floorplan-sample.json"
+    },
+    "normalized": true
+   },
+   "expected": {
+    "width": 6030.0,
+    "depth": 4720.9,
+    "floorOutline": [
+     {
+      "x": 4330.0,
+      "z": 4720.9
+     },
+     {
+      "x": 410.0,
+      "z": 4710.9
+     },
+     {
+      "x": 400.0,
+      "z": 4350.9
+     },
+     {
+      "x": 0.0,
+      "z": 4350.9
+     },
+     {
+      "x": 0.0,
+      "z": 390.9
+     },
+     {
+      "x": 420.0,
+      "z": 390.9
+     },
+     {
+      "x": 399.7,
+      "z": 0.0
+     },
+     {
+      "x": 4340.0,
+      "z": 0.9
+     },
+     {
+      "x": 4340.0,
+      "z": 130.9
+     },
+     {
+      "x": 6030.0,
+      "z": 120.9
+     },
+     {
+      "x": 6030.0,
+      "z": 4610.9
+     },
+     {
+      "x": 4330.0,
+      "z": 4620.9
+     }
+    ],
+    "walls": [
+     [
+      "WALL-FP-1",
+      0,
+      140.0,
+      3000.0
+     ],
+     [
+      "WALL-FP-2",
+      0,
+      140.0,
+      3000.0
+     ],
+     [
+      "WALL-FP-3",
+      0,
+      140.0,
+      3000.0
+     ],
+     [
+      "WALL-FP-4",
+      0,
+      140.0,
+      3000.0
+     ],
+     [
+      "WALL-FP-5",
+      0,
+      140.0,
+      3000.0
+     ],
+     [
+      "WALL-FP-6",
+      0,
+      140.0,
+      3000.0
+     ],
+     [
+      "WALL-FP-7",
+      0,
+      140.0,
+      3000.0
+     ],
+     [
+      "WALL-FP-8",
+      0,
+      140.0,
+      3000.0
+     ],
+     [
+      "WALL-FP-9",
+      0,
+      140.0,
+      3000.0
+     ],
+     [
+      "WALL-FP-10",
+      0,
+      140.0,
+      3000.0
+     ],
+     [
+      "WALL-FP-11",
+      0,
+      140.0,
+      3000.0
+     ],
+     [
+      "WALL-FP-12",
+      0,
+      140.0,
+      3000.0
+     ]
+    ],
+    "structures": [
+     [
+      "STRUCT-column_001",
+      "column",
+      "column",
+      3000.0
+     ],
+     [
+      "STRUCT-opening_002",
+      "opening",
+      "door",
+      2200.0
+     ],
+     [
+      "STRUCT-furniture_001",
+      "furniture",
+      "cabinet",
+      2400.0
+     ],
+     [
+      "STRUCT-shaft_001",
+      "shaft",
+      "elevator_shaft",
+      3000.0
+     ],
+     [
+      "STRUCT-wall_006",
+      "wall",
+      "wall",
+      3000.0
+     ]
+    ]
+   }
+  },
+  {
+   "name": "building plan, bound on edge 0",
+   "input": {
+    "floorplan": {
+     "$fixture": "tests/data/floorplan-building.json"
+    },
+    "normalized": true,
+    "binding": {
+     "back": 0
+    }
+   },
+   "expected": {
+    "width": 5625.0,
+    "depth": 4715.45,
+    "floorOutline": [
+     {
+      "x": 5625.0,
+      "z": 4615.45
+     },
+     {
+      "x": 3925.0,
+      "z": 4615.45
+     },
+     {
+      "x": 3925.0,
+      "z": 4715.45
+     },
+     {
+      "x": 0.0,
+      "z": 4715.45
+     },
+     {
+      "x": 0.0,
+      "z": 390.45
+     },
+     {
+      "x": 4.85,
+      "z": 390.45
+     },
+     {
+      "x": 4.85,
+      "z": 0.0
+     },
+     {
+      "x": 3935.0,
+      "z": 0.0
+     },
+     {
+      "x": 3935.0,
+      "z": 125.45
+     },
+     {
+      "x": 5625.0,
+      "z": 125.45
+     }
+    ],
+    "walls": [
+     [
+      "WALL-BACK",
+      0,
+      240.0,
+      3000.0
+     ],
+     [
+      "WALL-FP-2",
+      0,
+      140.0,
+      3000.0
+     ],
+     [
+      "WALL-FP-3",
+      0,
+      140.0,
+      3000.0
+     ],
+     [
+      "WALL-FP-4",
+      0,
+      410.0,
+      3000.0
+     ],
+     [
+      "WALL-FP-5",
+      0,
+      140.0,
+      3000.0
+     ],
+     [
+      "WALL-FP-6",
+      0,
+      140.0,
+      3000.0
+     ],
+     [
+      "WALL-FP-7",
+      0,
+      120.0,
+      3000.0
+     ],
+     [
+      "WALL-FP-8",
+      0,
+      140.0,
+      3000.0
+     ],
+     [
+      "WALL-FP-9",
+      0,
+      240.0,
+      3000.0
+     ],
+     [
+      "WALL-FP-10",
+      0,
+      140.0,
+      3000.0
+     ]
+    ],
+    "structures": [
+     [
+      "STRUCT-column_001",
+      "column",
+      "column",
+      3000.0
+     ],
+     [
+      "STRUCT-opening_002",
+      "opening",
+      "door",
+      2200.0
+     ],
+     [
+      "STRUCT-furniture_001",
+      "furniture",
+      "cabinet",
+      2100.0
+     ],
+     [
+      "STRUCT-shaft_001",
+      "shaft",
+      "elevator_shaft",
+      3000.0
+     ],
+     [
+      "STRUCT-furniture_003",
+      "furniture",
+      "cabinet_kitchen_set",
+      900.0
+     ],
+     [
+      "STRUCT-furniture_017",
+      "furniture",
+      "cabinet_kitchen_set",
+      900.0
+     ],
+     [
+      "STRUCT-furniture_019",
+      "furniture",
+      "cabinet",
+      900.0
+     ],
+     [
+      "STRUCT-furniture_021",
+      "furniture",
+      "cabinet",
+      2400.0
+     ],
+     [
+      "STRUCT-stair_001",
+      "stair",
+      "stair",
+      1800.0
+     ],
+     [
+      "STRUCT-wall_006",
+      "wall",
+      "wall",
+      3000.0
+     ],
+     [
+      "STRUCT-wall_003",
+      "wall",
+      "wall",
+      3000.0
+     ],
+     [
+      "STRUCT-wall_009",
+      "wall",
+      "wall",
+      3000.0
+     ],
+     [
+      "STRUCT-wall_010",
+      "wall",
+      "wall",
+      3000.0
+     ],
+     [
+      "STRUCT-wall_002",
+      "wall",
+      "wall",
+      3000.0
+     ],
+     [
+      "STRUCT-wall_011",
+      "wall",
+      "wall",
+      3000.0
+     ],
+     [
+      "STRUCT-wall_015",
+      "wall",
+      "wall",
+      3000.0
+     ],
+     [
+      "STRUCT-wall_012",
+      "wall",
+      "wall",
+      3000.0
+     ],
+     [
+      "STRUCT-wall_013",
+      "wall",
+      "wall",
+      3000.0
+     ],
+     [
+      "STRUCT-wall_h02",
+      "wall",
+      "wall",
+      3000.0
+     ],
+     [
+      "STRUCT-wall_h03",
+      "wall",
+      "wall",
+      3000.0
+     ],
+     [
+      "STRUCT-wall_h04",
+      "wall",
+      "wall",
+      3000.0
+     ],
+     [
+      "STRUCT-wall_h05",
+      "wall",
+      "wall",
+      3000.0
+     ],
+     [
+      "STRUCT-wall_h06",
+      "wall",
+      "wall",
+      3000.0
+     ],
+     [
+      "STRUCT-wall_h07",
+      "wall",
+      "wall",
+      3000.0
+     ],
+     [
+      "STRUCT-wall_h08",
+      "wall",
+      "wall",
+      3000.0
+     ],
+     [
+      "STRUCT-wall_h09",
+      "wall",
+      "wall",
+      3000.0
+     ],
+     [
+      "STRUCT-wall_h10",
+      "wall",
+      "wall",
+      3000.0
+     ]
+    ]
+   }
+  }
+ ]
+}

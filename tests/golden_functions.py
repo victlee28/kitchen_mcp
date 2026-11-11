@@ -431,7 +431,147 @@ def cabinet_run_plan_corner(i):
     return cabinet_run.plan_corner(spec, i["runA"], i["runB"], i.get("width", 900.0), i.get("moduleType", "base"))
 
 
+def _tup(v):
+    """JSON arrays of numbers -> tuples (points), arrays of points -> lists of tuples; other values as they are."""
+    if isinstance(v, list) and v and all(isinstance(x, (int, float)) for x in v):
+        return tuple(v)
+    if isinstance(v, list) and v and all(isinstance(x, list) for x in v):
+        return [_tup(x) for x in v]
+    return v
+
+
+def _json(v):
+    return json.loads(json.dumps(v))
+
+
+def _geom(name):
+    fn = getattr(floorplan.geom, name)
+    return lambda i: {"value": _json(fn(*[_tup(a) for a in i["args"]]))}
+
+
+def regions_priority_score(i):
+    score = regions.priority_score(i["row"], i.get("country"), i.get("region"))
+    return {"score": score, "label": regions.priority_label(score)}
+
+
+def handles_material_ops(i):
+    spec = _spec_after(i)
+    op, scope = handles.material_ops(spec, geometry.compile_spec(spec), i["partIds"], i["material"])
+    return {"op": op, "scope": scope}
+
+
+def lexicon_fold(i):
+    return {"folded": lexicon.fold(i["text"])}
+
+
+def lexicon_notes(i):
+    return {"notes": lexicon.notes(lexicon.interpret(i["text"]).items)}
+
+
+def floorplan_derive_region(i):
+    return floorplan.derive_region(_floorplan(i), i["seeds"])
+
+
+def floorplan_parse_region(i):
+    return floorplan.parse_region(_floorplan(i), i["spec"])
+
+
+def floorplan_kitchen_transform(i):
+    return floorplan.kitchen_transform(_floorplan(i), i["binding"])
+
+
+def floorplan_room_edges(i):
+    return {"edges": _json(floorplan.back.room_edges([tuple(p) for p in i["room"]]))}
+
+
+def floorplan_detect_element_backs(i):
+    return {"backs": floorplan.detect_element_backs(_floorplan(i), tuple(i.get("kinds", ["furniture"])), tuple(i["tags"]) if i.get("tags") else None)}
+
+
+def floorplan_resolve_binding(i):
+    b = floorplan.resolve_binding(_floorplan(i), i.get("need"))
+    return None if b is None else {k: b[k] for k in ("back", "right", "left", "offset", "source", "transform")}
+
+
+def floorplan_room_section(i):
+    """Projection: size, floor outline, each wall as [id, edge, thickness, openings] and each structure as [id, kind, tag, height]."""
+    fp = _floorplan(i)
+    sec = floorplan.room_section(fp, i.get("binding"), "MAT-WALL")
+    return {"width": sec["width"], "depth": sec["depth"], "floorOutline": sec["floorOutline"],
+            "walls": [[w["id"], len(w["openings"]), w["thickness"], w["height"]] for w in sec["walls"]],
+            "structures": [[st["id"], st["kind"], st["tag"], st["height"]] for st in sec["structures"]]}
+
+
+def floorplan_finish_document(i):
+    """The L fixture's scene put into a normalised floorplan room: walls kept, the floorplan record, where the first cabinet lands."""
+    fp = _floorplan(i)
+    binding = floorplan.bind_kitchen(fp, i["need"], i.get("backEdge"))
+    doc = threejs_export.export(_spec_after(i), "golden", 1, created_at="2026-01-01T00:00:00+00:00")
+    out = floorplan.finish_document(doc, fp, binding)
+    first = out["modules"][0]
+    return {"walls": [w["id"] for w in out["room"]["walls"]], "coordinateOrigin": out["coordinateSystem"]["origin"],
+            "firstModule": [first["id"], first["transform"]["position"], first["transform"]["rotation"]["y"]],
+            "floorplanKeys": sorted(out.get("floorplan", {}).keys()), "integrity": threejs_export.integrity(out)}
+
+
+def floorplan_default_height(i):
+    return {"height": floorplan.default_height(i["record"])}
+
+
+def floorplan_document_hash(i):
+    return {"hash": floorplan.document_hash(_floorplan(i))}
+
+
+def floorplan_document_frame_vectors(i):
+    vx, vy = floorplan.document.frame_vectors(i["data"])
+    return {"x": list(vx), "y": list(vy)}
+
+
+def floorplan_document_read_points(i):
+    return {"points": [list(p) for p in floorplan.document.read_points(i["value"], i.get("elementId", "e"), i.get("what", "outline"))]}
+
+
+def floorplan_document_element_bbox(i):
+    return {"bbox": floorplan.document.element_bbox(i["element"])}
+
+
+def floorplan_document_is_kitchen_unit(i):
+    return {"kitchen": floorplan.document.is_kitchen_unit(i["element"])}
+
+
 FUNCTIONS = {
+    "regions.priority_score": regions_priority_score,
+    "handles.material_ops": handles_material_ops,
+    "lexicon.fold": lexicon_fold,
+    "lexicon.notes": lexicon_notes,
+    "floorplan.derive_region": floorplan_derive_region,
+    "floorplan.parse_region": floorplan_parse_region,
+    "floorplan.kitchen_transform": floorplan_kitchen_transform,
+    "floorplan.room_edges": floorplan_room_edges,
+    "floorplan.detect_element_backs": floorplan_detect_element_backs,
+    "floorplan.resolve_binding": floorplan_resolve_binding,
+    "floorplan.room_section": floorplan_room_section,
+    "floorplan.finish_document": floorplan_finish_document,
+    "floorplan.default_height": floorplan_default_height,
+    "floorplan.document_hash": floorplan_document_hash,
+    "floorplan.document.frame_vectors": floorplan_document_frame_vectors,
+    "floorplan.document.read_points": floorplan_document_read_points,
+    "floorplan.document.element_bbox": floorplan_document_element_bbox,
+    "floorplan.document.is_kitchen_unit": floorplan_document_is_kitchen_unit,
+    "floorplan.geom.vsub": _geom("vsub"),
+    "floorplan.geom.vdot": _geom("vdot"),
+    "floorplan.geom.vcross": _geom("vcross"),
+    "floorplan.geom.vnorm": _geom("vnorm"),
+    "floorplan.geom.area2": _geom("area2"),
+    "floorplan.geom.seg_dist": _geom("seg_dist"),
+    "floorplan.geom.boundary_dist": _geom("boundary_dist"),
+    "floorplan.geom.point_in_poly": _geom("point_in_poly"),
+    "floorplan.geom.proper_cross": _geom("proper_cross"),
+    "floorplan.geom.polys_cross": _geom("polys_cross"),
+    "floorplan.geom.poly_dist": _geom("poly_dist"),
+    "floorplan.geom.self_intersects": _geom("self_intersects"),
+    "floorplan.geom.angle_between": _geom("angle_between"),
+    "floorplan.geom.long_dir": _geom("long_dir"),
     "run_line.plan_runs": run_line_plan_runs,
     "cabinet_run.plan_corner": cabinet_run_plan_corner,
     "geometry.compile_spec": geometry_compile_spec,

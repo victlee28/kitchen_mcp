@@ -1,0 +1,80 @@
+{
+ "function": "floorplan.document.element_bbox",
+ "cases": [
+  {
+   "name": "bbox given",
+   "input": {
+    "element": {
+     "id": "e",
+     "fields": {
+      "geometry": {
+       "value": {
+        "bbox": [
+         1,
+         2,
+         3,
+         4
+        ]
+       }
+      }
+     }
+    }
+   },
+   "expected": {
+    "bbox": [
+     1.0,
+     2.0,
+     3.0,
+     4.0
+    ]
+   }
+  },
+  {
+   "name": "from the outline",
+   "input": {
+    "element": {
+     "id": "e",
+     "fields": {
+      "geometry": {
+       "value": {
+        "outline": [
+         [
+          0,
+          5
+         ],
+         [
+          4,
+          1
+         ],
+         [
+          2,
+          9
+         ]
+        ]
+       }
+      }
+     }
+    }
+   },
+   "expected": {
+    "bbox": [
+     0.0,
+     1.0,
+     4.0,
+     9.0
+    ]
+   }
+  },
+  {
+   "name": "no geometry",
+   "input": {
+    "element": {
+     "id": "e"
+    }
+   },
+   "expected": {
+    "bbox": null
+   }
+  }
+ ]
+}

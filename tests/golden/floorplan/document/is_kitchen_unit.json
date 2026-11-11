@@ -1,0 +1,69 @@
+{
+ "function": "floorplan.document.is_kitchen_unit",
+ "cases": [
+  {
+   "name": "kitchen by tag",
+   "input": {
+    "element": {
+     "kind": "furniture",
+     "fields": {
+      "tag": {
+       "value": "kitchen"
+      }
+     }
+    }
+   },
+   "expected": {
+    "kitchen": true
+   }
+  },
+  {
+   "name": "bếp by label",
+   "input": {
+    "element": {
+     "kind": "furniture",
+     "fields": {
+      "label": {
+       "value": "Tủ bếp trên"
+      }
+     }
+    }
+   },
+   "expected": {
+    "kitchen": true
+   }
+  },
+  {
+   "name": "wardrobe",
+   "input": {
+    "element": {
+     "kind": "furniture",
+     "fields": {
+      "label": {
+       "value": "Tủ áo"
+      }
+     }
+    }
+   },
+   "expected": {
+    "kitchen": false
+   }
+  },
+  {
+   "name": "not furniture",
+   "input": {
+    "element": {
+     "kind": "area",
+     "fields": {
+      "label": {
+       "value": "Bếp"
+      }
+     }
+    }
+   },
+   "expected": {
+    "kitchen": false
+   }
+  }
+ ]
+}

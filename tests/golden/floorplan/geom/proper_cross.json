@@ -1,0 +1,57 @@
+{
+ "function": "floorplan.geom.proper_cross",
+ "cases": [
+  {
+   "name": "case 1",
+   "input": {
+    "args": [
+     [
+      0,
+      0
+     ],
+     [
+      2,
+      2
+     ],
+     [
+      0,
+      2
+     ],
+     [
+      2,
+      0
+     ]
+    ]
+   },
+   "expected": {
+    "value": true
+   }
+  },
+  {
+   "name": "case 2",
+   "input": {
+    "args": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      0
+     ],
+     [
+      1,
+      0
+     ],
+     [
+      2,
+      0
+     ]
+    ]
+   },
+   "expected": {
+    "value": false
+   }
+  }
+ ]
+}

@@ -1,0 +1,47 @@
+{
+ "function": "floorplan.geom.vsub",
+ "cases": [
+  {
+   "name": "case 1",
+   "input": {
+    "args": [
+     [
+      3,
+      4
+     ],
+     [
+      1,
+      1
+     ]
+    ]
+   },
+   "expected": {
+    "value": [
+     2,
+     3
+    ]
+   }
+  },
+  {
+   "name": "case 2",
+   "input": {
+    "args": [
+     [
+      0,
+      0
+     ],
+     [
+      -1,
+      2.5
+     ]
+    ]
+   },
+   "expected": {
+    "value": [
+     1,
+     -2.5
+    ]
+   }
+  }
+ ]
+}

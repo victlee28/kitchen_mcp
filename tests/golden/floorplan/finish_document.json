@@ -1,0 +1,71 @@
+{
+ "function": "floorplan.finish_document",
+ "cases": [
+  {
+   "name": "L fixture in the building room",
+   "input": {
+    "floorplan": {
+     "$fixture": "tests/data/floorplan-building.json"
+    },
+    "normalized": true,
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "need": {
+     "back": 2500
+    }
+   },
+   "expected": {
+    "walls": [
+     "WALL-BACK",
+     "WALL-RIGHT"
+    ],
+    "coordinateOrigin": "room_corner",
+    "firstModule": [
+     "MOD-TC1",
+     {
+      "x": 1920.0,
+      "y": 0.0,
+      "z": 4715.45
+     },
+     180.0
+    ],
+    "floorplanKeys": [],
+    "integrity": []
+   }
+  },
+  {
+   "name": "L fixture in the sample room",
+   "input": {
+    "floorplan": {
+     "$fixture": "tests/data/floorplan-sample.json"
+    },
+    "normalized": true,
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "need": {
+     "back": 2500
+    }
+   },
+   "expected": {
+    "walls": [
+     "WALL-BACK",
+     "WALL-RIGHT"
+    ],
+    "coordinateOrigin": "room_corner",
+    "firstModule": [
+     "MOD-TC1",
+     {
+      "x": 2329.994,
+      "y": 0.0,
+      "z": 4715.798
+     },
+     179.853838
+    ],
+    "floorplanKeys": [],
+    "integrity": []
+   }
+  }
+ ]
+}

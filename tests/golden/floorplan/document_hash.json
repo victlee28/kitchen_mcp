@@ -1,0 +1,28 @@
+{
+ "function": "floorplan.document_hash",
+ "cases": [
+  {
+   "name": "building plan",
+   "input": {
+    "floorplan": {
+     "$fixture": "tests/data/floorplan-building.json"
+    }
+   },
+   "expected": {
+    "hash": "3e5f45193f1c6208b39488b2b0c2cc09326ee26efaf189fa918bc44591577a49"
+   }
+  },
+  {
+   "name": "small document",
+   "input": {
+    "floorplan": {
+     "b": 1,
+     "a": "ê"
+    }
+   },
+   "expected": {
+    "hash": "62a2e71caf7cf6a4111516f2ec0c93c4e1df00362c313307432a6ca0c7f1bc70"
+   }
+  }
+ ]
+}

@@ -1,0 +1,34 @@
+{
+ "function": "lexicon.notes",
+ "cases": [
+  {
+   "name": "terms that only reach the prompt",
+   "input": {
+    "text": "bếp phong cách Japandi, gỗ sồi, kính sọc"
+   },
+   "expected": {
+    "notes": [
+     "[exported] japandi: Ghi vào thiết kế, file 3D và prompt ảnh; không đổi hình học. Vật liệu đi kèm cần nêu riêng (vd 'gỗ sáng')."
+    ]
+   }
+  },
+  {
+   "name": "everything built",
+   "input": {
+    "text": "bếp chữ L 3m"
+   },
+   "expected": {
+    "notes": []
+   }
+  },
+  {
+   "name": "nothing understood",
+   "input": {
+    "text": "xin chào"
+   },
+   "expected": {
+    "notes": []
+   }
+  }
+ ]
+}

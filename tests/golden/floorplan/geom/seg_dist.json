@@ -1,0 +1,49 @@
+{
+ "function": "floorplan.geom.seg_dist",
+ "cases": [
+  {
+   "name": "case 1",
+   "input": {
+    "args": [
+     [
+      1,
+      1
+     ],
+     [
+      0,
+      0
+     ],
+     [
+      2,
+      0
+     ]
+    ]
+   },
+   "expected": {
+    "value": 1.0
+   }
+  },
+  {
+   "name": "case 2",
+   "input": {
+    "args": [
+     [
+      3,
+      1
+     ],
+     [
+      0,
+      0
+     ],
+     [
+      2,
+      0
+     ]
+    ]
+   },
+   "expected": {
+    "value": 1.4142135623730951
+   }
+  }
+ ]
+}

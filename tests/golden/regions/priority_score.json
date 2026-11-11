@@ -1,0 +1,92 @@
+{
+ "function": "regions.priority_score",
+ "cases": [
+  {
+   "name": "global row, no country",
+   "input": {
+    "row": {
+     "region": "GLOBAL"
+    },
+    "country": null,
+    "region": null
+   },
+   "expected": {
+    "score": 10,
+    "label": "toàn cầu"
+   }
+  },
+  {
+   "name": "row of the design's country",
+   "input": {
+    "row": {
+     "region": "SEA",
+     "country": "VN"
+    },
+    "country": "VN",
+    "region": "SEA"
+   },
+   "expected": {
+    "score": 30,
+    "label": "quốc gia"
+   }
+  },
+  {
+   "name": "row of the design's region, another country",
+   "input": {
+    "row": {
+     "region": "SEA",
+     "country": "TH"
+    },
+    "country": "VN",
+    "region": "SEA"
+   },
+   "expected": {
+    "score": 15,
+    "label": "cùng khu vực (nước khác)"
+   }
+  },
+  {
+   "name": "row of the region only",
+   "input": {
+    "row": {
+     "region": "SEA"
+    },
+    "country": "VN",
+    "region": "SEA"
+   },
+   "expected": {
+    "score": 20,
+    "label": "khu vực"
+   }
+  },
+  {
+   "name": "foreign row",
+   "input": {
+    "row": {
+     "region": "EU"
+    },
+    "country": "VN",
+    "region": "SEA"
+   },
+   "expected": {
+    "score": 1,
+    "label": "tham khảo nước ngoài"
+   }
+  },
+  {
+   "name": "several countries in one row",
+   "input": {
+    "row": {
+     "region": "NA",
+     "country": "US, ca"
+    },
+    "country": "CA",
+    "region": "NA"
+   },
+   "expected": {
+    "score": 30,
+    "label": "quốc gia"
+   }
+  }
+ ]
+}

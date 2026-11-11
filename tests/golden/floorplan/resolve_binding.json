@@ -1,0 +1,66 @@
+{
+ "function": "floorplan.resolve_binding",
+ "cases": [
+  {
+   "name": "automatic, 3 m back run",
+   "input": {
+    "floorplan": {
+     "$fixture": "tests/data/floorplan-building.json"
+    },
+    "normalized": true,
+    "need": {
+     "back": 3000
+    }
+   },
+   "expected": {
+    "back": 2,
+    "right": null,
+    "left": null,
+    "offset": 0.0,
+    "source": "auto",
+    "transform": {
+     "origin": {
+      "x": 0.0,
+      "z": 4715.45
+     },
+     "yaw": -180.0,
+     "right": {
+      "x": -1.0,
+      "z": 0.0
+     },
+     "into": {
+      "x": -0.0,
+      "z": -1.0
+     }
+    }
+   }
+  },
+  {
+   "name": "no cabinets: no binding",
+   "input": {
+    "floorplan": {
+     "$fixture": "tests/data/floorplan-building.json"
+    },
+    "normalized": true,
+    "need": null
+   },
+   "expected": null
+  },
+  {
+   "name": "fits no wall",
+   "input": {
+    "floorplan": {
+     "$fixture": "tests/data/floorplan-building.json"
+    },
+    "normalized": true,
+    "need": {
+     "back": 9000
+    }
+   },
+   "error": {
+    "kind": "validation",
+    "code": "kitchen-fits-no-wall"
+   }
+  }
+ ]
+}

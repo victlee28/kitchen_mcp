@@ -1,0 +1,61 @@
+{
+ "function": "floorplan.geom.self_intersects",
+ "cases": [
+  {
+   "name": "case 1",
+   "input": {
+    "args": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       2000,
+       0
+      ],
+      [
+       2000,
+       1000
+      ],
+      [
+       0,
+       1000
+      ]
+     ]
+    ]
+   },
+   "expected": {
+    "value": false
+   }
+  },
+  {
+   "name": "case 2",
+   "input": {
+    "args": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       2,
+       2
+      ],
+      [
+       2,
+       0
+      ],
+      [
+       0,
+       2
+      ]
+     ]
+    ]
+   },
+   "expected": {
+    "value": true
+   }
+  }
+ ]
+}

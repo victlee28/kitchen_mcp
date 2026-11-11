@@ -1,0 +1,59 @@
+{
+ "function": "floorplan.geom.angle_between",
+ "cases": [
+  {
+   "name": "case 1",
+   "input": {
+    "args": [
+     [
+      1,
+      0
+     ],
+     [
+      0,
+      1
+     ]
+    ]
+   },
+   "expected": {
+    "value": 90.0
+   }
+  },
+  {
+   "name": "case 2",
+   "input": {
+    "args": [
+     [
+      1,
+      0
+     ],
+     [
+      -1,
+      0
+     ]
+    ]
+   },
+   "expected": {
+    "value": 0.0
+   }
+  },
+  {
+   "name": "case 3",
+   "input": {
+    "args": [
+     [
+      1,
+      0
+     ],
+     [
+      1,
+      1
+     ]
+    ]
+   },
+   "expected": {
+    "value": 45.0
+   }
+  }
+ ]
+}

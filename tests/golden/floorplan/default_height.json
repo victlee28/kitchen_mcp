@@ -1,0 +1,85 @@
+{
+ "function": "floorplan.default_height",
+ "cases": [
+  {
+   "name": "wall",
+   "input": {
+    "record": {
+     "kind": "wall"
+    }
+   },
+   "expected": {
+    "height": 3000.0
+   }
+  },
+  {
+   "name": "opening",
+   "input": {
+    "record": {
+     "kind": "opening"
+    }
+   },
+   "expected": {
+    "height": 2200.0
+   }
+  },
+  {
+   "name": "stair",
+   "input": {
+    "record": {
+     "kind": "stair"
+    }
+   },
+   "expected": {
+    "height": 1800.0
+   }
+  },
+  {
+   "name": "TV wall unit",
+   "input": {
+    "record": {
+     "kind": "furniture",
+     "label": "Vách TV phòng khách"
+    }
+   },
+   "expected": {
+    "height": 2400.0
+   }
+  },
+  {
+   "name": "wine cabinet",
+   "input": {
+    "record": {
+     "kind": "furniture",
+     "label": "Tủ rượu"
+    }
+   },
+   "expected": {
+    "height": 2100.0
+   }
+  },
+  {
+   "name": "other furniture",
+   "input": {
+    "record": {
+     "kind": "furniture",
+     "label": "Sofa"
+    }
+   },
+   "expected": {
+    "height": 900.0
+   }
+  },
+  {
+   "name": "area",
+   "input": {
+    "record": {
+     "kind": "area"
+    }
+   },
+   "expected": {
+    "height": 0.0
+   }
+  }
+ ]
+}

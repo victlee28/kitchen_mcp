@@ -1,0 +1,117 @@
+{
+ "function": "floorplan.parse_region",
+ "cases": [
+  {
+   "name": "region:kitchen with two kitchen areas is refused",
+   "input": {
+    "floorplan": {
+     "$fixture": "tests/data/floorplan-building.json"
+    },
+    "spec": "region:kitchen"
+   },
+   "error": {
+    "kind": "validation",
+    "code": "invalid-input"
+   }
+  },
+  {
+   "name": "region:around",
+   "input": {
+    "floorplan": {
+     "$fixture": "tests/data/floorplan-building.json"
+    },
+    "spec": "region:around=furniture_003"
+   },
+   "expected": {
+    "bbox": [
+     16.0,
+     1394.0,
+     337.0,
+     1559.0
+    ],
+    "seeds": [
+     "furniture_003"
+    ],
+    "sides": {
+     "forwardMin": {
+      "face": 16.0,
+      "walls": [
+       "wall_h09"
+      ],
+      "open": false
+     },
+     "forwardMax": {
+      "face": 337.0,
+      "walls": [
+       "wall_010"
+      ],
+      "open": false
+     },
+     "rightMin": {
+      "face": 1394.0,
+      "walls": [
+       "wall_009",
+       "wall_h05"
+      ],
+      "open": false
+     },
+     "rightMax": {
+      "face": 1559.0,
+      "walls": [
+       "wall_002",
+       "wall_h08"
+      ],
+      "open": false
+     }
+    },
+    "unit": "cm"
+   }
+  },
+  {
+   "name": "region:bbox",
+   "input": {
+    "floorplan": {
+     "$fixture": "tests/data/floorplan-building.json"
+    },
+    "spec": "region:bbox=0,0,300,200"
+   },
+   "expected": {
+    "bbox": [
+     0.0,
+     0.0,
+     300.0,
+     200.0
+    ],
+    "seeds": null,
+    "sides": null,
+    "unit": "cm"
+   }
+  },
+  {
+   "name": "bbox not ordered",
+   "input": {
+    "floorplan": {
+     "$fixture": "tests/data/floorplan-building.json"
+    },
+    "spec": "region:bbox=300,0,0,200"
+   },
+   "error": {
+    "kind": "validation",
+    "code": "invalid-input"
+   }
+  },
+  {
+   "name": "unknown form",
+   "input": {
+    "floorplan": {
+     "$fixture": "tests/data/floorplan-building.json"
+    },
+    "spec": "region:what"
+   },
+   "error": {
+    "kind": "validation",
+    "code": "invalid-input"
+   }
+  }
+ ]
+}

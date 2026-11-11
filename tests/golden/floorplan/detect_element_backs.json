@@ -1,0 +1,44 @@
+{
+ "function": "floorplan.detect_element_backs",
+ "cases": [
+  {
+   "name": "furniture of the building room",
+   "input": {
+    "floorplan": {
+     "$fixture": "tests/data/floorplan-building.json"
+    },
+    "normalized": true
+   },
+   "expected": {
+    "backs": [
+     {
+      "element": "furniture_021",
+      "label": "Vách TV",
+      "back": null
+     }
+    ]
+   }
+  },
+  {
+   "name": "cabinets only",
+   "input": {
+    "floorplan": {
+     "$fixture": "tests/data/floorplan-building.json"
+    },
+    "normalized": true,
+    "tags": [
+     "cabinet"
+    ]
+   },
+   "expected": {
+    "backs": [
+     {
+      "element": "furniture_021",
+      "label": "Vách TV",
+      "back": null
+     }
+    ]
+   }
+  }
+ ]
+}

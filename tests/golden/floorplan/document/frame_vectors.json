@@ -1,0 +1,113 @@
+{
+ "function": "floorplan.document.frame_vectors",
+ "cases": [
+  {
+   "name": "the building plan's frame (left-handed, declared)",
+   "input": {
+    "data": {
+     "frame": {
+      "x": "toi",
+      "y": "phai",
+      "z": "len",
+      "handed": "trai"
+     }
+    }
+   },
+   "expected": {
+    "x": [
+     0,
+     1,
+     0
+    ],
+    "y": [
+     1,
+     0,
+     0
+    ]
+   }
+  },
+  {
+   "name": "right-handed frame",
+   "input": {
+    "data": {
+     "frame": {
+      "x": "phai",
+      "y": "toi",
+      "z": "len"
+     }
+    }
+   },
+   "expected": {
+    "x": [
+     1,
+     0,
+     0
+    ],
+    "y": [
+     0,
+     1,
+     0
+    ]
+   }
+  },
+  {
+   "name": "declared right but left-handed",
+   "input": {
+    "data": {
+     "frame": {
+      "x": "toi",
+      "y": "phai",
+      "z": "len",
+      "handed": "phai"
+     }
+    }
+   },
+   "error": {
+    "kind": "validation",
+    "code": "invalid-input"
+   }
+  },
+  {
+   "name": "vertical axis not z",
+   "input": {
+    "data": {
+     "frame": {
+      "x": "len",
+      "y": "phai",
+      "z": "toi"
+     }
+    }
+   },
+   "error": {
+    "kind": "validation",
+    "code": "invalid-input"
+   }
+  },
+  {
+   "name": "no frame",
+   "input": {
+    "data": {}
+   },
+   "error": {
+    "kind": "validation",
+    "code": "invalid-input"
+   }
+  },
+  {
+   "name": "unknown axis name",
+   "input": {
+    "data": {
+     "frame": {
+      "x": "east",
+      "y": "north",
+      "z": "up"
+     }
+    }
+   },
+   "error": {
+    "kind": "validation",
+    "code": "invalid-input"
+   }
+  }
+ ]
+}

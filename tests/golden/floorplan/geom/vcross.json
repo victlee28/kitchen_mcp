@@ -1,0 +1,41 @@
+{
+ "function": "floorplan.geom.vcross",
+ "cases": [
+  {
+   "name": "case 1",
+   "input": {
+    "args": [
+     [
+      1,
+      0
+     ],
+     [
+      0,
+      1
+     ]
+    ]
+   },
+   "expected": {
+    "value": 1
+   }
+  },
+  {
+   "name": "case 2",
+   "input": {
+    "args": [
+     [
+      2,
+      3
+     ],
+     [
+      4,
+      6
+     ]
+    ]
+   },
+   "expected": {
+    "value": 0
+   }
+  }
+ ]
+}

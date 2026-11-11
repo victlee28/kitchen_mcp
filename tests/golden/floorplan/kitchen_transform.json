@@ -1,0 +1,60 @@
+{
+ "function": "floorplan.kitchen_transform",
+ "cases": [
+  {
+   "name": "edge 0, no offset",
+   "input": {
+    "floorplan": {
+     "$fixture": "tests/data/floorplan-sample.json"
+    },
+    "normalized": true,
+    "binding": {
+     "back": 0
+    }
+   },
+   "expected": {
+    "origin": {
+     "x": 410.0,
+     "z": 4710.9
+    },
+    "yaw": 179.853838,
+    "right": {
+     "x": -0.999997,
+     "z": -0.002551
+    },
+    "into": {
+     "x": 0.002551,
+     "z": -0.999997
+    }
+   }
+  },
+  {
+   "name": "edge 1, 300 mm offset",
+   "input": {
+    "floorplan": {
+     "$fixture": "tests/data/floorplan-sample.json"
+    },
+    "normalized": true,
+    "binding": {
+     "back": 1,
+     "offset": 300
+    }
+   },
+   "expected": {
+    "origin": {
+     "x": 408.33,
+     "z": 4650.784
+    },
+    "yaw": 91.59114,
+    "right": {
+     "x": -0.027767,
+     "z": -0.999614
+    },
+    "into": {
+     "x": 0.999614,
+     "z": -0.027767
+    }
+   }
+  }
+ ]
+}

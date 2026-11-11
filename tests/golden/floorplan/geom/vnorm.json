@@ -1,0 +1,39 @@
+{
+ "function": "floorplan.geom.vnorm",
+ "cases": [
+  {
+   "name": "case 1",
+   "input": {
+    "args": [
+     [
+      3,
+      4
+     ]
+    ]
+   },
+   "expected": {
+    "value": [
+     0.6,
+     0.8
+    ]
+   }
+  },
+  {
+   "name": "case 2",
+   "input": {
+    "args": [
+     [
+      0,
+      0
+     ]
+    ]
+   },
+   "expected": {
+    "value": [
+     0.0,
+     0.0
+    ]
+   }
+  }
+ ]
+}

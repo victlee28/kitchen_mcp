@@ -1,0 +1,101 @@
+{
+ "function": "floorplan.document.read_points",
+ "cases": [
+  {
+   "name": "outline",
+   "input": {
+    "value": {
+     "outline": [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ],
+      [
+       1,
+       1
+      ]
+     ]
+    }
+   },
+   "expected": {
+    "points": [
+     [
+      0.0,
+      0.0
+     ],
+     [
+      1.0,
+      0.0
+     ],
+     [
+      1.0,
+      1.0
+     ]
+    ]
+   }
+  },
+  {
+   "name": "two points",
+   "input": {
+    "value": {
+     "outline": [
+      [
+       0,
+       0
+      ],
+      [
+       1,
+       0
+      ]
+     ]
+    }
+   },
+   "error": {
+    "kind": "validation",
+    "code": "invalid-input"
+   }
+  },
+  {
+   "name": "not numeric",
+   "input": {
+    "value": {
+     "outline": [
+      [
+       0,
+       0
+      ],
+      [
+       "a",
+       0
+      ],
+      [
+       1,
+       1
+      ]
+     ]
+    }
+   },
+   "error": {
+    "kind": "validation",
+    "code": "invalid-input"
+   }
+  },
+  {
+   "name": "not an object",
+   "input": {
+    "value": [
+     1,
+     2
+    ]
+   },
+   "error": {
+    "kind": "validation",
+    "code": "invalid-input"
+   }
+  }
+ ]
+}

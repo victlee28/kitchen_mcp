@@ -1,0 +1,50 @@
+{
+ "function": "lexicon.fold",
+ "cases": [
+  {
+   "name": "diacritics and case",
+   "input": {
+    "text": "Tủ Bếp Gỗ Óc Chó"
+   },
+   "expected": {
+    "folded": "tu bep go oc cho"
+   }
+  },
+  {
+   "name": "đ and dash",
+   "input": {
+    "text": "đá-thạch anh"
+   },
+   "expected": {
+    "folded": "da thach anh"
+   }
+  },
+  {
+   "name": "decimal comma",
+   "input": {
+    "text": "cao 2,4 m, rộng 3,5"
+   },
+   "expected": {
+    "folded": "cao 2.4 m, rong 3.5"
+   }
+  },
+  {
+   "name": "already plain",
+   "input": {
+    "text": "oak 600"
+   },
+   "expected": {
+    "folded": "oak 600"
+   }
+  },
+  {
+   "name": "empty",
+   "input": {
+    "text": ""
+   },
+   "expected": {
+    "folded": ""
+   }
+  }
+ ]
+}
