@@ -1,0 +1,123 @@
+{
+ "function": "edit.update_appliance",
+ "cases": [
+  {
+   "name": "another hob model",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "op": {
+     "op": "update-appliance",
+     "id": "TB4",
+     "model": "hob-gas-2b-75"
+    }
+   },
+   "expected": {
+    "diff": {
+     "modules": {
+      "added": [],
+      "removed": [],
+      "changed": {}
+     },
+     "other": [
+      {
+       "path": "appliances[TB4].cutout",
+       "old": null,
+       "new": {
+        "w": 650.0,
+        "d": 350.0
+       }
+      },
+      {
+       "path": "appliances[TB4].dimensions",
+       "old": "730 × 430",
+       "new": "750 × 420"
+      },
+      {
+       "path": "appliances[TB4].energy",
+       "old": null,
+       "new": "gas"
+      },
+      {
+       "path": "appliances[TB4].model",
+       "old": null,
+       "new": "hob-gas-2b-75"
+      },
+      {
+       "path": "appliances[TB4].mount",
+       "old": null,
+       "new": "built_in"
+      },
+      {
+       "path": "appliances[TB4].name",
+       "old": "Bếp âm 2 vùng nấu, mặt kính đen",
+       "new": "Bếp gas âm 2 họng 75 cm"
+      },
+      {
+       "path": "appliances[TB4].size",
+       "old": null,
+       "new": {
+        "w": 750.0,
+        "d": 420.0,
+        "h": 140.0
+       }
+      }
+     ],
+     "truncated": false
+    },
+    "runs": []
+   }
+  },
+  {
+   "name": "model of another type",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "op": {
+     "op": "update-appliance",
+     "id": "TB4",
+     "model": "sink-double-82"
+    }
+   },
+   "error": {
+    "kind": "validation",
+    "code": "model-wrong-type"
+   }
+  },
+  {
+   "name": "moved to another cabinet",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "op": {
+     "op": "update-appliance",
+     "id": "TB6",
+     "changes": {
+      "module": "TD3"
+     }
+    }
+   },
+   "expected": {
+    "diff": {
+     "modules": {
+      "added": [],
+      "removed": [],
+      "changed": {}
+     },
+     "other": [
+      {
+       "path": "appliances[TB6].module",
+       "old": "TD4",
+       "new": "TD3"
+      }
+     ],
+     "truncated": false
+    },
+    "runs": []
+   }
+  }
+ ]
+}

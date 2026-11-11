@@ -1,0 +1,76 @@
+{
+ "function": "edit.replace_element",
+ "cases": [
+  {
+   "name": "element of the plan replaced",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "floorplan": {
+     "$fixture": "tests/data/floorplan-building.json"
+    },
+    "op": {
+     "op": "replace-element",
+     "id": "furniture_003",
+     "replaced": true
+    }
+   },
+   "expected": {
+    "diff": {
+     "modules": {
+      "added": [],
+      "removed": [],
+      "changed": {}
+     },
+     "other": [
+      {
+       "path": "floorplan.replaced",
+       "old": null,
+       "new": [
+        "furniture_003"
+       ]
+      }
+     ],
+     "truncated": false
+    },
+    "runs": []
+   }
+  },
+  {
+   "name": "no floorplan",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "op": {
+     "op": "replace-element",
+     "id": "furniture_003"
+    }
+   },
+   "error": {
+    "kind": "validation",
+    "code": "no-floorplan"
+   }
+  },
+  {
+   "name": "unknown element",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "floorplan": {
+     "$fixture": "tests/data/floorplan-building.json"
+    },
+    "op": {
+     "op": "replace-element",
+     "id": "nope"
+    }
+   },
+   "error": {
+    "kind": "not-found",
+    "code": "element-not-found"
+   }
+  }
+ ]
+}

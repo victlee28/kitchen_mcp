@@ -1,0 +1,50 @@
+{
+ "function": "edit.new_id",
+ "cases": [
+  {
+   "name": "wall rows",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "prefixes": [
+     "TD",
+     "TT",
+     "TC",
+     "KG",
+     "TB",
+     "X"
+    ]
+   },
+   "expected": {
+    "ids": {
+     "TD": "TD6",
+     "TT": "TT10",
+     "TC": "TC2",
+     "KG": "KG2",
+     "TB": "TB1",
+     "X": "X1"
+    },
+    "nextRun": "R1"
+   }
+  },
+  {
+   "name": "with runs",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "convertRows": true,
+    "prefixes": [
+     "TD"
+    ]
+   },
+   "expected": {
+    "ids": {
+     "TD": "TD6"
+    },
+    "nextRun": "R3"
+   }
+  }
+ ]
+}

@@ -1,0 +1,225 @@
+{
+ "function": "edit.stretch_run",
+ "cases": [
+  {
+   "name": "end of the back run longer",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "convertRows": true,
+    "op": {
+     "op": "stretch-run",
+     "id": "R1",
+     "end": "start",
+     "delta": 100
+    }
+   },
+   "expected": {
+    "diff": {
+     "modules": {
+      "added": [],
+      "removed": [],
+      "changed": {
+       "TT1": [
+        {
+         "field": "fromCorner",
+         "old": 670.0,
+         "new": 770.0
+        }
+       ],
+       "TD1": [
+        {
+         "field": "fromCorner",
+         "old": 670.0,
+         "new": 770.0
+        }
+       ],
+       "KG1": [
+        {
+         "field": "fromCorner",
+         "old": 1310.0,
+         "new": 1410.0
+        }
+       ],
+       "TT2": [
+        {
+         "field": "fromCorner",
+         "old": 670.0,
+         "new": 770.0
+        }
+       ],
+       "TC1": [
+        {
+         "field": "doors",
+         "old": [
+          335.0,
+          335.0
+         ],
+         "new": [
+          385.0,
+          385.0
+         ]
+        },
+        {
+         "field": "width",
+         "old": 670.0,
+         "new": 770.0
+        }
+       ]
+      }
+     },
+     "other": [
+      {
+       "path": "runs[R1].x",
+       "old": -1920.0,
+       "new": -2020.0
+      }
+     ],
+     "truncated": false
+    },
+    "runs": [
+     {
+      "id": "R1",
+      "x": -2020.0,
+      "z": 0.0,
+      "yaw": 0.0
+     },
+     {
+      "id": "R2",
+      "x": -0.0,
+      "z": 0.0,
+      "yaw": -90.0
+     }
+    ]
+   }
+  },
+  {
+   "name": "end shorter",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "convertRows": true,
+    "op": {
+     "op": "stretch-run",
+     "id": "R2",
+     "end": "end",
+     "delta": -90
+    }
+   },
+   "expected": {
+    "diff": {
+     "modules": {
+      "added": [],
+      "removed": [],
+      "changed": {
+       "TT6": [
+        {
+         "field": "doors",
+         "old": [
+          330.0
+         ],
+         "new": [
+          240.0
+         ]
+        },
+        {
+         "field": "width",
+         "old": 330.0,
+         "new": 240.0
+        }
+       ],
+       "TT9": [
+        {
+         "field": "doors",
+         "old": [
+          710.0
+         ],
+         "new": [
+          620.0
+         ]
+        },
+        {
+         "field": "width",
+         "old": 710.0,
+         "new": 620.0
+        }
+       ],
+       "TD5": [
+        {
+         "field": "doors",
+         "old": [
+          372.0
+         ],
+         "new": [
+          282.0
+         ]
+        },
+        {
+         "field": "width",
+         "old": 390.0,
+         "new": 300.0
+        }
+       ]
+      }
+     },
+     "other": [],
+     "truncated": false
+    },
+    "runs": [
+     {
+      "id": "R1",
+      "x": -1920.0,
+      "z": 0.0,
+      "yaw": 0.0
+     },
+     {
+      "id": "R2",
+      "x": -0.0,
+      "z": 0.0,
+      "yaw": -90.0
+     }
+    ]
+   }
+  },
+  {
+   "name": "too much",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "convertRows": true,
+    "op": {
+     "op": "stretch-run",
+     "id": "R2",
+     "end": "end",
+     "delta": -2000
+    }
+   },
+   "error": {
+    "kind": "validation",
+    "code": "stretch-limit"
+   }
+  },
+  {
+   "name": "bad end",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "convertRows": true,
+    "op": {
+     "op": "stretch-run",
+     "id": "R2",
+     "end": "middle",
+     "delta": 10
+    }
+   },
+   "error": {
+    "kind": "validation",
+    "code": "bad-run-end"
+   }
+  }
+ ]
+}

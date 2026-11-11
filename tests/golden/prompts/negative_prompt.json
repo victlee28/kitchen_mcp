@@ -1,0 +1,24 @@
+{
+ "function": "prompts.negative_prompt",
+ "cases": [
+  {
+   "name": "default",
+   "input": {},
+   "expected": {
+    "text": "distorted geometry, warped cabinet doors, changed perspective, extra handles, text, watermark, blurry, low quality, people, CGI, 3D render look, video game graphics, plastic-looking surfaces, flat uniform lighting, oversaturated colors, HDR halos, overexposed highlights, crushed black shadows, cartoon, illustration, painting, fisheye distortion, converging vertical lines, wavy or melted edges, smeared textures, repeated tiling texture pattern, floating objects without contact shadows, fake bokeh, lens flare, clutter, visible noise artifacts"
+   }
+  },
+  {
+   "name": "extras",
+   "input": {
+    "extra": [
+     "no people",
+     "no text"
+    ]
+   },
+   "expected": {
+    "text": "distorted geometry, warped cabinet doors, changed perspective, extra handles, text, watermark, blurry, low quality, people, no people, no text, CGI, 3D render look, video game graphics, plastic-looking surfaces, flat uniform lighting, oversaturated colors, HDR halos, overexposed highlights, crushed black shadows, cartoon, illustration, painting, fisheye distortion, converging vertical lines, wavy or melted edges, smeared textures, repeated tiling texture pattern, floating objects without contact shadows, fake bokeh, lens flare, clutter, visible noise artifacts"
+   }
+  }
+ ]
+}

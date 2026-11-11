@@ -1,0 +1,44 @@
+{
+ "function": "recognition.fridge_bay",
+ "cases": [
+  {
+   "name": "with niche",
+   "input": {
+    "width": 700,
+    "niche": 1650,
+    "height": 2200,
+    "depth": 620
+   },
+   "expected": {
+    "module": {
+     "niche": 1650,
+     "depth": 640.0
+    },
+    "fridge": {
+     "type": "fridge",
+     "name": "Tủ lạnh",
+     "dimensions": "600 × 1600 × 620"
+    }
+   }
+  },
+  {
+   "name": "no niche",
+   "input": {
+    "width": 600,
+    "height": 2100,
+    "depth": 600
+   },
+   "expected": {
+    "module": {
+     "niche": 1850.0,
+     "depth": 640.0
+    },
+    "fridge": {
+     "type": "fridge",
+     "name": "Tủ lạnh",
+     "dimensions": "500 × 1800 × 620"
+    }
+   }
+  }
+ ]
+}

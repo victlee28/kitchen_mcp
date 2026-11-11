@@ -1,0 +1,72 @@
+{
+ "function": "edit.molding",
+ "cases": [
+  {
+   "name": "ignore the ceiling",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "ops": [
+     {
+      "op": "set-moldings",
+      "moldings": [
+       {
+        "id": "crown-molding",
+        "variant": "crown",
+        "profile": "classic-crown-layered"
+       },
+       {
+        "id": "base-molding",
+        "variant": "base",
+        "profile": "classic-base"
+       }
+      ]
+     }
+    ],
+    "op": {
+     "op": "molding",
+     "id": "crown-molding",
+     "changes": {
+      "ignoreCeiling": true
+     }
+    }
+   },
+   "expected": {
+    "diff": {
+     "modules": {
+      "added": [],
+      "removed": [],
+      "changed": {}
+     },
+     "other": [
+      {
+       "path": "moldings[crown-molding].ignoreCeiling",
+       "old": false,
+       "new": true
+      }
+     ],
+     "truncated": false
+    },
+    "runs": []
+   }
+  },
+  {
+   "name": "unknown molding",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "op": {
+     "op": "molding",
+     "id": "nope",
+     "changes": {}
+    }
+   },
+   "error": {
+    "kind": "not-found",
+    "code": "molding-not-found"
+   }
+  }
+ ]
+}

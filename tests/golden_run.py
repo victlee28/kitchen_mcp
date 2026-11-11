@@ -6,6 +6,8 @@
 from __future__ import annotations
 
 import json
+
+from pydantic import ValidationError
 import sys
 from pathlib import Path
 
@@ -31,6 +33,8 @@ def run_case(function: str, case: dict):
         out = FUNCTIONS[function](case["input"])
     except errors.KitchenError as e:
         return "error", {"kind": e.kind, "code": e.code}
+    except ValidationError:                     # the spec's schema refused the data (the boundary check; web_server answers 400)
+        return "error", {"kind": "validation", "code": "schema"}
     return "value", json.loads(json.dumps(out))
 
 

@@ -541,8 +541,11 @@ def floorplan_document_is_kitchen_unit(i):
 
 # ---- helpers of runs, tv_system and appliance_models, one wrapper each (R19)
 def _ctx(i):
-    """The case's spec: rows turned into explicit runs first when ``convertRows`` is set, then ``ops`` applied."""
+    """The case's spec: an imported ``floorplan`` set on it (normalised, ``roomId``), rows turned into explicit runs first when
+    ``convertRows`` is set, then ``ops`` applied."""
     spec = _spec(i)
+    if i.get("floorplan"):
+        spec = load_spec({**to_data(spec), "floorplan": floorplan.normalize(_floorplan({"floorplan": i["floorplan"]}), i.get("roomId"))})
     if i.get("convertRows"):
         spec = load_spec(rows_to_runs.convert(spec)[0])
     for op in i.get("ops", []):
@@ -978,7 +981,215 @@ def errors_kind_of(i):
     return {"classes": out, "requireValue": err.require(i.get("value", 1), "v")}
 
 
+# ---- geometry, moldings, prompts, recognition, edit (one id per operation kind), appliance_kind (R19)
+def _edit_result(before, after):
+    """What an edit did: the spec diff (modules added / removed / changed, other paths) and the runs afterwards."""
+    diff = proposal.spec_diff(before, after)
+    return {"diff": diff, "runs": [to_data(r, exclude_none=True) for r in after.runs]}
+
+
+def _edit_op(i):
+    before = _ctx(i)
+    return _edit_result(before, edit.apply_op(before, i["op"]))
+
+
+def edit_new_id(i):
+    spec = _ctx(i)
+    return {"ids": {p: edit.new_id(spec, p) for p in i["prefixes"]}, "nextRun": edit.next_run_id(spec)}
+
+
+def edit_combine_ops(i):
+    return {"op": edit.combine_ops(i["ops"])}
+
+
+def geometry_frame(i):
+    """The kitchen frame of a design: wall_length, wall_reach, backsplash_height per row, run_wall per run."""
+    spec = _ctx(i)
+    lsau, lphai = geometry.wall_length(spec)
+    return {"wallLength": [lsau, lphai], "reach": geometry.wall_reach(spec, lsau),
+            "backsplash": {w: geometry.backsplash_height(spec, w, r) for w, r in i.get("rows", [])},
+            "runWalls": {r.id: geometry.run_wall(runs.RunFrame(r.id, r.x, r.z, r.yaw), lsau) for r in spec.runs}}
+
+
+def geometry_camera_inputs(i):
+    """What the camera planner is given: cabinet_faces, cabinet_bodies and room_solids (outline + solids)."""
+    spec = _ctx(i)
+    scene = geometry.compile_spec(spec)
+    room, solids = geometry.room_solids(spec, scene)
+    return {"faces": _plain(geometry.cabinet_faces(spec, scene)), "bodies": [[b.id, b.kind, len(b.outline), b.y0, b.y1] for b in geometry.cabinet_bodies(spec)],
+            "room": _plain(room), "solids": [[o.id, o.kind, len(o.outline), o.y0, o.y1] for o in solids]}
+
+
+def geometry_views(i):
+    """default_views and views_of: every view as [name, position, lookAt, fov, hide]."""
+    spec = _ctx(i)
+    pick = lambda vs: {k: [v.name, list(v.position), list(v.lookAt), v.verticalFov, list(v.hide or [])] for k, v in sorted(vs.items())}   # noqa: E731
+    return {"default": pick(geometry.default_views(spec)), "used": pick(geometry.views_of(spec))}
+
+
+def geometry_scene_json(i):
+    """Projection: version, units, bounds, part and module counts, the view names and the molding meshes."""
+    sj = geometry.scene_json(_ctx(i))
+    return {"version": sj["version"], "units": sj["units"], "bounds": _plain(sj["bounds"]), "parts": len(sj["parts"]), "views": sorted(sj["views"]),
+            "modules": len(sj["modules"]), "moldings": sj["moldings"]}
+
+
+def moldings_profile_of(i):
+    spec = _ctx(i)
+    out = {}
+    for pid in i["ids"]:
+        p = moldings.profile_of(spec, pid)
+        out[pid] = None if p is None else [p.name, len(p.points), p.height, p.overhang]
+    return {"profiles": out}
+
+
+def moldings_default_moldings(i):
+    return {"moldings": [to_data(m, exclude_none=True) for m in moldings.default_moldings(**i.get("args", {}))]}
+
+
+def moldings_sweep_rings(i):
+    return {"rings": _plain(moldings.sweep_rings(_pts(i["profile"]), _pts(i["points"]), i["y"]))}
+
+
+def moldings_ear_clip(i):
+    return {"triangles": _plain(moldings.ear_clip(_pts(i["poly"])))}
+
+
+def moldings_meshes(i):
+    """meshes (run_mesh of every run): [id, molding, vertices, faces]."""
+    return {"meshes": [[m.id, m.module, len(m.vertices), len(m.faces)] for m in moldings.meshes(_ctx(i))]}
+
+
+def moldings_check(i):
+    return {"issues": [[x["rule"], x["severity"], list(x.get("module") or []), [a["label"] for a in x.get("action", [])]] for x in moldings.check(_ctx(i))]}
+
+
+def moldings_lower_top(i):
+    spec = _ctx(i)
+    after = moldings.lower_top(spec, i["newTop"])
+    return {"common": {k: getattr(after.common, k) for k in ("cabinetTop", "upperTierSplit")}, "diff": proposal.spec_diff(spec, after)["modules"]}
+
+
+def prompts_negative_prompt(i):
+    from kitchen import prompts
+    return {"text": prompts.negative_prompt(i.get("extra"))}
+
+
+def prompts_gemini_text(i):
+    from kitchen import prompts
+    return {"text": prompts.gemini_text(i["kind"], i.get("prompt", ""), i.get("instruction", ""), i.get("stylePrompt", ""), i.get("role", ""), i.get("realism", ""))}
+
+
+def prompts_gemini_text_edit(i):
+    from kitchen import prompts
+    return {"text": prompts.gemini_text_edit(i["regions"], i.get("instruction", ""), i.get("realism", ""))}
+
+
+def prompts_gemini_text_geometry(i):
+    from kitchen import prompts
+    return {"text": prompts.gemini_text_geometry(i["operation"], i["changes"], i.get("where"), i.get("instruction", ""), i.get("realism", ""))}
+
+
+def prompts_gemini_text_multi(i):
+    from kitchen import prompts
+    return {"text": prompts.gemini_text_multi([tuple(r) for r in i["regions"]], i.get("instruction", ""))}
+
+
+def prompts_style_note(i):
+    from kitchen import prompts
+    return {"text": prompts.style_note(i["image"], i["view"])}
+
+
+def prompts_layer(i):
+    """global_prompt, tv_text, layer_prompt and edit_task_prompt for one design and one layer."""
+    from kitchen.prompts import layer as lp
+    spec = _ctx(i)
+    layer, _ = layers.resolve(layers.catalogue(spec, geometry.compile_spec(spec)), i["layerId"])
+    return {"global": lp.global_prompt(spec), "tv": lp.tv_text(spec), "layer": lp.layer_prompt(spec, layer, i.get("instruction", ""), i.get("material")),
+            "edit": lp.edit_task_prompt(spec, layer, i.get("instruction", ""), i.get("material"))}
+
+
+def prompts_photo(i):
+    from kitchen.prompts import photo
+    spec = _ctx(i) if i.get("spec") else None
+    return {"full": photo.full(spec, i.get("lighting", "daylight")) if spec else None, "local": photo.local(spec, i.get("extra"))}
+
+
+def prompts_recognition_text(i):
+    from kitchen import prompts
+    t = prompts.recognition_text(i["kind"], tuple(i["types"]))
+    return {"start": t[:120], "length": len(t), "mentions": [x for x in i["types"] if x in t]}
+
+
+def recognition_common_changes(i):
+    from kitchen.recognition import layout as rl
+    lay = build_layout(i["layout"])
+    if lay is None:
+        return None
+    return {"changes": rl.common_changes(i["common"], lay, i.get("ceiling"), i.get("materials", {}))}
+
+
+def recognition_appliance_size(i):
+    from kitchen.recognition import layout as rl
+    return {"sizes": [rl.appliance_size(k, w, n) for k, w, n in i["cases"]]}
+
+
+def recognition_fridge_bay(i):
+    from kitchen.recognition.draft import DraftModule
+    from kitchen.recognition.operation import fridge_bay
+    extra, fridge = fridge_bay(DraftModule(type="tall-fridge", wall="back", width=i["width"], niche=i.get("niche")), i["height"], i["depth"])
+    return {"module": extra, "fridge": fridge}
+
+
+def appliance_kind_changes_kind(i):
+    spec = _ctx(i)
+    return {"changes": appliance_kind.changes_kind(_app(spec, i), appliance_models.model(i["model"]))}
+
+
 FUNCTIONS = {
+    "edit.add_module": _edit_op,
+    "edit.add_run": _edit_op,
+    "edit.move_run": _edit_op,
+    "edit.set_run_system": _edit_op,
+    "edit.set_run_tv": _edit_op,
+    "edit.update_appliance": _edit_op,
+    "edit.replace_element": _edit_op,
+    "edit.remove_run": _edit_op,
+    "edit.stretch_run": _edit_op,
+    "edit.remove_module": _edit_op,
+    "edit.update_module": _edit_op,
+    "edit.update_common": _edit_op,
+    "edit.lower_top": _edit_op,
+    "edit.molding": _edit_op,
+    "edit.set_moldings": _edit_op,
+    "edit.set_views": _edit_op,
+    "edit.replace": _edit_op,
+    "edit.new_id": edit_new_id,
+    "edit.combine_ops": edit_combine_ops,
+    "geometry.frame": geometry_frame,
+    "geometry.camera_inputs": geometry_camera_inputs,
+    "geometry.views": geometry_views,
+    "geometry.scene_json": geometry_scene_json,
+    "moldings.profile_of": moldings_profile_of,
+    "moldings.default_moldings": moldings_default_moldings,
+    "moldings.sweep_rings": moldings_sweep_rings,
+    "moldings.ear_clip": moldings_ear_clip,
+    "moldings.meshes": moldings_meshes,
+    "moldings.check": moldings_check,
+    "moldings.lower_top": moldings_lower_top,
+    "prompts.negative_prompt": prompts_negative_prompt,
+    "prompts.gemini_text": prompts_gemini_text,
+    "prompts.gemini_text_edit": prompts_gemini_text_edit,
+    "prompts.gemini_text_geometry": prompts_gemini_text_geometry,
+    "prompts.gemini_text_multi": prompts_gemini_text_multi,
+    "prompts.style_note": prompts_style_note,
+    "prompts.layer": prompts_layer,
+    "prompts.photo": prompts_photo,
+    "prompts.recognition_text": prompts_recognition_text,
+    "recognition.common_changes": recognition_common_changes,
+    "recognition.appliance_size": recognition_appliance_size,
+    "recognition.fridge_bay": recognition_fridge_bay,
+    "appliance_kind.changes_kind": appliance_kind_changes_kind,
     "wall_line.segments": wall_line_segments,
     "wall_line.inward_normal": wall_line_inward_normal,
     "wall_line.wall_gap": wall_line_wall_gap,

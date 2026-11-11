@@ -12,7 +12,7 @@ Quy ước toạ độ (theo file gốc): gốc ở góc trong giữa tường s
 from __future__ import annotations
 
 import re
-from typing import Any, Literal, TypedDict, TypeVar
+from typing import Any, Literal, TypedDict, TypeVar, cast
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -37,22 +37,22 @@ class _Base(BaseModel):
 
 
 class Common(_Base):
-    plinthHeight: float = 110
-    baseTop: float = 840
-    countertop: float = 900
-    countertopThickness: float = 60
-    baseDepth: float = 550
-    countertopOverhang: float = 20
+    plinthHeight: float = Field(default=110, ge=0)
+    baseTop: float = Field(default=840, gt=0)
+    countertop: float = Field(default=900, gt=0)
+    countertopThickness: float = Field(default=60, ge=0)
+    baseDepth: float = Field(default=550, gt=0)
+    countertopOverhang: float = Field(default=20, ge=0)
     backsplashHeight: Literal["standard", "to-upper", "to-ceiling"] = "standard"
     backsplashHeightMm: float | None = Field(default=None, ge=50, le=3000, description="Backsplash height in mm; overrides backsplashHeight when set")
     wallTilePattern: str | None = Field(default=None, description="How the wall tile is laid (herringbone, running-bond); carried to the 3D file and the image prompt")
-    upperBottom: float = 1530
-    upperTierSplit: float = 2280
-    cabinetTop: float = 2610
-    ceiling: float = 2640
-    upperDepth: float = 320
-    doorThickness: float = 18
-    doorGap: float = 3
+    upperBottom: float = Field(default=1530, gt=0)
+    upperTierSplit: float = Field(default=2280, gt=0)
+    cabinetTop: float = Field(default=2610, gt=0)
+    ceiling: float = Field(default=2640, gt=0)
+    upperDepth: float = Field(default=320, gt=0)
+    doorThickness: float = Field(default=18, gt=0)
+    doorGap: float = Field(default=3, ge=0)
     backThickness: float = Field(default=9, gt=0, description="Độ dày tấm hậu (mm)")
     material: dict[str, str] = Field(default_factory=dict, description="base, upper, tall, cornerShelf, carcass, countertop, wallTile, floor, wall")
     handle: "Handle" = Field(default_factory=lambda: Handle())
@@ -128,6 +128,15 @@ class BackPanel(_Base):
     s1: float
     y0: float
     y1: float
+
+    @model_validator(mode="before")
+    @classmethod
+    def _old_names(cls, data: Any) -> Any:
+        """Revisions saved before 11/11/2026 call ``s0`` / ``s1`` ``from`` / ``to`` (same meaning); they still load."""
+        if isinstance(data, dict) and "s0" not in data and "from" in data:
+            old = cast("dict[str, Any]", data)
+            return {**{k: v for k, v in old.items() if k not in ("from", "to")}, "s0": old["from"], "s1": old.get("to")}
+        return data
 
 
 class _LaidBox(TypedDict):

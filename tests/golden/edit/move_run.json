@@ -1,0 +1,78 @@
+{
+ "function": "edit.move_run",
+ "cases": [
+  {
+   "name": "turn and move",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "convertRows": true,
+    "op": {
+     "op": "move-run",
+     "id": "R2",
+     "changes": {
+      "x": -100,
+      "yaw": -80
+     }
+    }
+   },
+   "expected": {
+    "diff": {
+     "modules": {
+      "added": [],
+      "removed": [],
+      "changed": {}
+     },
+     "other": [
+      {
+       "path": "runs[R2].x",
+       "old": -0.0,
+       "new": -100.0
+      },
+      {
+       "path": "runs[R2].yaw",
+       "old": -90.0,
+       "new": -80.0
+      }
+     ],
+     "truncated": false
+    },
+    "runs": [
+     {
+      "id": "R1",
+      "x": -1920.0,
+      "z": 0.0,
+      "yaw": 0.0
+     },
+     {
+      "id": "R2",
+      "x": -100.0,
+      "z": 0.0,
+      "yaw": -80.0
+     }
+    ]
+   }
+  },
+  {
+   "name": "unknown run",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "convertRows": true,
+    "op": {
+     "op": "move-run",
+     "id": "R9",
+     "changes": {
+      "x": 1
+     }
+    }
+   },
+   "error": {
+    "kind": "not-found",
+    "code": "run-not-found"
+   }
+  }
+ ]
+}

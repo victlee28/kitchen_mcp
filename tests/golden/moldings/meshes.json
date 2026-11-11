@@ -1,0 +1,63 @@
+{
+ "function": "moldings.meshes",
+ "cases": [
+  {
+   "name": "crown and base on the L",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "ops": [
+     {
+      "op": "set-moldings",
+      "moldings": [
+       {
+        "id": "crown-molding",
+        "variant": "crown",
+        "profile": "classic-crown-layered"
+       },
+       {
+        "id": "base-molding",
+        "variant": "base",
+        "profile": "classic-base"
+       }
+      ]
+     }
+    ]
+   },
+   "expected": {
+    "meshes": [
+     [
+      "crown-molding-1",
+      "crown-molding",
+      44,
+      84
+     ],
+     [
+      "crown-molding-2",
+      "crown-molding",
+      44,
+      84
+     ],
+     [
+      "base-molding-3",
+      "base-molding",
+      35,
+      66
+     ]
+    ]
+   }
+  },
+  {
+   "name": "no moldings",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    }
+   },
+   "expected": {
+    "meshes": []
+   }
+  }
+ ]
+}

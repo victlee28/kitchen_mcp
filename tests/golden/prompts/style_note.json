@@ -1,0 +1,25 @@
+{
+ "function": "prompts.style_note",
+ "cases": [
+  {
+   "name": "image 2, back wall",
+   "input": {
+    "image": 2,
+    "view": "back wall"
+   },
+   "expected": {
+    "text": "IMAGE 2 is a STYLE REFERENCE only: an approved photograph of this same kitchen from another camera angle ('back wall'). Match its materials, colors, wood grain, stone veining, surface finish and the mood and color temperature of its light. Do NOT copy its composition, camera, framing or objects, and do not let it change the shapes in the other image(s)."
+   }
+  },
+  {
+   "name": "image 3",
+   "input": {
+    "image": 3,
+    "view": "overhead"
+   },
+   "expected": {
+    "text": "IMAGE 3 is a STYLE REFERENCE only: an approved photograph of this same kitchen from another camera angle ('overhead'). Match its materials, colors, wood grain, stone veining, surface finish and the mood and color temperature of its light. Do NOT copy its composition, camera, framing or objects, and do not let it change the shapes in the other image(s)."
+   }
+  }
+ ]
+}

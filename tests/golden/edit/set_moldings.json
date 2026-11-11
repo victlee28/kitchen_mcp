@@ -1,0 +1,139 @@
+{
+ "function": "edit.set_moldings",
+ "cases": [
+  {
+   "name": "crown and base",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "op": {
+     "op": "set-moldings",
+     "moldings": [
+      {
+       "id": "crown-molding",
+       "variant": "crown",
+       "profile": "classic-crown-layered"
+      },
+      {
+       "id": "base-molding",
+       "variant": "base",
+       "profile": "classic-base"
+      }
+     ]
+    }
+   },
+   "expected": {
+    "diff": {
+     "modules": {
+      "added": [],
+      "removed": [],
+      "changed": {}
+     },
+     "other": [
+      {
+       "path": "moldings",
+       "old": [],
+       "new": [
+        {
+         "id": "crown-molding",
+         "variant": "crown",
+         "profile": "classic-crown-layered",
+         "wall": [],
+         "joinGap": 50.0,
+         "openEnd": "return-to-wall",
+         "material": null,
+         "enabled": true,
+         "ignoreCeiling": false
+        },
+        {
+         "id": "base-molding",
+         "variant": "base",
+         "profile": "classic-base",
+         "wall": [],
+         "joinGap": 50.0,
+         "openEnd": "return-to-wall",
+         "material": null,
+         "enabled": true,
+         "ignoreCeiling": false
+        }
+       ]
+      }
+     ],
+     "truncated": false
+    },
+    "runs": []
+   }
+  },
+  {
+   "name": "none",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "ops": [
+     {
+      "op": "set-moldings",
+      "moldings": [
+       {
+        "id": "crown-molding",
+        "variant": "crown",
+        "profile": "classic-crown-layered"
+       },
+       {
+        "id": "base-molding",
+        "variant": "base",
+        "profile": "classic-base"
+       }
+      ]
+     }
+    ],
+    "op": {
+     "op": "set-moldings",
+     "moldings": []
+    }
+   },
+   "expected": {
+    "diff": {
+     "modules": {
+      "added": [],
+      "removed": [],
+      "changed": {}
+     },
+     "other": [
+      {
+       "path": "moldings",
+       "old": [
+        {
+         "id": "crown-molding",
+         "variant": "crown",
+         "profile": "classic-crown-layered",
+         "wall": [],
+         "joinGap": 50.0,
+         "openEnd": "return-to-wall",
+         "material": null,
+         "enabled": true,
+         "ignoreCeiling": false
+        },
+        {
+         "id": "base-molding",
+         "variant": "base",
+         "profile": "classic-base",
+         "wall": [],
+         "joinGap": 50.0,
+         "openEnd": "return-to-wall",
+         "material": null,
+         "enabled": true,
+         "ignoreCeiling": false
+        }
+       ],
+       "new": []
+      }
+     ],
+     "truncated": false
+    },
+    "runs": []
+   }
+  }
+ ]
+}

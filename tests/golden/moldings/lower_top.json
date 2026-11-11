@@ -1,0 +1,81 @@
+{
+ "function": "moldings.lower_top",
+ "cases": [
+  {
+   "name": "100 mm lower",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "newTop": 2510
+   },
+   "expected": {
+    "common": {
+     "cabinetTop": 2510.0,
+     "upperTierSplit": 2280.0
+    },
+    "diff": {
+     "added": [],
+     "removed": [],
+     "changed": {
+      "KG1": [
+       {
+        "field": "height",
+        "old": 1080.0,
+        "new": 980.0
+       }
+      ],
+      "TT9": [
+       {
+        "field": "height",
+        "old": 330.0,
+        "new": 230.0
+       }
+      ],
+      "TT7": [
+       {
+        "field": "height",
+        "old": 330.0,
+        "new": 230.0
+       }
+      ],
+      "TT8": [
+       {
+        "field": "height",
+        "old": 330.0,
+        "new": 230.0
+       }
+      ],
+      "TT2": [
+       {
+        "field": "height",
+        "old": 330.0,
+        "new": 230.0
+       }
+      ],
+      "TC1": [
+       {
+        "field": "height",
+        "old": 2610.0,
+        "new": 2510.0
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "name": "too low",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "newTop": 1000
+   },
+   "error": {
+    "kind": "validation",
+    "code": "invalid-input"
+   }
+  }
+ ]
+}

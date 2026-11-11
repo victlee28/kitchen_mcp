@@ -1,0 +1,43 @@
+{
+ "function": "prompts.recognition_text",
+ "cases": [
+  {
+   "name": "photo",
+   "input": {
+    "kind": "photo",
+    "types": [
+     "base",
+     "upper",
+     "tall-fridge"
+    ]
+   },
+   "expected": {
+    "start": "You are reading a photograph of a kitchen. List the cabinet modules you can see, wall by wall, in millimetres.\n- type: o",
+    "length": 956,
+    "mentions": [
+     "base",
+     "upper",
+     "tall-fridge"
+    ]
+   }
+  },
+  {
+   "name": "drawing",
+   "input": {
+    "kind": "drawing",
+    "types": [
+     "base",
+     "upper-loft"
+    ]
+   },
+   "expected": {
+    "start": "You are reading a technical drawing (plan or elevation) of a kitchen. List the cabinet modules you can see, wall by wall",
+    "length": 975,
+    "mentions": [
+     "base",
+     "upper-loft"
+    ]
+   }
+  }
+ ]
+}

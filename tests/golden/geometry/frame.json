@@ -1,0 +1,106 @@
+{
+ "function": "geometry.frame",
+ "cases": [
+  {
+   "name": "wall rows",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "rows": [
+     [
+      "back",
+      null
+     ],
+     [
+      "right",
+      null
+     ]
+    ]
+   },
+   "expected": {
+    "wallLength": [
+     2520.0,
+     3430.0
+    ],
+    "reach": {
+     "back": 1920.0,
+     "right": 2830.0
+    },
+    "backsplash": {
+     "back": 600.0,
+     "right": 600.0
+    },
+    "runWalls": {}
+   }
+  },
+  {
+   "name": "runs",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "convertRows": true,
+    "rows": [
+     [
+      "back",
+      "R1"
+     ],
+     [
+      "right",
+      "R2"
+     ]
+    ]
+   },
+   "expected": {
+    "wallLength": [
+     2520.0,
+     3430.0
+    ],
+    "reach": {
+     "back": 1920.0,
+     "right": 2830.0
+    },
+    "backsplash": {
+     "back": 600.0,
+     "right": 600.0
+    },
+    "runWalls": {
+     "R1": "back",
+     "R2": "right"
+    }
+   }
+  },
+  {
+   "name": "with a floorplan",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "floorplan": {
+     "$fixture": "tests/data/floorplan-building.json"
+    },
+    "rows": [
+     [
+      "back",
+      null
+     ]
+    ]
+   },
+   "expected": {
+    "wallLength": [
+     2520.0,
+     3430.0
+    ],
+    "reach": {
+     "back": 1920.0,
+     "right": 2830.0
+    },
+    "backsplash": {
+     "back": 600.0
+    },
+    "runWalls": {}
+   }
+  }
+ ]
+}

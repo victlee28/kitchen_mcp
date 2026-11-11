@@ -1,0 +1,115 @@
+{
+ "function": "geometry.scene_json",
+ "cases": [
+  {
+   "name": "L fixture",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    }
+   },
+   "expected": {
+    "version": "2.0",
+    "units": "mm",
+    "bounds": {
+     "min": [
+      -1920.0,
+      0.0,
+      0
+     ],
+     "max": [
+      0,
+      2610.0,
+      2830.0
+     ]
+    },
+    "parts": 98,
+    "views": [
+     "back-wall",
+     "cooking-area",
+     "corner-shelf",
+     "left-corner",
+     "long-run",
+     "original-angle",
+     "overhead",
+     "plan"
+    ],
+    "modules": 16,
+    "moldings": []
+   }
+  },
+  {
+   "name": "with moldings",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "ops": [
+     {
+      "op": "set-moldings",
+      "moldings": [
+       {
+        "id": "crown-molding",
+        "variant": "crown",
+        "profile": "classic-crown-layered"
+       },
+       {
+        "id": "base-molding",
+        "variant": "base",
+        "profile": "classic-base"
+       }
+      ]
+     }
+    ]
+   },
+   "expected": {
+    "version": "2.0",
+    "units": "mm",
+    "bounds": {
+     "min": [
+      -1920.0,
+      0.0,
+      0
+     ],
+     "max": [
+      0,
+      2610.0,
+      2830.0
+     ]
+    },
+    "parts": 98,
+    "views": [
+     "back-wall",
+     "cooking-area",
+     "corner-shelf",
+     "left-corner",
+     "long-run",
+     "original-angle",
+     "overhead",
+     "plan"
+    ],
+    "modules": 16,
+    "moldings": [
+     {
+      "id": "crown-molding-1",
+      "molding": "crown-molding",
+      "vertices": 44,
+      "faces": 84
+     },
+     {
+      "id": "crown-molding-2",
+      "molding": "crown-molding",
+      "vertices": 44,
+      "faces": 84
+     },
+     {
+      "id": "base-molding-3",
+      "molding": "base-molding",
+      "vertices": 35,
+      "faces": 66
+     }
+    ]
+   }
+  }
+ ]
+}

@@ -1,0 +1,135 @@
+{
+ "function": "edit.update_module",
+ "cases": [
+  {
+   "name": "wider, neighbours move",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "op": {
+     "op": "update",
+     "id": "TD3",
+     "changes": {
+      "width": 500
+     }
+    }
+   },
+   "expected": {
+    "diff": {
+     "modules": {
+      "added": [],
+      "removed": [],
+      "changed": {
+       "TD4": [
+        {
+         "field": "fromCorner",
+         "old": 1810.0,
+         "new": 1940.0
+        }
+       ],
+       "TD3": [
+        {
+         "field": "doors",
+         "old": [
+          370.0
+         ],
+         "new": [
+          500.0
+         ]
+        },
+        {
+         "field": "width",
+         "old": 370.0,
+         "new": 500.0
+        }
+       ],
+       "TD5": [
+        {
+         "field": "fromCorner",
+         "old": 2440.0,
+         "new": 2570.0
+        }
+       ]
+      }
+     },
+     "other": [
+      {
+       "path": "appliances[TB4].center",
+       "old": 2130.0,
+       "new": 2260.0
+      }
+     ],
+     "truncated": false
+    },
+    "runs": []
+   }
+  },
+  {
+   "name": "doors keep their proportion",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "op": {
+     "op": "update",
+     "id": "TD1",
+     "changes": {
+      "width": 600
+     },
+     "closeGap": false
+    }
+   },
+   "expected": {
+    "diff": {
+     "modules": {
+      "added": [],
+      "removed": [],
+      "changed": {
+       "TD1": [
+        {
+         "field": "doors",
+         "old": [
+          350.0,
+          350.0
+         ],
+         "new": [
+          300.0,
+          300.0
+         ]
+        },
+        {
+         "field": "width",
+         "old": 700.0,
+         "new": 600.0
+        }
+       ]
+      }
+     },
+     "other": [],
+     "truncated": false
+    },
+    "runs": []
+   }
+  },
+  {
+   "name": "id cannot change",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "op": {
+     "op": "update",
+     "id": "TD3",
+     "changes": {
+      "id": "TD9"
+     }
+    }
+   },
+   "error": {
+    "kind": "validation",
+    "code": "invalid-input"
+   }
+  }
+ ]
+}

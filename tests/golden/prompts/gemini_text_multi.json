@@ -1,0 +1,44 @@
+{
+ "function": "prompts.gemini_text_multi",
+ "cases": [
+  {
+   "name": "two parts",
+   "input": {
+    "regions": [
+     [
+      "RED",
+      "door",
+      "walnut",
+      "bottom left"
+     ],
+     [
+      "BLUE",
+      "handle",
+      "brass",
+      "middle"
+     ]
+    ]
+   },
+   "expected": {
+    "text": "Edit the FIRST image. The SECOND image is a color-coded mask; apply each change only inside its colored region:\n- RED region (door): make it walnut. bottom left\n- BLUE region (handle): make it brass. middle\nKeep the exact shape, edges, panel gaps, perspective and lighting; leave all black (unmasked) areas of the first image unchanged; return the full image at the same framing."
+   }
+  },
+  {
+   "name": "one with instruction",
+   "input": {
+    "regions": [
+     [
+      "RED",
+      "countertop",
+      "marble",
+      "back"
+     ]
+    ],
+    "instruction": "keep reflections"
+   },
+   "expected": {
+    "text": "Edit the FIRST image. The SECOND image is a color-coded mask; apply each change only inside its colored region:\n- RED region (countertop): make it marble. back\nkeep reflections\nKeep the exact shape, edges, panel gaps, perspective and lighting; leave all black (unmasked) areas of the first image unchanged; return the full image at the same framing."
+   }
+  }
+ ]
+}

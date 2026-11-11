@@ -1,0 +1,56 @@
+{
+ "function": "moldings.default_moldings",
+ "cases": [
+  {
+   "name": "both",
+   "input": {},
+   "expected": {
+    "moldings": [
+     {
+      "id": "crown-molding",
+      "variant": "crown",
+      "profile": "classic-crown-layered",
+      "wall": [],
+      "joinGap": 50.0,
+      "openEnd": "return-to-wall",
+      "enabled": true,
+      "ignoreCeiling": false
+     },
+     {
+      "id": "base-molding",
+      "variant": "base",
+      "profile": "classic-base",
+      "wall": [],
+      "joinGap": 50.0,
+      "openEnd": "return-to-wall",
+      "enabled": true,
+      "ignoreCeiling": false
+     }
+    ]
+   }
+  },
+  {
+   "name": "crown only, own profile",
+   "input": {
+    "args": {
+     "base": false,
+     "crown_profile": "x"
+    }
+   },
+   "expected": {
+    "moldings": [
+     {
+      "id": "crown-molding",
+      "variant": "crown",
+      "profile": "x",
+      "wall": [],
+      "joinGap": 50.0,
+      "openEnd": "return-to-wall",
+      "enabled": true,
+      "ignoreCeiling": false
+     }
+    ]
+   }
+  }
+ ]
+}

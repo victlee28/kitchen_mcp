@@ -1,0 +1,77 @@
+{
+ "function": "edit.combine_ops",
+ "cases": [
+  {
+   "name": "one op stays one",
+   "input": {
+    "ops": [
+     {
+      "op": "remove",
+      "id": "TD3"
+     }
+    ]
+   },
+   "expected": {
+    "op": {
+     "op": "remove",
+     "id": "TD3"
+    }
+   }
+  },
+  {
+   "name": "nested multi flattened",
+   "input": {
+    "ops": [
+     {
+      "op": "remove",
+      "id": "TD3"
+     },
+     {
+      "op": "multi",
+      "ops": [
+       {
+        "op": "remove",
+        "id": "TD4"
+       },
+       {
+        "op": "common",
+        "changes": {}
+       }
+      ]
+     }
+    ]
+   },
+   "expected": {
+    "op": {
+     "op": "multi",
+     "ops": [
+      {
+       "op": "remove",
+       "id": "TD3"
+      },
+      {
+       "op": "remove",
+       "id": "TD4"
+      },
+      {
+       "op": "common",
+       "changes": {}
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "none",
+   "input": {
+    "ops": []
+   },
+   "expected": {
+    "op": {
+     "op": "multi",
+     "ops": []
+    }
+   }
+  }
+ ]
+}

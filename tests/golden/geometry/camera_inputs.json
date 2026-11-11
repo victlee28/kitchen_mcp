@@ -1,0 +1,173 @@
+{
+ "function": "geometry.camera_inputs",
+ "cases": [
+  {
+   "name": "wall rows",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    }
+   },
+   "expected": {
+    "faces": [
+     {
+      "key": "back-wall",
+      "name": "Chính diện tường sau",
+      "center": [
+       -1235.0,
+       640.0
+      ],
+      "normal": [
+       0.0,
+       1.0
+      ],
+      "length": 1370.0,
+      "height": 2610.0,
+      "run": "back"
+     },
+     {
+      "key": "right-wall",
+      "name": "Chính diện tường phải",
+      "center": [
+       -550.0,
+       1415.0
+      ],
+      "normal": [
+       -1.0,
+       0.0
+      ],
+      "length": 2830.0,
+      "height": 2610.0,
+      "run": "right"
+     }
+    ],
+    "bodies": [],
+    "room": [
+     [
+      -2520.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.0
+     ],
+     [
+      0.0,
+      6430.0
+     ],
+     [
+      -2520.0,
+      6430.0
+     ]
+    ],
+    "solids": []
+   }
+  },
+  {
+   "name": "runs",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "convertRows": true
+   },
+   "expected": {
+    "faces": [
+     {
+      "key": "back-wall",
+      "name": "Chính diện tường sau",
+      "center": [
+       -1235.0,
+       640.0
+      ],
+      "normal": [
+       0.0,
+       1.0
+      ],
+      "length": 1370.0,
+      "height": 2610.0,
+      "run": "R1"
+     },
+     {
+      "key": "right-wall",
+      "name": "Chính diện tường phải",
+      "center": [
+       -550.0,
+       1415.0
+      ],
+      "normal": [
+       -1.0,
+       0.0
+      ],
+      "length": 2830.0,
+      "height": 2610.0,
+      "run": "R2"
+     }
+    ],
+    "bodies": [
+     [
+      "TC1",
+      "cabinet:R1",
+      4,
+      0.0,
+      2610.0
+     ],
+     [
+      "TD1",
+      "cabinet:R1",
+      4,
+      0.0,
+      840.0
+     ],
+     [
+      "TD2",
+      "cabinet:R2",
+      4,
+      0.0,
+      840.0
+     ],
+     [
+      "TD3",
+      "cabinet:R2",
+      4,
+      0.0,
+      840.0
+     ],
+     [
+      "TD4",
+      "cabinet:R2",
+      4,
+      0.0,
+      840.0
+     ],
+     [
+      "TD5",
+      "cabinet:R2",
+      4,
+      0.0,
+      840.0
+     ]
+    ],
+    "room": [
+     [
+      -2520.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.0
+     ],
+     [
+      0.0,
+      6430.0
+     ],
+     [
+      -2520.0,
+      6430.0
+     ]
+    ],
+    "solids": []
+   }
+  }
+ ]
+}

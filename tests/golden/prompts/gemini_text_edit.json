@@ -1,0 +1,50 @@
+{
+ "function": "prompts.gemini_text_edit",
+ "cases": [
+  {
+   "name": "one region",
+   "input": {
+    "regions": [
+     {
+      "color": "RED",
+      "n": 1,
+      "role": "door",
+      "material_text": "walnut wood",
+      "where": "bottom left",
+      "others": 1,
+      "kind": "door"
+     }
+    ]
+   },
+   "expected": {
+    "text": "You are given two images. IMAGE 1 is the kitchen photo to edit; the area to change is surrounded by a thin colored OUTLINE with a number label. IMAGE 2 is the mask: the white area is exactly the region inside the outline in image 1.\nChanges:\n- Region 1 (RED outline): the door in the bottom left. Make it walnut wood. The other door in the photo is NOT outlined — leave it unchanged.\nChange ONLY the pixels inside the outlined region(s); everything outside them must stay identical to image 1. Keep the exact shape, edges, panel gaps, perspective and lighting of the edited parts. REMOVE the colored outlines and number labels in your result (draw what is really behind them). Return the full image at the same size and framing."
+   }
+  },
+  {
+   "name": "two regions",
+   "input": {
+    "regions": [
+     {
+      "color": "RED",
+      "n": 1,
+      "role": "door",
+      "material_text": "walnut wood"
+     },
+     {
+      "color": "BLUE",
+      "n": 2,
+      "role": "handle",
+      "material_text": "brass",
+      "others": 3,
+      "extra": "thin bar"
+     }
+    ],
+    "instruction": "same light",
+    "realism": "photo"
+   },
+   "expected": {
+    "text": "You are given two images. IMAGE 1 is the kitchen photo to edit; the areas to change are surrounded by a thin colored OUTLINE with a number label. IMAGE 2 is the color-coded mask: each colored area is exactly the region of the same-colored outline in image 1.\nChanges:\n- Region 1 (RED outline): the door. Make it walnut wood.\n- Region 2 (BLUE outline): the handle. Make it brass. thin bar The 3 other handles in the photo are NOT outlined — leave them unchanged.\nsame light\nphoto\nChange ONLY the pixels inside the outlined region(s); everything outside them must stay identical to image 1. Keep the exact shape, edges, panel gaps, perspective and lighting of the edited parts. REMOVE the colored outlines and number labels in your result (draw what is really behind them). Return the full image at the same size and framing."
+   }
+  }
+ ]
+}

@@ -51,6 +51,10 @@ def spec_diff(old: KitchenSpec, new: KitchenSpec) -> dict[str, Any]:
     other: list[dict[str, Any]] = []
     for k in sorted((set(a) | set(b)) - SKIP - {"module"}):
         _walk(a.get(k), b.get(k), k, other)
+    fa: dict[str, Any] = a.get("floorplan") or {}
+    fb: dict[str, Any] = b.get("floorplan") or {}
+    if fa.get("replaced") != fb.get("replaced"):     # the plan itself is skipped, but which of its elements cabinets replace is an edit
+        other.append({"path": "floorplan.replaced", "old": fa.get("replaced"), "new": fb.get("replaced")})
     truncated = len(other) > MAX_ENTRIES
     return {"modules": {"added": [m for m in mods_b if m not in mods_a], "removed": [m for m in mods_a if m not in mods_b], "changed": changed},
             "other": other[:MAX_ENTRIES], "truncated": truncated}

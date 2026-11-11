@@ -1,0 +1,132 @@
+{
+ "function": "edit.set_run_tv",
+ "cases": [
+  {
+   "name": "TV unit, shelves",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "convertRows": true,
+    "op": {
+     "op": "set-run-tv",
+     "id": "R1",
+     "layout": "shelves"
+    }
+   },
+   "expected": {
+    "diff": {
+     "modules": {
+      "added": [],
+      "removed": [],
+      "changed": {}
+     },
+     "other": [
+      {
+       "path": "runs[R1].purpose",
+       "old": null,
+       "new": "tv"
+      },
+      {
+       "path": "runs[R1].tvLayout",
+       "old": null,
+       "new": "shelves"
+      }
+     ],
+     "truncated": false
+    },
+    "runs": [
+     {
+      "id": "R1",
+      "x": -1920.0,
+      "z": 0.0,
+      "yaw": 0.0,
+      "purpose": "tv",
+      "tvLayout": "shelves"
+     },
+     {
+      "id": "R2",
+      "x": -0.0,
+      "z": 0.0,
+      "yaw": -90.0
+     }
+    ]
+   }
+  },
+  {
+   "name": "kitchen again",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "convertRows": true,
+    "ops": [
+     {
+      "op": "set-run-tv",
+      "id": "R1",
+      "layout": "full"
+     }
+    ],
+    "op": {
+     "op": "set-run-tv",
+     "id": "R1",
+     "layout": null
+    }
+   },
+   "expected": {
+    "diff": {
+     "modules": {
+      "added": [],
+      "removed": [],
+      "changed": {}
+     },
+     "other": [
+      {
+       "path": "runs[R1].purpose",
+       "old": "tv",
+       "new": null
+      },
+      {
+       "path": "runs[R1].tvLayout",
+       "old": "full",
+       "new": null
+      }
+     ],
+     "truncated": false
+    },
+    "runs": [
+     {
+      "id": "R1",
+      "x": -1920.0,
+      "z": 0.0,
+      "yaw": 0.0
+     },
+     {
+      "id": "R2",
+      "x": -0.0,
+      "z": 0.0,
+      "yaw": -90.0
+     }
+    ]
+   }
+  },
+  {
+   "name": "bad layout",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "convertRows": true,
+    "op": {
+     "op": "set-run-tv",
+     "id": "R1",
+     "layout": "wall"
+    }
+   },
+   "error": {
+    "kind": "validation",
+    "code": "bad-tv-layout"
+   }
+  }
+ ]
+}

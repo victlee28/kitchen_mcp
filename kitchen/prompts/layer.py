@@ -42,8 +42,12 @@ TV_UNIT = {
 
 
 def tv_text(spec: KitchenSpec) -> str:
-    """What the TV units of the design look like, for the prompt (the layout of the first one; the panel behind the TV when there is one)."""
-    first = sorted(tv_system.tv_runs(spec))[0]
+    """What the TV units of the design look like, for the prompt (the layout of the first one; the panel behind the TV when there is one).
+    ``""`` for a design without a TV unit."""
+    tv_runs = sorted(tv_system.tv_runs(spec))
+    if not tv_runs:
+        return ""
+    first = tv_runs[0]
     text = TV_UNIT.get(tv_system.layout_of(spec, first) or "columns", TV_UNIT["columns"])
     if any(m.backPanel is not None for m in spec.module if m.run == first):
         text += ", a smooth panel in the cabinet finish on the wall behind the TV"

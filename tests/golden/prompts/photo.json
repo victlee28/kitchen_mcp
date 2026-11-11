@@ -1,0 +1,43 @@
+{
+ "function": "prompts.photo",
+ "cases": [
+  {
+   "name": "daylight, L",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    }
+   },
+   "expected": {
+    "full": "Shoot it as a professional architectural interior photograph: full-frame camera, 24–35 mm rectilinear lens at eye level about 1.5 m, f/8 with everything in focus, vertical lines kept perfectly vertical, no fisheye. Lighting: bright natural daylight on an overcast-to-sunny morning, neutral white balance around 5000K, soft large-source light with gentle falloff across the room; warm LED strip light under the wall cabinets washes the backsplash and countertop (subtle in daylight). Materials: wood surfaces show natural, non-repeating grain running consistently along each panel, with true-to-scale grain size and subtle variation between boards; laminate and melamine panels have a fine low-sheen texture with soft, broad reflections; matte painted fronts have an even satin finish with no plastic shine; the stone countertop has a crisp eased edge, realistic veining that continues across the front edge, and a light polished reflection of the wall cabinets; metal handles and appliances show brushed metal with directional micro-scratches and soft specular highlights; tiles have thin recessed grout lines and slightly varying glaze reflections. Physically plausible detail: thin dark shadow lines in the 2–3 mm reveal gaps between doors and drawers; soft ambient-occlusion contact shadows where cabinets meet the wall, floor and ceiling, and in inside corners; a soft shadow under the countertop overhang and inside the toe-kick recess; door and panel edges have tiny rounded bevels that catch a thin line of light; a soft shadow band on the backsplash under the wall cabinets. Natural color, realistic dynamic range (no HDR look), very fine natural sensor grain, accurate white balance; the room looks clean and newly installed, with no people, text or clutter. It must be indistinguishable from a real photograph, not a 3D render.",
+    "local": "Make the edited area photographically consistent with image 1, as if captured in the same shot: same light direction, color temperature, exposure, contrast, sharpness, depth of field and sensor grain; correct perspective-matched texture scale; reflections and highlights that agree with the light sources visible in image 1; soft contact and ambient-occlusion shadows where the edited parts meet neighbouring surfaces; thin dark reveal gaps between doors and drawers; no visible seam, halo or blur along the region boundary. Surface detail: wood surfaces show natural, non-repeating grain running consistently along each panel, with true-to-scale grain size and subtle variation between boards; laminate and melamine panels have a fine low-sheen texture with soft, broad reflections; matte painted fronts have an even satin finish with no plastic shine; the stone countertop has a crisp eased edge, realistic veining that continues across the front edge, and a light polished reflection of the wall cabinets; metal handles and appliances show brushed metal with directional micro-scratches and soft specular highlights; tiles have thin recessed grout lines and slightly varying glaze reflections."
+   }
+  },
+  {
+   "name": "evening",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "lighting": "dim-evening"
+   },
+   "expected": {
+    "full": "Shoot it as a professional architectural interior photograph: full-frame camera, 24–35 mm rectilinear lens at eye level about 1.5 m, f/8 with everything in focus, vertical lines kept perfectly vertical, no fisheye. Lighting: evening interior lighting: warm 2700–3000K recessed ceiling downlights and under-cabinet LED strips as the main light, dark window, cozy pools of light on the countertop, no harsh flash; warm LED strip light under the wall cabinets washes the backsplash and countertop. Materials: wood surfaces show natural, non-repeating grain running consistently along each panel, with true-to-scale grain size and subtle variation between boards; laminate and melamine panels have a fine low-sheen texture with soft, broad reflections; matte painted fronts have an even satin finish with no plastic shine; the stone countertop has a crisp eased edge, realistic veining that continues across the front edge, and a light polished reflection of the wall cabinets; metal handles and appliances show brushed metal with directional micro-scratches and soft specular highlights; tiles have thin recessed grout lines and slightly varying glaze reflections. Physically plausible detail: thin dark shadow lines in the 2–3 mm reveal gaps between doors and drawers; soft ambient-occlusion contact shadows where cabinets meet the wall, floor and ceiling, and in inside corners; a soft shadow under the countertop overhang and inside the toe-kick recess; door and panel edges have tiny rounded bevels that catch a thin line of light; a soft shadow band on the backsplash under the wall cabinets. Natural color, realistic dynamic range (no HDR look), very fine natural sensor grain, accurate white balance; the room looks clean and newly installed, with no people, text or clutter. It must be indistinguishable from a real photograph, not a 3D render.",
+    "local": "Make the edited area photographically consistent with image 1, as if captured in the same shot: same light direction, color temperature, exposure, contrast, sharpness, depth of field and sensor grain; correct perspective-matched texture scale; reflections and highlights that agree with the light sources visible in image 1; soft contact and ambient-occlusion shadows where the edited parts meet neighbouring surfaces; thin dark reveal gaps between doors and drawers; no visible seam, halo or blur along the region boundary. Surface detail: wood surfaces show natural, non-repeating grain running consistently along each panel, with true-to-scale grain size and subtle variation between boards; laminate and melamine panels have a fine low-sheen texture with soft, broad reflections; matte painted fronts have an even satin finish with no plastic shine; the stone countertop has a crisp eased edge, realistic veining that continues across the front edge, and a light polished reflection of the wall cabinets; metal handles and appliances show brushed metal with directional micro-scratches and soft specular highlights; tiles have thin recessed grout lines and slightly varying glaze reflections."
+   }
+  },
+  {
+   "name": "local without a design",
+   "input": {
+    "extra": [
+     "kính",
+     "gỗ sồi"
+    ]
+   },
+   "expected": {
+    "full": null,
+    "local": "Make the edited area photographically consistent with image 1, as if captured in the same shot: same light direction, color temperature, exposure, contrast, sharpness, depth of field and sensor grain; correct perspective-matched texture scale; reflections and highlights that agree with the light sources visible in image 1; soft contact and ambient-occlusion shadows where the edited parts meet neighbouring surfaces; thin dark reveal gaps between doors and drawers; no visible seam, halo or blur along the region boundary. Surface detail: wood surfaces show natural, non-repeating grain running consistently along each panel, with true-to-scale grain size and subtle variation between boards; glass doors and the cooktop show faint reflections and slight transparency, not opaque flat color."
+   }
+  }
+ ]
+}

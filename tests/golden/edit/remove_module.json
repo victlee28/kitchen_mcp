@@ -1,0 +1,95 @@
+{
+ "function": "edit.remove_module",
+ "cases": [
+  {
+   "name": "closing the gap",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "op": {
+     "op": "remove",
+     "id": "TD3"
+    }
+   },
+   "expected": {
+    "diff": {
+     "modules": {
+      "added": [],
+      "removed": [
+       "TD3"
+      ],
+      "changed": {
+       "TD4": [
+        {
+         "field": "fromCorner",
+         "old": 1810.0,
+         "new": 1440.0
+        }
+       ],
+       "TD5": [
+        {
+         "field": "fromCorner",
+         "old": 2440.0,
+         "new": 2070.0
+        }
+       ]
+      }
+     },
+     "other": [
+      {
+       "path": "appliances[TB4].center",
+       "old": 2130.0,
+       "new": 1760.0
+      }
+     ],
+     "truncated": false
+    },
+    "runs": []
+   }
+  },
+  {
+   "name": "leaving the gap",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "op": {
+     "op": "remove",
+     "id": "TD3",
+     "closeGap": false
+    }
+   },
+   "expected": {
+    "diff": {
+     "modules": {
+      "added": [],
+      "removed": [
+       "TD3"
+      ],
+      "changed": {}
+     },
+     "other": [],
+     "truncated": false
+    },
+    "runs": []
+   }
+  },
+  {
+   "name": "unknown",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "op": {
+     "op": "remove",
+     "id": "XX"
+    }
+   },
+   "error": {
+    "kind": "not-found",
+    "code": "module-not-found"
+   }
+  }
+ ]
+}

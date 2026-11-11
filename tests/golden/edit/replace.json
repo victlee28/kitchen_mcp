@@ -1,0 +1,435 @@
+{
+ "function": "edit.replace",
+ "cases": [
+  {
+   "name": "whole design replaced",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "op": {
+     "op": "replace",
+     "spec": {
+      "module": [
+       {
+        "id": "TD1",
+        "type": "base",
+        "wall": "back",
+        "fromCorner": 0,
+        "width": 600,
+        "height": 840,
+        "depth": 560
+       }
+      ]
+     }
+    }
+   },
+   "expected": {
+    "diff": {
+     "modules": {
+      "added": [],
+      "removed": [
+       "TC1",
+       "TT1",
+       "TT2",
+       "KG1",
+       "TD2",
+       "TD3",
+       "TD4",
+       "TD5",
+       "TT3",
+       "TT4",
+       "TT5",
+       "TT6",
+       "TT7",
+       "TT8",
+       "TT9"
+      ],
+      "changed": {
+       "TD1": [
+        {
+         "field": "depth",
+         "old": 550.0,
+         "new": 560.0
+        },
+        {
+         "field": "doors",
+         "old": [
+          350.0,
+          350.0
+         ],
+         "new": []
+        },
+        {
+         "field": "fromCorner",
+         "old": 550.0,
+         "new": 0.0
+        },
+        {
+         "field": "name",
+         "old": "Tủ dưới 2 cánh",
+         "new": ""
+        },
+        {
+         "field": "width",
+         "old": 700.0,
+         "new": 600.0
+        }
+       ]
+      }
+     },
+     "other": [
+      {
+       "path": "appliances",
+       "old": [
+        {
+         "id": "TB1",
+         "name": "Tủ lạnh 2 cánh, ngăn đá trên",
+         "type": "fridge",
+         "dimensions": "600 × 1600 × 620",
+         "position": "Trong hốc TC1",
+         "module": "TC1",
+         "wall": null,
+         "center": null,
+         "model": null,
+         "energy": null,
+         "size": null,
+         "cutout": null,
+         "mount": null
+        },
+        {
+         "id": "TB2",
+         "name": "Chậu rửa đôi màu tối, lắp dương",
+         "type": "sink",
+         "dimensions": "780 × 410",
+         "position": "Trên TD2, tâm cách góc 1000",
+         "module": null,
+         "wall": "right",
+         "center": 1000.0,
+         "model": null,
+         "energy": null,
+         "size": null,
+         "cutout": null,
+         "mount": null
+        },
+        {
+         "id": "TB3",
+         "name": "Vòi rửa cổ cao",
+         "type": "faucet",
+         "dimensions": "cao 310",
+         "position": "Sau chậu rửa",
+         "module": null,
+         "wall": "right",
+         "center": 1000.0,
+         "model": null,
+         "energy": null,
+         "size": null,
+         "cutout": null,
+         "mount": null
+        },
+        {
+         "id": "TB4",
+         "name": "Bếp âm 2 vùng nấu, mặt kính đen",
+         "type": "cooktop",
+         "dimensions": "730 × 430",
+         "position": "Tâm cách góc 2130",
+         "module": null,
+         "wall": "right",
+         "center": 2130.0,
+         "model": null,
+         "energy": null,
+         "size": null,
+         "cutout": null,
+         "mount": null
+        },
+        {
+         "id": "TB5",
+         "name": "Máy hút mùi âm tủ",
+         "type": "hood",
+         "dimensions": "730 × 165",
+         "position": "Dưới TT5",
+         "module": "TT5",
+         "wall": null,
+         "center": null,
+         "model": null,
+         "energy": null,
+         "size": null,
+         "cutout": null,
+         "mount": null
+        },
+        {
+         "id": "TB6",
+         "name": "Lò vi sóng âm tủ",
+         "type": "oven",
+         "dimensions": "560 × 350",
+         "position": "Trong hộc TD4",
+         "module": "TD4",
+         "wall": null,
+         "center": null,
+         "model": null,
+         "energy": null,
+         "size": null,
+         "cutout": null,
+         "mount": null
+        },
+        {
+         "id": "LED",
+         "name": "Đèn LED hắt dưới tủ trên và trong kệ góc",
+         "type": "light",
+         "dimensions": "ánh sáng ấm",
+         "position": "Mép trước đáy tủ",
+         "module": null,
+         "wall": null,
+         "center": null,
+         "model": null,
+         "energy": null,
+         "size": null,
+         "cutout": null,
+         "mount": null
+        }
+       ],
+       "new": []
+      },
+      {
+       "path": "cameraViews.back-wall",
+       "old": {
+        "name": "Chính diện tường sau",
+        "position": [
+         -1.15,
+         1.35,
+         4.6
+        ],
+        "lookAt": [
+         -0.95,
+         1.25,
+         0.2
+        ],
+        "verticalFov": 44.0,
+        "hide": []
+       },
+       "new": null
+      },
+      {
+       "path": "cameraViews.cooking-area",
+       "old": {
+        "name": "Cận cảnh khu nấu",
+        "position": [
+         -1.95,
+         1.62,
+         3.3
+        ],
+        "lookAt": [
+         -0.3,
+         1.15,
+         2.05
+        ],
+        "verticalFov": 48.0,
+        "hide": []
+       },
+       "new": null
+      },
+      {
+       "path": "cameraViews.corner-shelf",
+       "old": {
+        "name": "Cận cảnh kệ góc",
+        "position": [
+         -1.6,
+         1.62,
+         1.95
+        ],
+        "lookAt": [
+         -0.35,
+         1.92,
+         0.5
+        ],
+        "verticalFov": 50.0,
+        "hide": []
+       },
+       "new": null
+      },
+      {
+       "path": "cameraViews.left-corner",
+       "old": {
+        "name": "Từ phía tủ lạnh",
+        "position": [
+         -3.3,
+         1.62,
+         1.05
+        ],
+        "lookAt": [
+         -0.35,
+         1.22,
+         2.3
+        ],
+        "verticalFov": 54.0,
+        "hide": []
+       },
+       "new": null
+      },
+      {
+       "path": "cameraViews.long-run",
+       "old": {
+        "name": "Chính diện dãy dài",
+        "position": [
+         -2.75,
+         1.36,
+         1.75
+        ],
+        "lookAt": [
+         0.0,
+         1.3,
+         1.75
+        ],
+        "verticalFov": 56.0,
+        "hide": []
+       },
+       "new": null
+      },
+      {
+       "path": "cameraViews.original-angle",
+       "old": {
+        "name": "Góc ảnh gốc",
+        "position": [
+         -3.9157,
+         1.3549,
+         5.2267
+        ],
+        "lookAt": [
+         -2.177,
+         1.3325,
+         3.0833
+        ],
+        "verticalFov": 45.62,
+        "hide": []
+       },
+       "new": null
+      },
+      {
+       "path": "cameraViews.overhead",
+       "old": {
+        "name": "Toàn cảnh từ trên",
+        "position": [
+         -3.55,
+         4.35,
+         4.75
+        ],
+        "lookAt": [
+         -0.85,
+         0.75,
+         1.1
+        ],
+        "verticalFov": 44.0,
+        "hide": []
+       },
+       "new": null
+      },
+      {
+       "path": "cameraViews.plan",
+       "old": {
+        "name": "Mặt bằng",
+        "position": [
+         -0.96,
+         6.0,
+         1.4201
+        ],
+        "lookAt": [
+         -0.96,
+         0.0,
+         1.42
+        ],
+        "verticalFov": 36.0,
+        "hide": []
+       },
+       "new": null
+      },
+      {
+       "path": "common.floorTile",
+       "old": [
+        800,
+        800
+       ],
+       "new": null
+      },
+      {
+       "path": "common.material.base",
+       "old": "Laminate vân gỗ sồi sáng",
+       "new": null
+      },
+      {
+       "path": "common.material.cornerShelf",
+       "old": "Vân gỗ sồi",
+       "new": null
+      },
+      {
+       "path": "common.material.countertop",
+       "old": "Đá nhân tạo trắng",
+       "new": null
+      },
+      {
+       "path": "common.material.tall",
+       "old": "Laminate vân gỗ sồi sáng",
+       "new": null
+      },
+      {
+       "path": "common.material.upper",
+       "old": "Trắng mờ",
+       "new": null
+      },
+      {
+       "path": "common.material.wallTile",
+       "old": "Gạch thẻ trắng 75×300 xếp dọc",
+       "new": null
+      },
+      {
+       "path": "common.wallTile",
+       "old": [
+        75,
+        300
+       ],
+       "new": null
+      },
+      {
+       "path": "name",
+       "old": "Tủ bếp chữ L – gỗ sồi và trắng",
+       "new": "Thiết kế tủ bếp"
+      },
+      {
+       "path": "origin",
+       "old": "Gốc toạ độ ở góc trong giữa tường sau và tường phải; \"tu\" là khoảng cách từ góc dọc theo tường.",
+       "new": null
+      },
+      {
+       "path": "source",
+       "old": "Ước lượng từ phối cảnh ảnh render (hiệu chỉnh camera theo 18 điểm, sai số trung bình 1,4 px), quy về chiều cao mặt bếp 900 mm. Sai số kích thước khoảng ±5–10%.",
+       "new": null
+      }
+     ],
+     "truncated": false
+    },
+    "runs": []
+   }
+  },
+  {
+   "name": "invalid design",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "op": {
+     "op": "replace",
+     "spec": {
+      "module": [
+       {
+        "id": "TD1"
+       }
+      ]
+     }
+    }
+   },
+   "error": {
+    "kind": "validation",
+    "code": "schema"
+   }
+  }
+ ]
+}

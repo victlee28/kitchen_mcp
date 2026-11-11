@@ -1,0 +1,393 @@
+{
+ "function": "edit.set_views",
+ "cases": [
+  {
+   "name": "pin views",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "op": {
+     "op": "set-views",
+     "cameraViews": {
+      "a": {
+       "name": "A",
+       "position": [
+        1,
+        1.5,
+        3
+       ],
+       "lookAt": [
+        0,
+        1,
+        0
+       ],
+       "verticalFov": 50
+      }
+     }
+    }
+   },
+   "expected": {
+    "diff": {
+     "modules": {
+      "added": [],
+      "removed": [],
+      "changed": {}
+     },
+     "other": [
+      {
+       "path": "cameraViews.a",
+       "old": null,
+       "new": {
+        "name": "A",
+        "position": [
+         1.0,
+         1.5,
+         3.0
+        ],
+        "lookAt": [
+         0.0,
+         1.0,
+         0.0
+        ],
+        "verticalFov": 50.0,
+        "hide": []
+       }
+      },
+      {
+       "path": "cameraViews.back-wall",
+       "old": {
+        "name": "Chính diện tường sau",
+        "position": [
+         -1.15,
+         1.35,
+         4.6
+        ],
+        "lookAt": [
+         -0.95,
+         1.25,
+         0.2
+        ],
+        "verticalFov": 44.0,
+        "hide": []
+       },
+       "new": null
+      },
+      {
+       "path": "cameraViews.cooking-area",
+       "old": {
+        "name": "Cận cảnh khu nấu",
+        "position": [
+         -1.95,
+         1.62,
+         3.3
+        ],
+        "lookAt": [
+         -0.3,
+         1.15,
+         2.05
+        ],
+        "verticalFov": 48.0,
+        "hide": []
+       },
+       "new": null
+      },
+      {
+       "path": "cameraViews.corner-shelf",
+       "old": {
+        "name": "Cận cảnh kệ góc",
+        "position": [
+         -1.6,
+         1.62,
+         1.95
+        ],
+        "lookAt": [
+         -0.35,
+         1.92,
+         0.5
+        ],
+        "verticalFov": 50.0,
+        "hide": []
+       },
+       "new": null
+      },
+      {
+       "path": "cameraViews.left-corner",
+       "old": {
+        "name": "Từ phía tủ lạnh",
+        "position": [
+         -3.3,
+         1.62,
+         1.05
+        ],
+        "lookAt": [
+         -0.35,
+         1.22,
+         2.3
+        ],
+        "verticalFov": 54.0,
+        "hide": []
+       },
+       "new": null
+      },
+      {
+       "path": "cameraViews.long-run",
+       "old": {
+        "name": "Chính diện dãy dài",
+        "position": [
+         -2.75,
+         1.36,
+         1.75
+        ],
+        "lookAt": [
+         0.0,
+         1.3,
+         1.75
+        ],
+        "verticalFov": 56.0,
+        "hide": []
+       },
+       "new": null
+      },
+      {
+       "path": "cameraViews.original-angle",
+       "old": {
+        "name": "Góc ảnh gốc",
+        "position": [
+         -3.9157,
+         1.3549,
+         5.2267
+        ],
+        "lookAt": [
+         -2.177,
+         1.3325,
+         3.0833
+        ],
+        "verticalFov": 45.62,
+        "hide": []
+       },
+       "new": null
+      },
+      {
+       "path": "cameraViews.overhead",
+       "old": {
+        "name": "Toàn cảnh từ trên",
+        "position": [
+         -3.55,
+         4.35,
+         4.75
+        ],
+        "lookAt": [
+         -0.85,
+         0.75,
+         1.1
+        ],
+        "verticalFov": 44.0,
+        "hide": []
+       },
+       "new": null
+      },
+      {
+       "path": "cameraViews.plan",
+       "old": {
+        "name": "Mặt bằng",
+        "position": [
+         -0.96,
+         6.0,
+         1.4201
+        ],
+        "lookAt": [
+         -0.96,
+         0.0,
+         1.42
+        ],
+        "verticalFov": 36.0,
+        "hide": []
+       },
+       "new": null
+      }
+     ],
+     "truncated": false
+    },
+    "runs": []
+   }
+  },
+  {
+   "name": "clear them",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "op": {
+     "op": "set-views",
+     "cameraViews": {}
+    }
+   },
+   "expected": {
+    "diff": {
+     "modules": {
+      "added": [],
+      "removed": [],
+      "changed": {}
+     },
+     "other": [
+      {
+       "path": "cameraViews.back-wall",
+       "old": {
+        "name": "Chính diện tường sau",
+        "position": [
+         -1.15,
+         1.35,
+         4.6
+        ],
+        "lookAt": [
+         -0.95,
+         1.25,
+         0.2
+        ],
+        "verticalFov": 44.0,
+        "hide": []
+       },
+       "new": null
+      },
+      {
+       "path": "cameraViews.cooking-area",
+       "old": {
+        "name": "Cận cảnh khu nấu",
+        "position": [
+         -1.95,
+         1.62,
+         3.3
+        ],
+        "lookAt": [
+         -0.3,
+         1.15,
+         2.05
+        ],
+        "verticalFov": 48.0,
+        "hide": []
+       },
+       "new": null
+      },
+      {
+       "path": "cameraViews.corner-shelf",
+       "old": {
+        "name": "Cận cảnh kệ góc",
+        "position": [
+         -1.6,
+         1.62,
+         1.95
+        ],
+        "lookAt": [
+         -0.35,
+         1.92,
+         0.5
+        ],
+        "verticalFov": 50.0,
+        "hide": []
+       },
+       "new": null
+      },
+      {
+       "path": "cameraViews.left-corner",
+       "old": {
+        "name": "Từ phía tủ lạnh",
+        "position": [
+         -3.3,
+         1.62,
+         1.05
+        ],
+        "lookAt": [
+         -0.35,
+         1.22,
+         2.3
+        ],
+        "verticalFov": 54.0,
+        "hide": []
+       },
+       "new": null
+      },
+      {
+       "path": "cameraViews.long-run",
+       "old": {
+        "name": "Chính diện dãy dài",
+        "position": [
+         -2.75,
+         1.36,
+         1.75
+        ],
+        "lookAt": [
+         0.0,
+         1.3,
+         1.75
+        ],
+        "verticalFov": 56.0,
+        "hide": []
+       },
+       "new": null
+      },
+      {
+       "path": "cameraViews.original-angle",
+       "old": {
+        "name": "Góc ảnh gốc",
+        "position": [
+         -3.9157,
+         1.3549,
+         5.2267
+        ],
+        "lookAt": [
+         -2.177,
+         1.3325,
+         3.0833
+        ],
+        "verticalFov": 45.62,
+        "hide": []
+       },
+       "new": null
+      },
+      {
+       "path": "cameraViews.overhead",
+       "old": {
+        "name": "Toàn cảnh từ trên",
+        "position": [
+         -3.55,
+         4.35,
+         4.75
+        ],
+        "lookAt": [
+         -0.85,
+         0.75,
+         1.1
+        ],
+        "verticalFov": 44.0,
+        "hide": []
+       },
+       "new": null
+      },
+      {
+       "path": "cameraViews.plan",
+       "old": {
+        "name": "Mặt bằng",
+        "position": [
+         -0.96,
+         6.0,
+         1.4201
+        ],
+        "lookAt": [
+         -0.96,
+         0.0,
+         1.42
+        ],
+        "verticalFov": 36.0,
+        "hide": []
+       },
+       "new": null
+      }
+     ],
+     "truncated": false
+    },
+    "runs": []
+   }
+  }
+ ]
+}

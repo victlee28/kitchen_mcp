@@ -1,0 +1,81 @@
+{
+ "function": "recognition.appliance_size",
+ "cases": [
+  {
+   "name": "sizes",
+   "input": {
+    "cases": [
+     [
+      "sink",
+      800,
+      null
+     ],
+     [
+      "sink",
+      500,
+      null
+     ],
+     [
+      "cooktop",
+      600,
+      null
+     ],
+     [
+      "oven",
+      600,
+      450
+     ],
+     [
+      "fridge",
+      700,
+      null
+     ],
+     [
+      "hood",
+      900,
+      null
+     ],
+     [
+      "x",
+      600,
+      null
+     ]
+    ]
+   },
+   "expected": {
+    "sizes": [
+     "760 × 430",
+     "460 × 430",
+     "590 × 430",
+     "560 × 414",
+     null,
+     "730 × 165",
+     null
+    ]
+   }
+  },
+  {
+   "name": "narrow",
+   "input": {
+    "cases": [
+     [
+      "sink",
+      300,
+      null
+     ],
+     [
+      "cooktop",
+      300,
+      null
+     ]
+    ]
+   },
+   "expected": {
+    "sizes": [
+     "260 × 430",
+     "290 × 430"
+    ]
+   }
+  }
+ ]
+}

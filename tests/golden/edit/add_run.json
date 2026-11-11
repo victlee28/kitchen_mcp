@@ -1,0 +1,83 @@
+{
+ "function": "edit.add_run",
+ "cases": [
+  {
+   "name": "new run",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "op": {
+     "op": "add-run",
+     "run": {
+      "x": -1000,
+      "z": 2000,
+      "yaw": 180
+     }
+    }
+   },
+   "expected": {
+    "diff": {
+     "modules": {
+      "added": [],
+      "removed": [],
+      "changed": {}
+     },
+     "other": [
+      {
+       "path": "idCounters.R",
+       "old": null,
+       "new": 1
+      },
+      {
+       "path": "runs",
+       "old": [],
+       "new": [
+        {
+         "id": "R1",
+         "x": -1000.0,
+         "z": 2000.0,
+         "yaw": 180.0,
+         "purpose": null,
+         "tvLayout": null,
+         "system": null
+        }
+       ]
+      }
+     ],
+     "truncated": false
+    },
+    "runs": [
+     {
+      "id": "R1",
+      "x": -1000.0,
+      "z": 2000.0,
+      "yaw": 180.0
+     }
+    ]
+   }
+  },
+  {
+   "name": "id taken",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "convertRows": true,
+    "op": {
+     "op": "add-run",
+     "run": {
+      "id": "R1",
+      "x": 0,
+      "z": 0,
+      "yaw": 0
+     }
+    }
+   },
+   "error": {
+    "kind": "validation",
+    "code": "run-exists"
+   }
+  }
+ ]
+}

@@ -1,0 +1,45 @@
+{
+ "function": "prompts.layer",
+ "cases": [
+  {
+   "name": "a door of the L",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "layerId": "TD1-door-1",
+    "material": "Walnut",
+    "instruction": "matte"
+   },
+   "expected": {
+    "global": "photorealistic interior photograph of a modern kitchen, base cabinets oak wood grain laminate, wall cabinets white matte finish, countertop white engineered quartz stone, backsplash white subway tile, realistic materials, sharp details, architectural photography",
+    "tv": "",
+    "layer": "cabinet door front, (Walnut), matte, keep exactly the same shape, edges, panel gaps and perspective, consistent lighting with the surrounding scene",
+    "edit": "cabinet door front, (Walnut), matte, keep exactly the same shape, edges, panel gaps and perspective, consistent lighting with the surrounding scene, photorealistic, matching scene lighting and grain, realistic texture, soft contact shadows"
+   }
+  },
+  {
+   "name": "a TV unit design",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "convertRows": true,
+    "ops": [
+     {
+      "op": "set-run-tv",
+      "id": "R1",
+      "layout": "columns"
+     }
+    ],
+    "layerId": "tier:base:door"
+   },
+   "expected": {
+    "global": "photorealistic interior photograph of a modern kitchen, a built-in TV wall unit: a low wall-to-wall media console with drawers and no stone top, an open TV niche above it with a flat TV mounted on the wall, tall storage columns at both ends and a slim floating open shelf above the TV, base cabinets oak wood grain laminate, wall cabinets white matte finish, countertop white engineered quartz stone, backsplash white subway tile, realistic materials, sharp details, architectural photography",
+    "tv": "a built-in TV wall unit: a low wall-to-wall media console with drawers and no stone top, an open TV niche above it with a flat TV mounted on the wall, tall storage columns at both ends and a slim floating open shelf above the TV",
+    "layer": "cabinet door front, made of oak wood grain laminate, (Laminate vân gỗ sồi sáng), keep exactly the same shape, edges, panel gaps and perspective, consistent lighting with the surrounding scene",
+    "edit": "cabinet door front, made of oak wood grain laminate, (Laminate vân gỗ sồi sáng), keep exactly the same shape, edges, panel gaps and perspective, consistent lighting with the surrounding scene, photorealistic, matching scene lighting and grain, realistic texture, soft contact shadows"
+   }
+  }
+ ]
+}

@@ -1,0 +1,94 @@
+{
+ "function": "edit.lower_top",
+ "cases": [
+  {
+   "name": "lower the top 100 mm",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "op": {
+     "op": "lower-top",
+     "newTop": 2510
+    }
+   },
+   "expected": {
+    "diff": {
+     "modules": {
+      "added": [],
+      "removed": [],
+      "changed": {
+       "KG1": [
+        {
+         "field": "height",
+         "old": 1080.0,
+         "new": 980.0
+        }
+       ],
+       "TT9": [
+        {
+         "field": "height",
+         "old": 330.0,
+         "new": 230.0
+        }
+       ],
+       "TT7": [
+        {
+         "field": "height",
+         "old": 330.0,
+         "new": 230.0
+        }
+       ],
+       "TT8": [
+        {
+         "field": "height",
+         "old": 330.0,
+         "new": 230.0
+        }
+       ],
+       "TT2": [
+        {
+         "field": "height",
+         "old": 330.0,
+         "new": 230.0
+        }
+       ],
+       "TC1": [
+        {
+         "field": "height",
+         "old": 2610.0,
+         "new": 2510.0
+        }
+       ]
+      }
+     },
+     "other": [
+      {
+       "path": "common.cabinetTop",
+       "old": 2610.0,
+       "new": 2510.0
+      }
+     ],
+     "truncated": false
+    },
+    "runs": []
+   }
+  },
+  {
+   "name": "below the wall cabinets",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "op": {
+     "op": "lower-top",
+     "newTop": 1500
+    }
+   },
+   "error": {
+    "kind": "validation",
+    "code": "invalid-input"
+   }
+  }
+ ]
+}

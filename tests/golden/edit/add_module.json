@@ -1,0 +1,135 @@
+{
+ "function": "edit.add_module",
+ "cases": [
+  {
+   "name": "after a cabinet, closing up",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "op": {
+     "op": "add",
+     "module": {
+      "width": 400
+     },
+     "afterModule": "TD3"
+    }
+   },
+   "expected": {
+    "diff": {
+     "modules": {
+      "added": [
+       "TD6"
+      ],
+      "removed": [],
+      "changed": {
+       "TD4": [
+        {
+         "field": "fromCorner",
+         "old": 1810.0,
+         "new": 2210.0
+        }
+       ],
+       "TD5": [
+        {
+         "field": "fromCorner",
+         "old": 2440.0,
+         "new": 2840.0
+        }
+       ]
+      }
+     },
+     "other": [
+      {
+       "path": "appliances[TB4].center",
+       "old": 2130.0,
+       "new": 2530.0
+      },
+      {
+       "path": "idCounters.TD",
+       "old": null,
+       "new": 6
+      }
+     ],
+     "truncated": false
+    },
+    "runs": []
+   }
+  },
+  {
+   "name": "into a run",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "convertRows": true,
+    "op": {
+     "op": "add",
+     "module": {
+      "type": "base",
+      "wall": "island",
+      "run": "R1",
+      "fromCorner": 1920,
+      "width": 600,
+      "height": 840,
+      "depth": 560
+     },
+     "closeGap": false
+    }
+   },
+   "expected": {
+    "diff": {
+     "modules": {
+      "added": [
+       "TD6"
+      ],
+      "removed": [],
+      "changed": {}
+     },
+     "other": [
+      {
+       "path": "idCounters.TD",
+       "old": null,
+       "new": 6
+      }
+     ],
+     "truncated": false
+    },
+    "runs": [
+     {
+      "id": "R1",
+      "x": -1920.0,
+      "z": 0.0,
+      "yaw": 0.0
+     },
+     {
+      "id": "R2",
+      "x": -0.0,
+      "z": 0.0,
+      "yaw": -90.0
+     }
+    ]
+   }
+  },
+  {
+   "name": "unknown type",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "op": {
+     "op": "add",
+     "module": {
+      "type": "nope",
+      "width": 400
+     },
+     "afterModule": "TD3"
+    }
+   },
+   "error": {
+    "kind": "validation",
+    "code": "schema"
+   }
+  }
+ ]
+}

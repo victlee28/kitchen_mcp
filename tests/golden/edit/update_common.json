@@ -1,0 +1,56 @@
+{
+ "function": "edit.update_common",
+ "cases": [
+  {
+   "name": "countertop and plinth",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "op": {
+     "op": "common",
+     "changes": {
+      "countertop": 900,
+      "plinthHeight": 120
+     }
+    }
+   },
+   "expected": {
+    "diff": {
+     "modules": {
+      "added": [],
+      "removed": [],
+      "changed": {}
+     },
+     "other": [
+      {
+       "path": "common.plinthHeight",
+       "old": 110.0,
+       "new": 120.0
+      }
+     ],
+     "truncated": false
+    },
+    "runs": []
+   }
+  },
+  {
+   "name": "bad value",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "op": {
+     "op": "common",
+     "changes": {
+      "plinthHeight": -5
+     }
+    }
+   },
+   "error": {
+    "kind": "validation",
+    "code": "schema"
+   }
+  }
+ ]
+}

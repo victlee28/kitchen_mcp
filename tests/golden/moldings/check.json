@@ -1,0 +1,149 @@
+{
+ "function": "moldings.check",
+ "cases": [
+  {
+   "name": "crown over the ceiling",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "ops": [
+     {
+      "op": "set-moldings",
+      "moldings": [
+       {
+        "id": "crown-molding",
+        "variant": "crown",
+        "profile": "classic-crown-layered"
+       },
+       {
+        "id": "base-molding",
+        "variant": "base",
+        "profile": "classic-base"
+       }
+      ]
+     }
+    ]
+   },
+   "expected": {
+    "issues": [
+     [
+      "MOLDING-CEILING-001",
+      "error",
+      [
+       "crown-molding",
+       "KG1",
+       "TT7",
+       "TT8"
+      ],
+      [
+       "Hạ đỉnh tủ 60 mm (2610 → 2550)",
+       "Để nguyên"
+      ]
+     ],
+     [
+      "MOLDING-FLIPUP-001",
+      "warning",
+      [
+       "TT2",
+       "TT7",
+       "TT8",
+       "TT9"
+      ],
+      []
+     ]
+    ]
+   }
+  },
+  {
+   "name": "ignored ceiling",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "ops": [
+     {
+      "op": "set-moldings",
+      "moldings": [
+       {
+        "id": "crown-molding",
+        "variant": "crown",
+        "profile": "classic-crown-layered"
+       },
+       {
+        "id": "base-molding",
+        "variant": "base",
+        "profile": "classic-base"
+       }
+      ]
+     },
+     {
+      "op": "molding",
+      "id": "crown-molding",
+      "changes": {
+       "ignoreCeiling": true
+      }
+     }
+    ]
+   },
+   "expected": {
+    "issues": [
+     [
+      "MOLDING-CEILING-001",
+      "info",
+      [
+       "crown-molding"
+      ],
+      [
+       "Hạ đỉnh tủ 60 mm (2610 → 2550)",
+       "Bỏ chọn để nguyên"
+      ]
+     ],
+     [
+      "MOLDING-FLIPUP-001",
+      "warning",
+      [
+       "TT2",
+       "TT7",
+       "TT8",
+       "TT9"
+      ],
+      []
+     ]
+    ]
+   }
+  },
+  {
+   "name": "unknown profile",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "ops": [
+     {
+      "op": "set-moldings",
+      "moldings": [
+       {
+        "id": "m",
+        "variant": "crown",
+        "profile": "nope"
+       }
+      ]
+     }
+    ]
+   },
+   "expected": {
+    "issues": [
+     [
+      "MOLDING-PROFILE-001",
+      "error",
+      [
+       "m"
+      ],
+      []
+     ]
+    ]
+   }
+  }
+ ]
+}

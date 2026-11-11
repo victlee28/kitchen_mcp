@@ -1,5 +1,6 @@
 """Fixes of 11/11/2026: a laid-again system keeps the appliance models picked before and its corner shelf; its fridge cabinet stays deep
 enough; "họng" (a gas burner) is not "hồng" (pink)."""
+import json
 import sys
 import unittest
 from pathlib import Path
@@ -83,6 +84,27 @@ class TestGeometryEditAdd(unittest.TestCase):
         ops, desc, _ = geometry_edit.build_ops(spec, [{"type": "add-module", "module": {"width": 400}, "afterModule": "TD3"}])
         self.assertEqual(len(ops), 1)
         self.assertTrue(desc[0]["vi"].startswith("thêm "), desc[0])
+
+
+class TestSpecData(unittest.TestCase):
+    def test_back_panel_saved_with_the_old_names_still_loads(self):
+        from kitchen.spec import BackPanel
+        self.assertEqual(BackPanel.model_validate({"from": -910, "to": 1830, "y0": 450, "y1": 1850}), BackPanel(s0=-910, s1=1830, y0=450, y1=1850))
+
+    def test_negative_levels_are_refused(self):
+        import json
+        from pydantic import ValidationError
+        spec = load_spec(json.loads((ROOT / "fixtures" / "l-shaped-kitchen.json").read_text(encoding="utf-8")))
+        with self.assertRaises(ValidationError):
+            edit.apply_op(spec, {"op": "common", "changes": {"plinthHeight": -5}})
+
+    def test_replacing_a_floorplan_element_shows_in_the_preview(self):
+        from kitchen import proposal
+        from kitchen.spec import to_data
+        spec = load_spec(json.loads((ROOT / "fixtures" / "l-shaped-kitchen.json").read_text(encoding="utf-8")))
+        spec = load_spec({**to_data(spec), "floorplan": {"elements": [{"id": "f1"}], "replaced": []}})
+        after = edit.apply_op(spec, {"op": "replace-element", "id": "f1", "replaced": True})
+        self.assertIn({"path": "floorplan.replaced", "old": [], "new": ["f1"]}, proposal.spec_diff(spec, after)["other"])
 
 
 if __name__ == "__main__":

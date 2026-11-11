@@ -1,0 +1,57 @@
+{
+ "function": "appliance_kind.changes_kind",
+ "cases": [
+  {
+   "name": "insert hood to wall chimney",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "appliance": "TB5",
+    "model": "hood-wall-90"
+   },
+   "expected": {
+    "changes": true
+   }
+  },
+  {
+   "name": "same kind",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "appliance": "TB5",
+    "model": "hood-insert-70"
+   },
+   "expected": {
+    "changes": false
+   }
+  },
+  {
+   "name": "hob never",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "appliance": "TB4",
+    "model": "hob-gas-2b-75"
+   },
+   "expected": {
+    "changes": false
+   }
+  },
+  {
+   "name": "insert hood to island",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "appliance": "TB5",
+    "model": "hood-island-90"
+   },
+   "expected": {
+    "changes": true
+   }
+  }
+ ]
+}

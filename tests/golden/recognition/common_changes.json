@@ -1,0 +1,135 @@
+{
+ "function": "recognition.common_changes",
+ "cases": [
+  {
+   "name": "recognised levels and materials",
+   "input": {
+    "layout": {
+     "schema": "recognized-runs/1",
+     "runs": [
+      {
+       "id": "back",
+       "length": 2400,
+       "modules": [
+        {
+         "type": "base",
+         "s": 0,
+         "width": 600,
+         "y": 0,
+         "height": 850,
+         "depth": 580
+        }
+       ]
+      }
+     ],
+     "common": {
+      "countertop": 880,
+      "baseTop": 850
+     }
+    },
+    "common": {
+     "countertop": 900,
+     "baseTop": 840,
+     "cabinetTop": 2400,
+     "ceiling": 2700,
+     "material": {
+      "base": "Trắng"
+     }
+    },
+    "ceiling": 2600,
+    "materials": {
+     "base": "Gỗ sồi"
+    }
+   },
+   "expected": {
+    "changes": {
+     "baseTop": 850.0,
+     "countertop": 880.0,
+     "ceiling": 2600,
+     "material": {
+      "base": "Gỗ sồi"
+     }
+    }
+   }
+  },
+  {
+   "name": "nothing new",
+   "input": {
+    "layout": {
+     "schema": "recognized-runs/1",
+     "runs": [
+      {
+       "id": "back",
+       "length": 2400,
+       "modules": [
+        {
+         "type": "base",
+         "s": 0,
+         "width": 600,
+         "y": 0,
+         "height": 840,
+         "depth": 560
+        }
+       ]
+      }
+     ]
+    },
+    "common": {
+     "countertop": 900,
+     "baseTop": 840,
+     "cabinetTop": 2400,
+     "ceiling": 2700,
+     "material": {
+      "base": "Trắng"
+     }
+    }
+   },
+   "expected": {
+    "changes": {}
+   }
+  },
+  {
+   "name": "cabinets taller than the ceiling seen",
+   "input": {
+    "layout": {
+     "schema": "recognized-runs/1",
+     "runs": [
+      {
+       "id": "back",
+       "length": 2400,
+       "modules": [
+        {
+         "type": "base",
+         "s": 0,
+         "width": 600,
+         "y": 0,
+         "height": 850,
+         "depth": 580
+        }
+       ]
+      }
+     ],
+     "common": {
+      "cabinetTop": 2650
+     }
+    },
+    "common": {
+     "countertop": 900,
+     "baseTop": 840,
+     "cabinetTop": 2400,
+     "ceiling": 2700,
+     "material": {
+      "base": "Trắng"
+     }
+    },
+    "ceiling": 2600
+   },
+   "expected": {
+    "changes": {
+     "cabinetTop": 2650.0,
+     "ceiling": 2680.0
+    }
+   }
+  }
+ ]
+}

@@ -1,0 +1,175 @@
+{
+ "function": "edit.remove_run",
+ "cases": [
+  {
+   "name": "the right run with its cabinets",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "convertRows": true,
+    "op": {
+     "op": "remove-run",
+     "id": "R2"
+    }
+   },
+   "expected": {
+    "diff": {
+     "modules": {
+      "added": [],
+      "removed": [
+       "TD2",
+       "TD3",
+       "TD4",
+       "TD5",
+       "TT3",
+       "TT4",
+       "TT5",
+       "TT6",
+       "TT7",
+       "TT8",
+       "TT9"
+      ],
+      "changed": {}
+     },
+     "other": [
+      {
+       "path": "appliances[TB2]",
+       "old": {
+        "id": "TB2",
+        "name": "Chậu rửa đôi màu tối, lắp dương",
+        "type": "sink",
+        "dimensions": "780 × 410",
+        "position": "Trên TD2, tâm cách góc 1000",
+        "module": "TD2",
+        "wall": null,
+        "center": 1000.0,
+        "model": null,
+        "energy": null,
+        "size": null,
+        "cutout": null,
+        "mount": null
+       },
+       "new": null
+      },
+      {
+       "path": "appliances[TB3]",
+       "old": {
+        "id": "TB3",
+        "name": "Vòi rửa cổ cao",
+        "type": "faucet",
+        "dimensions": "cao 310",
+        "position": "Sau chậu rửa",
+        "module": "TD2",
+        "wall": null,
+        "center": 1000.0,
+        "model": null,
+        "energy": null,
+        "size": null,
+        "cutout": null,
+        "mount": null
+       },
+       "new": null
+      },
+      {
+       "path": "appliances[TB4]",
+       "old": {
+        "id": "TB4",
+        "name": "Bếp âm 2 vùng nấu, mặt kính đen",
+        "type": "cooktop",
+        "dimensions": "730 × 430",
+        "position": "Tâm cách góc 2130",
+        "module": "TD4",
+        "wall": null,
+        "center": 2130.0,
+        "model": null,
+        "energy": null,
+        "size": null,
+        "cutout": null,
+        "mount": null
+       },
+       "new": null
+      },
+      {
+       "path": "appliances[TB5]",
+       "old": {
+        "id": "TB5",
+        "name": "Máy hút mùi âm tủ",
+        "type": "hood",
+        "dimensions": "730 × 165",
+        "position": "Dưới TT5",
+        "module": "TT5",
+        "wall": null,
+        "center": null,
+        "model": null,
+        "energy": null,
+        "size": null,
+        "cutout": null,
+        "mount": null
+       },
+       "new": null
+      },
+      {
+       "path": "appliances[TB6]",
+       "old": {
+        "id": "TB6",
+        "name": "Lò vi sóng âm tủ",
+        "type": "oven",
+        "dimensions": "560 × 350",
+        "position": "Trong hộc TD4",
+        "module": "TD4",
+        "wall": null,
+        "center": null,
+        "model": null,
+        "energy": null,
+        "size": null,
+        "cutout": null,
+        "mount": null
+       },
+       "new": null
+      },
+      {
+       "path": "runs[R2]",
+       "old": {
+        "id": "R2",
+        "x": -0.0,
+        "z": 0.0,
+        "yaw": -90.0,
+        "purpose": null,
+        "tvLayout": null,
+        "system": null
+       },
+       "new": null
+      }
+     ],
+     "truncated": false
+    },
+    "runs": [
+     {
+      "id": "R1",
+      "x": -1920.0,
+      "z": 0.0,
+      "yaw": 0.0
+     }
+    ]
+   }
+  },
+  {
+   "name": "unknown",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "convertRows": true,
+    "op": {
+     "op": "remove-run",
+     "id": "R9"
+    }
+   },
+   "error": {
+    "kind": "not-found",
+    "code": "run-not-found"
+   }
+  }
+ ]
+}

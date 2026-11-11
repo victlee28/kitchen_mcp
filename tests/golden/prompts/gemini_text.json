@@ -1,0 +1,61 @@
+{
+ "function": "prompts.gemini_text",
+ "cases": [
+  {
+   "name": "gen0",
+   "input": {
+    "kind": "gen0",
+    "prompt": "warm oak kitchen",
+    "instruction": "keep the window",
+    "stylePrompt": "Japandi",
+    "role": "door",
+    "realism": "natural light"
+   },
+   "expected": {
+    "text": "The image is a flat-shaded 3D render of a kitchen design with black construction lines. Turn it into a photorealistic interior photograph. Keep EXACTLY the same camera, perspective, framing, layout, cabinet sizes, door and drawer divisions, appliance positions, wall and floor edges. Do not add, remove, move or resize anything; do not crop. Replace flat colors with realistic materials of the same hue. Scene: Japandi. natural light keep the window"
+   }
+  },
+  {
+   "name": "edit",
+   "input": {
+    "kind": "edit",
+    "prompt": "warm oak kitchen",
+    "instruction": "keep the window",
+    "stylePrompt": "Japandi",
+    "role": "door",
+    "realism": "natural light"
+   },
+   "expected": {
+    "text": "Edit the FIRST image. The SECOND image is a mask: change only the region that is white in the mask (door). Make it: warm oak kitchen. keep the window Keep the exact shape, edges, panel gaps, perspective and lighting; leave every other pixel of the first image unchanged; return the full image at the same framing."
+   }
+  },
+  {
+   "name": "style",
+   "input": {
+    "kind": "style",
+    "prompt": "warm oak kitchen",
+    "instruction": "keep the window",
+    "stylePrompt": "Japandi",
+    "role": "door",
+    "realism": "natural light"
+   },
+   "expected": {
+    "text": "Edit the FIRST image. The SECOND image is a mask: change only the region that is white in the mask (door). Make it: warm oak kitchen. keep the window Keep the exact shape, edges, panel gaps, perspective and lighting; leave every other pixel of the first image unchanged; return the full image at the same framing."
+   }
+  },
+  {
+   "name": "other",
+   "input": {
+    "kind": "other",
+    "prompt": "warm oak kitchen",
+    "instruction": "keep the window",
+    "stylePrompt": "Japandi",
+    "role": "door",
+    "realism": "natural light"
+   },
+   "expected": {
+    "text": "Edit the FIRST image. The SECOND image is a mask: change only the region that is white in the mask (door). Make it: warm oak kitchen. keep the window Keep the exact shape, edges, panel gaps, perspective and lighting; leave every other pixel of the first image unchanged; return the full image at the same framing."
+   }
+  }
+ ]
+}

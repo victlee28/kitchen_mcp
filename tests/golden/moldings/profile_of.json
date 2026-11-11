@@ -1,0 +1,86 @@
+{
+ "function": "moldings.profile_of",
+ "cases": [
+  {
+   "name": "presets and unknown",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "ids": [
+     "classic-crown-layered",
+     "classic-base",
+     "nope"
+    ]
+   },
+   "expected": {
+    "profiles": {
+     "classic-crown-layered": [
+      "Phào nóc nhiều lớp",
+      11,
+      90.0,
+      68.0
+     ],
+     "classic-base": [
+      "Phào chân",
+      7,
+      95.0,
+      15.0
+     ],
+     "nope": null
+    }
+   }
+  },
+  {
+   "name": "design's own profile",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "ops": [
+     {
+      "op": "set-moldings",
+      "moldings": [],
+      "moldingProfiles": [
+       {
+        "id": "my-p",
+        "name": "Mine",
+        "points": [
+         [
+          0,
+          0
+         ],
+         [
+          20,
+          0
+         ],
+         [
+          20,
+          40
+         ],
+         [
+          0,
+          40
+         ]
+        ]
+       }
+      ]
+     }
+    ],
+    "ids": [
+     "my-p"
+    ]
+   },
+   "expected": {
+    "profiles": {
+     "my-p": [
+      "Mine",
+      4,
+      40.0,
+      20.0
+     ]
+    }
+   }
+  }
+ ]
+}

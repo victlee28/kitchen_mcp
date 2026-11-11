@@ -1,0 +1,34 @@
+{
+ "function": "prompts.gemini_text_geometry",
+ "cases": [
+  {
+   "name": "remove",
+   "input": {
+    "operation": "remove-item",
+    "changes": [
+     "remove the base cabinet"
+    ],
+    "where": "left of the sink"
+   },
+   "expected": {
+    "text": "You are given three images of the same kitchen from the same camera. IMAGE 1 is the photo to edit; the area to change is surrounded by a thin RED outline with the label 1. IMAGE 2 is the mask: white = exactly the region inside the outline. IMAGE 3 is a flat-colored technical drawing (black lines) of how the kitchen must look AFTER the change, same camera and framing: inside the outlined region, follow image 3 exactly for which objects exist and for their shapes, edges and positions.\nChanges:\n- remove the base cabinet\nThe region is in the left of the sink.\nWhere an object is removed, image 3 shows what is behind it (wall, floor, the side of the neighbouring cabinet, the countertop end, the plinth): paint those surfaces with the same materials, colors and lighting as the matching surfaces elsewhere in image 1, so nothing of the removed object remains.\nImage 3 is only a shape guide: do NOT copy its flat colors or black lines — the result must look like the photograph in image 1, with consistent perspective, shadows and lighting. Everything outside the outline must stay identical to image 1. REMOVE the red outline and number label. Return the full image at the same size and framing."
+   }
+  },
+  {
+   "name": "add",
+   "input": {
+    "operation": "add-item",
+    "changes": [
+     "add a cabinet",
+     "with oak fronts"
+    ],
+    "where": null,
+    "instruction": "x",
+    "realism": "y"
+   },
+   "expected": {
+    "text": "You are given three images of the same kitchen from the same camera. IMAGE 1 is the photo to edit; the area to change is surrounded by a thin RED outline with the label 1. IMAGE 2 is the mask: white = exactly the region inside the outline. IMAGE 3 is a flat-colored technical drawing (black lines) of how the kitchen must look AFTER the change, same camera and framing: inside the outlined region, follow image 3 exactly for which objects exist and for their shapes, edges and positions.\nChanges:\n- add a cabinet\n- with oak fronts\nPaint the new object(s) shown in image 3 with realistic materials that match the existing cabinets of image 1 (same finish, color and hardware style unless stated).\nx\ny\nImage 3 is only a shape guide: do NOT copy its flat colors or black lines — the result must look like the photograph in image 1, with consistent perspective, shadows and lighting. Everything outside the outline must stay identical to image 1. REMOVE the red outline and number label. Return the full image at the same size and framing."
+   }
+  }
+ ]
+}
