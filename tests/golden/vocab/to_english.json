@@ -1,0 +1,75 @@
+{
+ "function": "vocab.to_english",
+ "cases": [
+  {
+   "name": "gas burners are not pink",
+   "input": {
+    "text": "Bếp gas âm 2 họng 75 cm"
+   },
+   "expected": {
+    "english": "",
+    "color": null
+   }
+  },
+  {
+   "name": "pink with diacritics",
+   "input": {
+    "text": "Sơn hồng phấn"
+   },
+   "expected": {
+    "english": "pink painted",
+    "color": "#d9a3a8"
+   }
+  },
+  {
+   "name": "pink without diacritics",
+   "input": {
+    "text": "mau hong"
+   },
+   "expected": {
+    "english": "pink",
+    "color": "#d9a3a8"
+   }
+  },
+  {
+   "name": "green typed bare",
+   "input": {
+    "text": "xanh luc"
+   },
+   "expected": {
+    "english": "green",
+    "color": "#3f7d4a"
+   }
+  },
+  {
+   "name": "colour and finish",
+   "input": {
+    "text": "Laminate xanh rêu mờ"
+   },
+   "expected": {
+    "english": "sage green matte finish laminate",
+    "color": "#7d8a5f"
+   }
+  },
+  {
+   "name": "wood",
+   "input": {
+    "text": "Gỗ óc chó"
+   },
+   "expected": {
+    "english": "walnut wood",
+    "color": "#5c3f2c"
+   }
+  },
+  {
+   "name": "empty",
+   "input": {
+    "text": ""
+   },
+   "expected": {
+    "english": "",
+    "color": null
+   }
+  }
+ ]
+}

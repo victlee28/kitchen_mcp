@@ -109,16 +109,25 @@ class Run(_Base):
     """An explicit straight run of cabinets standing at any angle. Local axes: s along the run (fromCorner of its modules), d from the back of the
     cabinets to their door face. World = (x, z) + s * (cos yaw, -sin yaw) + d * (sin yaw, cos yaw), yaw in degrees as in three.js rotation.y
     (yaw 0: doors look at +z, s grows towards +x; yaw 180: doors look at -z, s grows towards -x).
-
-    Optional extra field ``purpose``: ``"tv"`` for a TV wall unit (``tv_system``): no worktop, wall tile or kitchen rule. Left out (not
-    declared) for kitchen runs, so the data of existing designs does not change."""
+"""
     id: str
     x: float = Field(default=0, description="World x of the run origin (s = 0, d = 0), mm, kitchen frame")
     z: float = Field(default=0, description="World z of the run origin, mm, kitchen frame")
     yaw: float = Field(default=0, description="Degrees, three.js rotation.y; the doors look along (sin yaw, cos yaw)")
+    purpose: Literal["tv"] | None = Field(default=None, description="tv: a TV wall unit (kitchen/tv_system.py): no worktop, wall tile or kitchen rule. Unset: kitchen cabinets")
+    tvLayout: Literal["columns", "shelves", "full"] | None = Field(default=None, description="TV unit only: the layout it was made with (tv_system.STYLES)")
     system: str | None = Field(default=None, pattern=r"^[A-Za-z0-9_.-]+$", max_length=80,
                                description="Cabinet system the run belongs to: the id of the floorplan element (elements[].id, e.g. furniture_003) it was made "
                                            "against. Unset: the system is worked out from which runs touch (runs.systems)")
+
+
+class BackPanel(_Base):
+    """A panel on the wall behind a TV (TV units, ``tv_system``): along the run from ``s0`` to ``s1`` mm, measured from the start of the
+    cabinet that carries it; from ``y0`` to ``y1`` mm above the floor."""
+    s0: float
+    s1: float
+    y0: float
+    y1: float
 
 
 class FrontSection(_Base):
@@ -155,6 +164,7 @@ class Module(_Base):
     doorStyle: Literal["flat", "frame", "glass"] | None = Field(default=None, description="Cánh phẳng (slab), cánh khung (shaker) hoặc kính")
     material: str | None = Field(default=None, description="Vật liệu mặt trước riêng của module (ghi đè chung.vatLieu theo tầng)")
     handle: HandleOverride | None = Field(default=None, description="Handle settings of this module only; overrides the storey and common handle")
+    backPanel: BackPanel | None = Field(default=None, description="TV units: the panel on the wall behind the TV, carried by one console cabinet")
     note: str | None = None
 
     @property

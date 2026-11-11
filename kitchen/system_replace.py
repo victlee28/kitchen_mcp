@@ -18,6 +18,7 @@ from typing import Any
 from . import appliance_models, runs
 from .cabinet_run import fit_depth
 from .errors import InvalidInput
+from .numeric import EPS_MM
 from .spec import KitchenSpec, Module, to_data
 
 FRONTLESS = ("corner-shelf", "upper-open")            # no doors or drawer fronts: no front material, door style or handle
@@ -195,16 +196,15 @@ def kept_models(spec: KitchenSpec, mods: list[Module], said: str = "") -> dict[s
     return out
 
 
-def _keep_device(device: dict[str, Any], keep: dict[str, dict[str, Any]], width: float, notes: list[str]) -> dict[str, Any]:
+def _keep_device(device: dict[str, Any], keep: dict[str, dict[str, Any]], width_mm: float) -> tuple[dict[str, Any], str | None]:
+    """``(device, note)``: the device with its kept model when the new cabinet (``width_mm``) is wide enough, else as laid out."""
     model = keep.get(str(device.get("type")))
     if not model:
-        return device
+        return device, None
     need = appliance_models.needed_width(model)
-    if need and need > width + 1e-6:
-        notes.append(f"{model['name']} could not be kept: it needs a {need:g} mm cabinet, the new one is {width:g} mm (the default model is used)")
-        return device
-    notes.append(f"{model['name']} kept")
-    return {**device, **{k: v for k, v in appliance_models.changes_for(model).items() if v is not None}}
+    if need and need > width_mm + EPS_MM:
+        return device, f"{model['name']} could not be kept: it needs a {need:g} mm cabinet, the new one is {width_mm:g} mm (the default model is used)"
+    return {**device, **{k: v for k, v in appliance_models.changes_for(model).items() if v is not None}}, f"{model['name']} kept"
 
 
 def _make_room(modules: list[dict[str, Any]], models: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
@@ -289,10 +289,13 @@ def relayout_ops(spec: KitchenSpec, mods: list[Module], laid: dict[str, list[dic
                 if m.get(key):
                     entry[key] = m[key]
             if models:
-                if isinstance(entry.get("appliance"), dict):
-                    entry["appliance"] = _keep_device(entry["appliance"], models, entry["width"], kept)
-                if isinstance(entry.get("appliances"), list):
-                    entry["appliances"] = [_keep_device(d, models, entry["width"], kept) if isinstance(d, dict) else d for d in entry["appliances"]]
+                for key in ("appliance", "appliances"):
+                    value = entry.get(key)
+                    devices = [value] if isinstance(value, dict) else value if isinstance(value, list) else []
+                    done = [_keep_device(d, models, entry["width"]) if isinstance(d, dict) else (d, None) for d in devices]
+                    kept += [note for _, note in done if note]
+                    if devices:
+                        entry[key] = done[0][0] if isinstance(value, dict) else [d for d, _ in done]
             front = (fronts.get("material") or {}).get(storey) or (fronts.get("material") or {}).get("base" if storey == "tall" else storey)
             keep = old.get(storey, {})
             if m["type"] not in FRONTLESS:

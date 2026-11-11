@@ -247,10 +247,10 @@ class _Builder:
                      y_than + c.doorGap / 2, cur - c.doorGap / 2)
 
     def _back_panel(self, m: Module) -> None:
-        """A TV unit's panel on the wall behind the TV (``backPanel``: from / to along the run relative to the cabinet, y0 / y1)."""
-        bp = getattr(m, "backPanel", None)
-        if isinstance(bp, dict) and all(isinstance(bp.get(k), (int, float)) for k in ("from", "to", "y0", "y1")) and bp["to"] > bp["from"]:
-            self.box(m.id, "side-panel", m.wall, m.fromCorner + bp["from"], m.fromCorner + bp["to"], 0, tv_system.PANEL_THICKNESS, bp["y0"], bp["y1"])
+        """A TV unit's panel on the wall behind the TV (``Module.backPanel``: s0 / s1 along the run from the cabinet's start, y0 / y1)."""
+        bp = m.backPanel
+        if bp is not None and bp.s1 > bp.s0 and bp.y1 > bp.y0:
+            self.box(m.id, "side-panel", m.wall, m.fromCorner + bp.s0, m.fromCorner + bp.s1, 0, tv_system.PANEL_THICKNESS, bp.y0, bp.y1)
 
     def upper(self, m: Module):
         dc = self.c.doorThickness

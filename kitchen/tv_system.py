@@ -12,7 +12,7 @@ import unicodedata
 from typing import Any
 
 from .numeric import round_int
-from .spec import KitchenSpec, from_data, to_data
+from .spec import KitchenSpec, Run, from_data, to_data
 
 PURPOSE = "tv"
 CONSOLE_HEIGHT = 450.0     # low media console, plinth included (mm)
@@ -106,7 +106,7 @@ def _put_tv(console: list[dict[str, Any]], center: float, width: float, panel: t
     host["appliance"] = tv
     if panel is not None:
         pw, y0, y1 = panel
-        host["backPanel"] = {"from": center - pw / 2 - host["s"], "to": center + pw / 2 - host["s"], "y0": y0, "y1": y1}
+        host["backPanel"] = {"s0": center - pw / 2 - host["s"], "s1": center + pw / 2 - host["s"], "y0": y0, "y1": y1}
 
 
 def layout(length: float, common: dict[str, Any], style: str = "columns", panel: bool = True) -> list[dict[str, Any]]:
@@ -179,11 +179,11 @@ def console(length: float) -> list[dict[str, Any]]:
 def layout_of(spec: Any, run_id: str) -> str | None:
     """The layout a TV run was made with (None: not a TV run)."""
     r = next((r for r in spec.runs if r.id == run_id), None)
-    return (getattr(r, "tvLayout", None) or "columns") if r is not None and is_tv_run(r) else None
+    return (r.tvLayout or "columns") if r is not None and is_tv_run(r) else None
 
 
-def is_tv_run(run: Any) -> bool:
-    return getattr(run, "purpose", None) == PURPOSE
+def is_tv_run(run: Run) -> bool:
+    return run.purpose == PURPOSE
 
 
 def tv_runs(spec: Any) -> set[str]:

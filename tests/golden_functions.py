@@ -16,7 +16,7 @@ sys.path.insert(0, str(ROOT))
 from kitchen.spec import KitchenSpec  # noqa: E402
 from kitchen import edit, floorplan, geometry, layers, moldings, numeric, proposal, rules, run_line, runs, structure_mesh  # noqa: E402
 from kitchen.recognition import build_draft, build_layout, choose_recognizer, gemini_wire, recognizer_wire, runs_from_draft  # noqa: E402
-from kitchen import intent, run_template  # noqa: E402
+from kitchen import intent, run_template, tv_system, vocab  # noqa: E402
 from kitchen.placement import Placement  # noqa: E402
 from kitchen.spec import load_spec, to_data  # noqa: E402
 
@@ -197,6 +197,17 @@ def run_template_run_from_template(i):
             "common": out["common"]}
 
 
+def tv_system_layout(i):
+    mods = tv_system.layout(i["length"], i.get("common", {}), i.get("style", "columns"), i.get("panel", True))
+    return {"modules": [[m["type"], m["s"], m["width"], m["y"], m["height"]] for m in mods],
+            "tv": [m["appliance"]["model"] for m in mods if m.get("appliance")],
+            "panel": [m["backPanel"] for m in mods if m.get("backPanel")]}
+
+
+def vocab_to_english(i):
+    return {"english": vocab.to_english(i["text"]), "color": vocab.color(i["text"])}
+
+
 FUNCTIONS = {
     "placement.to_room": placement_to_room,
     "placement.to_kitchen": placement_to_kitchen,
@@ -227,4 +238,6 @@ FUNCTIONS = {
     "runs.systems": runs_systems,
     "recognition.recognizer_wire.clean_job_id": recognizer_wire_clean_job_id,
     "recognition.recognizer_wire.job_progress": recognizer_wire_job_progress,
+    "tv_system.layout": tv_system_layout,
+    "vocab.to_english": vocab_to_english,
 }
