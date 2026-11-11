@@ -10,6 +10,7 @@ File xuất ra hợp lệ với CẢ schema gốc v1.0.0 lẫn bản mở rộng
 """
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 
 import math
@@ -20,6 +21,7 @@ from .numeric import round_half_away, round_int
 from . import appliance_models, runs, floorplan as fpmod, roomctx, hardware, regions, vocab
 from .geometry import Part, backsplash_height, compile_spec, views_of
 from .errors import InvalidInput, require
+from .jsonview import as_dict, as_list
 from .palette import SEGMENT_COLORS, module_color as _module_color
 from .spec import Handle, KitchenSpec, Module, effective_handle
 
@@ -32,23 +34,27 @@ SEMANTIC = {"carcass": "carcass", "plinth": "plinth", "door": "door", "glass-doo
             "molding": "molding"}
 
 
-def _hex(rgb) -> str:
+Vec3 = tuple[float, float, float]
+Box = tuple[list[float], list[float]]          # (low corner, high corner) of a local box
+
+
+def _hex(rgb: Sequence[float]) -> str:
     return "#%02x%02x%02x" % tuple(int(v) for v in rgb)
 
 
-def _v(x, y, z) -> dict[str, Any]:
+def _v(x: float, y: float, z: float) -> dict[str, Any]:
     return {"x": round_half_away(float(x), 2), "y": round_half_away(float(y), 2), "z": round_half_away(float(z), 2)}
 
 
-def _tf(pos, rot_y=0.0) -> dict[str, Any]:
-    return {"position": _v(*pos), "rotation": {"x": 0, "y": round_half_away(rot_y, 4), "z": 0, "unit": "deg"}}
+def _tf(pos: Sequence[float], rot_y: float = 0.0) -> dict[str, Any]:
+    return {"position": _v(pos[0], pos[1], pos[2]), "rotation": {"x": 0, "y": round_half_away(rot_y, 4), "z": 0, "unit": "deg"}}
 
 
-def _dims(w, h, d) -> dict[str, Any]:
+def _dims(w: float, h: float, d: float) -> dict[str, Any]:
     return {"width": round_half_away(max(w, 0.01), 2), "height": round_half_away(max(h, 0.01), 2), "depth": round_half_away(max(d, 0.01), 2)}
 
 
-def _rot(v, deg):
+def _rot(v: Sequence[float], deg: float) -> Vec3:
     """Quay véc-tơ quanh Y theo quy ước three.js (rotation.y)."""
     t = math.radians(deg)
     x, y, z = v
@@ -58,37 +64,38 @@ def _rot(v, deg):
 class Frame:
     """Khung cục bộ (anchor bottom-back-left) của module hoặc vật đặt theo tường."""
 
-    def __init__(self, pos, rot_y, origin=(0.0, 0.0, 0.0), run=None):
-        self.pos, self.rot = tuple(pos), rot_y
+    def __init__(self, pos: Sequence[float], rot_y: float, origin: Sequence[float] = (0.0, 0.0, 0.0), run: str | None = None):
+        self.pos: Vec3 = (pos[0], pos[1], pos[2])
+        self.rot = rot_y
         self.run = run                   # id of the run whose coordinates ``origin`` is in (None: any part with run coordinates is in this frame's run)
-        self.origin = tuple(origin)      # run coordinates (s, y, d) of ``pos`` for a frame inside an angled run; unused otherwise
+        self.origin: Vec3 = (origin[0], origin[1], origin[2])     # run coordinates (s, y, d) of ``pos`` for a frame inside an angled run; unused otherwise
 
-    def part_box(self, p):
+    def part_box(self, p: Part) -> Box:
         """Local box of a part: from its run coordinates when it stands in an angled run, else from its world AABB."""
         if p.frame is not None and p.lmin is not None and p.lmax is not None and (self.run is None or p.run == self.run):
             return [p.lmin[i] - self.origin[i] for i in range(3)], [p.lmax[i] - self.origin[i] for i in range(3)]
         return self.box_local(p.min, p.max)                               # a part of another run (the far leg of a corner shelf): from its world box
 
     @staticmethod
-    def for_part(p, wall):
+    def for_part(p: Part, wall: str | None) -> "Frame":
         """Frame at the anchor corner of a part: its run frame for an angled part, else the axis frame of its wall."""
         if p.frame is not None and p.lmin is not None and p.run_frame is not None:
             x, z = p.run_frame.to_world(p.lmin[0], p.lmin[2])
             return Frame((x, p.lmin[1], z), p.frame[2], p.lmin)
         return Frame.for_aabb(p.min, p.max, wall)
 
-    def to_local(self, p):
+    def to_local(self, p: Sequence[float]) -> Vec3:
         d = (p[0] - self.pos[0], p[1] - self.pos[1], p[2] - self.pos[2])
         return _rot(d, -self.rot)
 
-    def box_local(self, mn, mx):
+    def box_local(self, mn: Sequence[float], mx: Sequence[float]) -> Box:
         pts = [self.to_local((x, y, z)) for x in (mn[0], mx[0]) for y in (mn[1], mx[1]) for z in (mn[2], mx[2])]
         openings = [min(p[i] for p in pts) for i in range(3)]
         hi = [max(p[i] for p in pts) for i in range(3)]
         return openings, hi
 
     @staticmethod
-    def for_aabb(mn, mx, wall):
+    def for_aabb(mn: Sequence[float], mx: Sequence[float], wall: str | None) -> "Frame":
         """Khung đặt vật thẳng trục theo hướng của tường: anchor = góc dưới-sau-trái."""
         r = ROT.get(wall or "back", 0.0)
         if r == 0:
@@ -119,7 +126,7 @@ def _module_frame(m: Module, lsau: float, fr: "runs.RunFrame | None" = None) -> 
 
 def _guess(text: str) -> dict[str, Any]:
     g = _guess_base(text)
-    w = vocab._find(text, vocab.WOOD)  # loài gỗ nêu rõ (óc chó, teak…) quyết định màu gỗ
+    w = vocab.find(text, vocab.WOOD)  # loài gỗ nêu rõ (óc chó, teak…) quyết định màu gỗ
     if w and "transmission" not in g:
         g = {**g, "color": w[1]}
     c = vocab.explicit_color(text)  # màu nêu rõ (xanh rêu, kem, xám…) ghi đè màu mặc định của chất liệu
@@ -177,9 +184,10 @@ def _materials(spec: KitchenSpec) -> tuple[list[dict[str, Any]], dict[str, str]]
         "floor": ("MAT-FLOOR", vl.get("floor", "Gạch lát nền 800×800"), "floor"),
         "plinth": ("MAT-PLINTH", "Chân tủ nhựa xám đậm", "plinth"),
     }
-    out, ids = [], {}
+    out: list[dict[str, Any]] = []
+    ids: dict[str, str] = {}
     for key, (mid, name, sem) in defs.items():
-        g = {"threeMaterialType": "MeshStandardMaterial", "roughness": 0.5, "metalness": 0.0, **_guess(name)}
+        g: dict[str, Any] = {"threeMaterialType": "MeshStandardMaterial", "roughness": 0.5, "metalness": 0.0, **_guess(name)}
         if key == "sink":
             g.update(color="#2f3236", roughness=0.35, metalness=0.2)
         if key == "cooktop":
@@ -190,7 +198,7 @@ def _materials(spec: KitchenSpec) -> tuple[list[dict[str, Any]], dict[str, str]]
             g.update(color="#bdb4a6", roughness=0.6)
         if key == "plinth":
             g.update(color="#4a4740", roughness=0.8)
-        material_text = {"id": mid, "name": name, **g, "semanticClass": sem}
+        material_text: dict[str, Any] = {"id": mid, "name": name, **g, "semanticClass": sem}
         if key == "wallTile" and spec.common.model_extra and spec.common.model_extra.get("wallTile"):
             a, b = spec.common.model_extra["wallTile"][:2]
             material_text["textureRepeat"] = {"u": round_half_away(1000 / a, 3), "v": round_half_away(1000 / b, 3)}  # số viên trên mỗi mét
@@ -236,7 +244,7 @@ ASSETS = [
 
 
 # ------------------------------------------------------------------ chi tiết module
-def _split_carcass(openings, hi, t, b) -> list[tuple[str, str | None, list[Any], list[Any]]]:
+def _split_carcass(openings: list[float], hi: list[float], t: float, b: float) -> list[tuple[str, str | None, list[float], list[float]]]:
     """Thân hộp -> hông trái/phải, đáy, nóc, hậu (toạ độ cục bộ)."""
     (x0, y0, z0), (x1, y1, z1) = openings, hi
     if x1 - x0 < 3 * t or y1 - y0 < 3 * t or z1 - z0 < 80:
@@ -248,18 +256,19 @@ def _split_carcass(openings, hi, t, b) -> list[tuple[str, str | None, list[Any],
             ("back", None, [x0 + t, y0 + t, z0], [x1 - t, y1 - t, z0 + b])]
 
 
-def _handle(hn: Handle, material_id: str, w, h, d, tier, hinge, horizontal=False, source: str | None = None) -> dict[str, Any] | None:
+def _handle(hn: Handle, material_id: str, w: float, h: float, d: float, tier: str, hinge: str | None, horizontal: bool = False,
+            source: str | None = None) -> dict[str, Any] | None:
     hd = hardware.handle(hn, w, h, tier, hinge, horizontal)
     if hd is None:
         return None
-    out = {"type": hd["type"], "assetId": hd["assetId"], "materialId": material_id,
-           "transform": _tf((hd["x"], hd["y"], d)), "dimensions": _dims(*hd["size"])}
+    out: dict[str, Any] = {"type": hd["type"], "assetId": hd["assetId"], "materialId": material_id,
+           "transform": _tf((hd["x"], hd["y"], d)), "dimensions": _dims(hd["size"][0], hd["size"][1], hd["size"][2])}
     if source:
         out["sourceRef"] = source  # ID chi tiết tay nắm trong bộ biên dịch (= layer sửa ảnh)
     return out
 
 
-def _module_entry(spec: KitchenSpec, m: Module, parts: list[Part], frame: Frame, size, mats: dict[str, Any], led: bool) -> dict[str, Any]:
+def _module_entry(spec: KitchenSpec, m: Module, parts: list[Part], frame: Frame, size: Vec3, mats: dict[str, Any], led: bool) -> dict[str, Any]:
     c = spec.common
     storey = m.storey
     tier = TIER[storey]
@@ -267,9 +276,9 @@ def _module_entry(spec: KitchenSpec, m: Module, parts: list[Part], frame: Frame,
     front = {"base": "base", "upper": "upper", "loft": "upper", "tall": "tall", "corner": "cornerShelf"}[storey]
     if m.material:  # vật liệu mặt trước riêng của module (vd đổi màu một tủ từ ảnh AI)
         front = f"module:{m.id}"
-    entry = {
+    entry: dict[str, Any] = {
         "id": f"MOD-{m.id}", "moduleType": "corner_cabinet" if m.blindCorner else ("appliance_cabinet" if m.type == "tall-fridge" else MODULE_TYPE[storey]),
-        "name": m.name or m.id, "dimensions": _dims(*size), "transform": _tf(frame.pos, frame.rot),
+        "name": m.name or m.id, "dimensions": _dims(size[0], size[1], size[2]), "transform": _tf(frame.pos, frame.rot),
         "carcaseMaterialId": mats["cornerShelf"] if storey == "corner" else mats["carcass"], "frontMaterialId": mats[front],
         "frontStyle": {"glass": "glass", "frame": "shaker", "flat": "slab"}.get(m.doorStyle or "", "glass" if m.type == "upper-glass" else "slab"),
         "sourceRef": m.id, "storey": storey,
@@ -287,9 +296,10 @@ def _module_entry(spec: KitchenSpec, m: Module, parts: list[Part], frame: Frame,
     if led and storey in ("upper", "corner"):
         entry["led"] = True
     t = c.doorThickness
-    door_parts, n = [], defaultdict(int)
+    door_parts: list[tuple[list[float], list[float], bool, str]] = []
+    n: defaultdict[str, int] = defaultdict(int)
 
-    def pid(role):
+    def pid(role: str) -> str:
         n[role] += 1
         return f"{m.id}-{role}-{n[role]}"
 
@@ -300,7 +310,7 @@ def _module_entry(spec: KitchenSpec, m: Module, parts: list[Part], frame: Frame,
         openings, hi = frame.part_box(p)
         if p.type == "carcass":
             for role, crole, a, b in _split_carcass(openings, hi, t, c.backThickness):
-                e = {"id": pid(role), "role": role, "assetId": "ASSET-PANEL", "dimensions": _dims(b[0] - a[0], b[1] - a[1], b[2] - a[2]),
+                e: dict[str, Any] = {"id": pid(role), "role": role, "assetId": "ASSET-PANEL", "dimensions": _dims(b[0] - a[0], b[1] - a[1], b[2] - a[2]),
                      "transform": _tf(a), "materialId": mats["carcass"], "semanticClass": "carcass", "sourceRef": p.id}
                 if crole:
                     e["customRole"] = crole
@@ -315,10 +325,11 @@ def _module_entry(spec: KitchenSpec, m: Module, parts: list[Part], frame: Frame,
             if entry["drawers"][-1]["hardware"] is None:
                 entry["drawers"][-1].pop("hardware")
         else:
-            role, crole, material_text, sem = {
+            spec_of: dict[str, tuple[str | None, str | None, str | None, str | None]] = {
                 "plinth": ("plinth", None, mats["plinth"], "plinth"),
                 "shelf": ("shelf", "niche_board" if storey == "base" else None, mats["cornerShelf"] if storey == "corner" else mats["carcass"], "shelf"),
-            }.get(p.type, (None, None, None, None))
+            }
+            role, crole, material_text, sem = spec_of.get(p.type, (None, None, None, None))
             if p.type == "side-panel":
                 sz = size[0]
                 if m.endPanel and (openings[0] >= sz - m.endPanel - 1 if m.blindSide == "start" else hi[0] <= m.endPanel + 1):
@@ -333,7 +344,8 @@ def _module_entry(spec: KitchenSpec, m: Module, parts: list[Part], frame: Frame,
             if role is None:
                 role, crole, material_text, sem = "custom", None, mats["carcass"], SEMANTIC.get(p.type, "custom")
             e = {"id": pid(role), "role": role, "assetId": "ASSET-PLINTH" if role == "plinth" else "ASSET-SHELF" if role == "shelf" else "ASSET-PANEL",
-                 "dimensions": _dims(*(hi[i] - openings[i] for i in range(3))), "transform": _tf(openings), "materialId": material_text, "semanticClass": sem,
+                 "dimensions": _dims(hi[0] - openings[0], hi[1] - openings[1], hi[2] - openings[2]), "transform": _tf(openings), "materialId": material_text,
+                 "semanticClass": sem,
                  "sourceRef": p.id}
             if crole:
                 e["customRole"] = crole
@@ -343,7 +355,7 @@ def _module_entry(spec: KitchenSpec, m: Module, parts: list[Part], frame: Frame,
 
     # cánh: bản lề theo moCanh hoặc tự suy (kitchen.hardware, dùng chung với bộ biên dịch hình học)
     door_parts.sort(key=lambda x: (x[0][1], x[0][0]))
-    rows = defaultdict(list)
+    rows: defaultdict[int, list[tuple[list[float], list[float], bool, str]]] = defaultdict(list)
     for d in door_parts:
         rows[round_int(d[0][1])].append(d)
     flat = [d for _, ds in sorted(rows.items()) for d in sorted(ds, key=lambda x: x[0][0])]
@@ -351,7 +363,7 @@ def _module_entry(spec: KitchenSpec, m: Module, parts: list[Part], frame: Frame,
     for k, (openings, hi, glass, src) in enumerate(flat):
         w, h, d = (hi[j] - openings[j] for j in range(3))
         hinge = hinge_of[k]
-        door = {"id": pid("door"), "assetId": "ASSET-DOOR-GLASS" if glass else "ASSET-DOOR-SLAB", "hingeSide": hinge,
+        door: dict[str, Any] = {"id": pid("door"), "assetId": "ASSET-DOOR-GLASS" if glass else "ASSET-DOOR-SLAB", "hingeSide": hinge,
                 "materialId": mats["glass"] if glass else mats[front], "dimensions": _dims(w, h, d), "transform": _tf(openings),
                 "glass": glass, "frontStyle": "glass" if glass else entry["frontStyle"], "openingAngle": 0, "sourceRef": src,
                 "hinges": [{"offset": 100}, {"offset": round_half_away(h - 100, 1)}] + ([{"offset": round_half_away(h / 2, 1)}] if h > 1200 else [])}
@@ -372,13 +384,13 @@ def _run_docs(spec: KitchenSpec, modules: list[dict[str, Any]]) -> list[dict[str
     """runs[]: one group per explicit run. Each module of a run gets placement.runId and a localTransform; its ``transform`` stays the world one
     and is checked to equal run.transform composed with localTransform (a mismatch is a bug in the exporter, so it raises)."""
     by_ref = {m["sourceRef"]: m for m in modules}
-    out = []
+    out: list[dict[str, Any]] = []
     for r in spec.runs:
         fr = runs.RunFrame(r.id, r.x, r.z, r.yaw)
         members = sorted((m for m in spec.module if m.run == r.id), key=lambda m: (m.fromCorner, m.y))
         if not members:
             continue
-        ids = []
+        ids: list[str] = []
         for m in members:
             entry = by_ref[m.id]
             entry["placement"]["runId"] = f"RUN-{r.id}"
@@ -408,14 +420,14 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
     mats_list, mats = _materials(spec)
     qg, kv = regions.normalize(country or spec.country, spec.region)
     sel = select(kb_rows if kb_rows is not None else default_rows(), qg, kv)
-    by_mod = defaultdict(list)
+    by_mod: defaultdict[str | None, list[Part]] = defaultdict(list)
     for p in scene.parts:
         by_mod[p.module].append(p)
     has_led = any(t.type == "light" for t in spec.appliances)
 
     # phòng
     lsau, lphai = scene.lsau, scene.lphai
-    walls = [{"id": "WALL-BACK", "start": _v(0, 0, 0), "end": _v(-lsau, 0, 0), "height": c.ceiling, "thickness": 100,
+    walls: list[dict[str, Any]] = [{"id": "WALL-BACK", "start": _v(0, 0, 0), "end": _v(-lsau, 0, 0), "height": c.ceiling, "thickness": 100,
               "materialId": mats["wall"], "interiorNormal": _v(0, 0, 1), "openings": []},
              {"id": "WALL-RIGHT", "start": _v(0, 0, 0), "end": _v(0, 0, lphai), "height": c.ceiling, "thickness": 100,
               "materialId": mats["wall"], "interiorNormal": _v(-1, 0, 0), "openings": []}]
@@ -430,7 +442,7 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
                 for i, openings in enumerate(tw.openings):
                     wall_entry["openings"].append({"id": f"{wall_entry['id']}-LO{i + 1}", "type": "window" if openings.type == "window" else "door",
                                              "offset": openings.fromCorner, "width": openings.width, "height": openings.height, "sillHeight": openings.sillHeight})
-    room = {"dimensions": _dims(lsau, c.ceiling, lphai), "walls": walls, "floor": {"materialId": mats["floor"], "thickness": 0},
+    room: dict[str, Any] = {"dimensions": _dims(lsau, c.ceiling, lphai), "walls": walls, "floor": {"materialId": mats["floor"], "thickness": 0},
             "ceiling": {"height": c.ceiling, "materialId": mats["wall"], "render": False}}
     ctx = roomctx.for_spec(spec, lsau, lphai)   # imported floorplan: its room, real walls and elements replace the default room
     floorplan = ctx.floorplan if ctx else None
@@ -441,7 +453,7 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
         room["floor"]["outline"] = sec["floorOutline"]
 
     # module
-    modules = []
+    modules: list[dict[str, Any]] = []
     system_of = runs.systems(spec)
     for m in spec.module:
         frame, size = _module_frame(m, lsau, runs.frame_of(spec, m))
@@ -452,7 +464,8 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
 
     # thiết bị & phụ kiện
     app_type = {"fridge": "Refrigerator", "hood": "Range_Hood_Insert", "oven": "BuiltIn_Oven", "tv": "Television"}
-    appliances, accessories = [], []
+    appliances: list[dict[str, Any]] = []
+    accessories: list[dict[str, Any]] = []
     for tb in spec.appliances:
         ps = by_mod.get(tb.id, [])
         if not ps:
@@ -463,9 +476,9 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
         wall = host.orient if host and host.wall != "corner" else (tb.wall or "back")
         fr = Frame.for_part(p, wall)
         openings, hi = fr.part_box(p)
-        dims = _dims(*(hi[i] - openings[i] for i in range(3)))
+        dims = _dims(hi[0] - openings[0], hi[1] - openings[1], hi[2] - openings[2])
         mid = appliance_models.model_id(tb)                       # its model, or (old designs) the guess from its name
-        cat = appliance_models.BY_ID.get(mid or "", {})
+        cat: dict[str, Any] = appliance_models.BY_ID.get(mid or "", {})
         energy = tb.energy or cat.get("energy")
         look = {k: v for k, v in (("model", mid), ("rendering", "model-3d" if cat.get("asset3d") else "box-placeholder"),
                                   ("box", cat.get("box"))) if v is not None}
@@ -473,7 +486,7 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
             hanging = tb.type == "hood" and host is not None and host.storey == "base"      # over the hob, out of a cabinet (appliance_kind)
             t = ("Cooktop_Gas" if energy in ("gas", "mixed") else "Cooktop_Induction") if tb.type == "cooktop" else "Range_Hood_Canopy" if hanging else \
                 ("Microwave" if cat.get("box", {}).get("kind") == "microwave" else "BuiltIn_Oven") if tb.type == "oven" else app_type[tb.type]
-            a = {"id": f"APP-{tb.id}", "type": t, "name": tb.name or tb.id, "assetId": "ASSET-APPLIANCE-BOX", "dimensions": dims,
+            a: dict[str, Any] = {"id": f"APP-{tb.id}", "type": t, "name": tb.name or tb.id, "assetId": "ASSET-APPLIANCE-BOX", "dimensions": dims,
                  "transform": _tf(fr.pos, fr.rot), "materialId": mats["cooktop"] if tb.type in ("cooktop", "tv") else mats["inox"], "sourceRef": tb.id,
                  "energy": energy or ("induction" if tb.type == "cooktop" else "electric"),
                  "installation": {"mountType": "wall_mounted" if hanging else {"fridge": "freestanding" if (tb.mount or "freestanding") != "built_in" else "built_in",
@@ -488,7 +501,7 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
             for i, extra in enumerate(ps[1:], start=2):                 # more boxes of the same appliance (a hood's chimney)
                 efr = Frame.for_part(extra, wall)
                 lo, hi2 = efr.part_box(extra)
-                appliances.append({**a, "id": f"APP-{tb.id}-{i}", "dimensions": _dims(*(hi2[j] - lo[j] for j in range(3))),
+                appliances.append({**a, "id": f"APP-{tb.id}-{i}", "dimensions": _dims(hi2[0] - lo[0], hi2[1] - lo[1], hi2[2] - lo[2]),
                                    "transform": _tf(efr.pos, efr.rot), "name": f"{a['name']} (ống khói)"})
         elif tb.type in ("sink", "faucet"):
             accessories.append({"id": f"ACC-{tb.id}", "type": ("Sink_Double" if cat.get("box", {}).get("basins") == 2 else "Sink_Single") if tb.type == "sink" else "Faucet_Classic", **look,
@@ -502,7 +515,7 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
         fr = Frame.for_part(p, p.orient)
         openings, hi = fr.part_box(p)
         w, h, d = (hi[k] - openings[k] for k in range(3))
-        cutouts = []
+        cutouts: list[dict[str, Any]] = []
         for tgt in cut_targets:
             src = next(pp for pp in scene.parts if pp.module == tgt["sourceRef"])
             inside = (src.run == p.run and src.lmin is not None and src.lmax is not None and p.lmin is not None and p.lmax is not None and
@@ -542,8 +555,9 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
 
     # phào: mặt cắt -> assets (dùng chung), đường chạy -> decorations
     from . import moldings as _mol
-    decorations, assets = [], list(ASSETS)
-    seen_prof = set()
+    decorations: list[dict[str, Any]] = []
+    assets: list[dict[str, Any]] = list(ASSETS)
+    seen_prof: set[str] = set()
     for i, run in enumerate(_mol.compute_runs(spec)):
         mol, prof = run.molding, run.profile
         aid = f"ASSET-MOLDING-{prof.id}"
@@ -572,7 +586,7 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
     # đèn
     lo_b, hi_b = scene.bounds()
     cx, cz = (lo_b[0] + hi_b[0]) / 2, (lo_b[2] + hi_b[2]) / 2
-    lighting = [{"id": "LIGHT-HEMI", "type": "HemisphereLight", "color": "#ffffff", "groundColor": "#8a8170", "intensity": 1.2},
+    lighting: list[dict[str, Any]] = [{"id": "LIGHT-HEMI", "type": "HemisphereLight", "color": "#ffffff", "groundColor": "#8a8170", "intensity": 1.2},
                 {"id": "LIGHT-SUN", "type": "DirectionalLight", "color": "#fff6e8", "intensity": 1.4, "position": _v(cx - 3000, 4000, cz + 3000),
                  "target": _v(cx, 800, cz), "castShadow": True}]
     if has_led:
@@ -588,22 +602,21 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
                                  "target": _v(f.pos[0] + r[0], 0, f.pos[2] + r[2]), "parentId": mod["id"]})
 
     # camera (gocNhin: m -> mm)
-    cameras = []
+    cameras: list[dict[str, Any]] = []
     for key, v in views_of(spec).items():
         pos = [x * 1000 for x in v.position]
         tgt = [x * 1000 for x in v.lookAt]
         d = [b - a for a, b in zip(pos, tgt)]
         n = math.sqrt(sum(x * x for x in d)) or 1
         up = _v(0, 0, -1) if abs(d[1] / n) > 0.999 else _v(0, 1, 0)
-        cameras.append({"id": f"CAM-{key}", "name": v.name or key, "position": _v(*pos), "target": _v(*tgt), "projection": "perspective",
+        cameras.append({"id": f"CAM-{key}", "name": v.name or key, "position": _v(pos[0], pos[1], pos[2]), "target": _v(tgt[0], tgt[1], tgt[2]), "projection": "perspective",
                         "fov": v.verticalFov, "fovAxis": "vertical", "near": 50, "far": 50000, "up": up, "aspect": round_half_away(4 / 3, 4),
                         **({"hide": list(v.hide)} if v.hide else {})})
 
-    p_cb = (sel.get("sink-cooktop") or {}).get("params", {})
-    p_ld = (sel.get("walkway") or {}).get("params", {})
-    p_kt = (sel.get("upper-gap") or {}).get("params", {})
-    p_hm = (sel.get("hood") or {}).get("params", {})
-    constraints = {"allowTouching": True, "overlapTolerance": 1, "minimumSinkCooktopDistance": p_cb.get("sink_cooktop_min", 300),
+    def params(topic: str) -> dict[str, Any]:
+        return (sel.get(topic) or {}).get("params", {})
+    p_cb, p_ld, p_kt, p_hm = params("sink-cooktop"), params("walkway"), params("upper-gap"), params("hood")
+    constraints: dict[str, Any] = {"allowTouching": True, "overlapTolerance": 1, "minimumSinkCooktopDistance": p_cb.get("sink_cooktop_min", 300),
                    "minimumWalkwayWidth": p_ld.get("walkway_min", p_ld.get("walkway_1person", 900)), "enforceRoomBounds": True,
                    "minimumCountertopToWallCabinet": p_kt.get("upper_gap_min", 450), "minimumHoodClearance": p_hm.get("gap_min", 650),
                    "sources": {k: sel[t]["code"] for k, t in (("minimumSinkCooktopDistance", "sink-cooktop"), ("minimumWalkwayWidth", "walkway"),
@@ -612,7 +625,7 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
     palette = {SEMANTIC.get(k, k): _hex(v) for k, v in SEGMENT_COLORS.items()}
     palette.update({f"module:{m.id}": _hex(_module_color(m.id)) for m in spec.module})
 
-    doc = {
+    doc: dict[str, Any] = {
         "schemaVersion": "1.5.0",
         "metadata": {"designId": re.sub(r"[^A-Za-z0-9_.:-]", "-", design_id) or "design", "projectName": spec.name,
                      "description": spec.source or "", "style": spec.style, "revision": max(1, rev), "author": "kitchen-design-mcp",
@@ -645,21 +658,21 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
 
 def integrity(doc: dict[str, Any]) -> list[str]:
     """Kiểm tra tham chiếu mà JSON Schema không diễn đạt được (materialId/assetId/parentId tồn tại, id duy nhất)."""
-    errs = []
+    errs: list[str] = []
     mats = {m["id"] for m in doc["materials"]}
     assets = {a["id"] for a in doc.get("assets", [])}
     ids: list[str] = []
 
-    def walk(o, path):
-        if isinstance(o, dict):
-            for k, v in o.items():
+    def walk(o: Any, path: str) -> None:
+        if (obj := as_dict(o)) is not None:
+            for k, v in obj.items():
                 if k in ("materialId", "carcaseMaterialId", "frontMaterialId", "defaultMaterialId") and v not in mats:
                     errs.append(f"{path}.{k}={v} không có trong materials")
                 if k == "assetId" and v not in assets:
                     errs.append(f"{path}.{k}={v} không có trong assets")
                 walk(v, f"{path}.{k}")
-        elif isinstance(o, list):
-            for i, v in enumerate(o):
+        elif (seq := as_list(o)) is not None:
+            for i, v in enumerate(seq):
                 walk(v, f"{path}[{i}]")
 
     walk(doc, "$")

@@ -78,7 +78,7 @@ def _matches(t: str, ta: str, key: str) -> bool:
     return False
 
 
-def _find(text: str, table: Sequence[tuple[str, ...]]) -> tuple[str, ...] | None:
+def find(text: str, table: Sequence[tuple[str, ...]]) -> tuple[str, ...] | None:
     t, ta = norm(text), _accented(text)
     for row in table:
         if _matches(t, ta, row[0]):
@@ -88,13 +88,13 @@ def _find(text: str, table: Sequence[tuple[str, ...]]) -> tuple[str, ...] | None
 
 def color(text: str) -> str | None:
     """Màu hex suy từ tên vật liệu (màu nêu rõ được ưu tiên hơn màu gỗ)."""
-    r = _find(text, COLORS) or _find(text, WOOD)
+    r = find(text, COLORS) or find(text, WOOD)
     return r[1] if r else None
 
 
 def explicit_color(text: str) -> str | None:
     """Chỉ màu nêu rõ, bỏ trắng/đen (các quy tắc chất liệu đã xử lý)."""
-    r = _find(text, COLORS)
+    r = find(text, COLORS)
     return r[1] if r and not r[0].startswith(("trắng", "đen")) else None
 
 
