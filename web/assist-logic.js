@@ -1,5 +1,5 @@
 // Pure logic for the free-command box, the photo/drawing upload and the styleFrom select (no DOM, no fetch).
-import { describeProposal, SYSTEM_STYLES } from './menu-logic.js';
+import { describeProposal } from './menu-logic.js';
 
 export const MAX_UPLOAD_BYTES = 12 * 1024 * 1024;
 export const UPLOAD_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
@@ -114,8 +114,8 @@ export function templateIntent(text) {
  *  system ("hệ tủ", "cả / cho / của / toàn hệ") and asks for a change (thay, đổi, sửa, làm lại, thêm, bỏ…). Returns null when it is not such a
  *  sentence, else `{ prompt }` (what is left once the system phrase and the lead-in verbs are taken out describes the new system: it is laid out
  *  again) or `{ style }` (nothing is left, "phong cách khác", or the name of a preset: the cabinets stay and take that style; `auto` = one unlike
- *  the current). */
-export function systemIntent(text) {
+ *  the current). `styles`: the catalog's style presets, [{ id, names: [vi, en] }], so a preset can be named in the sentence. */
+export function systemIntent(text, styles = []) {
   const words = String(text ?? '').trim().split(/\s+/).filter(Boolean);
   const flat = words.map((w) => plain(w).replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, ''));
   const f = flat.join(' ');
@@ -140,8 +140,8 @@ export function systemIntent(text) {
   const rest = keep.slice(i).join(' ').replace(/\s+([,;:.])/g, '$1').replace(/([,;:])(?=[,;:.])/g, '').replace(/^[:,;.\s-]+|[,;:\s]+$/g, '').trim();
   const r = plain(rest).replace(/[.!]+$/, '').trim();
   if (!r || /^(phong\s+cach|kieu|style)(\s+(khac|moi))?$/.test(r) || /^(mot\s+)?(phong\s+cach|kieu)\s+khac(\s+di)?$/.test(r)) return { style: 'auto' };
-  const named = SYSTEM_STYLES.find(([id, label]) => id !== 'auto' && (r === plain(label) || r === `phong cach ${plain(label)}` || r === id));
-  return named ? { style: named[0] } : { prompt: rest };
+  const named = styles.find(({ id, names }) => names.some((n) => r === plain(n) || r === `phong cach ${plain(n)}`) || r === id);
+  return named ? { style: named.id } : { prompt: rest };
 }
 
 /** Does the sentence point at a reference picture ("giống hình ảnh tham chiếu", "theo ảnh mẫu")? Such a sentence needs an attached image. */

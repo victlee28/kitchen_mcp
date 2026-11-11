@@ -1,0 +1,68 @@
+[
+ {
+  "id": "modern-white",
+  "name": {
+   "vi": "Hiện đại trắng bóng",
+   "en": "Modern gloss white"
+  },
+  "front": "Acrylic trắng bóng",
+  "door": "flat",
+  "handle": "concealed",
+  "handleMaterial": "Nhôm"
+ },
+ {
+  "id": "warm-oak",
+  "name": {
+   "vi": "Gỗ sồi ấm",
+   "en": "Warm oak"
+  },
+  "front": "Laminate vân gỗ sồi sáng",
+  "door": "flat",
+  "handle": "bar",
+  "handleMaterial": "Nhôm đen mờ"
+ },
+ {
+  "id": "classic-sage",
+  "name": {
+   "vi": "Cổ điển xanh rêu",
+   "en": "Classic sage green"
+  },
+  "front": "Sơn xanh rêu mờ",
+  "door": "frame",
+  "handle": "knob",
+  "handleMaterial": "Đồng thau"
+ },
+ {
+  "id": "minimal-grey",
+  "name": {
+   "vi": "Tối giản xám đậm",
+   "en": "Minimal dark grey"
+  },
+  "front": "Acrylic xám đậm",
+  "door": "flat",
+  "handle": "concealed",
+  "handleMaterial": "Nhôm"
+ },
+ {
+  "id": "shaker-cream",
+  "name": {
+   "vi": "Shaker kem",
+   "en": "Shaker cream"
+  },
+  "front": "Sơn kem mờ",
+  "door": "frame",
+  "handle": "bar",
+  "handleMaterial": "Đồng thau xước"
+ },
+ {
+  "id": "walnut-luxe",
+  "name": {
+   "vi": "Gỗ óc chó sang trọng",
+   "en": "Walnut luxe"
+  },
+  "front": "Veneer gỗ óc chó",
+  "door": "flat",
+  "handle": "bar",
+  "handleMaterial": "Đồng vàng"
+ }
+]

@@ -235,5 +235,29 @@ class TestMaterialsFromTheCatalog(unittest.TestCase):
         self.assertIn("Laminate xanh rêu mờ", texts)
 
 
+class TestStylesFromTheCatalog(unittest.TestCase):
+    """Stage 1.3: the style presets of a whole cabinet system are catalog items (workshop and user)."""
+
+    def test_a_user_style_restyles_a_system(self):
+        tmp = Path(tempfile.mkdtemp())
+        try:
+            from kitchen import runs
+            from kitchen.service import KitchenService
+            s = KitchenService(db_path=tmp / "k.db", render_dir=tmp / "r")
+            s.catalog_put("style", "my-blue", {"name": {"vi": "Xanh của tôi"}, "front": "Sơn xanh navy mờ", "door": "frame", "handle": "knob",
+                                               "handleMaterial": "Đồng thau"}, "user")
+            fixture = json.loads((ROOT / "fixtures" / "l-shaped-kitchen.json").read_text(encoding="utf-8"))
+            rec = s.create_from_spec(fixture)
+            spec = s.store.get(rec["id"])[0]
+            system = next(iter(runs.systems(spec).values()))
+            got = s._replace_system(spec, system, None, "my-blue", None, s.catalog())
+            self.assertEqual(got["style"], "my-blue")
+            self.assertIn("Sơn xanh navy mờ", json.dumps(got["operation"], ensure_ascii=False))
+            with self.assertRaises(InvalidInput):
+                s._replace_system(spec, system, None, "my-blue", None)                  # not in the builtin catalog
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+
 if __name__ == "__main__":
     unittest.main()

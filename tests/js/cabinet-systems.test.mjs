@@ -2,9 +2,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { groupLabel, groupLayerIds, groupRole, manySystems, shiftGroup } from '../../web/design-logic.js';
-import { actionsFor, buildGroupOp, edgeChoices, groupActions, pickTarget, SYSTEM_STYLES, systemTemplate } from '../../web/menu-logic.js';
+import { actionsFor, buildGroupOp, edgeChoices, groupActions, pickTarget, systemTemplate } from '../../web/menu-logic.js';
 import { shiftGroupId } from '../../web/selection.js';
 import { systemIntent, templateIntent } from '../../web/assist-logic.js';
+
+const STYLES = [{ id: 'warm-oak', names: ['Gỗ sồi ấm', 'Warm oak'] }, { id: 'classic-sage', names: ['Cổ điển xanh rêu', 'Classic sage green'] }];
 
 // furniture_003: A1, A2 (base), U1 (upper), H1 (loft). furniture_017: C1, C2 (base).
 const systems = {
@@ -74,16 +76,16 @@ test('replacing a whole system: a sentence lays it out again, none restyles it',
   assert.deepEqual(systemTemplate('wall_h10', '', 'warm-oak'), { kind: 'replace-system', system: 'wall_h10', style: 'warm-oak' });
   assert.deepEqual(systemTemplate('auto-R1', null), { kind: 'replace-system', system: 'auto-R1', style: 'auto' });
   assert.throws(() => systemTemplate(undefined, 'x'), /hệ tủ/);
-  assert.throws(() => systemTemplate('S', '', 'no-such'), /Phong cách/);
-  assert.equal(SYSTEM_STYLES[0][0], 'auto');
+  assert.throws(() => systemTemplate('S', '', 'no-such', STYLES), /Phong cách/);
+  assert.deepEqual(systemTemplate('S', '', 'no-such'), { kind: 'replace-system', system: 'S', style: 'no-such' });   // styles not loaded: the server checks
 });
 
 test('"thay cả hệ tủ" in the command box: a description lays the system out again, nothing more restyles it', () => {
   assert.deepEqual(systemIntent('thay cả hệ tủ'), { style: 'auto' });
   assert.deepEqual(systemIntent('Thay cả hệ tủ này bằng một hệ tủ mới'), { style: 'auto' });
   assert.deepEqual(systemIntent('đổi hệ tủ sang phong cách khác'), { style: 'auto' });
-  assert.deepEqual(systemIntent('đổi cả hệ sang Gỗ sồi ấm'), { style: 'warm-oak' });
-  assert.deepEqual(systemIntent('thay hệ tủ bằng phong cách cổ điển xanh rêu'), { style: 'classic-sage' });
+  assert.deepEqual(systemIntent('đổi cả hệ sang Gỗ sồi ấm', STYLES), { style: 'warm-oak' });
+  assert.deepEqual(systemIntent('thay hệ tủ bằng phong cách cổ điển xanh rêu', STYLES), { style: 'classic-sage' });
   assert.deepEqual(systemIntent('thay cả hệ tủ bằng hệ mới: có chậu rửa, bếp và tủ lạnh, cánh khung'), { prompt: 'có chậu rửa, bếp và tủ lạnh, cánh khung' });
   assert.deepEqual(systemIntent('làm lại hệ tủ này theo kiểu bồn rửa giữa, 2 ngăn kéo'), { prompt: 'kiểu bồn rửa giữa, 2 ngăn kéo' });
   assert.deepEqual(systemIntent('sửa lại, thêm tủ nóc cho hệ , cho tủ lạnh sang phải'), { prompt: 'thêm tủ nóc, cho tủ lạnh sang phải' });

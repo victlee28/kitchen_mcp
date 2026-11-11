@@ -21,7 +21,7 @@ from .cabinet_run import fit_depth
 from .errors import InvalidInput
 from .jsonview import as_dict, as_list
 from .numeric import EPS_MM
-from .labels import STYLE_PRESETS
+from .i18n import pick
 from .spec import KitchenSpec, LaidModule, Module, to_data
 
 FRONTLESS = ("corner-shelf", "upper-open")            # no doors or drawer fronts: no front material, door style or handle
@@ -39,9 +39,17 @@ class Style:
     handle_material: str
 
 
-STYLES: tuple[Style, ...] = tuple(Style(*row) for row in STYLE_PRESETS)    # the table itself is data (labels.STYLE_PRESETS)
-STYLE_BY_ID = {s.id: s for s in STYLES}
 AUTO = "auto"
+
+
+def _styles(catalog: Catalog) -> tuple[Style, ...]:
+    return tuple(Style(it.id, pick(it.data.get("name"), "vi"), str(it.data["front"]), str(it.data["door"]), str(it.data["handle"]),
+                       str(it.data["handleMaterial"])) for it in catalog.all("style"))
+
+
+def styles(catalog: Catalog = builtin.CATALOG) -> tuple[Style, ...]:
+    """The style presets, in catalog order (the catalog kind ``style``: workshop and user edit them)."""
+    return catalog.derived("system_replace.styles", _styles)
 
 
 def members(spec: KitchenSpec, system: str) -> list[Module]:
@@ -63,14 +71,18 @@ def current_front(spec: KitchenSpec, mods: list[Module]) -> str | None:
     return fronts.most_common(1)[0][0] if fronts else None
 
 
-def pick_style(spec: KitchenSpec, mods: list[Module], wanted: str | None) -> Style:
+def pick_style(spec: KitchenSpec, mods: list[Module], wanted: str | None, catalog: Catalog = builtin.CATALOG) -> Style:
     """The preset ``wanted`` names; ``auto`` / None: the first preset whose front differs from what the system shows now."""
+    all_styles = styles(catalog)
+    by_id = {s.id: s for s in all_styles}
     if wanted and wanted != AUTO:
-        if wanted not in STYLE_BY_ID:
-            raise InvalidInput(f"Unknown style {wanted}; use one of {', '.join(STYLE_BY_ID)}", code="bad-style")
-        return STYLE_BY_ID[wanted]
+        if wanted not in by_id:
+            raise InvalidInput(f"Unknown style {wanted}; use one of {', '.join(by_id)}", code="bad-style")
+        return by_id[wanted]
+    if not all_styles:
+        raise InvalidInput("The catalog has no style preset", code="bad-style")
     now = current_front(spec, mods)
-    return next((s for s in STYLES if s.front != now), STYLES[0])
+    return next((s for s in all_styles if s.front != now), all_styles[0])
 
 
 def style_ops(spec: KitchenSpec, mods: list[Module], style: Style) -> list[dict[str, Any]]:

@@ -33,7 +33,7 @@ class TestRestyle(unittest.TestCase):
 
     def test_only_the_system_changes(self):
         mods = sr.members(KITCHEN, "furniture_003")
-        style = sr.STYLE_BY_ID["classic-sage"]
+        style = sr.pick_style(KITCHEN, mods, "classic-sage")
         after = edit.apply_op(KITCHEN, edit.combine_ops(sr.style_ops(KITCHEN, mods, style)))
         for i in ("K1", "K2"):
             m = after.find(i)
@@ -116,13 +116,10 @@ class TestFridgeSide(unittest.TestCase):
 
 
 class TestWebStyles(unittest.TestCase):
-    def test_the_page_lists_the_same_presets(self):
-        import re
+    def test_the_page_has_no_copy_of_the_presets(self):
         src = (ROOT / "web" / "menu-logic.js").read_text(encoding="utf-8")
-        block = src[src.index("export const SYSTEM_STYLES"):src.index("];", src.index("export const SYSTEM_STYLES"))]
-        ids = re.findall(r"\['([a-z-]+)',", block)
-        self.assertEqual(ids, ["auto", *(s.id for s in sr.STYLES)])
-        self.assertEqual(dict(re.findall(r"\['([a-z-]+)', '([^']+)'\]", block))["warm-oak"], sr.STYLE_BY_ID["warm-oak"].name)
+        self.assertNotIn("SYSTEM_STYLES =", src)                       # the page reads the catalog kind "style" (stage 1.3)
+        self.assertEqual([s.id for s in sr.styles()][:2], ["modern-white", "warm-oak"])
 
 
 class TestService(unittest.TestCase):

@@ -41,5 +41,15 @@
    "workshop",
    "user"
   ]
+ },
+ "style": {
+  "label": {
+   "vi": "Phong cách hệ tủ",
+   "en": "Cabinet system styles"
+  },
+  "writers": [
+   "workshop",
+   "user"
+  ]
  }
 }

@@ -8,6 +8,11 @@ import { groupLabel, groupLayerIds, manySystems } from './design-logic.js';
 import * as catalog from './catalog-client.js';
 import { lang } from './i18n.js';
 
+let styles = [];                     // the style presets of a whole cabinet system (catalog kind "style"), named in a sentence
+catalog.list('style', lang()).then((d) => {
+  styles = d.items.map((it) => ({ id: it.id, names: [it.data.name?.vi, it.data.name?.en].filter(Boolean) }));
+}).catch(() => { /* a preset can still be picked by "phong cách khác" */ });
+
 const call = (path, body) => request(path, 'POST', body);
 const JOB_KEY = 'recogJob';
 // the waiting job and where its run will stand ({job, anchor, mode}); the anchor is the object picked when the picture was sent
@@ -93,7 +98,7 @@ export function createModuleMenu(ctx) {
     if (busy) return; const { id, rev } = ctx.getState();
     if (mentionsReference(text)) return redraw(text, 'Câu lệnh nhắc tới ảnh tham chiếu: hãy bấm "📎 Ảnh tham chiếu" để chọn ảnh trước, rồi bấm "Xem trước".');
     if (target.kind === 'appliance') return applianceModels(text);
-    const wish = target.kind === 'structure' ? null : systemIntent(text);
+    const wish = target.kind === 'structure' ? null : systemIntent(text, styles);
     if (wish) return replaceSystem(text, wish);
     const intent = templateIntent(text);
     if (intent?.kind === 'shape') return redraw(text, `Chưa tạo được tủ chữ ${intent.shape} bằng lệnh. Hãy dùng "Tạo từ mẫu" ở cột trái, hoặc nói "tủ chữ I" để tạo một dãy dọc cạnh vật thể.`);
@@ -229,7 +234,7 @@ export function createModuleMenu(ctx) {
   async function replaceSystem(text, wish) {
     if (busy) return; const { id, rev, systems } = ctx.getState();
     let template;
-    try { template = systemTemplate(systems?.[target.id]?.system, wish.prompt, wish.style); } catch (e) { return redraw(text, e.message); }
+    try { template = systemTemplate(systems?.[target.id]?.system, wish.prompt, wish.style, styles.length ? styles : null); } catch (e) { return redraw(text, e.message); }
     busy = true; ctx.setStatus(template.prompt ? 'Xếp lại cả hệ tủ theo mô tả…' : 'Đổi phong cách cả hệ tủ…');
     try {
       const { status, data } = await call(`/api/designs/${id}/template`, { template, baseRev: rev });

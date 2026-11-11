@@ -1,0 +1,74 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "style",
+ "type": "object",
+ "required": [
+  "name",
+  "front",
+  "door",
+  "handle",
+  "handleMaterial"
+ ],
+ "additionalProperties": false,
+ "properties": {
+  "name": {
+   "type": "object",
+   "required": [
+    "vi"
+   ],
+   "properties": {
+    "vi": {
+     "type": "string",
+     "minLength": 1
+    },
+    "en": {
+     "type": "string"
+    }
+   },
+   "additionalProperties": false,
+   "x-label": {
+    "vi": "Tên",
+    "en": "Name"
+   }
+  },
+  "front": {
+   "type": "string",
+   "minLength": 1,
+   "x-label": {
+    "vi": "Vật liệu mặt cánh",
+    "en": "Front material"
+   }
+  },
+  "door": {
+   "enum": [
+    "flat",
+    "frame",
+    "glass"
+   ],
+   "x-label": {
+    "vi": "Kiểu cánh",
+    "en": "Door style"
+   }
+  },
+  "handle": {
+   "enum": [
+    "bar",
+    "knob",
+    "concealed",
+    "none"
+   ],
+   "x-label": {
+    "vi": "Kiểu tay nắm",
+    "en": "Handle"
+   }
+  },
+  "handleMaterial": {
+   "type": "string",
+   "minLength": 1,
+   "x-label": {
+    "vi": "Vật liệu tay nắm",
+    "en": "Handle material"
+   }
+  }
+ }
+}

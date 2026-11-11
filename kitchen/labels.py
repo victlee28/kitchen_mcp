@@ -16,15 +16,4 @@ NAMES: dict[str, str] = {
 DEFAULT_FRONT = "Laminate vân gỗ sồi sáng"   # the design's default base / tall front finish (threejs_export._materials uses the same name)
 
 
-# Style presets of a whole cabinet system (system_replace.STYLES): id -> (name, front finish, door, handle, handle material).
-# Door and handle are ASCII codes; the names and finishes are the Vietnamese the designs use (vocab reads them).
-STYLE_PRESETS: tuple[tuple[str, str, str, str, str, str], ...] = (
-    ("modern-white", "Hiện đại trắng bóng", "Acrylic trắng bóng", "flat", "concealed", "Nhôm"),
-    ("warm-oak", "Gỗ sồi ấm", "Laminate vân gỗ sồi sáng", "flat", "bar", "Nhôm đen mờ"),
-    ("classic-sage", "Cổ điển xanh rêu", "Sơn xanh rêu mờ", "frame", "knob", "Đồng thau"),
-    ("minimal-grey", "Tối giản xám đậm", "Acrylic xám đậm", "flat", "concealed", "Nhôm"),
-    ("shaker-cream", "Shaker kem", "Sơn kem mờ", "frame", "bar", "Đồng thau xước"),
-    ("walnut-luxe", "Gỗ óc chó sang trọng", "Veneer gỗ óc chó", "flat", "bar", "Đồng vàng"),
-)
-
 OBLIQUE_VIEW = "{name} (chéo)"     # the name of a run's oblique camera view

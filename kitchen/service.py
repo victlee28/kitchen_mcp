@@ -527,7 +527,7 @@ class KitchenService:
         style preset (``style``: a preset id, or ``auto`` / None for the first one unlike what it shows now)."""
         mods = system_replace.members(spec, system)
         if not (isinstance(prompt, str) and prompt.strip()):
-            chosen = system_replace.pick_style(spec, mods, style if isinstance(style, str) else None)
+            chosen = system_replace.pick_style(spec, mods, style if isinstance(style, str) else None, catalog)
             ops = system_replace.style_ops(spec, mods, chosen)
             return {'operation': edit.combine_ops(ops), 'system': system, 'mode': 'restyle', 'style': chosen.id,
                     'summary': [f"System {system}: {len(ops)} cabinets take the style \"{chosen.name}\" ({chosen.front}, {chosen.door} doors, {chosen.handle} handles)"]}

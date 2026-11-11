@@ -8,8 +8,6 @@ export const MAX_OVERHANG = 100;
 export const MAX_RUN_SHIFT = 10000, MAX_STRETCH = 1500;   // mm a run may be moved / an end dragged in one go
 export const RUN_ACTIONS = ['runMove', 'runStretch', 'runRemove'];
 // The style presets of kitchen/system_replace.py (same ids, same order; tests/test_system_replace.py checks it): "thay cả hệ tủ" with no description takes one.
-export const SYSTEM_STYLES = [['auto', 'Tự chọn (khác phong cách hiện tại)'], ['modern-white', 'Hiện đại trắng bóng'], ['warm-oak', 'Gỗ sồi ấm'],
-  ['classic-sage', 'Cổ điển xanh rêu'], ['minimal-grey', 'Tối giản xám đậm'], ['shaker-cream', 'Shaker kem'], ['walnut-luxe', 'Gỗ óc chó sang trọng']];
 export const RUN_TURNS = [[0, 'Không xoay'], [90, 'Xoay 90° ngược chiều kim đồng hồ'], [-90, 'Xoay 90° theo chiều kim đồng hồ'], [180, 'Quay ngược lại (180°)'], [45, 'Xoay 45° ngược chiều'], [-45, 'Xoay 45° theo chiều']];
 
 /** Was the press-and-release a click (pointer barely moved, short)? down/up: {x, y, t}. */
@@ -236,12 +234,13 @@ export function buildGroupOp(action, g, form, spec) {
   return ops.length === 1 ? ops[0] : { op: 'multi', ops };
 }
 
-/** The server template that replaces a whole cabinet system: laid out again from `prompt` when there is one, else restyled with `style`. */
-export function systemTemplate(system, prompt, style = 'auto') {
+/** The server template that replaces a whole cabinet system: laid out again from `prompt` when there is one, else restyled with `style`.
+ * `styles`: the catalog's style presets ([{ id }]) when loaded, to refuse an unknown one here (the server checks it anyway). */
+export function systemTemplate(system, prompt, style = 'auto', styles = null) {
   if (!system) throw new Error('Không biết tủ này thuộc hệ tủ nào; tải lại thiết kế rồi thử lại');
   const text = String(prompt || '').trim();
   if (text) return { kind: 'replace-system', system, prompt: text };
-  if (!SYSTEM_STYLES.some(([id]) => id === style)) throw new Error(`Phong cách không có: ${style}`);
+  if (style !== 'auto' && styles && !styles.some((x) => x.id === style)) throw new Error(`Phong cách không có: ${style}`);
   return { kind: 'replace-system', system, style };
 }
 
