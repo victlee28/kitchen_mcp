@@ -131,9 +131,9 @@ class Handler(BaseHTTPRequestHandler):
         q = {k: v[0] for k, v in parse_qs(u.query).items()}
         rev = int(q["rev"]) if q.get("rev") else None
         p = u.path
-        s = SVC
         if method == "GET" and not p.startswith("/api/"):
             return self._static(p)
+        s = errors.require(SVC, "kitchen service (make_server sets it)")
         if p == "/api/knowledge" and method == "GET":
             kinds = [k for k in (q.get("kinds") or "").split(",") if k] or None
             return self._json(200, s.search_knowledge(q.get("q", ""), kinds, q.get("country"), q.get("region"), q.get("regionOnly") == "1"))
@@ -355,7 +355,7 @@ class Handler(BaseHTTPRequestHandler):
     def _ref_url(self, layers_res: dict) -> str | None:
         ref = layers_res["baseImage"]
         if ref["type"] == "job":
-            u = self._url(SVC.images.get(ref["jobId"])["result"]["dir"])
+            u = self._url(errors.require(SVC, "kitchen service").images.get(ref["jobId"])["result"]["dir"])
             return u and u + "composite.png"
         name = {"beauty": "beauty.png", "imported": "base_imported.png"}.get(ref["type"], "albedo.png")
         return layers_res["url"] and layers_res["url"] + name
@@ -380,7 +380,7 @@ class Handler(BaseHTTPRequestHandler):
         except ApiError as e:
             self._json(e.status, {"error": str(e)})
         except errors.KitchenError as e:             # one mapping: kind -> status; the stable code is added for clients
-            self._json(errors.http_status(e), {"error": str(e), "code": e.code})
+            self._json(errors.http_status(e) or 500, {"error": str(e), "code": e.code})
         except FileNotFoundError as e:
             self._json(404, {"error": str(e)})
         except ValidationError as e:

@@ -121,7 +121,7 @@ def load_rgb(path: Path, size: tuple[int, int] | None = None) -> tuple[np.ndarra
         im = f.convert("RGB")
     resized = False
     if size and im.size != size:
-        im = im.resize(size, Image.LANCZOS)
+        im = im.resize(size, Image.Resampling.LANCZOS)
         resized = True
     return np.array(im), resized
 

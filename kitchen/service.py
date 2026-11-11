@@ -289,7 +289,8 @@ class KitchenService:
         app = next((a for a in spec.appliances if a.id == str(template.get('id') or '')), None)
         if app is None:
             raise NotFound(f"No appliance {template.get('id')!r}", code='appliance-not-found')
-        prompt = template.get('prompt') if isinstance(template.get('prompt'), str) else ''
+        raw_prompt = template.get('prompt')
+        prompt = raw_prompt if isinstance(raw_prompt, str) else ''
         now = appliance_models.model_id(app)
         info = {'id': app.id, 'type': app.type, 'name': app.name, 'model': now, 'size': appliance_models.size_of(app)}
         if not template.get('model'):
@@ -633,7 +634,10 @@ class KitchenService:
         if inbox is None:
             return {**out, 'status': 'unavailable', 'message': 'The inbox recognizer is not configured (CABINET_RECOGNIZER_URL)'}
         anchor, mode = self._check_anchor(anchor, mode)
-        return self._recognition_result(design_id, spec, current, out, 'inbox', lambda: inbox.collect(job_id), country, anchor, mode)
+        collect = getattr(inbox, 'collect', None)                # only the inbox recognizer answers later, by job id
+        if collect is None:
+            return {**out, 'status': 'unavailable', 'message': 'The inbox recognizer cannot collect a job'}
+        return self._recognition_result(design_id, spec, current, out, 'inbox', lambda: collect(job_id), country, anchor, mode)
 
     @staticmethod
     def _check_anchor(anchor: Any, mode: Any) -> tuple[dict[str, Any] | None, str]:

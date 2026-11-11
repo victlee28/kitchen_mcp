@@ -103,13 +103,13 @@ class Store:
         for country_code in country_codes:
             regions.normalize(country_code)
         country_code = ','.join(country_codes)
-        metadata = json.dumps(metadata or {}, ensure_ascii=False)
+        metadata_json = json.dumps(metadata or {}, ensure_ascii=False)
         with self._conn() as connection:
             row = connection.execute('SELECT id FROM knowledge WHERE code=? AND active=1', (code,)).fetchone()
             if row:
-                connection.execute('UPDATE knowledge SET kind=?, title=?, content=?, source_url=?, metadata_json=?, region=?, country=? WHERE id=?', (kind, title, content, source_url, metadata, region_code, country_code, row['id']))
+                connection.execute('UPDATE knowledge SET kind=?, title=?, content=?, source_url=?, metadata_json=?, region=?, country=? WHERE id=?', (kind, title, content, source_url, metadata_json, region_code, country_code, row['id']))
                 return {'ok': True, 'code': code, 'operation': 'update', 'region': region_code, 'country': country_code}
-            connection.execute('INSERT INTO knowledge(kind,code,title,content,source_url,metadata_json,region,country) VALUES(?,?,?,?,?,?,?,?)', (kind, code, title, content, source_url, metadata, region_code, country_code))
+            connection.execute('INSERT INTO knowledge(kind,code,title,content,source_url,metadata_json,region,country) VALUES(?,?,?,?,?,?,?,?)', (kind, code, title, content, source_url, metadata_json, region_code, country_code))
             return {'ok': True, 'code': code, 'operation': 'add-new', 'region': region_code, 'country': country_code}
 
     def regions_summary(self) -> list[dict]:

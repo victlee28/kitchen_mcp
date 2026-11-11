@@ -68,7 +68,8 @@ def build_ops(spec: KitchenSpec, items: list[dict]) -> tuple[list[dict], list[di
             mod = it.get("module") or {}
             op = {"op": "add", "module": mod, "afterModule": it.get("afterModule"), "closeGap": bool(it.get("closeGap", True))}
             nxt = edit.apply_op(cur, op)
-            m = nxt.find(mod.get("id"))
+            before = {x.id for x in cur.module}
+            m = next(x for x in nxt.module if x.id not in before)          # the new cabinet (its id is made by add when none is given)
             material_text = layers.material_slot(nxt, m.id, "door")[1]
             face_en = vocab.to_english(material_text or "")
             d = {"vi": f"thêm {m.id} ({m.type})", "en": f"add a new {module_en(m)}" + (f" with {face_en} fronts" if face_en else ""),
@@ -122,7 +123,7 @@ def pin_cameras(spec: KitchenSpec, nxt: KitchenSpec) -> dict | None:
 
 
 # ------------------------------------------------------------------ so sánh render cũ / mới
-def _ids(d: Path) -> tuple[np.ndarray, list[str]]:
+def _ids(d: Path) -> tuple[np.ndarray, dict[int, str]]:
     inst, meta = imaging.load_instances(d)
     names = {x["value"]: x["id"] for x in meta["instances"]}
     return inst, names

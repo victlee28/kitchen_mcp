@@ -59,6 +59,14 @@ class TypecheckRatchet(unittest.TestCase):
         self.assertEqual(better, {}, "fewer strict errors than the baseline: run `python tests/test_typecheck.py --write` to lock it in")
 
 
+    def test_whole_package_has_no_basic_errors(self):
+        """The shell too (service, intent, store, web_server...): pyright as configured in pyproject.toml finds nothing (0 since 11/11/2026)."""
+        out = subprocess.run(["pyright", "--outputjson", "kitchen", "web_server.py"], cwd=ROOT, capture_output=True, text=True, timeout=600)
+        found = [f"{Path(d['file']).name}:{d['range']['start']['line'] + 1} {d['message'].splitlines()[0]}"
+                 for d in json.loads(out.stdout)["generalDiagnostics"] if d["severity"] == "error"]
+        self.assertEqual(found, [])
+
+
 if __name__ == "__main__":
     if "--write" in sys.argv:
         BASELINE.write_text(json.dumps(errors_per_file(), indent=2, sort_keys=True) + "\n", encoding="utf-8")

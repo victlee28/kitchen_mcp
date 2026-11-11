@@ -15,7 +15,14 @@ from typing import Literal
 from pydantic import BaseModel, Field, ValidationError
 
 from . import lexicon, regions
-from .spec import Appliance, Common, Handle, KitchenSpec, Module, Room, Wall
+from .spec import Appliance, Common, FrontSection, Handle, KitchenSpec, Module, Room, Wall
+
+WallSide = Literal["back", "right", "left"]
+
+
+def _DRAWERS() -> list[FrontSection]:
+    """The two drawers of a hob or drawer cabinet (180 + 250 mm, from the top)."""
+    return [FrontSection(type="drawer", height=180), FrontSection(type="drawer", height=250)]
 
 
 _NUM = r"(\d+(?:[.,]\d+)?)\s*(mm|cm|mét|met|m)?(?![a-zà-ỹ])"
@@ -114,7 +121,7 @@ def parse_prompt(prompt: str) -> tuple[KitchenTemplate, list[str]]:
     qg, kv = regions.from_description(prompt)
     if qg or kv:
         data["country"], data["region"] = qg, kv
-        notes.append(f"Áp tiêu chuẩn ưu tiên cho {regions.COUNTRIES[qg][0] if qg else regions.REGIONS[kv]}")
+        notes.append(f"Áp tiêu chuẩn ưu tiên cho {regions.COUNTRIES[qg][0] if qg else regions.REGIONS[kv or '']}")
     try:
         color = KitchenTemplate.model_validate(data)
     except ValidationError as e:
@@ -257,7 +264,7 @@ def from_template(color: KitchenTemplate, name: str = "Thiết kế tủ bếp",
     ceiling = color.ceiling or max(color.cabinetTop + max(30, h_loft), 2400)
     top = min(color.cabinetTop, ceiling - h_loft) if h_loft else color.cabinetTop  # chừa chỗ cho phào nóc dưới trần
     material = {"wallTile": "Đá ốp tường đồng bộ mặt bàn", **color.material}
-    handle = Handle(**{k: v for k, v in (("variant", color.handleVariant), ("material", color.handleMaterial)) if v})
+    handle = Handle.model_validate({k: v for k, v in (("variant", color.handleVariant), ("material", color.handleMaterial)) if v})
     c = Common(countertop=countertop, baseTop=countertop - 60, plinthHeight=kt["plinthHeight"], baseDepth=color.baseDepth or kt["baseDepth"],
               upperDepth=kt["upperDepth"], cabinetTop=top, ceiling=ceiling, upperTierSplit=top if not color.loft else top - 330,
               upperBottom=upper_bottom if top - upper_bottom >= 450 else top - 600, material=material, backsplashHeight=color.backsplashHeight,
@@ -276,7 +283,7 @@ def from_template(color: KitchenTemplate, name: str = "Thiết kế tủ bếp",
         n[p] += 1
         return f"{p}{n[p]}"
 
-    def thickness(wall: str, start: float, length: float, appliance: list[str], front: float = 450):
+    def thickness(wall: WallSide, start: float, length: float, appliance: list[str], front: float = 450):
         """Bố trí một dãy tủ dưới: [khoảng trước] + thiết bị xen khoảng 600 + [khoảng sau 450].
         Khoảng trống là mặt bàn thao tác (NKBA-10/14/15); thiếu chỗ thì co về 300 rồi bỏ."""
         nonlocal tb
@@ -292,7 +299,7 @@ def from_template(color: KitchenTemplate, name: str = "Thiết kế tủ bếp",
             doors = [w / 2, w / 2] if w >= 600 else [w]
             m = Module(id=id("TD"), type=type, name={"base-sink": "Tủ chậu", "base-cooktop": "Tủ dưới bếp"}.get(type, "Tủ dưới"),
                        wall=wall, fromCorner=s, width=w, y=0, height=c.baseTop, depth=c.baseDepth, doors=doors,
-                       frontSections=[{"type": "drawer", "height": 180}, {"type": "drawer", "height": 250}] if type == "base-cooktop" else [])
+                       frontSections=_DRAWERS() if type == "base-cooktop" else [])
             mods.append(m)
             if type == "base-sink":
                 tb.append(Appliance(id=f"TB{len(tb)+1}", type="sink", name="Chậu rửa", dimensions=f"{min(780, w - 40):g} × 430", wall=wall, center=s + w / 2))
@@ -301,9 +308,9 @@ def from_template(color: KitchenTemplate, name: str = "Thiết kế tủ bếp",
                 tb.append(Appliance(id=f"TB{len(tb)+1}", type="cooktop", name="Bếp âm", dimensions=f"{min(730, w - 10):g} × 430", wall=wall, center=s + w / 2))
             s += w
 
-    def upper(wall: str, start: float, end: float):
+    def upper(wall: WallSide, start: float, end: float):
         """Tủ trên chia theo đúng ranh giới tủ dưới bên dưới; ô ngay trên bếp thành tủ hút mùi."""
-        cooktop_centers = [t.center for t in tb if t.type == "cooktop" and t.wall == wall]
+        cooktop_centers = [t.center for t in tb if t.type == "cooktop" and t.wall == wall and t.center is not None]
         cuts = sorted({start, end, *[m.fromCorner for m in mods if m.wall == wall and m.storey == "base" and start < m.fromCorner < end],
                        *[m.endAt for m in mods if m.wall == wall and m.storey == "base" and start < m.endAt < end]})
         segs = [(a, b) for a, b in zip(cuts, cuts[1:]) if b - a >= 1]
@@ -323,7 +330,8 @@ def from_template(color: KitchenTemplate, name: str = "Thiết kế tủ bếp",
                 tb.append(Appliance(id=f"TB{len(tb)+1}", type="hood", name="Máy hút mùi âm tủ", dimensions=f"{min(w - 40, 730):g} × 165", module=mods[-1].id))
             if color.loft:
                 # có phào nóc: cánh nóc mở ngang thay vì lật lên để không chạm phào (MOLDING-CANH-LAT-001)
-                loft_door, hinge = ([w / 2, w / 2], ["left", "right"]) if (h_loft and w >= 600) else ([w], ["left"] if h_loft else [])
+                hinge: list[Literal["left", "right", "upper", "base"]] = ["left", "right"] if (h_loft and w >= 600) else ["left"] if h_loft else []
+                loft_door = [w / 2, w / 2] if (h_loft and w >= 600) else [w]
                 mods.append(Module(id=id("TN"), type="upper-loft", name="Tủ nóc", wall=wall, fromCorner=a, width=w, y=c.upperTierSplit,
                                    height=c.cabinetTop - c.upperTierSplit, depth=upper_depth, doors=loft_door, hingeSides=hinge))
 
@@ -370,17 +378,17 @@ def from_template(color: KitchenTemplate, name: str = "Thiết kế tủ bếp",
     Wback = max(color.backWallLength, 2 * c.baseDepth + 900) if color.geometry_edit == "U" else color.backWallLength
     g, aisle = c.baseDepth, 1100  # lối đi giữa đảo và dãy tủ (NKBA 1067–1220)
 
-    def free_run(label, z, start, length, blind=0):
+    def free_run(label: str, z: float, start: float, length: float, blind: float = 0) -> bool:
         """Dãy đặt rời (đảo / bán đảo) song song tường sau, mặt cánh hướng về tường sau."""
         s = start
         if blind:  # đầu sát tường phải: phần góc khuất không cánh để không đụng tủ bên cạnh
             mods.append(Module(id=id("TD"), type="base-drawers", name=label, wall="island", offset=z, fromCorner=s, width=blind + 450, y=0,
-                               height=c.baseTop, depth=g, blindCorner=blind, frontSections=[{"type": "drawer", "height": 180}, {"type": "drawer", "height": 250}]))
+                               height=c.baseTop, depth=g, blindCorner=blind, frontSections=_DRAWERS()))
             s += blind + 450
             length -= blind + 450
         for w in _split(length, []) if length >= 300 else []:
             mods.append(Module(id=id("TD"), type="base-drawers", name=label, wall="island", offset=z, fromCorner=s, width=w, y=0,
-                               height=c.baseTop, depth=g, frontSections=[{"type": "drawer", "height": 180}, {"type": "drawer", "height": 250}]))
+                               height=c.baseTop, depth=g, frontSections=_DRAWERS()))
             s += w
         return length >= 300
 

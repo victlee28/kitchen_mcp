@@ -75,5 +75,15 @@ class TestCloseGapTall(unittest.TestCase):
         self.assertLess(after.find("TC1").fromCorner, 1250.0)
 
 
+class TestGeometryEditAdd(unittest.TestCase):
+    def test_add_module_without_an_id_is_described(self):
+        import json
+        from kitchen import geometry_edit
+        spec = load_spec(json.loads((ROOT / "fixtures" / "l-shaped-kitchen.json").read_text(encoding="utf-8")))
+        ops, desc, _ = geometry_edit.build_ops(spec, [{"type": "add-module", "module": {"width": 400}, "afterModule": "TD3"}])
+        self.assertEqual(len(ops), 1)
+        self.assertTrue(desc[0]["vi"].startswith("thêm "), desc[0])
+
+
 if __name__ == "__main__":
     unittest.main()

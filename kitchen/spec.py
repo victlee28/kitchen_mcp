@@ -57,7 +57,7 @@ class Common(_Base):
     material: dict[str, str] = Field(default_factory=dict, description="base, upper, tall, cornerShelf, carcass, countertop, wallTile, floor, wall")
     handle: "Handle" = Field(default_factory=lambda: Handle())
     handleByStorey: dict[str, "HandleOverride"] | None = Field(
-        None, description="Partial handle settings per storey (base, upper, loft, tall, corner); overrides `handle`, overridden by Module.handle")
+        default=None, description="Partial handle settings per storey (base, upper, loft, tall, corner); overrides `handle`, overridden by Module.handle")
 
     @field_validator("handleByStorey")
     @classmethod
@@ -293,8 +293,8 @@ class MoldingProfile(_Base):
     description: str | None = None
 
     @model_validator(mode="after")
-    def _validate(self):
-        pts = [tuple(map(float, p)) for p in self.points]
+    def _validate(self) -> "MoldingProfile":
+        pts = [(float(p[0]), float(p[1])) for p in self.points]
         if len(pts) > 1 and pts[0] == pts[-1]:
             pts = pts[:-1]
         if len(pts) < 3:
@@ -360,7 +360,7 @@ class KitchenSpec(_Base):
     aiHints: list[str] | None = Field(default=None, description="English phrases for the image prompt only (e.g. fluted glass, herringbone tile)")
     floorplan: dict[str, Any] | None = Field(default=None, description="Derived room geometry imported from an audited floorplan (mm); the source document is stored once, referenced by floorplan.ref")
     promptInterpretation: list[dict[str, Any]] | None = Field(default=None, description="How each term of the creation prompt was understood: term, canonical, scope, target, status, message")
-    common: Common = Field(default_factory=Common)
+    common: Common = Field(default_factory=lambda: Common())
     room: Room | None = None
     module: list[Module] = Field(default_factory=list)
     appliances: list[Appliance] = Field(default_factory=list)

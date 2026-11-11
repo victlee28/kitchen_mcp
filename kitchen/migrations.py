@@ -30,7 +30,7 @@ class MigrationError(errors.Infrastructure):
 class Step:
     version: int
     name: str
-    fn: Callable[[sqlite3.Connection], None]
+    fn: Callable[[sqlite3.Connection], object]   # what it returns is ignored
     atomic: bool = True
 
 

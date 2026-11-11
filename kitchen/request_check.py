@@ -49,8 +49,8 @@ def check_lean(lean: dict) -> dict:
     for a in imgs:
         im, err = _decode(a.get("dataUrl", ""))
         tag = f"Ảnh {a.get('order')} ({a.get('role')})"
-        if err:
-            errors.append(f"{tag}: {err}")
+        if err or im is None:
+            errors.append(f"{tag}: {err or 'unreadable image'}")
             info.append({"order": a.get("order"), "role": a.get("role"), "ok": False})
             continue
         decoded[a.get("role")] = im
