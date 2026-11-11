@@ -8,6 +8,7 @@ Hệ toạ độ cánh: x từ mép trái (nhìn từ phía trước) sang phả
 from __future__ import annotations
 
 from collections import defaultdict
+from typing import Any
 
 from .numeric import round_int
 from .spec import Module, Handle
@@ -44,7 +45,7 @@ def hinges(m: Module, doors: list[tuple[float, float, float, float]]) -> list[st
     return [out[i] for i in range(len(doors))]
 
 
-def handle(tn: Handle, w: float, h: float, tier: str, hinge: str | None, horizontal: bool = False) -> dict | None:
+def handle(tn: Handle, w: float, h: float, tier: str, hinge: str | None, horizontal: bool = False) -> dict[str, Any] | None:
     """Tay nắm trên một cánh/ngăn kéo rộng w, cao h. None nếu không có tay nhô ra (âm / nhấn mở)."""
     if tn.variant in ("none", "concealed"):
         return None

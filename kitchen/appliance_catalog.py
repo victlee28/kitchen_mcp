@@ -9,7 +9,9 @@ without one is read as).
 """
 from __future__ import annotations
 
-MODELS: tuple[dict, ...] = (
+from typing import Any
+
+MODELS: tuple[dict[str, Any], ...] = (
     # ---- hobs
     {"id": "hob-ind-2z-73", "type": "cooktop", "name": "Bếp từ đôi âm 73 cm", "energy": "induction", "size": {"w": 730, "d": 430, "h": 60},
      "cutout": {"w": 680, "d": 380}, "mount": "built_in", "fits": {"hostWidth": 750}, "default": True,

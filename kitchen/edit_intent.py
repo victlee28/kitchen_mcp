@@ -18,6 +18,7 @@ import re
 from typing import Any
 
 from .edit import combine_ops
+from .jsonview import as_dict, as_list
 from .lexicon import fold
 from .numeric import round_half_away
 from .spec import KitchenSpec, Module, to_data
@@ -197,10 +198,12 @@ def interpret_edit(spec: KitchenSpec, text: str, scope: list[str] | None = None)
 
 def check_operation(op: Any) -> dict[str, Any]:
     """Gate for an operation produced elsewhere (a language model): a known kind, no whole-design replace, no nested multi."""
-    kind = op.get("op") if isinstance(op, dict) else None
-    if kind not in ALLOWED_OPS:
+    obj = as_dict(op)
+    kind = obj.get("op") if obj is not None else None
+    if obj is None or kind not in ALLOWED_OPS:
         return {"status": "unsupported", "message": f"Thao tác {kind!r} không được phép từ câu lệnh tự do."}
-    if kind == "multi" and not all(isinstance(o, dict) and o.get("op") in ALLOWED_OPS and o.get("op") != "multi" for o in op.get("ops") or []):
+    subs = [as_dict(o) for o in as_list(obj.get("ops")) or []]
+    if kind == "multi" and not all(o is not None and o.get("op") in ALLOWED_OPS and o.get("op") != "multi" for o in subs):
         return {"status": "unsupported", "message": "Danh sách thao tác không hợp lệ."}
     return {"status": "ok", "operation": op, "summary": ["Đề xuất từ mô hình ngôn ngữ"], "targets": []}
 

@@ -118,7 +118,7 @@ def plan_on_line(spec: KitchenSpec, line: Line, modules: list[LaidModule], clear
     ops.append({"op": "add-run", "run": run})
     reach = 0.0
     for m in sorted(modules, key=lambda item: item["s"]):
-        entry = {"type": m["type"], "wall": "island", "run": run["id"], "fromCorner": float(m["s"]), "width": float(m["width"]), "y": float(m["y"]),
+        entry: dict[str, Any] = {"type": m["type"], "wall": "island", "run": run["id"], "fromCorner": float(m["s"]), "width": float(m["width"]), "y": float(m["y"]),
                  "height": float(m["height"]), "depth": float(m["depth"])}
         extra = cast("dict[str, Any]", m)                     # the optional fields, read by name
         for key in EXTRA_FIELDS:

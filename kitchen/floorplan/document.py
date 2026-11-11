@@ -7,19 +7,9 @@ import math
 from typing import Any, cast
 
 from ..errors import InvalidInput
+from ..jsonview import as_dict, as_list
 
 from .constants import AXIS
-
-
-# ---------------------------------------------------------------- typed views of untyped JSON values
-def as_dict(value: Any) -> dict[str, Any] | None:
-    """``value`` as a JSON object, or None when it is not one (a typed view for the checker; no copy)."""
-    return cast(dict[str, Any], value) if isinstance(value, dict) else None
-
-
-def as_list(value: Any) -> list[Any] | None:
-    """``value`` as a JSON array, or None when it is not one."""
-    return cast(list[Any], value) if isinstance(value, list) else None
 
 
 def elements_of(data: dict[str, Any]) -> list[dict[str, Any]]:

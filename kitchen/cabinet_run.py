@@ -34,7 +34,8 @@ def _plan_angled(spec: KitchenSpec, outline: list[Pt], a: Pt, b: Pt, module_type
     line = Line(a, b, _outward(outline, a, b))
     widths = split_widths(run_frame(line)["length"])
     c = spec.common
-    at, modules = 0.0, []
+    at = 0.0
+    modules: list[LaidModule] = []
     for w in widths:
         modules.append({"type": module_type, "width": w, "s": at, "y": 0, "height": float(c.baseTop), "depth": float(c.baseDepth)})
         at += w
@@ -147,7 +148,7 @@ def plan_corner(spec: KitchenSpec, run_a: str, run_b: str, width: float = 900.0,
     c, sn = runmod.trig(yaw)
     ox = px + back * mx - (width / 2.0) * c
     oz = pz + back * mz + (width / 2.0) * sn
-    run = {"id": next_run_id(spec), "x": float(round_half_away(ox, 1)), "z": float(round_half_away(oz, 1)), "yaw": float(round_half_away(yaw, 2))}
+    run: dict[str, Any] = {"id": next_run_id(spec), "x": float(round_half_away(ox, 1)), "z": float(round_half_away(oz, 1)), "yaw": float(round_half_away(yaw, 2))}
     cf = runmod.RunFrame(run["id"], run["x"], run["z"], run["yaw"])
     box = cf.footprint(0.0, width, 0.0, depth)
     depth_a = max((m.depth for m in spec.module if m.run == run_a), default=depth)
@@ -178,11 +179,12 @@ SHALLOW = 350.0      # mm: an object this shallow or shallower also sets the dep
 def fit_depth(modules: list[LaidModule], depth: float) -> list[LaidModule]:
     """The cabinets made as deep as the object they replace: base and tall cabinets always; wall cabinets and the loft row only when the
     object is ``SHALLOW`` or shallower (otherwise they keep their own depth)."""
-    out = []
+    out: list[LaidModule] = []
     for m in modules:
-        t = str(m["type"])
-        upper = t.startswith("upper")
-        out.append({**m, "depth": float(depth)} if not upper or depth <= SHALLOW else dict(m))
+        n = m.copy()
+        if not str(m["type"]).startswith("upper") or depth <= SHALLOW:
+            n["depth"] = float(depth)
+        out.append(n)
     return out
 
 

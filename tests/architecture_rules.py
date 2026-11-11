@@ -10,7 +10,7 @@ KITCHEN = ROOT / "kitchen"
 # R1: modules that must stay free of I/O, clocks, randomness and Pydantic behaviour.
 CORE_MODULES = (
     "placement", "roomctx", "rules", "rules_kb", "rules_nkba", "edit", "proposal", "geometry", "moldings", "handles", "hardware",
-    "structure_mesh", "camera_plan", "layers", "threejs_export", "lexicon", "vocab", "edit_intent", "cabinet_run", "run_line", "runs", "rows_to_runs", "system_replace", "tv_system", "wall_line", "appliance_models", "appliance_kind", "regions", "errors", "palette", "numeric",
+    "structure_mesh", "camera_plan", "layers", "threejs_export", "lexicon", "vocab", "edit_intent", "cabinet_run", "run_line", "runs", "rows_to_runs", "system_replace", "tv_system", "wall_line", "appliance_models", "appliance_kind", "regions", "errors", "palette", "numeric", "jsonview",
 )
 CORE_PACKAGES = ("prompts", "floorplan", "recognition")                      # packages whose every file is core (the files are found on disk)
 

@@ -52,7 +52,7 @@ class RunFrame:
 
     def corners(self, lmin: tuple[float, float, float], lmax: tuple[float, float, float]) -> list[tuple[float, float, float]]:
         """The 8 world corners of a local box (s, y, d); bit 0 = s, bit 1 = y, bit 2 = d (same order as min / max boxes)."""
-        out = []
+        out: list[tuple[float, float, float]] = []
         for i in range(8):
             s = lmax[0] if i & 1 else lmin[0]
             y = lmax[1] if i & 2 else lmin[1]
@@ -293,7 +293,7 @@ def aabb(points: list[Point]) -> tuple[Point, Point]:
 
 
 def _axes(poly: list[Point]) -> list[Point]:
-    out = []
+    out: list[Point] = []
     for i, a in enumerate(poly):
         b = poly[(i + 1) % len(poly)]
         ex, ez = b[0] - a[0], b[1] - a[1]
@@ -323,8 +323,10 @@ def module_footprint(frame: RunFrame, m: Module) -> list[Point]:
 def strip_extent(poly: list[Point], frame: RunFrame, d_max: float) -> tuple[float, float] | None:
     """(smallest, largest) s, in ``frame``, of the part of a convex polygon inside the strip 0 <= d <= d_max; None when it misses the strip."""
     pts = [frame.to_local(x, z) for x, z in poly]
-    for keep in (lambda p: p[1] >= 0.0, lambda p: p[1] <= d_max):
-        edge = 0.0 if keep(( 0.0, 0.0)) and not keep((0.0, -1.0)) else d_max
+    for lower in (True, False):                     # clip at d = 0, then at d = d_max
+        def keep(p: Point, lower: bool = lower) -> bool:
+            return p[1] >= 0.0 if lower else p[1] <= d_max
+        edge = 0.0 if lower else d_max
         out: list[Point] = []
         for i, a in enumerate(pts):
             b = pts[(i + 1) % len(pts)]

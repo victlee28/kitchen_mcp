@@ -7,6 +7,7 @@ object (towards the room), the run as deep as the object. An object with no edge
 from __future__ import annotations
 
 import math
+from typing import Any
 from dataclasses import dataclass
 
 from .floorplan.geom import point_in_poly
@@ -39,7 +40,7 @@ class Edge:
 
 def segments(poly: list[Pt]) -> list[Segment]:
     """The closed outline's edges (zero-length ones left out)."""
-    out = []
+    out: list[Segment] = []
     for i, a in enumerate(poly):
         b = poly[(i + 1) % len(poly)]
         if math.hypot(b[0] - a[0], b[1] - a[1]) > 1e-6:
@@ -93,7 +94,7 @@ def wall_gap(a: Pt, b: Pt, inward: Pt, walls: list[Segment]) -> float | None:
 
 def edges(poly: list[Pt], walls: list[Segment]) -> list[Edge]:
     """Every edge of the outline with its inward normal and its gap to a wall (None: none)."""
-    out = []
+    out: list[Edge] = []
     for i, a in enumerate(poly):
         b = poly[(i + 1) % len(poly)]
         if math.hypot(b[0] - a[0], b[1] - a[1]) < 1.0:
@@ -129,7 +130,7 @@ def _ray_exit(poly: list[Pt], p: Pt, d: Pt) -> float | None:
 def depth_from(poly: list[Pt], edge: Edge) -> float:
     """How deep the object is behind ``edge`` (mm): the shortest of the inward rays from points along the edge (an L's leg, not its body)."""
     ux, uz = _unit(edge.a, edge.b)
-    found = []
+    found: list[float] = []
     for f in DEPTH_SAMPLES:
         p = (edge.a[0] + ux * edge.length * f, edge.a[1] + uz * edge.length * f)
         t = _ray_exit(poly, p, edge.inward)
@@ -197,7 +198,7 @@ def _trim(p: Placed, other: Placed) -> Placed | None:
     return Placed((p.a[0] + ux * start, p.a[1] + uz * start), (p.a[0] + ux * end, p.a[1] + uz * end), p.doors, p.depth, p.edge)
 
 
-def replace_lines(poly: list[Pt], walls: list[Segment], back_edge: int | None = None) -> dict:
+def replace_lines(poly: list[Pt], walls: list[Segment], back_edge: int | None = None) -> dict[str, Any]:
     """Where the runs replacing an object stand. ``{"status": "ok", "runs": [Placed]}``: one run per edge against a wall (longest first, later
     ones shortened where an earlier one already stands: an L or an object in a corner gives two runs meeting in the corner), the back on the
     edge, the doors into the object, as deep as the object behind that edge. With no edge against a wall and no ``back_edge`` chosen:

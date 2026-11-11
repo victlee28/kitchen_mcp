@@ -50,10 +50,10 @@ def plan(spec: KitchenSpec, app: Appliance, model: dict[str, Any]) -> tuple[list
 
 
 def _hang_hood(spec: KitchenSpec, app: Appliance, model: dict[str, Any], h: Module) -> list[dict[str, Any]]:
-    hob = h if h.storey == "base" else next(x for x in spec.module if x.storey == "base" and appliance_models._over(h, x))
+    hob = h if h.storey == "base" else next(x for x in spec.module if x.storey == "base" and appliance_models.over(h, x))
     ops: list[dict[str, Any]] = [{"op": "update-appliance", "id": app.id, "model": model["id"], "changes": {"module": hob.id}}]
     if h.storey != "base":                    # out of its wall cabinet: the cabinet goes, and the top-row cabinets standing on it
-        ops += [{"op": "remove", "id": x.id, "closeGap": False} for x in spec.module if x.type == "upper-loft" and appliance_models._over(x, h)]
+        ops += [{"op": "remove", "id": x.id, "closeGap": False} for x in spec.module if x.type == "upper-loft" and appliance_models.over(x, h)]
         ops.append({"op": "remove", "id": h.id, "closeGap": False})
     return ops
 

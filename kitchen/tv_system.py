@@ -85,12 +85,12 @@ def run_fields(style: str) -> dict[str, Any]:
 
 def front_of(common: dict[str, Any]) -> str:
     """The front finish a TV unit's closed cabinets share: the design's tall (else base) front."""
-    mats = common.get("material") or {}
+    mats: dict[str, Any] = common.get("material") or {}
     return str(mats.get("tall") or mats.get("base") or DEFAULT_FRONT)
 
 
 def _console(at: float, length: float) -> list[LaidModule]:
-    out = []
+    out: list[LaidModule] = []
     for w in _split(length):
         out.append({"type": "base", "s": at, "width": w, "y": 0.0, "height": CONSOLE_HEIGHT_MM, "depth": 400.0, "name": NAMES["tv-console"],
                     "frontSections": [{"type": "drawer", "height": CONSOLE_HEIGHT_MM}]})

@@ -12,7 +12,7 @@ Quy ước toạ độ (theo file gốc): gốc ở góc trong giữa tường s
 from __future__ import annotations
 
 import re
-from typing import Any, Literal, TypedDict
+from typing import Any, Literal, TypedDict, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -415,7 +415,7 @@ def load_spec(data: dict | str) -> KitchenSpec:
     return KitchenSpec.model_validate(data)
 
 
-def dump_spec(spec: KitchenSpec) -> dict:
+def dump_spec(spec: KitchenSpec) -> dict[str, Any]:
     return spec.model_dump(mode="json", exclude_none=True)
 
 
@@ -424,6 +424,9 @@ def to_data(model: BaseModel, exclude_none: bool = False) -> dict[str, Any]:
     return model.model_dump(mode="json", exclude_none=exclude_none)
 
 
-def from_data(cls: type, data: dict):
+ModelT = TypeVar("ModelT", bound=BaseModel)
+
+
+def from_data(cls: type[ModelT], data: dict[str, Any]) -> ModelT:
     """Plain JSON data -> validated model of type ``cls`` (the boundary validation; raises pydantic.ValidationError)."""
     return cls.model_validate(data)

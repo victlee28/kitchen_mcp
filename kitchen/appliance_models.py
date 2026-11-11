@@ -15,7 +15,7 @@ from .errors import InvalidInput
 from .runs import spot
 from .spec import Appliance, KitchenSpec, Module
 
-BY_ID: dict[str, dict] = {m["id"]: m for m in MODELS}
+BY_ID: dict[str, dict[str, Any]] = {m["id"]: m for m in MODELS}
 SIDE = 18.0              # mm: cabinet side panel; a hole must fit between the two
 WORKTOP_EDGE = 50.0      # mm: worktop left in front of and behind a hole
 HOOD_SIDE = 10.0         # mm: an integrated hood needs this much room each side inside its cabinet
@@ -90,7 +90,7 @@ def changes_for(m: dict) -> dict[str, Any]:
     return out
 
 
-def kind_of(m: dict | None) -> str:
+def kind_of(m: dict[str, Any] | None) -> str:
     """The kind of a model inside its type, which decides the cabinets around it: a hood ``insert`` (in a wall cabinet), ``chimney`` (on
     the wall over the hob) or ``island`` (from the ceiling); a fridge ``freestanding`` (in an open niche) or ``integrated`` (behind doors)."""
     if not m:
@@ -164,7 +164,7 @@ def fit(spec: KitchenSpec, app: Appliance, m: dict) -> tuple[str, list[str]]:
     return ("bad", reasons) if reasons else ("ok", [])
 
 
-def changes_cabinets(spec: KitchenSpec, app: Appliance, m: dict, h: Module | None) -> list[str] | None:
+def changes_cabinets(spec: KitchenSpec, app: Appliance, m: dict[str, Any], h: Module | None) -> list[str] | None:
     """What changing ``app`` to a model of another kind does to the cabinets around it (shown in the popup, "check"), or why it cannot
     ("Cannot …", "bad"). None when the appliance's cabinet is not found."""
     if h is None:
@@ -176,16 +176,16 @@ def changes_cabinets(spec: KitchenSpec, app: Appliance, m: dict, h: Module | Non
                 return [f"Cannot: {app.id} already stands in a wall cabinet"]
             if not h.run and h.wall == "island":
                 return ["Cannot: an island has no wall cabinet to hide the hood in"]
-            busy = [x.id for x in spec.module if x.storey in ("upper", "loft") and _over(x, h)]
+            busy = [x.id for x in spec.module if x.storey in ("upper", "loft") and over(x, h)]
             if busy:
                 return [f"Cannot: wall cabinets {', '.join(busy)} already stand over the hob"]
             return [f"A hood cabinet is built over {h.id} and the hood goes into it"]
-        hob = h if h.storey == "base" else next((x for x in spec.module if x.storey == "base" and _over(h, x)), None)
+        hob = h if h.storey == "base" else next((x for x in spec.module if x.storey == "base" and over(h, x)), None)
         if hob is None:
             return ["Cannot: no hob cabinet under the hood"]
         out = [f"The hood hangs over {hob.id} ({'from the ceiling' if to == 'island' else 'on the wall, with its chimney'})"]
         if h.storey != "base":
-            above = [x.id for x in spec.module if x.type == "upper-loft" and _over(x, h)]
+            above = [x.id for x in spec.module if x.type == "upper-loft" and over(x, h)]
             out.append(f"Hood cabinet {h.id} is removed" + (f", with {', '.join(above)} above it" if above else ""))
         return out
     if app.type == "fridge":
@@ -199,7 +199,7 @@ def changes_cabinets(spec: KitchenSpec, app: Appliance, m: dict, h: Module | Non
     return []
 
 
-def _over(a: Module, b: Module) -> bool:
+def over(a: Module, b: Module) -> bool:
     """Do the two cabinets share some length of the same row (one above the other)?"""
     same = (a.run == b.run) if (a.run or b.run) else (a.wall == b.wall and (a.offset, a.facing) == (b.offset, b.facing))
     return same and a.fromCorner < b.endAt - 1 and b.fromCorner < a.endAt - 1

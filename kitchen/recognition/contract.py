@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from collections.abc import Sequence
-from typing import Literal, Protocol
+from typing import Any, Literal, Protocol
 
 SOURCE_KINDS = ("photo", "drawing")
 SourceKind = Literal["photo", "drawing"]
@@ -36,7 +36,7 @@ class Recognizer(Protocol):
     Anything may be wrong or missing: ``build_draft`` checks it. A recognizer that cannot read the source returns ``{"modules": []}`` or raises.
     """
 
-    def recognize(self, source: RecognitionInput) -> dict: ...
+    def recognize(self, source: RecognitionInput) -> dict[str, Any]: ...
 
 
 PREFERENCE = ("inbox", "cabinet", "gemini")       # which plugged-in recognizer answers when nothing is asked for: Claude Desktop by chat first (to debug), then a model with an API key

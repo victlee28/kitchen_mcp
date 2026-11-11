@@ -4,7 +4,6 @@ from __future__ import annotations
 from typing import Any
 
 from ..numeric import round_half_away
-from ..spec import KitchenSpec, to_data
 from .draft import Draft, DraftModule
 
 PREFIX = {"base": "TD", "upper": "TT", "tall": "TC"}

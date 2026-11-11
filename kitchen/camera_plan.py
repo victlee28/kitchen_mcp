@@ -107,7 +107,7 @@ def face_targets(face: Face) -> list[tuple[float, float, float]]:
     """Points on the front of the run (3 along x 3 heights) the camera must see."""
     ux, uz = face.normal[1], -face.normal[0]            # along the run, to the right of someone facing the doors
     top = max(face.height, 900.0)
-    out = []
+    out: list[tuple[float, float, float]] = []
     for f in (-0.4, 0.0, 0.4):
         for h in (0.2, 0.55, 0.9):
             out.append((face.center[0] + ux * face.length * f, top * h, face.center[1] + uz * face.length * f))
@@ -155,7 +155,7 @@ def _best(face: Face, directions: list[Pt], width_factor: float, room: list[Pt] 
     others = [] if room else [Obstacle(b.id, b.kind, b.outline, -math.inf, math.inf) for b in bodies if b.kind != f"cabinet:{face.run}"]
     # never stand inside (or within WALL_CLEAR of) a solid: a stair, a column, a piece of furniture, a wall the room outline does not cover
     solids = [ob for ob in obstacles if ob.kind not in NON_BLOCKING and ob.y1 > 0.0 and ob.y0 < EYE]
-    best: tuple[tuple, Pt, float, list[str]] | None = None
+    best: tuple[tuple[Any, ...], Pt, float, list[str]] | None = None
     dist = MAX_DIST
     while dist >= MIN_DIST - 1e-6:
         for direction in directions:

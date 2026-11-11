@@ -4,6 +4,8 @@ Pure text builders: the callers pass in what the job knows (regions, changes, th
 """
 from __future__ import annotations
 
+from typing import Any
+
 
 def gemini_text(kind: str, prompt: str, instruction: str, style_prompt: str, role: str = "", realism: str = "") -> str:
     """Chỉ dẫn dạng câu cho Gemini (model hiểu ngôn ngữ tự nhiên tốt hơn danh sách tag)."""
@@ -19,7 +21,7 @@ def gemini_text(kind: str, prompt: str, instruction: str, style_prompt: str, rol
             "image unchanged; return the full image at the same framing.").strip()
 
 
-def gemini_text_edit(regions: list[dict], instruction: str = "", realism: str = "") -> str:
+def gemini_text_edit(regions: list[dict[str, Any]], instruction: str = "", realism: str = "") -> str:
     """Chỉ dẫn sửa ảnh cho Gemini khi ảnh 1 đã ĐÁNH DẤU (viền màu + số quanh từng vùng) và ảnh 2 là mask.
 
     Mỗi region: color (RED…), n (số nhãn), role, mat, extra, where (vị trí bằng chữ), others (số vật cùng loại khác giữ nguyên).
@@ -30,7 +32,7 @@ def gemini_text_edit(regions: list[dict], instruction: str = "", realism: str = 
             + " surrounded by a thin colored OUTLINE with a number label. IMAGE 2 is the "
             + ("color-coded mask: each colored area is exactly the region of the same-colored outline in image 1."
                if multi else "mask: the white area is exactly the region inside the outline in image 1."))
-    lines = []
+    lines: list[str] = []
     for r in regions:
         what = f"the {r['role']}" + (f" in the {r['where']}" if r.get("where") else "")
         n, kind = r.get("others") or 0, r.get("kind") or r["role"]

@@ -9,6 +9,8 @@ import base64
 import json
 from typing import Any
 
+from ..jsonview import as_dict, as_list
+
 from ..prompts import RECOGNITION_SCHEMA, recognition_text
 from ..spec import MODULE_TYPES
 from . import recognizer_wire
@@ -44,14 +46,15 @@ def request_body(kind: str, data: bytes, media_type: str, note: str = "") -> dic
 
 def answer_text(response: Any) -> str:
     """The text of the first candidate of a generateContent response (``""`` when there is none)."""
-    cands = response.get("candidates") if isinstance(response, dict) else None
-    if not isinstance(cands, list) or not cands or not isinstance(cands[0], dict):
+    body = as_dict(response)
+    cands = as_list(body.get("candidates")) if body is not None else None
+    first = as_dict(cands[0]) if cands else None
+    content = as_dict(first.get("content")) if first is not None else None
+    parts = as_list(content.get("parts")) if content is not None else None
+    if parts is None:
         return ""
-    content = cands[0].get("content")
-    parts = content.get("parts") if isinstance(content, dict) else None
-    if not isinstance(parts, list):
-        return ""
-    return "".join(p["text"] for p in parts if isinstance(p, dict) and isinstance(p.get("text"), str))
+    texts = [p.get("text") for p in (as_dict(x) for x in parts) if p is not None]
+    return "".join(t for t in texts if isinstance(t, str))
 
 
 def parse_draft(text: str) -> dict[str, Any] | None:
@@ -60,4 +63,4 @@ def parse_draft(text: str) -> dict[str, Any] | None:
         raw = json.loads(text)
     except ValueError:
         return None
-    return raw if isinstance(raw, dict) else None
+    return as_dict(raw)
