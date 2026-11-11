@@ -119,11 +119,11 @@ def fit(spec: KitchenSpec, app: Appliance, m: dict) -> tuple[str, list[str]]:
     h = host(spec, app)
     now = kind_of(BY_ID.get(model_id(app) or ""))
     if kind_of(m) != now and app.type in ("hood", "fridge"):
-        reasons = changes_cabinets(spec, app, m, h)
-        if reasons is None:
+        around = changes_cabinets(spec, app, m, h)
+        if around is None:
             return "bad", ["This change needs the cabinet the appliance stands in, which was not found"]
-        bad = [r for r in reasons if r.startswith("Cannot")]
-        return ("blocked", [b.removeprefix("Cannot: ") for b in bad]) if bad else ("check", reasons)
+        bad = [r for r in around if r.startswith("Cannot")]
+        return ("blocked", [b.removeprefix("Cannot: ") for b in bad]) if bad else ("check", around)
     if h is None:
         return ("ok", []) if app.type == "faucet" else ("check", ["No cabinet found under / around this appliance: check the fit by hand"])
     reasons: list[str] = []
