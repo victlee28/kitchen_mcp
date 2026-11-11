@@ -10,14 +10,15 @@ Two ways, both one operation the page previews before it is saved, and both touc
 """
 from __future__ import annotations
 
+import re
 from collections import Counter
 from dataclasses import dataclass
 from typing import Any
 
-from . import runs
+from . import appliance_models, runs
 from .cabinet_run import fit_depth
 from .errors import InvalidInput
-from .spec import KitchenSpec, Module
+from .spec import KitchenSpec, Module, to_data
 
 FRONTLESS = ("corner-shelf", "upper-open")            # no doors or drawer fronts: no front material, door style or handle
 OWN_DOOR = ("upper-glass",)                           # the door style is the cabinet's own (glass): left as it is
@@ -148,7 +149,7 @@ def storey_of(module_type: str) -> str:
     return "tall" if module_type.startswith("tall") else "upper" if module_type.startswith("upper") else "base"
 
 
-EXTRA_FIELDS = ("name", "niche", "appliance", "appliances", "doors", "frontSections", "hingeSides", "doorStyle", "blindCorner", "blindSide", "shelfCount", "backPanel")
+EXTRA_FIELDS = ("name", "niche", "appliance", "appliances", "doors", "frontSections", "hingeSides", "doorStyle", "blindCorner", "blindSide", "shelfCount", "backPanel", "material")
 
 
 def _handle_of(m: Module) -> tuple[tuple[str, Any], ...]:
@@ -174,21 +175,103 @@ def _inherited(spec: KitchenSpec, mods: list[Module]) -> dict[str, dict[str, Any
     return out
 
 
+APPLIANCE_WORDS = {      # a sentence that names the appliance asks for a new one: its old model is not kept (lower case, with diacritics)
+    "cooktop": r"bếp\s*(?:từ|gas|ga|nấu|điện|hồng\s*ngoại|đôi|đơn)|(?<!\w)hob(?!\w)", "sink": r"chậu", "hood": r"hút\s*mùi",
+    "fridge": r"tủ\s*lạnh", "oven": r"(?<!\w)lò(?!\w)", "faucet": r"(?<!\w)vòi(?!\w)", "tv": r"ti\s*vi|(?<!\w)tv(?!\w)",
+}
+
+
+def kept_models(spec: KitchenSpec, mods: list[Module], said: str = "") -> dict[str, dict[str, Any]]:
+    """The model each kind of appliance of the system was given (an explicit ``model``, e.g. a double sink picked in the popup), unless the
+    sentence names that appliance: laying the system out again keeps it (it used to fall back to the default model)."""
+    ids = {m.id for m in mods}
+    text = (said or "").lower()
+    out: dict[str, dict[str, Any]] = {}
+    for a in spec.appliances:
+        mid = getattr(a, "model", None)
+        if a.module in ids and isinstance(mid, str) and mid in appliance_models.BY_ID and a.type not in out \
+                and not re.search(APPLIANCE_WORDS.get(a.type, r"(?!x)x"), text):
+            out[a.type] = appliance_models.BY_ID[mid]
+    return out
+
+
+def _keep_device(device: dict[str, Any], keep: dict[str, dict[str, Any]], width: float, notes: list[str]) -> dict[str, Any]:
+    model = keep.get(str(device.get("type")))
+    if not model:
+        return device
+    need = appliance_models.needed_width(model)
+    if need and need > width + 1e-6:
+        notes.append(f"{model['name']} could not be kept: it needs a {need:g} mm cabinet, the new one is {width:g} mm (the default model is used)")
+        return device
+    notes.append(f"{model['name']} kept")
+    return {**device, **{k: v for k, v in appliance_models.changes_for(model).items() if v is not None}}
+
+
+def _make_room(modules: list[dict[str, Any]], models: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+    """Widen the cabinet of a kept appliance that needs more room (a double sink in an 800 cabinet) by taking it from a plain base cabinet
+    next to it (left at least ``MIN_PLAIN`` wide); the worktop devices on it stay centred on it."""
+    out = sorted((dict(m) for m in modules), key=lambda m: m["s"])
+    for host in out:
+        devices = [d for d in [host.get("appliance"), *(host.get("appliances") or [])] if isinstance(d, dict)]
+        need = max((appliance_models.needed_width(models[d["type"]]) or 0.0 for d in devices if d.get("type") in models), default=0.0)
+        delta = need - float(host["width"])
+        if delta <= 1e-6:
+            continue
+        end = host["s"] + host["width"]
+        after = [(True, n) for n in out if abs(n["s"] - end) <= 1]                         # the cabinet just right of it, then just left
+        before = [(False, n) for n in out if abs(n["s"] + n["width"] - host["s"]) <= 1]
+        for right, n in after + before:
+            if n["type"] != "base" or n.get("appliance") or n.get("appliances") or float(n["width"]) - delta < MIN_PLAIN:
+                continue
+            old_mid = host["s"] + host["width"] / 2
+            n["width"] = float(n["width"]) - delta
+            if right:
+                n["s"] = float(n["s"]) + delta
+            else:
+                host["s"] = float(host["s"]) - delta
+            host["width"] = float(host["width"]) + delta
+            shift = host["s"] + host["width"] / 2 - old_mid
+            for key in ("appliance", "appliances"):
+                v = host.get(key)
+                fix = lambda d: {**d, "center": d["center"] + shift} if isinstance(d, dict) and isinstance(d.get("center"), (int, float)) else d
+                if isinstance(v, dict):
+                    host[key] = fix(v)
+                elif isinstance(v, list):
+                    host[key] = [fix(d) for d in v]
+            break
+    return out
+
+
+MIN_PLAIN = 300.0
+
+
 def relayout_ops(spec: KitchenSpec, mods: list[Module], laid: dict[str, list[dict[str, Any]]], fronts: dict[str, Any],
-                 asked: frozenset[str] = frozenset(), refused: frozenset[str] = frozenset()) -> tuple[list[dict[str, Any]], list[str]]:
+                 asked: frozenset[str] = frozenset(), refused: frozenset[str] = frozenset(),
+                 models: dict[str, dict[str, Any]] | None = None) -> tuple[list[dict[str, Any]], list[str]]:
     """``(operations, summary)``: add ``laid[run]`` to each run, then remove every old cabinet of the system (modules as ``run_template`` gives
     them: ``{"type", "width", "s", "y", "height", "depth", ...}``, ``s`` from the slot's start). ``fronts``: what the sentence said about the fronts,
-    ``{"material"?: {storey: name}, "handle"?: {...}}``; what it did not say is taken from the old cabinets of the same storey."""
+    ``{"material"?: {storey: name}, "handle"?: {...}}``; what it did not say is taken from the old cabinets of the same storey. ``models``:
+    models to keep per kind of appliance (``kept_models``)."""
     slots = {s.run: s for s in run_slots(spec, mods)}
     old = _inherited(spec, mods)
+    corner: list[tuple[str, float, float, float, float]] = []     # (run, s0, s1, y0, y1) the corner shelves keep: nothing new goes there
+    for m in mods:
+        if m.type == "corner-shelf" and m.run:
+            corner.append((m.run, m.fromCorner, m.endAt, m.y, m.y + m.height))
+            if m.turnsInto:
+                corner.append((m.turnsInto, 0.0, float(m.rightLength or 0.0), m.y, m.y + m.height))
+    blocked = 0
     ops: list[dict[str, Any]] = []      # the new cabinets go in first: a run left with no cabinet is removed with its last one
     summary: list[str] = []
     dropped: Counter[str] = Counter()
+    kept: list[str] = []
     for run_id, modules in laid.items():
         slot = slots[run_id]
         added = 0
         if slot.depth is not None:                     # as deep as the run was (plan 10/11/2026, D3)
             modules = fit_depth(modules, slot.depth)
+        if models:
+            modules = _make_room(modules, models)
         for m in sorted(modules, key=lambda item: item["s"]):
             storey = storey_of(str(m["type"]))
             hood = m["type"] == "upper-hood"             # the hood always stands over the hob (rule of 10/11/2026), wall cabinets or not
@@ -197,9 +280,19 @@ def relayout_ops(spec: KitchenSpec, mods: list[Module], laid: dict[str, list[dic
                 continue
             entry: dict[str, Any] = {"type": m["type"], "wall": "island", "run": run_id, "fromCorner": slot.start + float(m["s"]),
                                      "width": float(m["width"]), "y": float(m["y"]), "height": float(m["height"]), "depth": float(m["depth"])}
+            s0, y0 = entry["fromCorner"], entry["y"]
+            if any(r == run_id and s0 < c1 - 1 and s0 + entry["width"] > c0 + 1 and y0 < z1 - 1 and y0 + entry["height"] > z0 + 1
+                   for r, c0, c1, z0, z1 in corner):
+                blocked += 1
+                continue
             for key in EXTRA_FIELDS:
                 if m.get(key):
                     entry[key] = m[key]
+            if models:
+                if isinstance(entry.get("appliance"), dict):
+                    entry["appliance"] = _keep_device(entry["appliance"], models, entry["width"], kept)
+                if isinstance(entry.get("appliances"), list):
+                    entry["appliances"] = [_keep_device(d, models, entry["width"], kept) if isinstance(d, dict) else d for d in entry["appliances"]]
             front = (fronts.get("material") or {}).get(storey) or (fronts.get("material") or {}).get("base" if storey == "tall" else storey)
             keep = old.get(storey, {})
             if m["type"] not in FRONTLESS:
@@ -214,6 +307,14 @@ def relayout_ops(spec: KitchenSpec, mods: list[Module], laid: dict[str, list[dic
             added += 1
         summary.append(f"Run {run_id}: {added} cabinets over {slot.length:g} mm")
     ops.extend({"op": "remove", "id": m.id, "closeGap": False} for m in mods)
+    for m in mods:                     # a corner shelf joining two runs of the system stands outside both slots: it is built again as it was
+        if m.type == "corner-shelf" and m.run:
+            data = {k: v for k, v in to_data(m, exclude_none=True).items() if k != "id"}
+            ops.append({"op": "add", "closeGap": False, "module": data})
+            summary.append(f"Corner shelf {m.id} built again between runs {m.run} and {m.turnsInto or m.run}")
+    if blocked:
+        summary.append(f"{blocked} new cabinets left out where the corner shelf stands")
+    summary.extend(dict.fromkeys(kept))
     for storey, n in sorted(dropped.items()):
         summary.append(f"{n} {storey} cabinets left out: " + ("the sentence asks so" if storey in refused else "the system had none on that storey"))
     return ops, summary

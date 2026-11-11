@@ -263,3 +263,35 @@ export function modelChoices(models) {
 
 /** The image-tab layer of an appliance (the server names it <id>-<type>-1), for "Sửa ảnh". */
 export const applianceLayer = (id, type) => `${id}-${type}-1`;
+
+/** Wall faces of a three.js scene file as segments [{a, b}] (mm, the frame picked points are in): the floorplan's wall outlines
+ *  (every edge) and the drawn room's walls. */
+export function wallSegments(doc) {
+  const out = [];
+  for (const st of doc?.room?.structures || []) {
+    if (st.kind !== 'wall' || !Array.isArray(st.outline)) continue;
+    st.outline.forEach((p, i) => out.push({ a: p, b: st.outline[(i + 1) % st.outline.length] }));
+  }
+  for (const w of doc?.room?.walls || []) if (w.start && w.end) out.push({ a: w.start, b: w.end });
+  return out;
+}
+
+/** Does the drawn line from -> to (mm) run along a wall: parallel within 2° and both ends within 150 mm of the same wall face, overlapping
+ *  it by half the line at least? Then the server turns the backs to the wall, so the "which side" question is left out (kitchen/wall_line.py). */
+export function lineAlongWall(from, to, walls, near = 150, degrees = 2) {
+  const len = Math.hypot(to.x - from.x, to.z - from.z);
+  if (len < 1) return false;
+  const ux = (to.x - from.x) / len, uz = (to.z - from.z) / len;
+  for (const { a, b } of walls) {
+    const wl = Math.hypot(b.x - a.x, b.z - a.z);
+    if (wl < 1) continue;
+    const wx = (b.x - a.x) / wl, wz = (b.z - a.z) / wl;
+    if (Math.abs(ux * wz - uz * wx) > Math.sin((degrees * Math.PI) / 180)) continue;           // not parallel
+    const off = (p) => Math.abs((p.x - a.x) * wz - (p.z - a.z) * wx);
+    if (off(from) > near || off(to) > near) continue;
+    const t = (p) => (p.x - a.x) * wx + (p.z - a.z) * wz;
+    const lo = Math.max(Math.min(t(from), t(to)), 0), hi = Math.min(Math.max(t(from), t(to)), wl);
+    if (hi - lo >= len * 0.5) return true;
+  }
+  return false;
+}

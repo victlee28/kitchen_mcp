@@ -3,7 +3,7 @@
 import { el } from './dom.js';
 import { request } from './api-client.js';
 import { interpretBody, describeInterpret, templateIntent, systemIntent, mentionsReference, checkUpload, recognizeBody, recognizeJobBody, anchorFor, describeRecognition, recognitionLines } from './assist-logic.js';
-import { actionsFor, buildGroupOp, buildOp, describeProposal, groupActions, layerFor, lineTemplate, menuPosition, DOOR_STYLES, HANDLE_VARIANTS, MATERIAL_PRESETS, RUN_ACTIONS, RUN_TURNS, systemTemplate, edgeChoices, modelChoices, APPLIANCE_VI, applianceLayer } from './menu-logic.js';
+import { actionsFor, buildGroupOp, buildOp, describeProposal, groupActions, layerFor, lineTemplate, menuPosition, DOOR_STYLES, HANDLE_VARIANTS, MATERIAL_PRESETS, RUN_ACTIONS, RUN_TURNS, systemTemplate, edgeChoices, modelChoices, APPLIANCE_VI, applianceLayer, lineAlongWall, wallSegments } from './menu-logic.js';
 import { groupLabel, groupLayerIds, manySystems } from './design-logic.js';
 
 const call = (path, body) => request(path, 'POST', body);
@@ -201,7 +201,9 @@ export function createModuleMenu(ctx) {
     const text = el('input', { type: 'text', value: keep.text || '', placeholder: 'để trống: toàn tủ dưới · vd "có chậu rửa và bếp"', autocomplete: 'off' });
     const out = el('div', { class: 'ctx-msg' }); if (message) out.append(err(message));
     const go = el('button', { type: 'button', class: 'primary', onclick: () => drawRun(from, to, side.value, text.value) }, 'Xem trước');
-    box.replaceChildren(header(`Dãy tủ mới · dài ${len} mm`), el('label', {}, 'Cánh tủ quay ra', side), el('label', {}, 'Trong dãy có gì (không bắt buộc)', text), out,
+    const along = lineAlongWall(from, to, wallSegments(ctx.getState().doc));     // the server turns the backs to the wall: nothing to ask
+    const facing = along ? el('p', { class: 'ctx-msg' }, 'Dãy chạy sát tường: lưng tủ tự quay vào tường.') : el('label', {}, 'Cánh tủ quay ra', side);
+    box.replaceChildren(header(`Dãy tủ mới · dài ${len} mm`), facing, el('label', {}, 'Trong dãy có gì (không bắt buộc)', text), out,
       el('div', { class: 'row' }, go, el('button', { type: 'button', class: 'ghost', onclick: list }, 'Quay lại')));
     box.onkeydown = (e) => { if (e.key === 'Enter' && e.target.tagName !== 'BUTTON') { e.preventDefault(); go.click(); } };
     go.focus();

@@ -30,7 +30,8 @@ class TestLayout(unittest.TestCase):
         self.assertEqual((shelf[0]["s"], shelf[0]["width"]), (600.0, 2780.0))
         sets = [m["appliance"] for m in mods if m.get("appliance")]
         self.assertEqual(len(sets), 1)
-        self.assertEqual((sets[0]["type"], sets[0]["model"], sets[0]["center"]), ("tv", "tv-65", 1990.0))
+        host = next(m for m in mods if m.get("appliance"))
+        self.assertEqual((sets[0]["type"], sets[0]["model"], host["s"] + sets[0]["center"]), ("tv", "tv-65", 1990.0))
 
     def test_short_line_has_no_columns_and_a_smaller_tv(self):
         mods = tv.layout(1300, COMMON)
@@ -112,6 +113,19 @@ class TestTvRunOps(unittest.TestCase):
         host = next(a.module for a in _spec_with_tv().appliances if a.type == "tv")
         panel = [p for p in scene.parts if p.module == host and p.type == "side-panel" and p.lmax[1] - p.lmin[1] > 1000]
         self.assertEqual(len(panel), 1)
+
+    def test_the_tv_moves_with_its_cabinet(self):
+        spec = _spec_with_tv()
+        tv_app = next(a for a in spec.appliances if a.type == "tv")
+        before = next(p for p in geometry.compile_spec(spec).parts if p.type == "tv")
+        host = spec.find(tv_app.module)
+        moved = edit.apply_op(spec, {"op": "update", "id": host.id, "changes": {"fromCorner": host.fromCorner + 100}})
+        after = next(p for p in geometry.compile_spec(moved).parts if p.type == "tv")
+        self.assertAlmostEqual(abs((after.lmin[0] - before.lmin[0]) + (after.lmin[2] - before.lmin[2])), 100.0, delta=0.5)
+
+    def test_full_layout_wall_cabinets_share_the_tall_finish(self):
+        uppers = [m for m in tv.layout(3980, {"cabinetTop": 2610, "material": {"tall": "Gỗ óc chó"}}, "full") if m["type"] == "upper"]
+        self.assertTrue(uppers and all(m["material"] == "Gỗ óc chó" for m in uppers))
 
     def test_set_run_tv_marks_and_clears(self):
         spec = _spec_with_tv()

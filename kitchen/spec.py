@@ -226,7 +226,7 @@ class Appliance(_Base):
     position: str | None = None
     module: str | None = Field(default=None, description="Module chứa thiết bị")
     wall: Literal["back", "right", "left"] | None = None
-    center: float | None = Field(default=None, description="Tâm thiết bị, khoảng cách từ góc dọc theo tường (mm)")
+    center: float | None = Field(default=None, description="Tâm thiết bị, khoảng cách từ góc dọc theo tường (mm); tivi (type tv): tính từ đầu tủ chứa nó, nên đi theo tủ")
     model: str | None = Field(default=None, description="Model id in kitchen/appliance_catalog.py; none = read from name and dimensions")
     energy: Literal["gas", "induction", "electric", "mixed"] | None = None
     size: dict[str, float] | None = Field(default=None, description="Body size {w, d, h} in mm")

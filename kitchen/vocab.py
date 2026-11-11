@@ -56,10 +56,30 @@ def _has(t: str, key: str) -> bool:
     return f" {_strip_diacritics(key)} " in t
 
 
+def _accented(t: str) -> str:
+    """Like ``_norm`` but keeping the diacritics (same length, so offsets match ``_norm``)."""
+    return " " + re.sub(r"[\s,;/]+", " ", unicodedata.normalize("NFC", (t or "").lower())) + " "
+
+
+def _matches(t: str, ta: str, key: str) -> bool:
+    """``key`` is in the text: typed without diacritics, or with exactly these diacritics. "họng" (a gas burner) is not "hồng" (pink),
+    though both are "hong" once stripped; "hong" typed bare still means pink."""
+    plain, word = f" {_strip_diacritics(key)} ", f" {unicodedata.normalize('NFC', key.lower())} "
+    if len(t) != len(ta):                       # a character that did not strip to exactly one: fall back to the plain match
+        return plain in t
+    at = t.find(plain)
+    while at >= 0:
+        typed = ta[at:at + len(plain)]
+        if typed == word or typed == plain:
+            return True
+        at = t.find(plain, at + 1)
+    return False
+
+
 def _find(text: str, table):
-    t = _norm(text)
+    t, ta = _norm(text), _accented(text)
     for row in table:
-        if _has(t, row[0]):
+        if _matches(t, ta, row[0]):
             return row
     return None
 
@@ -80,12 +100,12 @@ def to_english(text: str) -> str:
     """Cụm tiếng Anh ngắn cho prompt, vd 'Laminate xanh rêu mờ' -> 'sage green matte finish laminate'."""
     if not text:
         return ""
-    t = _norm(text)
+    t, ta = _norm(text), _accented(text)
     used, out = set(), []
     for table, col in ((COLORS, 2), (WOOD, 2), (CHAT, 1)):
         for row in table:
             k = row[0]
-            if _has(t, k) and not any(_strip_diacritics(k) in _strip_diacritics(u) for u in used):
+            if _matches(t, ta, k) and not any(_strip_diacritics(k) in _strip_diacritics(u) for u in used):
                 used.add(k)
                 if row[col]:
                     out.append(row[col])

@@ -428,7 +428,8 @@ class KitchenService:
         asked = {'upper', 'loft'} if color.loft and 'loft' not in refused else set()
         if re.search(r"tủ\s*(?:trên|treo)", re.sub(no + r"tủ\s*(?:trên|treo)", "", said)):
             asked.add('upper')
-        ops, summary = system_replace.relayout_ops(spec, mods, laid, fronts, frozenset(asked - refused), frozenset(refused))
+        ops, summary = system_replace.relayout_ops(spec, mods, laid, fronts, frozenset(asked - refused), frozenset(refused),
+                                                   system_replace.kept_models(spec, mods, prompt))
         ops = [*undo_tv, *ops]
         kept = [n for n in notes if 'chiều dài' not in n]          # the run keeps its length: the "no length given" note does not apply
         return {'operation': edit.combine_ops(ops), 'system': system, 'mode': 'relayout', 'summary': [f"System {system} laid out again", *summary, *kept]}
@@ -445,11 +446,12 @@ class KitchenService:
         laid: dict[str, list[dict[str, Any]]] = {}
         for i, slot in enumerate(slots):
             modules = tv_system.layout(slot.length, common, style, tv_system.wants_panel(prompt)) if i == 0 else tv_system.console(slot.length)
-            for m in modules:                                     # the TV's centre is along the run: the slot starts at slot.start
-                if isinstance(m.get('appliance'), dict) and 'center' in m['appliance']:
-                    m['appliance'] = {**m['appliance'], 'center': m['appliance']['center'] + slot.start}
             laid[slot.run] = modules
-        ops, summary = system_replace.relayout_ops(spec, mods, laid, {}, frozenset({'upper', 'loft'}), frozenset())
+        old = [m for m in mods if m.type not in system_replace.FRONTLESS and m.storey in ('tall', 'base') and m.material]
+        front = old[0].material if old else tv_system.front_of(common)
+        fronts = {'material': {storey: front for storey in ('base', 'upper', 'tall')}}       # one finish for the whole TV wall
+        ops, summary = system_replace.relayout_ops(spec, mods, laid, fronts, frozenset({'upper', 'loft'}), frozenset(),
+                                                   system_replace.kept_models(spec, mods, prompt))
         marks = [{'op': 'set-run-tv', 'id': s.run, 'layout': style} for s in slots]
         names = {'columns': 'low console, TV niche, two columns', 'shelves': 'low console and open shelves', 'full': 'closed wall with a TV niche'}
         return {'operation': edit.combine_ops([*marks, *ops]), 'system': system, 'mode': 'relayout',

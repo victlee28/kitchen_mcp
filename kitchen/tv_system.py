@@ -24,6 +24,7 @@ TV_CENTER = 1100.0         # height of the middle of the screen (seated eye leve
 FULL_UPPER_Y = 1750.0      # "full" layout: bottom of the wall cabinets over the niche; also the top of the panel behind the TV
 SIDE_SHELF_Y, SIDE_GAP = 1300.0, 300.0      # "shelves" layout: open shelves beside the TV, this far from it
 PANEL_THICKNESS = 18.0
+DEFAULT_FRONT = "Laminate vân gỗ sồi sáng"   # the design's default base / tall front (threejs_export._materials)
 STYLES = ("columns", "shelves", "full")
 TV_DEPTH = 30.0
 TVS = ((1700.0, "65", 1450.0, 830.0), (1400.0, "55", 1230.0, 710.0), (0.0, "43", 960.0, 560.0))   # (niche from, inches, w, h)
@@ -82,6 +83,12 @@ def run_fields(style: str) -> dict[str, Any]:
     return {"purpose": PURPOSE, "tvLayout": style if style in STYLES else "columns"}
 
 
+def front_of(common: dict[str, Any]) -> str:
+    """The front finish a TV unit's closed cabinets share: the design's tall (else base) front."""
+    mats = common.get("material") or {}
+    return str(mats.get("tall") or mats.get("base") or DEFAULT_FRONT)
+
+
 def _console(at: float, length: float) -> list[dict[str, Any]]:
     out = []
     for w in _split(length):
@@ -95,7 +102,7 @@ def _put_tv(console: list[dict[str, Any]], center: float, width: float, panel: t
     """The TV (sized for ``width``) on the console cabinet under ``center``; the panel behind it (``(width, y0, y1)``) on the same cabinet."""
     host = next((c for c in console if c["s"] <= center < c["s"] + c["width"]), console[0])
     tv = tv_for(width)
-    tv["center"] = center                   # along the run (it may straddle two console cabinets)
+    tv["center"] = center - host["s"]       # from the start of its cabinet: the TV moves with it (it may straddle two console cabinets)
     host["appliance"] = tv
     if panel is not None:
         pw, y0, y1 = panel
@@ -109,6 +116,7 @@ def layout(length: float, common: dict[str, Any], style: str = "columns", panel:
     but for the TV niche: tall cabinets each side, wall cabinets over the niche). ``panel``: a panel on the wall behind the TV."""
     length = float(int(length // 10) * 10)
     top = float(common.get("cabinetTop") or 2400.0)
+    front = front_of(common)
     out: list[dict[str, Any]] = []
     if style == "full":
         niche = length if length < 2000 else min(length - 800.0, max(1200.0, float(round_int(length * 0.45 / 10) * 10)))
@@ -128,7 +136,7 @@ def layout(length: float, common: dict[str, Any], style: str = "columns", panel:
             at = side
             for w in _split(niche, 900.0):
                 out.append({"type": "upper", "s": at, "width": w, "y": FULL_UPPER_Y, "height": top - FULL_UPPER_Y, "depth": SHELF_DEPTH,
-                            "name": "Tủ trên hốc tivi"})
+                            "name": "Tủ trên hốc tivi", "material": front})        # one finish for the whole wall, not the white of kitchen uppers
                 at += w
         _put_tv(console, side + niche / 2, niche, (niche, CONSOLE_HEIGHT, FULL_UPPER_Y) if panel else None)
         return out

@@ -172,3 +172,12 @@ test('dragging a run handle: ends stretch along the run, the middle moves the ru
   const made = dragChange('move', 200, 0);
   assert.deepEqual(buildOp(made.action, 'A1', made.form, byRuns), { op: 'move-run', id: 'R1', changes: { x: -2800, z: 0 } });
 });
+
+test('a drawn line along a wall needs no "which side" question', async () => {
+  const { lineAlongWall, wallSegments } = await import('../../web/menu-logic.js');
+  const doc = { room: { structures: [{ kind: 'wall', outline: [{ x: 0, z: 0 }, { x: 4000, z: 0 }, { x: 4000, z: -120 }, { x: 0, z: -120 }] }] } };
+  const walls = wallSegments(doc);
+  assert.equal(lineAlongWall({ x: 500, z: 80 }, { x: 3000, z: 90 }, walls), true);
+  assert.equal(lineAlongWall({ x: 500, z: 600 }, { x: 3000, z: 600 }, walls), false);      // in the middle of the room
+  assert.equal(lineAlongWall({ x: 500, z: 80 }, { x: 500, z: 2500 }, walls), false);       // square to the wall
+});

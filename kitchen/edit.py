@@ -73,7 +73,7 @@ def add_module(spec: KitchenSpec, module: dict[str, Any], after_module: str | No
                     data[key] = getattr(ref, key)
     if not data.get("id"):
         storey = data.get("type", "base")
-        data["id"] = new_id(s, "TC" if storey.startswith("tall") else "TT" if storey.startswith("upper") else "TD")
+        data["id"] = new_id(s, "KG" if storey == "corner-shelf" else "TC" if storey.startswith("tall") else "TT" if storey.startswith("upper") else "TD")
     new = from_data(Module, data)
     if close_gap:
         _shift(s, new, new.fromCorner, new.width, set())

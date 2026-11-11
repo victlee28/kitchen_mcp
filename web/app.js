@@ -53,7 +53,7 @@ function applyTarget(target) {
 window.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && !moduleMenu.isOpen && !/INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName || '')) { structSel.clear(); editor.clearGroup(); } });
 const moduleMenu = createModuleMenu({
   box: $('ctxMenu'), setStatus, keepOpenOn: (node) => $('viewport').contains(node),   // a press in the 3D view is decided by the click handler above
-  getState: () => ({ id: state.id, rev: state.rev, spec: state.spec, systems: state.systems, multi: state.multi }),
+  getState: () => ({ id: state.id, rev: state.rev, spec: state.spec, systems: state.systems, multi: state.multi, doc: state.doc }),
   afterChange: (res) => afterChange(res), reload: () => openDesign(state.id, true),
   structure: { hide: () => structSel.hideSelected(), isolate: () => structSel.isolateSelected(), showAll: () => structSel.showAll() },
   imageEdit: (detail) => window.dispatchEvent(new CustomEvent('image-edit-request', { detail })), guide: (from, to) => viewer.setGuide(from, to),

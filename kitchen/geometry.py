@@ -408,9 +408,9 @@ class _Builder:
                 w, h = k[:2]
                 sc = m.fromCorner + m.width / 2
                 self.box(tb.id, "hood", m.wall, sc - w / 2, sc + w / 2, 0, m.depth, m.y - h, m.y)
-            elif tb.type == "tv" and m and len(k) >= 2:      # a flat TV on the wall above its console, centred on ``center`` (along the run)
+            elif tb.type == "tv" and m and len(k) >= 2:      # a flat TV on the wall above its console, ``center`` from the start of that cabinet
                 w, h = k[:2]
-                sc = tb.center if tb.center is not None else m.fromCorner + m.width / 2
+                sc = m.fromCorner + (tb.center if tb.center is not None else m.width / 2)      # a TV's centre is measured from its cabinet
                 d = k[2] if len(k) >= 3 else tv_system.TV_DEPTH
                 y0 = max(m.y + m.height + 100.0, tv_system.TV_CENTER - h / 2)
                 d0 = tv_system.PANEL_THICKNESS + 2      # in front of the panel behind it, if any
