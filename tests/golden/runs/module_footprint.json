@@ -1,0 +1,78 @@
+{
+ "function": "runs.module_footprint",
+ "cases": [
+  {
+   "name": "back-run cabinet",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "convertRows": true,
+    "module": "TD1"
+   },
+   "expected": {
+    "footprint": [
+     [
+      -1250.0,
+      0.0
+     ],
+     [
+      -550.0,
+      0.0
+     ],
+     [
+      -550.0,
+      550.0
+     ],
+     [
+      -1250.0,
+      550.0
+     ]
+    ]
+   }
+  },
+  {
+   "name": "right-run cabinet",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "convertRows": true,
+    "module": "TD4"
+   },
+   "expected": {
+    "footprint": [
+     [
+      0.0,
+      1810.0
+     ],
+     [
+      0.0,
+      2440.0
+     ],
+     [
+      -550.0,
+      2440.0
+     ],
+     [
+      -550.0,
+      1810.0
+     ]
+    ]
+   }
+  },
+  {
+   "name": "wall-row cabinet has no run",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "module": "TD1"
+   },
+   "error": {
+    "kind": "validation",
+    "code": "missing-value"
+   }
+  }
+ ]
+}

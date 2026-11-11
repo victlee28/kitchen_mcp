@@ -1,0 +1,46 @@
+{
+ "function": "appliance_models.energy_notes",
+ "cases": [
+  {
+   "name": "induction to gas",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "appliance": "TB4",
+    "model": "hob-gas-2b-75"
+   },
+   "expected": {
+    "notes": [
+     "The new hob needs a gas supply (pipe or cylinder) and a gas valve under the worktop"
+    ]
+   }
+  },
+  {
+   "name": "same supply",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "appliance": "TB4",
+    "model": "hob-ind-2z-73"
+   },
+   "expected": {
+    "notes": []
+   }
+  },
+  {
+   "name": "not a hob",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "appliance": "TB2",
+    "model": "sink-double-82"
+   },
+   "expected": {
+    "notes": []
+   }
+  }
+ ]
+}

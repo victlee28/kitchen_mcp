@@ -14,7 +14,7 @@ from typing import Any
 from .appliance_catalog import MODELS
 from .errors import InvalidInput
 from .jsonview import as_dict
-from .runs import spot
+from .runs import row_of, spot
 from .spec import Appliance, KitchenSpec, Module
 
 BY_ID: dict[str, dict[str, Any]] = {m["id"]: m for m in MODELS}
@@ -111,6 +111,8 @@ def host(spec: KitchenSpec, app: Appliance) -> Module | None:
         at = spot(spec, app)
         if at is not None and at.module:
             return next((m for m in spec.module if m.id == at.module), None)
+        if at is not None:                    # given by wall + centre (designs by wall rows): the base cabinet of that row under the centre
+            return next((m for m in spec.module if m.storey == "base" and row_of(m) == at.row and m.fromCorner - 1 <= at.center <= m.endAt + 1), None)
     return next((m for m in spec.module if m.id == app.module), None) if app.module else None
 
 

@@ -1,0 +1,61 @@
+{
+ "function": "tv_system.tv_for",
+ "cases": [
+  {
+   "name": "niche 1600",
+   "input": {
+    "niche": 1600
+   },
+   "expected": {
+    "tv": {
+     "type": "tv",
+     "name": "Tivi 55 inch treo tường",
+     "dimensions": "1230x710x30",
+     "model": "tv-55"
+    }
+   }
+  },
+  {
+   "name": "niche 1300",
+   "input": {
+    "niche": 1300
+   },
+   "expected": {
+    "tv": {
+     "type": "tv",
+     "name": "Tivi 43 inch treo tường",
+     "dimensions": "960x560x30",
+     "model": "tv-43"
+    }
+   }
+  },
+  {
+   "name": "niche 1000",
+   "input": {
+    "niche": 1000
+   },
+   "expected": {
+    "tv": {
+     "type": "tv",
+     "name": "Tivi 43 inch treo tường",
+     "dimensions": "960x560x30",
+     "model": "tv-43"
+    }
+   }
+  },
+  {
+   "name": "niche 700",
+   "input": {
+    "niche": 700
+   },
+   "expected": {
+    "tv": {
+     "type": "tv",
+     "name": "Tivi 43 inch treo tường",
+     "dimensions": "960x560x30",
+     "model": "tv-43"
+    }
+   }
+  }
+ ]
+}

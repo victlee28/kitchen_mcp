@@ -1,0 +1,45 @@
+{
+ "function": "runs.along_wall",
+ "cases": [
+  {
+   "name": "back run on the back wall",
+   "input": {
+    "frame": {
+     "id": "R1",
+     "x": -1920,
+     "z": 0,
+     "yaw": 0
+    },
+    "wall": "back",
+    "s0": 0,
+    "s1": 600
+   },
+   "expected": {
+    "span": [
+     1320.0,
+     1920.0
+    ]
+   }
+  },
+  {
+   "name": "right run on the right wall",
+   "input": {
+    "frame": {
+     "id": "R2",
+     "x": 0,
+     "z": 0,
+     "yaw": -90
+    },
+    "wall": "right",
+    "s0": 100,
+    "s1": 700
+   },
+   "expected": {
+    "span": [
+     100.0,
+     700.0
+    ]
+   }
+  }
+ ]
+}

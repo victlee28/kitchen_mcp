@@ -1,0 +1,41 @@
+{
+ "function": "runs.frames",
+ "cases": [
+  {
+   "name": "no runs",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    }
+   },
+   "expected": {
+    "frames": {}
+   }
+  },
+  {
+   "name": "two runs",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "convertRows": true
+   },
+   "expected": {
+    "frames": {
+     "R1": {
+      "id": "R1",
+      "x": -1920.0,
+      "z": 0.0,
+      "yaw": 0.0
+     },
+     "R2": {
+      "id": "R2",
+      "x": -0.0,
+      "z": 0.0,
+      "yaw": -90.0
+     }
+    }
+   }
+  }
+ ]
+}

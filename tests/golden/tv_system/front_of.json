@@ -1,0 +1,41 @@
+{
+ "function": "tv_system.front_of",
+ "cases": [
+  {
+   "name": "tall material",
+   "input": {
+    "common": {
+     "material": {
+      "tall": "Gỗ óc chó",
+      "base": "Trắng"
+     }
+    }
+   },
+   "expected": {
+    "front": "Gỗ óc chó"
+   }
+  },
+  {
+   "name": "base only",
+   "input": {
+    "common": {
+     "material": {
+      "base": "Trắng"
+     }
+    }
+   },
+   "expected": {
+    "front": "Trắng"
+   }
+  },
+  {
+   "name": "none",
+   "input": {
+    "common": {}
+   },
+   "expected": {
+    "front": "Laminate vân gỗ sồi sáng"
+   }
+  }
+ ]
+}

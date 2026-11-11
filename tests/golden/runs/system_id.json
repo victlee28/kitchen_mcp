@@ -1,0 +1,32 @@
+{
+ "function": "runs.system_id",
+ "cases": [
+  {
+   "name": "plain",
+   "input": {
+    "raw": "furniture_003"
+   },
+   "expected": {
+    "id": "furniture_003"
+   }
+  },
+  {
+   "name": "spaces and accents",
+   "input": {
+    "raw": " Tủ bếp chính "
+   },
+   "expected": {
+    "id": "_T__b_p_ch_nh_"
+   }
+  },
+  {
+   "name": "empty",
+   "input": {
+    "raw": ""
+   },
+   "expected": {
+    "id": "element"
+   }
+  }
+ ]
+}

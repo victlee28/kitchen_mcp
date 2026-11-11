@@ -539,7 +539,240 @@ def floorplan_document_is_kitchen_unit(i):
     return {"kitchen": floorplan.document.is_kitchen_unit(i["element"])}
 
 
+# ---- helpers of runs, tv_system and appliance_models, one wrapper each (R19)
+def _ctx(i):
+    """The case's spec: rows turned into explicit runs first when ``convertRows`` is set, then ``ops`` applied."""
+    spec = _spec(i)
+    if i.get("convertRows"):
+        spec = load_spec(rows_to_runs.convert(spec)[0])
+    for op in i.get("ops", []):
+        spec = edit.apply_op(spec, op)
+    return spec
+
+
+def _rf(d):
+    return runs.RunFrame(d["id"], float(d["x"]), float(d["z"]), float(d["yaw"]))
+
+
+def _seat(seat):
+    if seat is None:
+        return None
+    import dataclasses
+    return {**_json(dataclasses.asdict(seat)), "origin": _json(seat.to_world(0.0, 0.0)), "normal": _json(seat.normal()), "yaw": seat.yaw}
+
+
+def _frame_data(fr):
+    return None if fr is None else {"id": fr.id, "x": fr.x, "z": fr.z, "yaw": fr.yaw}
+
+
+def _mod(spec, i, key="module"):
+    return spec.find(i[key])
+
+
+def runs_trig(i):
+    return {"cs": _json(runs.trig(i["yaw"]))}
+
+
+def runs_wall_seat(i):
+    return {"seat": _seat(runs.wall_seat(i["wall"], i["backLength"]))}
+
+
+def runs_free_seat(i):
+    return {"seat": _seat(runs.free_seat(i["offset"], i["depth"], i["facing"]))}
+
+
+def runs_seat_of(i):
+    spec = _ctx(i)
+    return {"seat": _seat(runs.seat_of(_mod(spec, i), i["backLength"]))}
+
+
+def runs_front_span(i):
+    return {"span": _json(runs.front_span(i["front"], tuple(i["min"]), tuple(i["max"])))}
+
+
+def runs_front_box(i):
+    return {"box": _json(runs.front_box(i["front"], *i["args"]))}
+
+
+def runs_frame_of(i):
+    spec = _ctx(i)
+    return {"frame": _frame_data(runs.frame_of(spec, _mod(spec, i)))}
+
+
+def runs_row_of(i):
+    spec = _ctx(i)
+    return {"rows": {m.id: runs.row_of(m) for m in spec.module}}
+
+
+def runs_spot(i):
+    spec = _ctx(i)
+    sp = runs.spot(spec, _app(spec, i))
+    return {"spot": None if sp is None else {"row": sp.row, "center": sp.center, "module": sp.module}}
+
+
+def runs_corner_joints(i):
+    return {"joints": [{"a": j.a, "b": j.b, "at": j.at, "angle": j.angle} for j in runs.corner_joints(_ctx(i))]}
+
+
+def runs_front_cross(i):
+    return {"cross": _json(runs.front_cross(_rf(i["a"]), i["da"], _rf(i["b"]), i["db"]))}
+
+
+def runs_run_wall(i):
+    return {"wall": runs.run_wall(_rf(i["frame"]), i["backLength"])}
+
+
+def runs_walls_used(i):
+    return {"walls": sorted(runs.walls_used(_ctx(i), i["backLength"]))}
+
+
+def runs_along_wall(i):
+    return {"span": _json(runs.along_wall(_rf(i["frame"]), i["wall"], i["s0"], i["s1"]))}
+
+
+def runs_frames(i):
+    return {"frames": {k: _frame_data(v) for k, v in runs.frames(_ctx(i)).items()}}
+
+
+def runs_aabb(i):
+    return {"box": _json(runs.aabb([tuple(p) for p in i["points"]]))}
+
+
+def runs_penetration(i):
+    return {"depth": runs.penetration([tuple(p) for p in i["a"]], [tuple(p) for p in i["b"]])}
+
+
+def runs_module_footprint(i):
+    spec = _ctx(i)
+    m = _mod(spec, i)
+    return {"footprint": _json(runs.module_footprint(require_frame(spec, m), m))}
+
+
+def require_frame(spec, m):
+    from kitchen.errors import require
+    return require(runs.frame_of(spec, m), f"{m.id}: run frame")
+
+
+def runs_strip_extent(i):
+    return {"extent": _json(runs.strip_extent([tuple(p) for p in i["poly"]], _rf(i["frame"]), i["dMax"]))}
+
+
+def runs_system_id(i):
+    return {"id": runs.system_id(i["raw"])}
+
+
+def runs_polygon_gap(i):
+    return {"gap": runs.polygon_gap([tuple(p) for p in i["a"]], [tuple(p) for p in i["b"]])}
+
+
+def runs_run_systems(i):
+    return {"systems": runs.run_systems(_ctx(i))}
+
+
+def tv_system_texts(i):
+    """The sentence readers of tv_system on one text: asks_tv, style_of, explicit_style, wants_panel."""
+    t = i["text"]
+    return {"asksTv": tv_system.asks_tv(t), "style": tv_system.style_of(t), "explicitStyle": tv_system.explicit_style(t),
+            "panel": tv_system.wants_panel(t)}
+
+
+def tv_system_tv_for(i):
+    return {"tv": tv_system.tv_for(i["niche"])}
+
+
+def tv_system_run_fields(i):
+    return {"fields": tv_system.run_fields(i["style"])}
+
+
+def tv_system_front_of(i):
+    return {"front": tv_system.front_of(i["common"])}
+
+
+def tv_system_console(i):
+    return {"modules": _json(tv_system.console(i["length"]))}
+
+
+def tv_system_runs(i):
+    """A design's TV runs: tv_runs, layout_of / is_tv_run per run, tv_modules, and what kitchen_only keeps."""
+    spec = _ctx(i)
+    return {"tvRuns": sorted(tv_system.tv_runs(spec)), "layouts": {r.id: tv_system.layout_of(spec, r.id) for r in spec.runs},
+            "isTv": {r.id: tv_system.is_tv_run(r) for r in spec.runs}, "tvModules": sorted(tv_system.tv_modules(spec)),
+            "kitchenOnly": [m.id for m in tv_system.kitchen_only(spec).module]}
+
+
+def appliance_models_lookup(i):
+    """The catalogue lookups: model (or its error), default_for, kind_of, needed_width, dimension_string, changes_for."""
+    m = appliance_models.model(i["model"])
+    return {"kind": appliance_models.kind_of(m), "neededWidth": appliance_models.needed_width(m), "dimensions": appliance_models.dimension_string(m),
+            "changes": appliance_models.changes_for(m), "defaultOfType": (appliance_models.default_for(m["type"]) or {}).get("id")}
+
+
+def appliance_models_of_appliance(i):
+    """What a design's appliance is read as: guessed, model_id, size_of, host, where, ai_facts and its sentence."""
+    spec = _ctx(i)
+    app = _app(spec, i)
+    h = appliance_models.host(spec, app)
+    facts = appliance_models.ai_facts(spec, app)
+    return {"guessed": appliance_models.guessed(app), "modelId": appliance_models.model_id(app), "size": appliance_models.size_of(app),
+            "host": h.id if h else None, "where": appliance_models.where(spec, app), "facts": _json(facts),
+            "sentence": appliance_models.sentence(facts, i.get("bbox"))}
+
+
+def appliance_models_changes_cabinets(i):
+    spec = _ctx(i)
+    app = _app(spec, i)
+    return {"changes": appliance_models.changes_cabinets(spec, app, appliance_models.model(i["model"]), appliance_models.host(spec, app))}
+
+
+def appliance_models_energy_notes(i):
+    spec = _ctx(i)
+    return {"notes": appliance_models.energy_notes(_app(spec, i), appliance_models.model(i["model"]))}
+
+
+def appliance_models_over(i):
+    spec = _ctx(i)
+    return {"over": appliance_models.over(spec.find(i["a"]), spec.find(i["b"]))}
+
+
+def appliance_models_check(i):
+    return {"issues": [[x["rule"], x["severity"], list(x.get("module") or []), x["content"]] for x in appliance_models.check(_ctx(i))]}
+
+
 FUNCTIONS = {
+    "runs.trig": runs_trig,
+    "runs.wall_seat": runs_wall_seat,
+    "runs.free_seat": runs_free_seat,
+    "runs.seat_of": runs_seat_of,
+    "runs.front_span": runs_front_span,
+    "runs.front_box": runs_front_box,
+    "runs.frame_of": runs_frame_of,
+    "runs.row_of": runs_row_of,
+    "runs.spot": runs_spot,
+    "runs.corner_joints": runs_corner_joints,
+    "runs.front_cross": runs_front_cross,
+    "runs.run_wall": runs_run_wall,
+    "runs.walls_used": runs_walls_used,
+    "runs.along_wall": runs_along_wall,
+    "runs.frames": runs_frames,
+    "runs.aabb": runs_aabb,
+    "runs.penetration": runs_penetration,
+    "runs.module_footprint": runs_module_footprint,
+    "runs.strip_extent": runs_strip_extent,
+    "runs.system_id": runs_system_id,
+    "runs.polygon_gap": runs_polygon_gap,
+    "runs.run_systems": runs_run_systems,
+    "tv_system.texts": tv_system_texts,
+    "tv_system.tv_for": tv_system_tv_for,
+    "tv_system.run_fields": tv_system_run_fields,
+    "tv_system.front_of": tv_system_front_of,
+    "tv_system.console": tv_system_console,
+    "tv_system.runs": tv_system_runs,
+    "appliance_models.lookup": appliance_models_lookup,
+    "appliance_models.of_appliance": appliance_models_of_appliance,
+    "appliance_models.changes_cabinets": appliance_models_changes_cabinets,
+    "appliance_models.energy_notes": appliance_models_energy_notes,
+    "appliance_models.over": appliance_models_over,
+    "appliance_models.check": appliance_models_check,
     "regions.priority_score": regions_priority_score,
     "handles.material_ops": handles_material_ops,
     "lexicon.fold": lexicon_fold,

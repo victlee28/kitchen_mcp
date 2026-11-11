@@ -1,0 +1,44 @@
+{
+ "function": "appliance_models.over",
+ "cases": [
+  {
+   "name": "hood cabinet over the oven cabinet",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "a": "TT5",
+    "b": "TD4"
+   },
+   "expected": {
+    "over": true
+   }
+  },
+  {
+   "name": "loft over the wall cabinet",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "a": "TT2",
+    "b": "TT1"
+   },
+   "expected": {
+    "over": true
+   }
+  },
+  {
+   "name": "different walls",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "a": "TT1",
+    "b": "TD4"
+   },
+   "expected": {
+    "over": false
+   }
+  }
+ ]
+}

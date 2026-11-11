@@ -1,0 +1,66 @@
+{
+ "function": "runs.spot",
+ "cases": [
+  {
+   "name": "sink on the right wall",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "appliance": "TB2"
+   },
+   "expected": {
+    "spot": {
+     "row": "right",
+     "center": 1000.0,
+     "module": null
+    }
+   }
+  },
+  {
+   "name": "hood in its cabinet",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "appliance": "TB5"
+   },
+   "expected": {
+    "spot": {
+     "row": "right",
+     "center": 2130.0,
+     "module": "TT5"
+    }
+   }
+  },
+  {
+   "name": "hob in a run",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "convertRows": true,
+    "appliance": "TB4"
+   },
+   "expected": {
+    "spot": {
+     "row": "run:R2",
+     "center": 2130.0,
+     "module": "TD4"
+    }
+   }
+  },
+  {
+   "name": "light",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "appliance": "LED"
+   },
+   "expected": {
+    "spot": null
+   }
+  }
+ ]
+}

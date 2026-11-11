@@ -1,0 +1,36 @@
+{
+ "function": "runs.walls_used",
+ "cases": [
+  {
+   "name": "wall rows",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "backLength": 2520
+   },
+   "expected": {
+    "walls": [
+     "back",
+     "right"
+    ]
+   }
+  },
+  {
+   "name": "explicit runs",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "convertRows": true,
+    "backLength": 2520
+   },
+   "expected": {
+    "walls": [
+     "back",
+     "right"
+    ]
+   }
+  }
+ ]
+}

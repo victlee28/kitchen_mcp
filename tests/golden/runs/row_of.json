@@ -1,0 +1,62 @@
+{
+ "function": "runs.row_of",
+ "cases": [
+  {
+   "name": "wall rows",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    }
+   },
+   "expected": {
+    "rows": {
+     "TC1": "back",
+     "TD1": "back",
+     "TT1": "back",
+     "TT2": "back",
+     "KG1": "corner",
+     "TD2": "right",
+     "TD3": "right",
+     "TD4": "right",
+     "TD5": "right",
+     "TT3": "right",
+     "TT4": "right",
+     "TT5": "right",
+     "TT6": "right",
+     "TT7": "right",
+     "TT8": "right",
+     "TT9": "right"
+    }
+   }
+  },
+  {
+   "name": "explicit runs",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "convertRows": true
+   },
+   "expected": {
+    "rows": {
+     "TC1": "run:R1",
+     "TD1": "run:R1",
+     "TT1": "run:R1",
+     "TT2": "run:R1",
+     "KG1": "run:R1",
+     "TD2": "run:R2",
+     "TD3": "run:R2",
+     "TD4": "run:R2",
+     "TD5": "run:R2",
+     "TT3": "run:R2",
+     "TT4": "run:R2",
+     "TT5": "run:R2",
+     "TT6": "run:R2",
+     "TT7": "run:R2",
+     "TT8": "run:R2",
+     "TT9": "run:R2"
+    }
+   }
+  }
+ ]
+}

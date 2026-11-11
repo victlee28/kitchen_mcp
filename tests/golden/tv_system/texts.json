@@ -1,0 +1,89 @@
+{
+ "function": "tv_system.texts",
+ "cases": [
+  {
+   "name": "default sentence",
+   "input": {
+    "text": "tạo hệ tủ tivi"
+   },
+   "expected": {
+    "asksTv": true,
+    "style": "columns",
+    "explicitStyle": null,
+    "panel": true
+   }
+  },
+  {
+   "name": "closed wall",
+   "input": {
+    "text": "tủ tivi kín cả vách"
+   },
+   "expected": {
+    "asksTv": true,
+    "style": "full",
+    "explicitStyle": "full",
+    "panel": true
+   }
+  },
+  {
+   "name": "full wall",
+   "input": {
+    "text": "tủ tv full tường"
+   },
+   "expected": {
+    "asksTv": true,
+    "style": "full",
+    "explicitStyle": "full",
+    "panel": true
+   }
+  },
+  {
+   "name": "hanging shelves, no columns, no panel",
+   "input": {
+    "text": "kệ tivi treo, không cột, không vách ốp"
+   },
+   "expected": {
+    "asksTv": true,
+    "style": "shelves",
+    "explicitStyle": "shelves",
+    "panel": false
+   }
+  },
+  {
+   "name": "two columns named",
+   "input": {
+    "text": "kệ tivi 2 cột, bỏ tấm ốp"
+   },
+   "expected": {
+    "asksTv": true,
+    "style": "columns",
+    "explicitStyle": "columns",
+    "panel": false
+   }
+  },
+  {
+   "name": "kitchen sentence",
+   "input": {
+    "text": "tủ bếp chữ L"
+   },
+   "expected": {
+    "asksTv": false,
+    "style": "columns",
+    "explicitStyle": null,
+    "panel": true
+   }
+  },
+  {
+   "name": "empty",
+   "input": {
+    "text": ""
+   },
+   "expected": {
+    "asksTv": false,
+    "style": "columns",
+    "explicitStyle": null,
+    "panel": true
+   }
+  }
+ ]
+}

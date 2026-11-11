@@ -1,0 +1,339 @@
+{
+ "function": "appliance_models.of_appliance",
+ "cases": [
+  {
+   "name": "TB1 of the L fixture",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "appliance": "TB1"
+   },
+   "expected": {
+    "guessed": "fridge-2d-60",
+    "modelId": "fridge-2d-60",
+    "size": {
+     "w": 600.0,
+     "h": 1600.0,
+     "d": 620.0
+    },
+    "host": "TC1",
+    "where": "in the tall cabinet TC1 (Tủ cao tủ lạnh)",
+    "facts": {
+     "id": "TB1",
+     "type": "fridge",
+     "model": "fridge-2d-60",
+     "name": "Tủ lạnh 2 cánh, ngăn đá trên",
+     "rendering": "box-placeholder",
+     "where": "in the tall cabinet TC1 (Tủ cao tủ lạnh)",
+     "size_mm": {
+      "w": 600.0,
+      "h": 1600.0,
+      "d": 620.0
+     },
+     "mount": "freestanding",
+     "energy": "electric",
+     "visual": {
+      "finish": "brushed stainless steel",
+      "features": {
+       "doors": "two doors, freezer at the bottom",
+       "handles": "vertical bar handles"
+      }
+     },
+     "prompt": "60 cm brushed stainless steel two-door fridge with bottom freezer and vertical bar handles",
+     "notShownInInputImage": [
+      "energy",
+      "size",
+      "mount",
+      "doors",
+      "handles",
+      "finish"
+     ],
+     "placeholderNote": "The plain box in the tall cabinet TC1 (Tủ cao tủ lạnh) is only a stand-in: draw it as 60 cm brushed stainless steel two-door fridge with bottom freezer and vertical bar handles, at the same place and size."
+    },
+    "sentence": "The plain box in the tall cabinet TC1 (Tủ cao tủ lạnh) is only a stand-in: draw it as 60 cm brushed stainless steel two-door fridge with bottom freezer and vertical bar handles, about 600 mm wide, at the same place."
+   }
+  },
+  {
+   "name": "TB2 of the L fixture",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "appliance": "TB2"
+   },
+   "expected": {
+    "guessed": "sink-double-82",
+    "modelId": "sink-double-82",
+    "size": {
+     "w": 780.0,
+     "d": 410.0,
+     "h": 0.0
+    },
+    "host": "TD2",
+    "where": "set into the worktop above TD2 (Tủ chậu rửa góc 2 cánh)",
+    "facts": {
+     "id": "TB2",
+     "type": "sink",
+     "model": "sink-double-82",
+     "name": "Chậu rửa đôi màu tối, lắp dương",
+     "rendering": "box-placeholder",
+     "where": "set into the worktop above TD2 (Tủ chậu rửa góc 2 cánh)",
+     "size_mm": {
+      "w": 780.0,
+      "d": 410.0,
+      "h": 0.0
+     },
+     "mount": "topmount",
+     "energy": null,
+     "visual": {
+      "finish": "brushed stainless steel",
+      "features": {
+       "basins": 2,
+       "rim": "thin top-mount rim"
+      }
+     },
+     "prompt": "double-bowl brushed stainless steel top-mount sink",
+     "notShownInInputImage": [
+      "energy",
+      "size",
+      "mount",
+      "basins",
+      "rim",
+      "finish"
+     ],
+     "cutout_mm": {
+      "w": 790,
+      "d": 420
+     },
+     "placeholderNote": "The plain box set into the worktop above TD2 (Tủ chậu rửa góc 2 cánh) is only a stand-in: draw it as double-bowl brushed stainless steel top-mount sink, at the same place and size."
+    },
+    "sentence": "The plain box set into the worktop above TD2 (Tủ chậu rửa góc 2 cánh) is only a stand-in: draw it as double-bowl brushed stainless steel top-mount sink, about 780 mm wide, at the same place."
+   }
+  },
+  {
+   "name": "TB4 of the L fixture",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "appliance": "TB4"
+   },
+   "expected": {
+    "guessed": "hob-ind-2z-73",
+    "modelId": "hob-ind-2z-73",
+    "size": {
+     "w": 730.0,
+     "d": 430.0,
+     "h": 0.0
+    },
+    "host": "TD4",
+    "where": "built into the worktop above TD4 (Hộc lò vi sóng và ngăn kéo)",
+    "facts": {
+     "id": "TB4",
+     "type": "cooktop",
+     "model": "hob-ind-2z-73",
+     "name": "Bếp âm 2 vùng nấu, mặt kính đen",
+     "rendering": "box-placeholder",
+     "where": "built into the worktop above TD4 (Hộc lò vi sóng và ngăn kéo)",
+     "size_mm": {
+      "w": 730.0,
+      "d": 430.0,
+      "h": 0.0
+     },
+     "mount": "built_in",
+     "energy": "induction",
+     "visual": {
+      "finish": "black tempered glass",
+      "features": {
+       "zones": 2,
+       "controls": "touch slider"
+      }
+     },
+     "prompt": "black glass two-zone induction hob with touch controls, flush with the worktop",
+     "notShownInInputImage": [
+      "energy",
+      "size",
+      "mount",
+      "zones",
+      "controls",
+      "finish"
+     ],
+     "cutout_mm": {
+      "w": 680,
+      "d": 380
+     },
+     "placeholderNote": "The plain box built into the worktop above TD4 (Hộc lò vi sóng và ngăn kéo) is only a stand-in: draw it as black glass two-zone induction hob with touch controls, flush with the worktop, at the same place and size."
+    },
+    "sentence": "The plain box built into the worktop above TD4 (Hộc lò vi sóng và ngăn kéo) is only a stand-in: draw it as black glass two-zone induction hob with touch controls, flush with the worktop, about 730 mm wide, at the same place."
+   }
+  },
+  {
+   "name": "TB5 of the L fixture",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "appliance": "TB5"
+   },
+   "expected": {
+    "guessed": "hood-insert-70",
+    "modelId": "hood-insert-70",
+    "size": {
+     "w": 730.0,
+     "h": 165.0,
+     "d": 0.0
+    },
+    "host": "TT5",
+    "where": "inside the wall cabinet TT5 (Tủ trên máy hút mùi 2 cánh)",
+    "facts": {
+     "id": "TB5",
+     "type": "hood",
+     "model": "hood-insert-70",
+     "name": "Máy hút mùi âm tủ",
+     "rendering": "box-placeholder",
+     "where": "inside the wall cabinet TT5 (Tủ trên máy hút mùi 2 cánh)",
+     "size_mm": {
+      "w": 730.0,
+      "h": 165.0,
+      "d": 0.0
+     },
+     "mount": "built_in",
+     "energy": "electric",
+     "visual": {
+      "finish": "stainless steel underside with glass visor",
+      "features": {
+       "filters": "visible metal grease filters",
+       "light": "LED strip"
+      }
+     },
+     "prompt": "70 cm stainless steel integrated cooker hood hidden in the wall cabinet, only the slim underside visible",
+     "notShownInInputImage": [
+      "energy",
+      "size",
+      "mount",
+      "filters",
+      "light",
+      "finish"
+     ],
+     "placeholderNote": "The plain box inside the wall cabinet TT5 (Tủ trên máy hút mùi 2 cánh) is only a stand-in: draw it as 70 cm stainless steel integrated cooker hood hidden in the wall cabinet, only the slim underside visible, at the same place and size."
+    },
+    "sentence": "The plain box inside the wall cabinet TT5 (Tủ trên máy hút mùi 2 cánh) is only a stand-in: draw it as 70 cm stainless steel integrated cooker hood hidden in the wall cabinet, only the slim underside visible, about 730 mm wide, at the same place."
+   }
+  },
+  {
+   "name": "TB6 of the L fixture",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "appliance": "TB6"
+   },
+   "expected": {
+    "guessed": "oven-60",
+    "modelId": "oven-60",
+    "size": {
+     "w": 560.0,
+     "h": 350.0,
+     "d": 0.0
+    },
+    "host": "TD4",
+    "where": "built into the cabinet TD4 (Hộc lò vi sóng và ngăn kéo)",
+    "facts": {
+     "id": "TB6",
+     "type": "oven",
+     "model": "oven-60",
+     "name": "Lò vi sóng âm tủ",
+     "rendering": "box-placeholder",
+     "where": "built into the cabinet TD4 (Hộc lò vi sóng và ngăn kéo)",
+     "size_mm": {
+      "w": 560.0,
+      "h": 350.0,
+      "d": 0.0
+     },
+     "mount": "built_in",
+     "energy": "electric",
+     "visual": {
+      "finish": "black glass door with stainless steel handle",
+      "features": {
+       "controls": "rotary knobs and display"
+      }
+     },
+     "prompt": "60 cm built-in oven with a black glass door, stainless steel bar handle and rotary knobs",
+     "notShownInInputImage": [
+      "energy",
+      "size",
+      "mount",
+      "controls",
+      "finish"
+     ],
+     "placeholderNote": "The plain box built into the cabinet TD4 (Hộc lò vi sóng và ngăn kéo) is only a stand-in: draw it as 60 cm built-in oven with a black glass door, stainless steel bar handle and rotary knobs, at the same place and size."
+    },
+    "sentence": "The plain box built into the cabinet TD4 (Hộc lò vi sóng và ngăn kéo) is only a stand-in: draw it as 60 cm built-in oven with a black glass door, stainless steel bar handle and rotary knobs, about 560 mm wide, at the same place."
+   }
+  },
+  {
+   "name": "with a box in the picture",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "appliance": "TB4",
+    "bbox": [
+     100,
+     200,
+     300,
+     260
+    ]
+   },
+   "expected": {
+    "guessed": "hob-ind-2z-73",
+    "modelId": "hob-ind-2z-73",
+    "size": {
+     "w": 730.0,
+     "d": 430.0,
+     "h": 0.0
+    },
+    "host": "TD4",
+    "where": "built into the worktop above TD4 (Hộc lò vi sóng và ngăn kéo)",
+    "facts": {
+     "id": "TB4",
+     "type": "cooktop",
+     "model": "hob-ind-2z-73",
+     "name": "Bếp âm 2 vùng nấu, mặt kính đen",
+     "rendering": "box-placeholder",
+     "where": "built into the worktop above TD4 (Hộc lò vi sóng và ngăn kéo)",
+     "size_mm": {
+      "w": 730.0,
+      "d": 430.0,
+      "h": 0.0
+     },
+     "mount": "built_in",
+     "energy": "induction",
+     "visual": {
+      "finish": "black tempered glass",
+      "features": {
+       "zones": 2,
+       "controls": "touch slider"
+      }
+     },
+     "prompt": "black glass two-zone induction hob with touch controls, flush with the worktop",
+     "notShownInInputImage": [
+      "energy",
+      "size",
+      "mount",
+      "zones",
+      "controls",
+      "finish"
+     ],
+     "cutout_mm": {
+      "w": 680,
+      "d": 380
+     },
+     "placeholderNote": "The plain box built into the worktop above TD4 (Hộc lò vi sóng và ngăn kéo) is only a stand-in: draw it as black glass two-zone induction hob with touch controls, flush with the worktop, at the same place and size."
+    },
+    "sentence": "The plain box built into the worktop above TD4 (Hộc lò vi sóng và ngăn kéo) (in the picture around x 100–300, y 200–260) is only a stand-in: draw it as black glass two-zone induction hob with touch controls, flush with the worktop, about 730 mm wide, at the same place."
+   }
+  }
+ ]
+}

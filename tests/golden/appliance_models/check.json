@@ -1,0 +1,109 @@
+{
+ "function": "appliance_models.check",
+ "cases": [
+  {
+   "name": "L fixture: no models, nothing checked",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    }
+   },
+   "expected": {
+    "issues": []
+   }
+  },
+  {
+   "name": "75 cm gas hob in a 630 cabinet (wall rows)",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "ops": [
+     {
+      "op": "update-appliance",
+      "id": "TB4",
+      "model": "hob-gas-2b-75"
+     }
+    ]
+   },
+   "expected": {
+    "issues": [
+     [
+      "APPLIANCE-MODEL-FIT",
+      "error",
+      [
+       "TB4",
+       "TD4"
+      ],
+      "TB4 (Bếp gas âm 2 họng 75 cm): Cut-out 650 mm is wider than the inside of TD4 (594 mm): needs a cabinet of at least 686 mm"
+     ],
+     [
+      "HOOD-WIDTH",
+      "warning",
+      [
+       "TB5",
+       "TB4"
+      ],
+      "Hood TB5 (730 mm) is narrower than the hob TB4 below it (750 mm)"
+     ]
+    ]
+   }
+  },
+  {
+   "name": "the same after the rows became runs",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "convertRows": true,
+    "ops": [
+     {
+      "op": "update-appliance",
+      "id": "TB4",
+      "model": "hob-gas-2b-75"
+     }
+    ]
+   },
+   "expected": {
+    "issues": [
+     [
+      "APPLIANCE-MODEL-FIT",
+      "error",
+      [
+       "TB4",
+       "TD4"
+      ],
+      "TB4 (Bếp gas âm 2 họng 75 cm): Cut-out 650 mm is wider than the inside of TD4 (594 mm): needs a cabinet of at least 686 mm"
+     ],
+     [
+      "HOOD-WIDTH",
+      "warning",
+      [
+       "TB5",
+       "TB4"
+      ],
+      "Hood TB5 (730 mm) is narrower than the hob TB4 below it (750 mm)"
+     ]
+    ]
+   }
+  },
+  {
+   "name": "double sink in the corner sink cabinet fits",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "ops": [
+     {
+      "op": "update-appliance",
+      "id": "TB2",
+      "model": "sink-double-82"
+     }
+    ]
+   },
+   "expected": {
+    "issues": []
+   }
+  }
+ ]
+}

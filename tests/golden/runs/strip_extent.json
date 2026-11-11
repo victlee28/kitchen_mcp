@@ -1,0 +1,74 @@
+{
+ "function": "runs.strip_extent",
+ "cases": [
+  {
+   "name": "box across the strip",
+   "input": {
+    "poly": [
+     [
+      -1500,
+      -100
+     ],
+     [
+      -1000,
+      -100
+     ],
+     [
+      -1000,
+      300
+     ],
+     [
+      -1500,
+      300
+     ]
+    ],
+    "frame": {
+     "id": "R1",
+     "x": -1920,
+     "z": 0,
+     "yaw": 0
+    },
+    "dMax": 560
+   },
+   "expected": {
+    "extent": [
+     420.0,
+     920.0
+    ]
+   }
+  },
+  {
+   "name": "box beyond the strip",
+   "input": {
+    "poly": [
+     [
+      -1500,
+      700
+     ],
+     [
+      -1000,
+      700
+     ],
+     [
+      -1000,
+      900
+     ],
+     [
+      -1500,
+      900
+     ]
+    ],
+    "frame": {
+     "id": "R1",
+     "x": -1920,
+     "z": 0,
+     "yaw": 0
+    },
+    "dMax": 560
+   },
+   "expected": {
+    "extent": null
+   }
+  }
+ ]
+}

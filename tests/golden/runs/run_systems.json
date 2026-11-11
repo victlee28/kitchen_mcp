@@ -1,0 +1,31 @@
+{
+ "function": "runs.run_systems",
+ "cases": [
+  {
+   "name": "no runs",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    }
+   },
+   "expected": {
+    "systems": {}
+   }
+  },
+  {
+   "name": "two joined runs",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "convertRows": true
+   },
+   "expected": {
+    "systems": {
+     "R1": "auto-R1",
+     "R2": "auto-R1"
+    }
+   }
+  }
+ ]
+}

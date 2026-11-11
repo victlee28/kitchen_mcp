@@ -1,0 +1,93 @@
+{
+ "function": "tv_system.runs",
+ "cases": [
+  {
+   "name": "kitchen only",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "convertRows": true
+   },
+   "expected": {
+    "tvRuns": [],
+    "layouts": {
+     "R1": null,
+     "R2": null
+    },
+    "isTv": {
+     "R1": false,
+     "R2": false
+    },
+    "tvModules": [],
+    "kitchenOnly": [
+     "TC1",
+     "TD1",
+     "TT1",
+     "TT2",
+     "KG1",
+     "TD2",
+     "TD3",
+     "TD4",
+     "TD5",
+     "TT3",
+     "TT4",
+     "TT5",
+     "TT6",
+     "TT7",
+     "TT8",
+     "TT9"
+    ]
+   }
+  },
+  {
+   "name": "back run made a TV unit",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "convertRows": true,
+    "ops": [
+     {
+      "op": "set-run-tv",
+      "id": "R1",
+      "layout": "columns"
+     }
+    ]
+   },
+   "expected": {
+    "tvRuns": [
+     "R1"
+    ],
+    "layouts": {
+     "R1": "columns",
+     "R2": null
+    },
+    "isTv": {
+     "R1": true,
+     "R2": false
+    },
+    "tvModules": [
+     "KG1",
+     "TC1",
+     "TD1",
+     "TT1",
+     "TT2"
+    ],
+    "kitchenOnly": [
+     "TD2",
+     "TD3",
+     "TD4",
+     "TD5",
+     "TT3",
+     "TT4",
+     "TT5",
+     "TT6",
+     "TT7",
+     "TT8",
+     "TT9"
+    ]
+   }
+  }
+ ]
+}

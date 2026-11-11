@@ -1,0 +1,113 @@
+{
+ "function": "runs.free_seat",
+ "cases": [
+  {
+   "name": "island facing -z",
+   "input": {
+    "offset": 1500,
+    "depth": 600,
+    "facing": "-z"
+   },
+   "expected": {
+    "seat": {
+     "front": "island",
+     "s_axis": 0,
+     "s_sign": -1,
+     "s_from": null,
+     "d_sign": -1,
+     "d_from": 2100,
+     "origin": [
+      -0.0,
+      2100.0
+     ],
+     "normal": [
+      0.0,
+      -1.0
+     ],
+     "yaw": 180.0
+    }
+   }
+  },
+  {
+   "name": "island facing +z",
+   "input": {
+    "offset": 1500,
+    "depth": 600,
+    "facing": "+z"
+   },
+   "expected": {
+    "seat": {
+     "front": "back",
+     "s_axis": 0,
+     "s_sign": -1,
+     "s_from": null,
+     "d_sign": 1,
+     "d_from": 900,
+     "origin": [
+      -0.0,
+      900.0
+     ],
+     "normal": [
+      0.0,
+      1.0
+     ],
+     "yaw": 0.0
+    }
+   }
+  },
+  {
+   "name": "island facing -x",
+   "input": {
+    "offset": 1500,
+    "depth": 600,
+    "facing": "-x"
+   },
+   "expected": {
+    "seat": {
+     "front": "right",
+     "s_axis": 2,
+     "s_sign": 1,
+     "s_from": null,
+     "d_sign": -1,
+     "d_from": -900,
+     "origin": [
+      -900.0,
+      0.0
+     ],
+     "normal": [
+      -1.0,
+      0.0
+     ],
+     "yaw": -90.0
+    }
+   }
+  },
+  {
+   "name": "island facing +x",
+   "input": {
+    "offset": 1500,
+    "depth": 600,
+    "facing": "+x"
+   },
+   "expected": {
+    "seat": {
+     "front": "left",
+     "s_axis": 2,
+     "s_sign": 1,
+     "s_from": null,
+     "d_sign": 1,
+     "d_from": -2100,
+     "origin": [
+      -2100.0,
+      0.0
+     ],
+     "normal": [
+      1.0,
+      0.0
+     ],
+     "yaw": 90.0
+    }
+   }
+  }
+ ]
+}

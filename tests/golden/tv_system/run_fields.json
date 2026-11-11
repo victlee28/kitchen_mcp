@@ -1,0 +1,41 @@
+{
+ "function": "tv_system.run_fields",
+ "cases": [
+  {
+   "name": "columns",
+   "input": {
+    "style": "columns"
+   },
+   "expected": {
+    "fields": {
+     "purpose": "tv",
+     "tvLayout": "columns"
+    }
+   }
+  },
+  {
+   "name": "shelves",
+   "input": {
+    "style": "shelves"
+   },
+   "expected": {
+    "fields": {
+     "purpose": "tv",
+     "tvLayout": "shelves"
+    }
+   }
+  },
+  {
+   "name": "full",
+   "input": {
+    "style": "full"
+   },
+   "expected": {
+    "fields": {
+     "purpose": "tv",
+     "tvLayout": "full"
+    }
+   }
+  }
+ ]
+}

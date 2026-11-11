@@ -1,0 +1,127 @@
+{
+ "function": "appliance_models.lookup",
+ "cases": [
+  {
+   "name": "hob-gas-2b-75",
+   "input": {
+    "model": "hob-gas-2b-75"
+   },
+   "expected": {
+    "kind": "",
+    "neededWidth": 750.0,
+    "dimensions": "750 × 420",
+    "changes": {
+     "model": "hob-gas-2b-75",
+     "name": "Bếp gas âm 2 họng 75 cm",
+     "dimensions": "750 × 420",
+     "size": {
+      "w": 750,
+      "d": 420,
+      "h": 140
+     },
+     "mount": "built_in",
+     "energy": "gas",
+     "cutout": {
+      "w": 650,
+      "d": 350
+     }
+    },
+    "defaultOfType": "hob-ind-2z-73"
+   }
+  },
+  {
+   "name": "sink-double-82",
+   "input": {
+    "model": "sink-double-82"
+   },
+   "expected": {
+    "kind": "",
+    "neededWidth": 830.0,
+    "dimensions": "820 × 450",
+    "changes": {
+     "model": "sink-double-82",
+     "name": "Chậu đôi inox 82 cm",
+     "dimensions": "820 × 450",
+     "size": {
+      "w": 820,
+      "d": 450,
+      "h": 220
+     },
+     "mount": "topmount",
+     "energy": null,
+     "cutout": {
+      "w": 790,
+      "d": 420
+     }
+    },
+    "defaultOfType": "sink-double-82"
+   }
+  },
+  {
+   "name": "sink-single-60",
+   "input": {
+    "model": "sink-single-60"
+   },
+   "expected": {
+    "kind": "",
+    "neededWidth": 610.0,
+    "dimensions": "600 × 450",
+    "changes": {
+     "model": "sink-single-60",
+     "name": "Chậu đơn inox 60 cm",
+     "dimensions": "600 × 450",
+     "size": {
+      "w": 600,
+      "d": 450,
+      "h": 200
+     },
+     "mount": "topmount",
+     "energy": null,
+     "cutout": {
+      "w": 570,
+      "d": 420
+     }
+    },
+    "defaultOfType": "sink-double-82"
+   }
+  },
+  {
+   "name": "hob-ind-2z-73",
+   "input": {
+    "model": "hob-ind-2z-73"
+   },
+   "expected": {
+    "kind": "",
+    "neededWidth": 750.0,
+    "dimensions": "730 × 430",
+    "changes": {
+     "model": "hob-ind-2z-73",
+     "name": "Bếp từ đôi âm 73 cm",
+     "dimensions": "730 × 430",
+     "size": {
+      "w": 730,
+      "d": 430,
+      "h": 60
+     },
+     "mount": "built_in",
+     "energy": "induction",
+     "cutout": {
+      "w": 680,
+      "d": 380
+     }
+    },
+    "defaultOfType": "hob-ind-2z-73"
+   }
+  },
+  {
+   "name": "no-such-model",
+   "input": {
+    "model": "no-such-model"
+   },
+   "error": {
+    "kind": "validation",
+    "code": "model-not-found"
+   }
+  }
+ ]
+}

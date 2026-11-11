@@ -1,0 +1,90 @@
+{
+ "function": "runs.seat_of",
+ "cases": [
+  {
+   "name": "back-wall cabinet",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "module": "TD1",
+    "backLength": 2520
+   },
+   "expected": {
+    "seat": {
+     "front": "back",
+     "s_axis": 0,
+     "s_sign": -1,
+     "s_from": null,
+     "d_sign": 1,
+     "d_from": null,
+     "origin": [
+      -0.0,
+      0.0
+     ],
+     "normal": [
+      0.0,
+      1.0
+     ],
+     "yaw": 0.0
+    }
+   }
+  },
+  {
+   "name": "right-wall cabinet",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "module": "TD3",
+    "backLength": 2520
+   },
+   "expected": {
+    "seat": {
+     "front": "right",
+     "s_axis": 2,
+     "s_sign": 1,
+     "s_from": null,
+     "d_sign": -1,
+     "d_from": null,
+     "origin": [
+      -0.0,
+      0.0
+     ],
+     "normal": [
+      -1.0,
+      0.0
+     ],
+     "yaw": -90.0
+    }
+   }
+  },
+  {
+   "name": "corner shelf",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "module": "KG1",
+    "backLength": 2520
+   },
+   "expected": {
+    "seat": null
+   }
+  },
+  {
+   "name": "cabinet in an explicit run",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "convertRows": true,
+    "module": "TD1",
+    "backLength": 2520
+   },
+   "expected": {
+    "seat": null
+   }
+  }
+ ]
+}

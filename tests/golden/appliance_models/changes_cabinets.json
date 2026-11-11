@@ -1,0 +1,31 @@
+{
+ "function": "appliance_models.changes_cabinets",
+ "cases": [
+  {
+   "name": "same kind of hob",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "appliance": "TB4",
+    "model": "hob-gas-2b-75"
+   },
+   "expected": {
+    "changes": []
+   }
+  },
+  {
+   "name": "double sink in the sink cabinet",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "appliance": "TB2",
+    "model": "sink-double-82"
+   },
+   "expected": {
+    "changes": []
+   }
+  }
+ ]
+}

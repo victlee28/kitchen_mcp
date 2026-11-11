@@ -55,10 +55,10 @@ def _split(length: float, most: float = CONSOLE_MAX_MM) -> list[float]:
 
 
 def style_of(text: str | None) -> str:
-    """Which layout a sentence asks for: ``full`` ("kín cả vách", "tủ kín"), ``shelves`` ("kệ treo", "không có cột") or ``columns``
+    """Which layout a sentence asks for: ``full`` ("kín cả vách", "tủ kín", "full tường"), ``shelves`` ("kệ treo", "không có cột") or ``columns``
     (the default: low console + niche + two columns)."""
     t = _plain(str(text or ""))
-    if re.search(r"\bkin\s+(?:ca\s+|het\s+)?(?:vach|tuong)\b|\btu\s+kin\b|\bkin\s+tu\s+san\b", t):
+    if re.search(r"\bkin\s+(?:ca\s+|het\s+)?(?:vach|tuong)\b|\btu\s+kin\b|\bkin\s+tu\s+san\b|\bfull\s+(?:vach|tuong)\b", t):
         return "full"
     if re.search(r"\bke\s+(?:treo|ho)\b|\bkhong\s+(?:co\s+|can\s+|lam\s+)?cot\b|\bbo\s+cot\b", t):
         return "shelves"
@@ -74,8 +74,8 @@ def explicit_style(text: str | None) -> str | None:
 
 
 def wants_panel(text: str | None) -> bool:
-    """A panel behind the TV unless the sentence refuses it ("không ốp", "bỏ tấm ốp")."""
-    return not re.search(r"\b(?:khong|bo|bot)\s+(?:can\s+|co\s+)?(?:tam\s+)?op\b", _plain(str(text or "")))
+    """A panel behind the TV unless the sentence refuses it ("không ốp", "bỏ tấm ốp", "không vách ốp")."""
+    return not re.search(r"\b(?:khong|bo|bot)\s+(?:can\s+|co\s+)?(?:tam\s+|vach\s+)?op\b", _plain(str(text or "")))
 
 
 def run_fields(style: str) -> dict[str, Any]:

@@ -1,0 +1,35 @@
+{
+ "function": "runs.corner_joints",
+ "cases": [
+  {
+   "name": "wall rows: none",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    }
+   },
+   "expected": {
+    "joints": []
+   }
+  },
+  {
+   "name": "the L after conversion",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "convertRows": true
+   },
+   "expected": {
+    "joints": [
+     {
+      "a": "R1",
+      "b": "R2",
+      "at": 1920.0,
+      "angle": 90.0
+     }
+    ]
+   }
+  }
+ ]
+}

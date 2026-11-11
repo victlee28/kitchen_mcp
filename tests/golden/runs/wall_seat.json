@@ -1,0 +1,103 @@
+{
+ "function": "runs.wall_seat",
+ "cases": [
+  {
+   "name": "back",
+   "input": {
+    "wall": "back",
+    "backLength": 2500
+   },
+   "expected": {
+    "seat": {
+     "front": "back",
+     "s_axis": 0,
+     "s_sign": -1,
+     "s_from": null,
+     "d_sign": 1,
+     "d_from": null,
+     "origin": [
+      -0.0,
+      0.0
+     ],
+     "normal": [
+      0.0,
+      1.0
+     ],
+     "yaw": 0.0
+    }
+   }
+  },
+  {
+   "name": "right",
+   "input": {
+    "wall": "right",
+    "backLength": 2500
+   },
+   "expected": {
+    "seat": {
+     "front": "right",
+     "s_axis": 2,
+     "s_sign": 1,
+     "s_from": null,
+     "d_sign": -1,
+     "d_from": null,
+     "origin": [
+      -0.0,
+      0.0
+     ],
+     "normal": [
+      -1.0,
+      0.0
+     ],
+     "yaw": -90.0
+    }
+   }
+  },
+  {
+   "name": "left",
+   "input": {
+    "wall": "left",
+    "backLength": 2500
+   },
+   "expected": {
+    "seat": {
+     "front": "left",
+     "s_axis": 2,
+     "s_sign": 1,
+     "s_from": null,
+     "d_sign": 1,
+     "d_from": -2500,
+     "origin": [
+      -2500.0,
+      0.0
+     ],
+     "normal": [
+      1.0,
+      0.0
+     ],
+     "yaw": 90.0
+    }
+   }
+  },
+  {
+   "name": "corner",
+   "input": {
+    "wall": "corner",
+    "backLength": 2500
+   },
+   "expected": {
+    "seat": null
+   }
+  },
+  {
+   "name": "nope",
+   "input": {
+    "wall": "nope",
+    "backLength": 2500
+   },
+   "expected": {
+    "seat": null
+   }
+  }
+ ]
+}

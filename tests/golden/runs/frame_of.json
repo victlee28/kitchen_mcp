@@ -1,0 +1,53 @@
+{
+ "function": "runs.frame_of",
+ "cases": [
+  {
+   "name": "wall row: no frame",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "module": "TD1"
+   },
+   "expected": {
+    "frame": null
+   }
+  },
+  {
+   "name": "after conversion, back run",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "convertRows": true,
+    "module": "TD1"
+   },
+   "expected": {
+    "frame": {
+     "id": "R1",
+     "x": -1920.0,
+     "z": 0.0,
+     "yaw": 0.0
+    }
+   }
+  },
+  {
+   "name": "after conversion, right run",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "convertRows": true,
+    "module": "TD3"
+   },
+   "expected": {
+    "frame": {
+     "id": "R2",
+     "x": -0.0,
+     "z": 0.0,
+     "yaw": -90.0
+    }
+   }
+  }
+ ]
+}
