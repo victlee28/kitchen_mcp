@@ -5,6 +5,7 @@ chỉ cần (min, max). Mỗi chi tiết mang `module` để chọn/tô mask the
 """
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
 from dataclasses import dataclass, field
@@ -109,7 +110,7 @@ def backsplash_height(spec: KitchenSpec, wall: str, run: str | None = None) -> f
     return max(50.0, upper_edge - c.countertop)
 
 
-def _wall_length(spec: KitchenSpec) -> tuple[float, float]:
+def wall_length(spec: KitchenSpec) -> tuple[float, float]:
     def endAt(wall: str) -> float:
         vals = [m.endAt for m in spec.module if m.wall == wall]
         if wall == "back":
@@ -157,7 +158,7 @@ class _Builder:
     def __init__(self, spec: KitchenSpec):
         self.spec = spec
         self.c = spec.common
-        self.lsau, self.lphai = _wall_length(spec)
+        self.lsau, self.lphai = wall_length(spec)
         self.parts: list[Part] = []
         self._n: dict[str, int] = {}
         self._isl = {m.id: (m.offset, m.depth, m.facing or "-z") for m in spec.module if m.wall == "island" and not m.run}  # free run: (door face position, depth, facing)
@@ -174,7 +175,8 @@ class _Builder:
             raise InvalidInput(wall)
         return seat
 
-    def box(self, module: str | None, type: str, wall: str, s0, s1, d0, d1, y0, y1, isl: tuple[float, float, str] | None = None, fr: "runmod.RunFrame | None" = None):
+    def box(self, module: str | None, type: str, wall: str, s0: float, s1: float, d0: float, d1: float, y0: float, y1: float,
+            isl: tuple[float, float, str] | None = None, fr: "runmod.RunFrame | None" = None) -> None:
         if s1 - s0 <= 0.01 or d1 - d0 <= 0.01 or y1 - y0 <= 0.01:
             return
         fr = fr or self._run.get(module or "")
@@ -196,7 +198,7 @@ class _Builder:
     def wall_behind(self, fr: "runmod.RunFrame") -> str | None:
         return run_wall(fr, self.lsau)
 
-    def door_widths(self, m: Module, s0, s1, y0, y1, type="door"):
+    def door_widths(self, m: Module, s0: float, s1: float, y0: float, y1: float, type: str = "door") -> None:
         """Chia dải mặt trước [s0,s1]x[y0,y1] thành cánh theo tỉ lệ m.canh, chừa khe."""
         k, dc = self.c.doorGap, self.c.doorThickness
         ws = m.doors or [s1 - s0]
@@ -226,7 +228,7 @@ class _Builder:
             self._back_panel(m)
             return
         cur = top
-        for i, t in enumerate(m.frontSections):
+        for t in m.frontSections:
             y0 = max(y_than, cur - t.height)
             if t.type == "niche":  # hộc trống: vách sau + ván nóc/đáy + hai hông
                 self.box(m.id, "carcass", m.wall, fs0, fs1, 0, 60, y0, cur)
@@ -531,7 +533,8 @@ def cabinet_faces(spec: KitchenSpec, scene: Scene) -> list[camera_plan.Face]:
     """The front of every run of cabinets (wall runs and explicit runs) in the kitchen frame, for the camera planner."""
     faces: list[camera_plan.Face] = []
 
-    def face(key: str, name: str, mods: list[Any], center, normal, owner: str) -> None:
+    def face(key: str, name: str, mods: list[Any], center: Callable[[float, float, float], tuple[float, float]], normal: tuple[float, float],
+             owner: str) -> None:
         lo, hi = min(m.fromCorner for m in mods), max(m.endAt for m in mods)
         faces.append(camera_plan.Face(key, name, center(lo, hi, max(m.depth for m in mods)), normal, hi - lo, max(m.y + m.height for m in mods), owner))
 
@@ -557,7 +560,7 @@ def cabinet_faces(spec: KitchenSpec, scene: Scene) -> list[camera_plan.Face]:
 def cabinet_bodies(spec: KitchenSpec) -> list[camera_plan.Obstacle]:
     """The floor footprint of every cabinet standing in a run, up to its top (kind ``cabinet:<run>``): cameras stand clear of them."""
     frames = runmod.frames(spec)
-    out = []
+    out: list[camera_plan.Obstacle] = []
     for m in spec.module:
         fr = frames.get(m.run) if m.run else None
         if fr is not None and m.storey in ("base", "tall"):
@@ -575,7 +578,7 @@ def room_solids(spec: KitchenSpec, scene: Scene) -> tuple[list[tuple[float, floa
         return [(-scene.lsau, 0.0), (0.0, 0.0), (0.0, scene.lphai + 3000.0), (-scene.lsau, scene.lphai + 3000.0)], []
     to_kitchen = ctx.placement.to_kitchen
     room = [to_kitchen(float(q["x"]), float(q["z"])) for q in ctx.floorplan.get("outline", [])]
-    solids = []
+    solids: list[camera_plan.Obstacle] = []
     for st in ctx.structures:
         outline = tuple(to_kitchen(float(p["x"]), float(p["z"])) for p in st["outline"])
         if len(outline) >= 3 and float(st.get("height") or 0) > 0:
@@ -621,7 +624,8 @@ def default_views(spec: KitchenSpec, scene: Scene | None = None) -> dict[str, Vi
         views.update({key: ViewAngle(**v) for key, v in planned.items()})
         biggest = max(faces, key=lambda f: f.length)
         if "left" not in reach:  # a U sees all three runs only from the open side: keep its own overview
-            views["perspective"] = ViewAngle(**{**planned[f"{biggest.key}-oblique"], "name": "Phối cảnh chéo"})
+            overview: dict[str, Any] = {**planned[f"{biggest.key}-oblique"], "name": "Phối cảnh chéo"}
+            views["perspective"] = ViewAngle(**overview)
     if solids and faces:
         for key in ("overhead", "plan"):
             v = views[key]

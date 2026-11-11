@@ -44,7 +44,7 @@ def profile_of(spec: KitchenSpec, id: str) -> MoldingProfile | None:
 
 def default_moldings(crown: bool = True, base: bool = True, crown_profile: str = "classic-crown-layered",
                      base_profile: str = "classic-base") -> list[Molding]:
-    out = []
+    out: list[Molding] = []
     if crown:
         out.append(Molding(id="crown-molding", variant="crown", profile=crown_profile))
     if base:
@@ -68,8 +68,8 @@ class Run:
 
 
 def _lsau(spec: KitchenSpec) -> float:
-    from .geometry import _wall_length            # the one length of the back wall: what the kitchen is drawn with
-    return _wall_length(spec)[0]
+    from .geometry import wall_length            # the one length of the back wall: what the kitchen is drawn with
+    return wall_length(spec)[0]
 
 
 def _wall_pt(wall: str, s: float, d: float, lsau: float) -> tuple[float, float]:
@@ -144,8 +144,9 @@ def _intervals(spec: KitchenSpec, variant: str) -> tuple[dict[str, list[tuple[fl
     return iv, 0.0
 
 
-def _segments(items, gap):
-    segs = []
+def _segments(items: list[tuple[float, float, float, str]], gap: float) -> list[dict[str, Any]]:
+    """Cabinets of one row joined into stretches of one depth: ``{"s0", "s1", "d", "mods"}``."""
+    segs: list[dict[str, Any]] = []
     for s0, s1, d, id in sorted(items):
         if segs and abs(segs[-1]["d"] - d) <= 1 and s0 - segs[-1]["s1"] <= gap:
             segs[-1]["s1"] = max(segs[-1]["s1"], s1)
@@ -155,7 +156,7 @@ def _segments(items, gap):
     return segs
 
 
-def _end_depth(seg, neighbor, ho: str) -> float | None:
+def _end_depth(seg: dict[str, Any], neighbor: dict[str, Any] | None, ho: str) -> float | None:
     """Độ sâu mà đầu phào quay về; None = cắt phẳng (đâm vào hông tủ sâu hơn hoặc tường)."""
     if neighbor is not None:
         if neighbor["d"] > seg["d"] + 1:
@@ -237,8 +238,8 @@ def _angled_runs(spec: KitchenSpec, mol: Molding, prof: MoldingProfile, y: float
         names: list[str] = []
         for n, k in reversed(list(enumerate(parts))):             # against s: the far run first, back to the first
             ch = chains[k]
-            start = [] if n > 0 else ch["start"]                  # its start is the corner it shares with the run before it
-            end = [] if k in joined else ch["end"]                # its end is the corner it shares with the run after it
+            start: list[tuple[float, float]] = [] if n > 0 else ch["start"]   # its start is the corner it shares with the run before it
+            end: list[tuple[float, float]] = [] if k in joined else ch["end"]              # its end is the corner it shares with the run after it
             pts += [ch["fr"].to_world(s0, d0) for s0, d0 in (start + end)[::-1]] if (start or end) else []
             if n > 0:
                 pts.append(chains[parts[n - 1]]["turn"])
@@ -269,9 +270,9 @@ def compute_runs(spec: KitchenSpec) -> list[Run]:
         join_l = bool(segs["left"] and segs["back"] and segs["left"][0]["s0"] <= segs["back"][-1]["d"] + 1
                       and segs["back"][-1]["s1"] >= lsau - segs["left"][0]["d"] - 1)
 
-        def wall_polys(w):
+        def wall_polys(w: str) -> list[dict[str, Any]]:
             """Mỗi đoạn -> danh sách (s, d) theo chiều đi, kèm cờ bỏ xử lý đầu ở phía góc."""
-            out = []
+            out: list[dict[str, Any]] = []
             ss = segs[w]
             for i, sg in enumerate(ss):
                 prev_n = ss[i - 1] if i > 0 and sg["s0"] - ss[i - 1]["s1"] <= mol.joinGap else None
@@ -327,8 +328,8 @@ def compute_runs(spec: KitchenSpec) -> list[Run]:
 
 
 # ------------------------------------------------------------------ quét mặt cắt
-def _normals(pts):
-    ts = []
+def _normals(pts: list[tuple[float, float]]) -> tuple[list[tuple[float, float]], list[tuple[float, float]]]:
+    ts: list[tuple[float, float]] = []
     for a, b in zip(pts, pts[1:]):
         L = math.dist(a, b)
         ts.append(((b[0] - a[0]) / L, (b[1] - a[1]) / L))
@@ -338,7 +339,7 @@ def _normals(pts):
 def sweep_rings(profile: list[tuple[float, float]], pts: list[tuple[float, float]], y: float) -> list[list[tuple[float, float, float]]]:
     """Vòng đỉnh 3D tại mỗi đỉnh đường chạy (miter ở đỉnh giữa). Bản JS: sweepRings trong scene-loader.js."""
     ns, _ = _normals(pts)
-    rings = []
+    rings: list[list[tuple[float, float, float]]] = []
     for i, p in enumerate(pts):
         if i == 0:
             m = ns[0]
@@ -354,9 +355,9 @@ def sweep_rings(profile: list[tuple[float, float]], pts: list[tuple[float, float
 
 def ear_clip(poly: list[tuple[float, float]]) -> list[tuple[int, int, int]]:
     idx = list(range(len(poly)))
-    tris = []
+    tris: list[tuple[int, int, int]] = []
 
-    def area2(a, b, c):
+    def area2(a: tuple[float, float], b: tuple[float, float], c: tuple[float, float]) -> float:
         return (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
 
     guard = 0
@@ -376,7 +377,7 @@ def ear_clip(poly: list[tuple[float, float]]) -> list[tuple[int, int, int]]:
         else:
             break
     if len(idx) == 3:
-        tris.append(tuple(idx))
+        tris.append((idx[0], idx[1], idx[2]))
     return tris
 
 
@@ -394,7 +395,7 @@ def run_mesh(run: Run, idx: int) -> MeshPart:
     rings = sweep_rings(prof, run.points, run.y)
     n = len(prof)
     verts = [v for r in rings for v in r]
-    faces = []
+    faces: list[tuple[int, int, int]] = []
     for k in range(len(rings) - 1):
         for j in range(n):
             a, b = k * n + j, k * n + (j + 1) % n
@@ -417,7 +418,7 @@ def _flap(m: Module) -> bool:
 
 def check(spec: KitchenSpec) -> list[dict[str, Any]]:
     c = spec.common
-    out = []
+    out: list[dict[str, Any]] = []
     by_id = {m.id: m for m in spec.module}
     runs = compute_runs(spec)
     for mol in spec.moldings:
@@ -438,7 +439,7 @@ def check(spec: KitchenSpec) -> list[dict[str, Any]]:
             if top > c.ceiling + 0.5:
                 new_top = math.floor((c.ceiling - prof.height) / 5) * 5
                 delta = c.cabinetTop - new_top
-                actions = []
+                actions: list[dict[str, Any]] = []
                 if delta > 0 and _can_lower(spec, delta):
                     actions.append({"label": f"Hạ đỉnh tủ {delta:g} mm ({c.cabinetTop:g} → {new_top:g})",
                                     "op": {"op": "lower-top", "newTop": new_top}})

@@ -10,10 +10,11 @@ from __future__ import annotations
 from typing import Any
 
 import math
+from collections.abc import Iterable
 
 from .numeric import round_half_away, round_int
 from . import regions, runs
-from .errors import require
+from .jsonview import as_dict, as_list
 from .spec import KitchenSpec, Appliance
 
 TOPICS = {
@@ -30,8 +31,8 @@ def select(rows: list[dict[str, Any]], country: str | None, region: str | None) 
     """rows: các mục tri thức (đã parse metadata). Trả {chủ đề: {code, params, mucDo, uuTien, thamKhao}}."""
     out: dict[str, dict[str, Any]] = {}
     for r in regions.sort_rows(rows, country, region):
-        meta = r.get("metadata") or {}
-        for topic in meta.get("validation") or []:
+        meta = as_dict(r.get("metadata")) or {}
+        for topic in as_list(meta.get("validation")) or []:
             if topic in out or topic not in TOPICS:
                 continue
             score = regions.priority_score(r, country, region)
@@ -46,15 +47,16 @@ def select(rows: list[dict[str, Any]], country: str | None, region: str | None) 
 
 class _Ctx:
     def __init__(self, spec: KitchenSpec, sel: dict[str, dict[str, Any]]):
-        self.spec, self.sel, self.out = spec, sel, []
+        self.spec, self.sel = spec, sel
+        self.out: list[dict[str, Any]] = []
 
-    def p(self, topic):
+    def p(self, topic: str) -> dict[str, Any] | None:
         s = self.sel.get(topic)
         return s["params"] if s else None
 
-    def add(self, topic, mods, msg, measured=None, limit=None):
+    def add(self, topic: str, mods: Iterable[str], msg: str, measured: Any = None, limit: Any = None) -> None:
         s = self.sel[topic]
-        d = {"rule": s["code"], "topic": topic, "severity": s["severity"], "module": list(mods), "content": msg,
+        d: dict[str, Any] = {"rule": s["code"], "topic": topic, "severity": s["severity"], "module": list(mods), "content": msg,
              "theo": f"{s['zone']} · {s['priority']}"}
         if s["reference"]:
             d["reference"] = True
@@ -82,7 +84,7 @@ def _span(tb: Appliance, center: float) -> tuple[float, float]:
     return center - w / 2, center + w / 2
 
 
-def _landing(spec: KitchenSpec, tb: Appliance, spots: "dict[str, runs.Spot]"):
+def _landing(spec: KitchenSpec, tb: Appliance, spots: "dict[str, runs.Spot]") -> tuple[float, float] | None:
     me = spots[tb.id]
     s0, s1 = _span(tb, me.center)
     run = next(((a, b) for a, b in _runs(spec, me.row) if a - 1 <= s0 and s1 <= b + 1), None)
@@ -101,7 +103,7 @@ def _landing(spec: KitchenSpec, tb: Appliance, spots: "dict[str, runs.Spot]"):
     return s0 - left, right - s1
 
 
-def _plan_point(spec, row, s, d):
+def _plan_point(spec: KitchenSpec, row: str, s: float, d: float) -> tuple[float, float]:
     """Plan position (x, z) of the point (s, d) of a row, in the kitchen frame."""
     if row.startswith("run:"):
         fr = runs.frames(spec).get(row[4:])
@@ -113,11 +115,12 @@ def _plan_point(spec, row, s, d):
     return seat.to_world(s, d)
 
 
-def _range(ctx, topic, value, lo_key, hi_key, label, mods=()):
+def _range(ctx: _Ctx, topic: str, value: float, lo_key: str | None, hi_key: str | None, label: str, mods: Iterable[str] = ()) -> None:
     p = ctx.p(topic)
     if not p:
         return
-    openings, hi = p.get(lo_key), p.get(hi_key)
+    openings = p.get(lo_key) if lo_key is not None else None
+    hi = p.get(hi_key) if hi_key is not None else None
     if (openings is not None and value < openings - 1) or (hi is not None and value > hi + 1):
         lim = f"{openings if openings is not None else '…'}–{hi if hi is not None else '…'}"
         ctx.add(topic, mods, f"{label} {value:g} mm ngoài {lim} mm", value, [openings, hi])

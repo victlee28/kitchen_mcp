@@ -51,7 +51,7 @@ class TestConvert(unittest.TestCase):
         self.assertEqual((b1.fromCorner, b1.doors), (900.0, [400.0, 200.0]), "the back wall is measured from the right: mirrored, doors in reverse")
         r1 = next(m for m in after.module if m.id == "R1x")
         self.assertEqual((r1.fromCorner, r1.hingeSides), (600.0, ["right"]), "the right wall is not mirrored; its lone door keeps the hinge it had")
-        self.assertEqual((after.room.length("back"), after.room.length("right")), geometry._wall_length(before), "the kitchen frame is written down")
+        self.assertEqual((after.room.length("back"), after.room.length("right")), geometry.wall_length(before), "the kitchen frame is written down")
 
     def test_a_blind_corner_changes_ends_with_its_row(self):
         mods = [box("B1", "back", 0, 1000, blindCorner=600, doors=[400]), box("B2", "back", 1000, 600), box("R1x", "right", 600, 600, blindCorner=0),
