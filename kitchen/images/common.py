@@ -8,7 +8,7 @@ from typing import Any, Callable
 
 import numpy as np
 
-from .. import imaging
+from .. import imaging, palette
 from .. import builtin
 from ..catalog import Catalog
 from ..config import Config
@@ -18,8 +18,7 @@ GROW_PX = 12     # nở mask gửi model (ngữ cảnh quanh mép)
 FEATHER_PX = 2   # viền mềm khi ghép, chỉ vào trong mask
 VIEW_COLORS = 1280, 960
 MAX_TASKS = 8
-ZONE_COLORS = [("RED", (255, 0, 0)), ("GREEN", (0, 200, 0)), ("BLUE", (0, 80, 255)), ("YELLOW", (255, 220, 0)),
-            ("MAGENTA", (255, 0, 255)), ("CYAN", (0, 230, 230)), ("ORANGE", (255, 140, 0)), ("PURPLE", (140, 60, 200))]
+ZONE_COLORS = palette.ZONE_COLORS   # catalog kind palette, item zone
 
 
 def describe_position(mask: np.ndarray) -> dict | None:

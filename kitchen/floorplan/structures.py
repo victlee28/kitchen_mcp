@@ -3,12 +3,11 @@ from __future__ import annotations
 
 from typing import Any
 
+from ..palette import STRUCTURE_COLORS, STRUCTURE_FALLBACK
 from .constants import DEFAULT_WALL_HEIGHT
 
 
 # ---------------------------------------------------------------- every drawn element -> 3D structures
-STRUCTURE_COLORS = {"wall": "#E7E2D5", "column": "#F2B65D", "opening": "#55C6A9", "furniture": "#D38662", "shaft": "#8C83D6",
-                    "stair": "#CFAE52", "area": "#7D9EAA"}
 STAIR_STEPS = 10
 STAIR_RISE = 1800.0
 
@@ -42,7 +41,7 @@ def structures(fp: dict[str, Any]) -> list[dict[str, Any]]:
         h = float(el["height"]) if measured else default_height(e)
         rec = {"id": f"STRUCT-{e['id']}", "sourceElement": e["id"], "kind": e["kind"], "tag": e.get("tag") or e["kind"],
                "outline": [{"x": p["x"], "z": p["z"]} for p in e["outline"]], "base": float(el.get("base", 0.0)), "height": h,
-               "heightSource": "measured" if measured else "assumed", "color": STRUCTURE_COLORS.get(e["kind"], "#9BA8B5"),
+               "heightSource": "measured" if measured else "assumed", "color": STRUCTURE_COLORS.get(e["kind"], STRUCTURE_FALLBACK),
                "membership": e["membership"]}
         if e.get("label"):
             rec["label"] = e["label"]

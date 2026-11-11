@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { buildKitchen } from './scene-loader.js';
+import './palette-client.js';   // sets the appliance box colours (catalog palette)
 
 export const viewOf = (cameraId) => cameraId.replace(/^CAM-/, '');
 

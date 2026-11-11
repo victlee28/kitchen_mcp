@@ -1,19 +1,33 @@
-"""Fixed colours of the semantic masks and the per-module identification colour. Shared by render.py and threejs_export.py."""
+"""The fixed colours (semantic masks, display colours, structures, edit zones) and the per-module identification colour.
+
+The tables are data: the locked catalog kind ``palette`` (``data/items/palette.json``). No layer may override it, so the builtin catalog
+is the truth and these constants are read once. Shared by render.py, threejs_export.py, geometry.py, floorplan and the image jobs.
+"""
 from __future__ import annotations
 
 import colorsys
 import hashlib
+from typing import Any
 
-SEGMENT_COLORS = {  # semantic mask colours (fixed between renders)
-    "carcass": (230, 159, 0), "plinth": (86, 180, 233), "door": (0, 158, 115), "glass-door": (0, 114, 178),
-    "drawer": (213, 94, 0), "side-panel": (204, 121, 167), "shelf": (240, 228, 66), "countertop": (255, 255, 255),
-    "fridge": (120, 120, 200), "sink": (40, 40, 40), "faucet": (160, 160, 160), "cooktop": (90, 0, 90),
-    "hood": (0, 90, 90), "oven": (120, 60, 20), "tv": (20, 20, 120), "wall": (180, 170, 150), "floor": (110, 100, 90),
-    "molding": (168, 117, 66), "handle": (255, 0, 140),
-    "structure-wall": (231, 226, 213), "structure-column": (242, 182, 93), "structure-opening": (85, 198, 169),
-    "structure-furniture": (211, 134, 98), "structure-shaft": (140, 131, 214), "structure-stair": (207, 174, 82),
-    "structure-area": (125, 158, 170), "structure-swing": (154, 217, 198),
-}
+from . import builtin
+
+Rgb = tuple[int, int, int]
+
+
+def _colors(id: str) -> Any:
+    return builtin.CATALOG.data("palette", id)["colors"]
+
+
+def _rgb(v: Any) -> Rgb:
+    return int(v[0]), int(v[1]), int(v[2])
+
+
+SEGMENT_COLORS: dict[str, Rgb] = {str(k): _rgb(v) for k, v in _colors("segment").items()}   # semantic mask colours (fixed between renders)
+STRUCTURE_COLORS: dict[str, str] = {str(k): str(v) for k, v in _colors("structure").items()}   # floor-plan structures
+STRUCTURE_FALLBACK: str = str(builtin.CATALOG.data("palette", "structure").get("fallback", "#9BA8B5"))
+DISPLAY_COLORS: dict[str, str] = {**{str(k): str(v) for k, v in _colors("display").items()},
+                                  **{f"structure-{k}": v for k, v in STRUCTURE_COLORS.items()}}   # display colour per part type
+ZONE_COLORS: list[tuple[str, Rgb]] = [(str(z["name"]), _rgb(z["rgb"])) for z in _colors("zone")]   # numbered edit zones
 
 
 def module_color(id: str) -> tuple[int, int, int]:

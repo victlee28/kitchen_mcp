@@ -1,0 +1,41 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "palette",
+ "type": "object",
+ "required": [
+  "colors"
+ ],
+ "additionalProperties": false,
+ "properties": {
+  "description": {
+   "type": "object",
+   "properties": {
+    "vi": {
+     "type": "string"
+    },
+    "en": {
+     "type": "string"
+    }
+   },
+   "additionalProperties": false,
+   "x-label": {
+    "vi": "Mô tả",
+    "en": "Description"
+   }
+  },
+  "colors": {
+   "type": [
+    "object",
+    "array"
+   ],
+   "x-label": {
+    "vi": "Màu",
+    "en": "Colours"
+   }
+  },
+  "fallback": {
+   "type": "string",
+   "pattern": "^#[0-9a-fA-F]{6}$"
+  }
+ }
+}

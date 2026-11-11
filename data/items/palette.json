@@ -1,0 +1,280 @@
+[
+ {
+  "id": "display",
+  "description": {
+   "vi": "Màu hiển thị theo loại chi tiết (xem 3D, ảnh màu phẳng); các khối hiện trạng lấy thêm từ bảng 'structure'",
+   "en": "Display colour per part type (3D viewer, flat albedo); structures add the 'structure' table"
+  },
+  "colors": {
+   "carcass": "#d9c3a0",
+   "plinth": "#5b5348",
+   "door": "#c8a273",
+   "glass-door": "#9fc7d8",
+   "drawer": "#b98f5e",
+   "side-panel": "#c19a6b",
+   "shelf": "#a77f55",
+   "countertop": "#f1f0ec",
+   "fridge": "#c9ccd1",
+   "sink": "#2f3236",
+   "faucet": "#8a8f96",
+   "cooktop": "#121212",
+   "tv": "#0b0d10",
+   "hood": "#6f747a",
+   "oven": "#3a3d42",
+   "wall": "#ece7de",
+   "floor": "#bdb4a6",
+   "molding": "#a87542",
+   "handle": "#2b2b2b",
+   "wall-tile": "#dedbd4",
+   "structure-swing": "#9AD9C6"
+  }
+ },
+ {
+  "id": "structure",
+  "description": {
+   "vi": "Màu các khối hiện trạng của mặt bằng (tường, cột, cửa…)",
+   "en": "Floor-plan structure colours"
+  },
+  "colors": {
+   "wall": "#E7E2D5",
+   "column": "#F2B65D",
+   "opening": "#55C6A9",
+   "furniture": "#D38662",
+   "shaft": "#8C83D6",
+   "stair": "#CFAE52",
+   "area": "#7D9EAA"
+  },
+  "fallback": "#9BA8B5"
+ },
+ {
+  "id": "segment",
+  "description": {
+   "vi": "Màu mask ngữ nghĩa (cố định giữa các lần dựng)",
+   "en": "Semantic mask colours (fixed between renders)"
+  },
+  "colors": {
+   "carcass": [
+    230,
+    159,
+    0
+   ],
+   "plinth": [
+    86,
+    180,
+    233
+   ],
+   "door": [
+    0,
+    158,
+    115
+   ],
+   "glass-door": [
+    0,
+    114,
+    178
+   ],
+   "drawer": [
+    213,
+    94,
+    0
+   ],
+   "side-panel": [
+    204,
+    121,
+    167
+   ],
+   "shelf": [
+    240,
+    228,
+    66
+   ],
+   "countertop": [
+    255,
+    255,
+    255
+   ],
+   "fridge": [
+    120,
+    120,
+    200
+   ],
+   "sink": [
+    40,
+    40,
+    40
+   ],
+   "faucet": [
+    160,
+    160,
+    160
+   ],
+   "cooktop": [
+    90,
+    0,
+    90
+   ],
+   "hood": [
+    0,
+    90,
+    90
+   ],
+   "oven": [
+    120,
+    60,
+    20
+   ],
+   "tv": [
+    20,
+    20,
+    120
+   ],
+   "wall": [
+    180,
+    170,
+    150
+   ],
+   "floor": [
+    110,
+    100,
+    90
+   ],
+   "molding": [
+    168,
+    117,
+    66
+   ],
+   "handle": [
+    255,
+    0,
+    140
+   ],
+   "structure-wall": [
+    231,
+    226,
+    213
+   ],
+   "structure-column": [
+    242,
+    182,
+    93
+   ],
+   "structure-opening": [
+    85,
+    198,
+    169
+   ],
+   "structure-furniture": [
+    211,
+    134,
+    98
+   ],
+   "structure-shaft": [
+    140,
+    131,
+    214
+   ],
+   "structure-stair": [
+    207,
+    174,
+    82
+   ],
+   "structure-area": [
+    125,
+    158,
+    170
+   ],
+   "structure-swing": [
+    154,
+    217,
+    198
+   ]
+  }
+ },
+ {
+  "id": "zone",
+  "description": {
+   "vi": "Màu đánh số vùng sửa ảnh (việc 1, 2, …)",
+   "en": "Colours of the numbered edit zones"
+  },
+  "colors": [
+   {
+    "name": "RED",
+    "rgb": [
+     255,
+     0,
+     0
+    ]
+   },
+   {
+    "name": "GREEN",
+    "rgb": [
+     0,
+     200,
+     0
+    ]
+   },
+   {
+    "name": "BLUE",
+    "rgb": [
+     0,
+     80,
+     255
+    ]
+   },
+   {
+    "name": "YELLOW",
+    "rgb": [
+     255,
+     220,
+     0
+    ]
+   },
+   {
+    "name": "MAGENTA",
+    "rgb": [
+     255,
+     0,
+     255
+    ]
+   },
+   {
+    "name": "CYAN",
+    "rgb": [
+     0,
+     230,
+     230
+    ]
+   },
+   {
+    "name": "ORANGE",
+    "rgb": [
+     255,
+     140,
+     0
+    ]
+   },
+   {
+    "name": "PURPLE",
+    "rgb": [
+     140,
+     60,
+     200
+    ]
+   }
+  ]
+ },
+ {
+  "id": "appliance-finish",
+  "description": {
+   "vi": "Màu bề mặt hộp thiết bị trong xem 3D (null: giữ vật liệu)",
+   "en": "Appliance box finish colours in the 3D view (null: keep the material)"
+  },
+  "colors": {
+   "black-glass": "#141414",
+   "black": "#1e1e1e",
+   "white": "#f1f1ee",
+   "steel": null,
+   "panel": null
+  }
+ }
+]

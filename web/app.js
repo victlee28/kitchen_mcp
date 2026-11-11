@@ -13,6 +13,7 @@ import { createMoldingPanel } from './molding-panel.js';
 import { createDesignCreatePanel } from './design-create-panel.js';
 import { createFloorplanPanel } from './floorplan-panel.js';
 import { createHeaderControls } from './header-controls.js';
+import './palette-client.js';   // the catalog palettes, loaded before the viewer draws (appliance box colours)
 
 const { setStatus, run } = createStatus($('status'));
 const controller = createDesignController({ api, renderList: renderDesignList, onOpened: showDesign });
@@ -92,7 +93,6 @@ createDesignCreatePanel({ state, api, run, setStatus, loadDesigns, clearSelectio
 createFloorplanPanel({ state, api, run, setStatus, loadDesigns, openDesign });
 const { loadRegions } = createHeaderControls({ state, api, run, openDesign, clearSelection, setView: (k) => viewer.setView(k),
   onViewChanged: (key) => window.dispatchEvent(new CustomEvent('view-changed', { detail: key })) });
-
 // imgedit.js (separate script, works without three.js) asks for a reload by event instead of reaching into this app.
 window.addEventListener('design-reload-request', (ev) => run('tải lại', () => afterChange({ id: ev.detail.id })));
 

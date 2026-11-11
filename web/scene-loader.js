@@ -312,7 +312,10 @@ function openDoor(group, d, s) {
 }
 
 // ---- appliance stand-ins: what a plain box draws of its model (``box`` in the export: hob zones / burners, sink bowls, fridge doors)
-const FINISH = { 'black-glass': 0x141414, black: 0x1e1e1e, white: 0xf1f1ee, steel: null, panel: null };
+let FINISH = {};                        // finish -> 0xrrggbb or null (keep the material): the palette "appliance-finish", set by the page
+
+/** The appliance box finish colours (catalog palette "appliance-finish", numbers or null); without them a box keeps its material. */
+export function setFinishes(map) { FINISH = { ...(map || {}) }; }
 
 function finishMaterial(base, finish, THREE) {
   const c = FINISH[finish];

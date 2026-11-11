@@ -5,8 +5,9 @@ import { $, el } from './dom.js';
 import { api, createStatus } from './api-client.js';
 import { styleFromOptions, styleFromValue } from './assist-logic.js';
 import { modelChoices, APPLIANCE_VI } from './menu-logic.js';
+import { PALETTES } from './palette-client.js';
 const S = { id: null, view: null, data: null, layer: null, job: null, jobs: [], poll: null, maskImg: null, tasks: [], maskCache: {}, sel: [], key: '' };
-const PALETTE = [[255, 0, 0], [0, 200, 0], [0, 80, 255], [255, 220, 0], [255, 0, 255], [0, 230, 230], [255, 140, 0], [140, 60, 200]];
+const PALETTE = (PALETTES.zone || []).map((z) => z.rgb).concat(PALETTES.zone?.length ? [] : [[255, 0, 0]]);   // numbered edit zones (catalog palette "zone")
 const MAX_TASKS = 8;
 
 const { setStatus: status, run } = createStatus($('status'));

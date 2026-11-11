@@ -14,15 +14,9 @@ from .numeric import round_half_away
 from . import camera_plan, roomctx, runs as runmod, structure_mesh, tv_system
 from .spec import ViewAngle, KitchenSpec, Module, effective_handle, to_data
 from .errors import InvalidInput, require
+from .palette import DISPLAY_COLORS
 
-COLORS = {  # màu hiển thị theo loại chi tiết (viewer 3D, mask ngữ nghĩa)
-    "carcass": "#d9c3a0", "plinth": "#5b5348", "door": "#c8a273", "glass-door": "#9fc7d8", "drawer": "#b98f5e",
-    "side-panel": "#c19a6b", "shelf": "#a77f55", "countertop": "#f1f0ec", "fridge": "#c9ccd1", "sink": "#2f3236",
-    "faucet": "#8a8f96", "cooktop": "#121212", "tv": "#0b0d10", "hood": "#6f747a", "oven": "#3a3d42", "wall": "#ece7de", "floor": "#bdb4a6",
-    "molding": "#a87542", "handle": "#2b2b2b", "wall-tile": "#dedbd4",
-    "structure-wall": "#E7E2D5", "structure-column": "#F2B65D", "structure-opening": "#55C6A9", "structure-furniture": "#D38662",
-    "structure-shaft": "#8C83D6", "structure-stair": "#CFAE52", "structure-area": "#7D9EAA", "structure-swing": "#9AD9C6",  # = floorplan.STRUCTURE_COLORS
-}
+COLORS = DISPLAY_COLORS  # màu hiển thị theo loại chi tiết (viewer 3D, mask ngữ nghĩa): catalog kind palette, item display
 
 
 @dataclass
