@@ -259,5 +259,39 @@ class TestStylesFromTheCatalog(unittest.TestCase):
             shutil.rmtree(tmp, ignore_errors=True)
 
 
+class TestBackendsFromTheCatalog(unittest.TestCase):
+    """Stage 1.5: image backends and recognizers are closed catalog kinds: the workshop renames, reorders or hides them, never adds one."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        from kitchen.service import KitchenService
+        self.s = KitchenService(db_path=self.tmp / "k.db", render_dir=self.tmp / "r")
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_hide_rename_and_no_new_ones(self):
+        s = self.s
+        self.assertEqual(list(s.image_backends()["backends"]), ["recolor", "job-package", "gemini"])
+        s.catalog_put("backend", "recolor", {}, "workshop", disabled=True)
+        b = s.catalog().data("backend", "gemini")
+        s.catalog_put("backend", "gemini", {**b, "name": {"vi": "Gemini của xưởng"}, "rank": 0}, "workshop")
+        offered = s.image_backends()["backends"]
+        self.assertEqual(list(offered), ["gemini", "job-package"])
+        self.assertEqual(offered["gemini"]["name"], "Gemini của xưởng")
+        with self.assertRaises(InvalidInput) as e:
+            s.catalog_put("backend", "midjourney", {"name": {"vi": "MJ"}, "kind": ["edit"]}, "workshop")
+        self.assertEqual(e.exception.code, "catalog-closed-kind")
+
+    def test_recognizer_preference(self):
+        from kitchen import recognition
+        self.assertEqual(recognition.choose_recognizer(["gemini", "inbox"], None, None), "inbox")
+        self.s.catalog_put("recognizer", "inbox", {}, "workshop", disabled=True)
+        c = self.s.catalog()
+        self.assertEqual(recognition.choose_recognizer(["gemini", "inbox"], None, None, c), "gemini")
+        self.assertIsNone(recognition.choose_recognizer(["gemini", "inbox"], "inbox", None, c))
+        self.assertEqual(recognition.choose_recognizer(["fake"], None, None, c), "fake")              # a plug-in under its own name
+
+
 if __name__ == "__main__":
     unittest.main()

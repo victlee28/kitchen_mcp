@@ -30,7 +30,7 @@
   "images/__init__.py": 1,
   "images/base_images.py": 109,
   "images/common.py": 17,
-  "images/jobs.py": 70,
+  "images/jobs.py": 69,
   "images/packages.py": 51,
   "images/request.py": 1,
   "images/request_builder.py": 108,

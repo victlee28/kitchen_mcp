@@ -1,0 +1,57 @@
+[
+ {
+  "id": "recolor",
+  "name": {
+   "vi": "Đổi màu giữ sáng tối (không AI)",
+   "en": "Recolour keeping the shading (no AI)"
+  },
+  "rank": 1,
+  "kind": [
+   "edit",
+   "geometry_edit"
+  ],
+  "supported": [
+   "mask"
+  ],
+  "needsConfig": []
+ },
+ {
+  "id": "job-package",
+  "name": {
+   "vi": "Xuất gói job, nộp ảnh kết quả sau",
+   "en": "Export a job package, submit the result later"
+  },
+  "rank": 2,
+  "kind": [
+   "edit",
+   "gen0",
+   "geometry_edit"
+  ],
+  "supported": [
+   "reference-image",
+   "mask-illustration"
+  ],
+  "needsConfig": []
+ },
+ {
+  "id": "gemini",
+  "name": {
+   "vi": "Gemini API (ảnh + chỉ dẫn)",
+   "en": "Gemini API (image + instruction)"
+  },
+  "rank": 3,
+  "kind": [
+   "edit",
+   "gen0",
+   "geometry_edit"
+  ],
+  "supported": [
+   "reference-image",
+   "mask-illustration"
+  ],
+  "needsConfig": [
+   "GEMINI_API_KEY | GEMINI_ENV_FILE",
+   "GEMINI_IMAGE_MODEL"
+  ]
+ }
+]

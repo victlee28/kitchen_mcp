@@ -1,0 +1,73 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "backend",
+ "type": "object",
+ "required": [
+  "name",
+  "kind"
+ ],
+ "additionalProperties": false,
+ "properties": {
+  "name": {
+   "type": "object",
+   "required": [
+    "vi"
+   ],
+   "properties": {
+    "vi": {
+     "type": "string",
+     "minLength": 1
+    },
+    "en": {
+     "type": "string"
+    }
+   },
+   "additionalProperties": false,
+   "x-label": {
+    "vi": "Tên",
+    "en": "Name"
+   }
+  },
+  "rank": {
+   "type": "number",
+   "x-label": {
+    "vi": "Thứ tự ưu tiên (nhỏ trước)",
+    "en": "Order (smallest first)"
+   }
+  },
+  "kind": {
+   "type": "array",
+   "items": {
+    "enum": [
+     "edit",
+     "gen0",
+     "geometry_edit"
+    ]
+   },
+   "x-label": {
+    "vi": "Dùng cho loại việc",
+    "en": "Job kinds"
+   }
+  },
+  "supported": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   },
+   "x-label": {
+    "vi": "Hỗ trợ",
+    "en": "Supports"
+   }
+  },
+  "needsConfig": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   },
+   "x-label": {
+    "vi": "Cần cấu hình (biến môi trường)",
+    "en": "Needs configuration (environment)"
+   }
+  }
+ }
+}

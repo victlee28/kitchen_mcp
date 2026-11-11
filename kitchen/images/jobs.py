@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from .. import geometry, geometry_edit, prompts, render
-from ..backends import BACKENDS
+from .. import backends
 from ..catalog import Catalog
 from ..config import Config
 from ..errors import InvalidInput
@@ -125,9 +125,10 @@ class ImageJobs:
             if not geometry_items:
                 raise InvalidInput("kind=hinh cần danh sách thao tác hình học (hinh)")
             mode = "design"  # sửa hình: chấp nhận ảnh = ghi thao tác vào thiết kế
-        if backend not in BACKENDS:
-            raise InvalidInput(f"backend phải là một trong: {', '.join(BACKENDS)}")
-        if kind not in BACKENDS[backend]["kind"]:
+        offered = backends.table(self.env.catalog())
+        if backend not in offered:
+            raise InvalidInput(f"backend phải là một trong: {', '.join(offered)}")
+        if kind not in offered[backend]["kind"]:
             raise InvalidInput(f"backend '{backend}' không hỗ trợ {kind}")
         if mode not in MODES:
             raise InvalidInput("mode phải là quick hoặc design")

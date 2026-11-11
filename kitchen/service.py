@@ -117,6 +117,9 @@ class KitchenService:
         cat.check_write(info, role)
         if not isinstance(id, str) or not self.ID_PATTERN.match(id):
             raise InvalidInput(f"Item id {id!r}: letters, digits and _ . : - only, 1-64 characters", code="catalog-bad-id")
+        if info.closed and id not in {e.id for e in self.builtin.entries if e.kind == kind}:
+            raise InvalidInput(f"{kind} items stand for code: {id!r} cannot be added, only the builtin ones edited or hidden",
+                               code="catalog-closed-kind")
         if not disabled:
             errors_found = catalog_files.schema_errors(self.builtin.schemas[kind], data)
             if errors_found:
@@ -735,7 +738,7 @@ class KitchenService:
         out: dict[str, Any] = {'id': design_id, 'baseRev': current}
         if not self.recognizers:
             return {**out, 'status': 'unavailable', 'message': 'No recognizer is configured'}
-        name = recognition.choose_recognizer(list(self.recognizers), recognizer, self.config.default_recognizer)
+        name = recognition.choose_recognizer(list(self.recognizers), recognizer, self.config.default_recognizer, self.catalog())
         if name is None or name not in self.recognizers:
             raise InvalidInput(f"recognizer must be one of: {', '.join(self.recognizers)}", code='unknown-recognizer')
         inp = recognition.RecognitionInput(kind=kind, data=data, name=str(source.get('name') or ''), media_type=str(source.get('mediaType') or ''),
@@ -949,7 +952,7 @@ class KitchenService:
     def image_backends(self) -> dict:
         """Image backends, geometry-edit operations and lighting presets the UI can offer."""
         from . import backends, geometry_edit, prompts
-        return {'backends': backends.BACKENDS, 'operation': geometry_edit.OPERATIONS,
+        return {'backends': backends.table(self.catalog()), 'operation': geometry_edit.OPERATIONS,
                 'lighting': prompts.LIGHTING_VI, 'default': self.config.default_backend}
 
     def check_request(self, text: str) -> dict:

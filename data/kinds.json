@@ -59,5 +59,25 @@
   },
   "writers": [],
   "locked": true
+ },
+ "backend": {
+  "label": {
+   "vi": "Cách tạo ảnh",
+   "en": "Image backends"
+  },
+  "writers": [
+   "workshop"
+  ],
+  "closed": true
+ },
+ "recognizer": {
+  "label": {
+   "vi": "Bộ nhận diện ảnh",
+   "en": "Recognizers"
+  },
+  "writers": [
+   "workshop"
+  ],
+  "closed": true
  }
 }

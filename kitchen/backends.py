@@ -16,7 +16,12 @@ import urllib.request
 
 from pathlib import Path
 
+from typing import Any
+
+from . import builtin
+from .catalog import Catalog
 from .config import Config
+from .i18n import pick
 
 class BackendError(ValueError):
     def __init__(self, code: str, msg: str):
@@ -24,14 +29,22 @@ class BackendError(ValueError):
         self.code = code  # thieu-anh | khong-ho-tro | qua-tai | het-gio | sinh-that-bai
 
 
-BACKENDS = {
-    "recolor": {"name": "Đổi màu giữ sáng tối (không AI)", "kind": ["edit", "geometry_edit"], "async": False,
-               "supported": ["mask"], "needsConfig": []},
-    "job-package": {"name": "Xuất gói job, nộp ảnh kết quả sau", "kind": ["edit", "gen0", "geometry_edit"], "async": False,
-                "supported": ["reference-image", "mask-illustration"], "needsConfig": []},
-    "gemini": {"name": "Gemini API (ảnh + chỉ dẫn)", "kind": ["edit", "gen0", "geometry_edit"], "async": True,
-               "supported": ["reference-image", "mask-illustration"], "needsConfig": ["GEMINI_API_KEY | GEMINI_ENV_FILE", "GEMINI_IMAGE_MODEL"]},
-}
+ASYNC = frozenset({"gemini"})      # backends that answer later (a worker thread waits for the model)
+CODED = ("recolor", "job-package", "gemini")      # the adapters this module implements (catalog kind ``backend`` is closed to others)
+
+
+def _rank(value: Any) -> float:
+    return float(value) if isinstance(value, (int, float)) and not isinstance(value, bool) else float("inf")
+
+
+def table(catalog: Catalog = builtin.CATALOG, lang: str = "vi") -> dict[str, dict[str, Any]]:
+    """The image backends offered, best first: catalog kind ``backend`` (the workshop renames, reorders by ``rank`` or hides them; API keys
+    stay in the environment). Only backends this module implements are listed."""
+    items = [it for it in catalog.all("backend") if it.id in CODED]
+    items.sort(key=lambda it: _rank(it.data.get("rank")))      # stable: catalog order breaks ties
+    return {it.id: {"name": pick(it.data.get("name"), lang), "kind": list(it.data.get("kind") or []), "async": it.id in ASYNC,
+                    "supported": list(it.data.get("supported") or []), "needsConfig": list(it.data.get("needsConfig") or [])} for it in items}
+
 
 
 # ------------------------------------------------------------------ Gemini

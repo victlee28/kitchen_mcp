@@ -1,0 +1,26 @@
+[
+ {
+  "id": "inbox",
+  "name": {
+   "vi": "Claude Desktop qua hộp thư (để gỡ lỗi)",
+   "en": "Claude Desktop through the inbox (debugging)"
+  },
+  "rank": 1
+ },
+ {
+  "id": "cabinet",
+  "name": {
+   "vi": "Bộ nhận diện tủ",
+   "en": "Cabinet recognizer"
+  },
+  "rank": 2
+ },
+ {
+  "id": "gemini",
+  "name": {
+   "vi": "Gemini (cần khoá API)",
+   "en": "Gemini (needs an API key)"
+  },
+  "rank": 3
+ }
+]

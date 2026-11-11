@@ -5,6 +5,9 @@ from dataclasses import dataclass
 from collections.abc import Sequence
 from typing import Any, Literal, Protocol
 
+from .. import builtin
+from ..catalog import Catalog
+
 SOURCE_KINDS = ("photo", "drawing")
 SourceKind = Literal["photo", "drawing"]
 
@@ -39,17 +42,30 @@ class Recognizer(Protocol):
     def recognize(self, source: RecognitionInput) -> dict[str, Any]: ...
 
 
-PREFERENCE = ("inbox", "cabinet", "gemini")       # which plugged-in recognizer answers when nothing is asked for: Claude Desktop by chat first (to debug), then a model with an API key
+def _rank(value: Any) -> float:
+    return float(value) if isinstance(value, (int, float)) and not isinstance(value, bool) else float("inf")
 
 
-def choose_recognizer(available: Sequence[str], requested: str | None, default: str | None) -> str | None:
-    """The recognizer to use: the one asked for (None when it is not plugged in), else ``default`` when plugged in, else the first of PREFERENCE
-    that is, else the only one. None = no choice can be made."""
+def preference(catalog: Catalog = builtin.CATALOG) -> list[str]:
+    """Which plugged-in recognizer answers when nothing is asked for, best first: the catalog kind ``recognizer`` by ``rank`` (builtin:
+    Claude Desktop by chat first, to debug, then a model with an API key)."""
+    items = catalog.all("recognizer")
+    order = sorted(range(len(items)), key=lambda i: (_rank(items[i].data.get("rank")), i))
+    return [items[i].id for i in order]
+
+
+def choose_recognizer(available: Sequence[str], requested: str | None, default: str | None, catalog: Catalog = builtin.CATALOG) -> str | None:
+    """The recognizer to use: the one asked for (None when it is not plugged in or hidden), else ``default`` when plugged in, else the first
+    of ``preference`` that is, else the only one. None = no choice can be made. A builtin recognizer the catalog no longer lists (the workshop
+    hid it) is not used; one plugged in under another name (a test, a plug-in) is."""
+    allowed = preference(catalog)
+    hidden = set(builtin.CATALOG.ids("recognizer")) - set(allowed)
+    available = [a for a in available if a not in hidden]
     if requested:
         return requested if requested in available else None
     if default and default in available:
         return default
-    for name in PREFERENCE:
+    for name in allowed:
         if name in available:
             return name
     return available[0] if len(available) == 1 else None
