@@ -6,19 +6,21 @@ code nào có bộ kiểm tra thì dùng tham số đó, code chưa có bộ ki�
 """
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import Any
 
 from itertools import combinations
 
 from . import appliance_models, knowledge_seed, moldings, regions, rules_kb, runs, tv_system
 from .errors import require
-from .spec import KitchenSpec, Module
+from .jsonview import as_dict
+from .spec import KitchenSpec
 
 TOL = 1.0  # mm
 
 
-def _issue(code, level, mods, msg, measured=None, limit=None):
-    d = {"rule": code, "severity": level, "module": list(mods), "content": msg}
+def _issue(code: str, level: str, mods: Iterable[str], msg: str, measured: Any = None, limit: Any = None) -> dict[str, Any]:
+    d: dict[str, Any] = {"rule": code, "severity": level, "module": list(mods), "content": msg}
     if measured is not None:
         d["measured"] = measured
     if limit is not None:
@@ -28,7 +30,7 @@ def _issue(code, level, mods, msg, measured=None, limit=None):
 
 def _envelopes(spec: KitchenSpec) -> list[tuple[str, tuple[Any, ...], tuple[Any, ...]]]:
     """Khối bao của từng module (corner-shelf tách 2 cánh) trong toạ độ thế giới."""
-    out = []
+    out: list[tuple[str, tuple[Any, ...], tuple[Any, ...]]] = []
     lsau = (spec.room.length("back") if spec.room else None) or max([m.endAt for m in spec.module if m.wall == "back"] + [0]) + 600
     for m in spec.module:
         y0, y1 = m.y, m.y + m.height
@@ -51,7 +53,7 @@ def _envelopes(spec: KitchenSpec) -> list[tuple[str, tuple[Any, ...], tuple[Any,
     return out
 
 
-def _overlap(a, b) -> float:
+def _overlap(a: tuple[tuple[Any, ...], tuple[Any, ...]], b: tuple[tuple[Any, ...], tuple[Any, ...]]) -> float:
     v = 1.0
     for i in range(3):
         v *= max(0.0, min(a[1][i], b[1][i]) - max(a[0][i], b[0][i]) - TOL)
@@ -60,7 +62,7 @@ def _overlap(a, b) -> float:
 
 def check_geometry(spec: KitchenSpec) -> list[dict[str, Any]]:
     c = spec.common
-    issues = []
+    issues: list[dict[str, Any]] = []
     env = _envelopes(spec)
     angled = {m.id: runs.module_footprint(fr, m) for m in spec.module if (fr := runs.frame_of(spec, m)) is not None and not m.turnsInto}   # two-legged: by its boxes
     for (id, mn, mx), (mb, nn, nx) in combinations(env, 2):
@@ -173,6 +175,6 @@ def validate(spec: KitchenSpec, kb_rules: list[dict[str, Any]] | None = None, co
     issues.sort(key=lambda i: order[i["severity"]])
     dem = {k: sum(i["severity"] == k for i in issues) for k in order}
     dung = {t: f"{v['code']} ({v['zone']}, {v['priority']})" for t, v in sel.items()}
-    chua = [r["code"] for r in rows if not (r.get("metadata") or {}).get("validation")]
+    chua = [r["code"] for r in rows if not (as_dict(r.get("metadata")) or {}).get("validation")]
     return {"valid": dem["error"] == 0, "dem": dem, "issues": issues, "country": qg, "region": kv,
             "appliedRules": dung, "unchecked": chua}

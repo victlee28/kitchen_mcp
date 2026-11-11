@@ -71,10 +71,10 @@ class Part:
 
 @dataclass
 class Scene:
-    parts: list[Part] = field(default_factory=list)
+    parts: list[Part] = field(default_factory=list[Part])
     lsau: float = 0
     lphai: float = 0
-    meshes: list[Any] = field(default_factory=list)  # lưới tam giác không thẳng trục (phào) — kitchen.moldings.MeshPart
+    meshes: list[Any] = field(default_factory=list[Any])  # lưới tam giác không thẳng trục (phào) — kitchen.moldings.MeshPart
 
     def bounds(self, cabinets_only: bool = True) -> tuple[list[float], list[float]]:
         ps = [p for p in self.parts if p.type != "handle" and (not cabinets_only or p.type not in ("wall", "floor"))]

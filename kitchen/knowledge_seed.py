@@ -10,6 +10,7 @@ Trường của mỗi mục:
 Số liệu chỉ ghi khi đọc được từ nguồn ghi ở source_url. Bản tóm tắt không thay văn bản gốc; khi thi công
 phải theo bản đầy đủ, quy chuẩn địa phương và hướng dẫn lắp của nhà sản xuất thiết bị.
 """
+from typing import Any
 
 NKBA = "https://kb.nkba.org/uploads/2022/05/Kitchen-Planning-Guidelines.pdf"
 RANGEMASTER = "https://www.rangemaster.co.uk/what-clearances-are-required-between-cooker-top-and-cooker-hood"
@@ -24,8 +25,9 @@ QCVN04 = "https://vksndtc.gov.vn/tin-tong-hop/quy-chuan-ky-thuat-quoc-gia-ve-nha
 VN_PRACTICE = "https://meta.vn/hotro/kich-thuoc-tu-bep-tieu-chuan-21437"
 
 
-def _k(kind, code, title, content, url, region, country, source, type, check=None, params=None, **extra):
-    meta = {"source": source, "sourceType": type, **extra}
+def _k(kind: str, code: str, title: str, content: str, url: str | None, region: str | None, country: str | None, source: str, type: str,
+       check: Any = None, params: Any = None, **extra: Any) -> dict[str, Any]:
+    meta: dict[str, Any] = {"source": source, "sourceType": type, **extra}
     if check:
         meta["validation"] = check
     if params:
@@ -37,7 +39,7 @@ def _k(kind, code, title, content, url, region, country, source, type, check=Non
 _N = "NKBA Kitchen Planning Guidelines"
 _VL = "Mô tả chung, cần đối chiếu catalogue nhà cung cấp"
 
-KNOWLEDGE = [
+KNOWLEDGE: list[dict[str, Any]] = [
     # ---------------- 3 mục mẫu ban đầu (không rõ nguồn) — giữ làm mặc định toàn cầu, mức "chua-ro"
     _k("standard", "KITCHEN-DEFAULT-001", "Kích thước công thái học",
        "Chiều cao mặt bàn tham chiếu 850-950 mm; chiều sâu tủ dưới 580-650 mm.", "", "GLOBAL", "",

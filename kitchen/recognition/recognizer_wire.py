@@ -10,6 +10,8 @@ import base64
 import re
 from typing import Any
 
+from ..jsonview import as_dict, as_list
+
 MAX_NOTE = 500
 # a module the recognizer had to approximate or could not place gets a confidence below ``draft.MIN_CONFIDENCE`` so the preview flags it
 REVIEW_CODES = ("type-approximated", "unknown-type", "outside-wall", "tall-sections-simplified", "blind-moved-to-left-run", "blind-moved-to-next-run", "corner-gap",
@@ -39,8 +41,8 @@ def request_body(kind: str, data: bytes, note: str = "") -> dict[str, Any]:
 
 def response_error(payload: Any) -> str:
     """``"code: message"`` when the service answered with an error object, else ``""``."""
-    err = payload.get("error") if isinstance(payload, dict) else None
-    if not isinstance(err, dict):
+    err = as_dict(_dict(payload).get("error"))
+    if err is None:
         return ""
     return f"{err.get('code') or err.get('kind') or 'error'}: {err.get('message') or ''}".strip()[:300]
 
@@ -53,7 +55,7 @@ def clean_job_id(value: Any) -> str:
 def job_progress(payload: Any) -> dict[str, str]:
     """Where a service job stands: ``{"state": "waiting"|"done"|"error", "step": ..., "message": ...}``. An answer that is neither, or that is
     not an object, is an ``error``. ``step``: the question being waited on; ``message``: the service's error."""
-    body = payload if isinstance(payload, dict) else {}
+    body = _dict(payload)
     state = body.get("state")
     if state in ("waiting", "done"):
         step = body.get("step")
@@ -67,11 +69,11 @@ def _issue_text(issue: dict[str, Any]) -> str:
 
 
 def _dict(value: Any) -> dict[str, Any]:
-    return value if isinstance(value, dict) else {}
+    return as_dict(value) or {}
 
 
 def _list(value: Any) -> list[Any]:
-    return value if isinstance(value, list) else []
+    return as_list(value) or []
 
 
 def _number(value: Any) -> float | None:
@@ -85,16 +87,17 @@ def draft_from_runs(payload: Any) -> dict[str, Any] | None:
     doc = layout_from_runs(payload)
     if doc is None:
         return None
-    issues = [i for i in _list(doc.get("issues")) if isinstance(i, dict)]
+    issues = [i for i in (as_dict(x) for x in _list(doc.get("issues"))) if i is not None]
     flagged = {i.get("module") for i in issues if i.get("code") in REVIEW_CODES and isinstance(i.get("module"), str)}
     modules: list[Any] = []
-    for run in _list(doc.get("runs")):
-        if not isinstance(run, dict):
+    for run in (as_dict(x) for x in _list(doc.get("runs"))):
+        if run is None:
             continue
         rid, length = run.get("id"), run.get("length")
-        for m in _list(run.get("modules")):
-            if not isinstance(m, dict):
-                modules.append(m)                  # build_draft lists it under ``rejected``
+        for raw in _list(run.get("modules")):
+            m = as_dict(raw)
+            if m is None:
+                modules.append(raw)                # build_draft lists it under ``rejected``
                 continue
             item: dict[str, Any] = {k: m[k] for k in MODULE_FIELDS if k not in ("wall", "fromCorner") and m.get(k) is not None}
             item["wall"] = rid
@@ -117,5 +120,5 @@ def draft_from_runs(payload: Any) -> dict[str, Any] | None:
 def layout_from_runs(payload: Any) -> dict[str, Any] | None:
     """The service's kitchen BY RUNS (``recognized-runs/1``: runs, joints, each cabinet's ``s`` from the left end of its run) from an answer, or
     None when the answer has none (an older service). ``recognition.build_layout`` checks it."""
-    runs = _dict(payload).get("runs")
-    return runs if isinstance(runs, dict) and isinstance(runs.get("runs"), list) else None
+    runs = as_dict(_dict(payload).get("runs"))
+    return runs if runs is not None and as_list(runs.get("runs")) is not None else None

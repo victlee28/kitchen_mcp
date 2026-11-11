@@ -14,7 +14,7 @@ from typing import Any
 
 from .geometry import Scene
 from .spec import KitchenSpec
-from . import handles, lexicon, vocab
+from . import handles
 from .errors import InvalidInput, NotFound, require
 
 FRONT_SECTIONS = ("door", "glass-door", "drawer")
@@ -110,7 +110,7 @@ def design_op(spec: KitchenSpec, layer: dict[str, Any], material: str, scene: Sc
 
 def catalogue(spec: KitchenSpec, scene: Scene) -> list[dict[str, Any]]:
     """Mọi chi tiết đơn + layer nhóm. Không gồm số pixel (phụ thuộc góc nhìn)."""
-    out = []
+    out: list[dict[str, Any]] = []
     storey_of = {m.id: m.storey for m in spec.module}
     from . import runs
     system_of: dict[str, str] = runs.systems(spec)
@@ -124,31 +124,31 @@ def catalogue(spec: KitchenSpec, scene: Scene) -> list[dict[str, Any]]:
                     "cabinetSystemId": system_of.get(p.module or "") or run_system.get(getattr(p, "run", None) or ""),
                     "selectable": True, "allowAppearanceChange": not p.type.startswith("structure-"),
                     "allowGeometryChange": False, "allowPositionChange": False})
-    by_id = {x["id"]: x for x in out}
-    groups = []
+    by_id: dict[str, dict[str, Any]] = {x["id"]: x for x in out}
+    groups: list[dict[str, Any]] = []
     for m in spec.module:
-        fronts = [x["id"] for x in out if x["module"] == m.id and x["type"] in FRONT_SECTIONS]
+        fronts: list[str] = [x["id"] for x in out if x["module"] == m.id and x["type"] in FRONT_SECTIONS]
         if fronts:
             first = by_id[fronts[0]]
             groups.append({"id": f"frontSections:{m.id}", "variant": "group", "module": m.id, "type": "door", "semanticClass": "cabinet_front",
                            "name": f"mặt trước {m.id}", "material": first["material"], "materialLocked": first["materialLocked"], "component": fronts})
-        hs = [x["id"] for x in out if x["module"] == m.id and x["type"] == "handle"]
+        hs: list[str] = [x["id"] for x in out if x["module"] == m.id and x["type"] == "handle"]
         if hs:
             groups.append({"id": f"handle:{m.id}", "variant": "group", "module": m.id, "type": "handle", "semanticClass": "hardware",
                            "name": f"tay nắm {m.id}", "material": by_id[hs[0]]["material"], "materialLocked": "common:handle",
                            "component": hs})
-        allp = [x["id"] for x in out if x["module"] == m.id]
+        allp: list[str] = [x["id"] for x in out if x["module"] == m.id]
         if allp:
             groups.append({"id": f"module:{m.id}", "variant": "group", "module": m.id, "type": "module", "semanticClass": "cabinet",
                            "name": f"module {m.id}", "material": None, "materialLocked": "", "component": allp})
     for mol in spec.moldings:
-        ids = [x["id"] for x in out if x["module"] == mol.id and x["type"] == "molding"]
+        ids: list[str] = [x["id"] for x in out if x["module"] == mol.id and x["type"] == "molding"]
         if ids:
             first = by_id[ids[0]]
             groups.append({"id": f"module:{mol.id}", "variant": "group", "module": mol.id, "type": "molding", "semanticClass": "decorations",
                            "name": f"phào {mol.id}", "material": first["material"], "materialLocked": first["materialLocked"], "component": ids})
-    for type in dict.fromkeys(x["type"] for x in out):
-        ids = [x["id"] for x in out if x["type"] == type]
+    for type in dict.fromkeys(str(x["type"]) for x in out):
+        ids = [str(x["id"]) for x in out if x["type"] == type]
         if len(ids) > 1:
             first = by_id[ids[0]]
             same = len({by_id[i]["materialLocked"] for i in ids}) == 1
@@ -180,7 +180,7 @@ def _tier_groups(parts: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def _role_groups(parts: list[dict[str, Any]], prefix: str, suffix: str, system: str | None = None) -> list[dict[str, Any]]:
-    out = []
+    out: list[dict[str, Any]] = []
     for tier, tname in TIER_NAME.items():
         members = [x for x in parts if x.get("storey") and TIER_OF[x["storey"]] == tier]
         doors = [x for x in members if x["type"] in ("door", "glass-door")]
@@ -189,9 +189,9 @@ def _role_groups(parts: list[dict[str, Any]], prefix: str, suffix: str, system: 
         roles = [("handle", "handle", f"tay nắm {tname}", hs), ("door", "door", f"cánh {tname}", doors),
                  ("drawer", "drawer", f"mặt ngăn kéo {tname}", drawers), ("front", "door", f"mặt trước {tname}", doors + drawers),
                  ("all", "module", f"{tname}: mặt trước và tay nắm", doors + drawers + hs)]
-        seen: list[frozenset] = []
+        seen: list[frozenset[str]] = []
         for role, type, name, xs in roles:
-            ids = [x["id"] for x in xs]
+            ids: list[str] = [x["id"] for x in xs]
             if not ids or frozenset(ids) in seen:
                 continue
             seen.append(frozenset(ids))

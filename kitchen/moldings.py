@@ -59,8 +59,8 @@ class Run:
     profile: MoldingProfile
     y: float
     points: list[tuple[float, float]]  # (x, z) mặt bằng, mm
-    modules: list[str] = field(default_factory=list)
-    wall: list[str] = field(default_factory=list)
+    modules: list[str] = field(default_factory=list[str])
+    wall: list[str] = field(default_factory=list[str])
 
     @property
     def length(self) -> float:
@@ -352,7 +352,7 @@ def sweep_rings(profile: list[tuple[float, float]], pts: list[tuple[float, float
     return rings
 
 
-def _ear_clip(poly: list[tuple[float, float]]) -> list[tuple[int, int, int]]:
+def ear_clip(poly: list[tuple[float, float]]) -> list[tuple[int, int, int]]:
     idx = list(range(len(poly)))
     tris = []
 
@@ -400,7 +400,7 @@ def run_mesh(run: Run, idx: int) -> MeshPart:
             a, b = k * n + j, k * n + (j + 1) % n
             c, d = (k + 1) * n + (j + 1) % n, (k + 1) * n + j
             faces += [(a, b, c), (a, c, d)]
-    cap = _ear_clip(prof)
+    cap = ear_clip(prof)
     last = (len(rings) - 1) * n
     faces += [(c, b, a) for a, b, c in cap] + [(last + a, last + b, last + c) for a, b, c in cap]
     return MeshPart(f"{run.molding.id}-{idx}", run.molding.id, "molding", verts, faces)

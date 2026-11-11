@@ -9,8 +9,13 @@ from __future__ import annotations
 from typing import Any
 
 import math
+from collections.abc import Callable
 
-from .moldings import MeshPart, _ear_clip
+from .jsonview import as_list
+from .moldings import MeshPart, ear_clip
+
+Pt = tuple[float, float]
+ToKitchen = Callable[[float, float], Pt]   # room scene (x, z) -> kitchen frame (x, z)
 
 KINDS = ("wall", "column", "opening", "furniture", "shaft", "stair", "area")
 SWING = "swing"          # type structure-swing: the floor area a door sweeps, drawn as a flat sheet next to the door
@@ -33,10 +38,10 @@ def prism(poly: list[tuple[float, float]], y0: float, y1: float) -> tuple[list[t
         poly = poly[::-1]
     n = len(poly)
     verts = [(x, y0, z) for x, z in poly]
-    faces: list[tuple[int, int, int]] = [(a, b, c) for a, b, c in _ear_clip(poly)]
+    faces: list[tuple[int, int, int]] = [(a, b, c) for a, b, c in ear_clip(poly)]
     if y1 > y0:
         verts += [(x, y1, z) for x, z in poly]
-        faces += [(n + a, n + b, n + c) for a, b, c in _ear_clip(poly)]
+        faces += [(n + a, n + b, n + c) for a, b, c in ear_clip(poly)]
         for i in range(n):
             j = (i + 1) % n
             faces += [(i, j, n + j), (i, n + j, n + i)]
@@ -45,7 +50,7 @@ def prism(poly: list[tuple[float, float]], y0: float, y1: float) -> tuple[list[t
 
 def _clip_halfplane(poly: list[tuple[float, float]], d: tuple[float, float], t0: float) -> list[tuple[float, float]]:
     """Part of ``poly`` where dot(p, d) >= t0 (Sutherland-Hodgman against one line)."""
-    out = []
+    out: list[tuple[float, float]] = []
     for a, b in zip(poly, poly[1:] + poly[:1]):
         da, db = a[0] * d[0] + a[1] * d[1] - t0, b[0] * d[0] + b[1] * d[1] - t0
         if da >= 0:
@@ -68,7 +73,7 @@ def _stair_steps(st: dict[str, Any], poly: list[tuple[float, float]]) -> list[tu
     d = (d[0] / ln, d[1] / ln)
     al = [p[0] * d[0] + p[1] * d[1] for p in poly]
     a0, run = min(al), (max(al) - min(al)) / st["steps"]
-    out = []
+    out: list[tuple[list[tuple[float, float]], float]] = []
     for i in range(st["steps"]):
         part = _clip_halfplane(poly, d, a0 + run * i)
         if len(part) >= 3:
@@ -76,9 +81,9 @@ def _stair_steps(st: dict[str, Any], poly: list[tuple[float, float]]) -> list[tu
     return out
 
 
-def swing_sheet(st: dict[str, Any], to_kitchen) -> tuple[list[tuple[float, float, float]], list[tuple[int, int, int]]] | None:
+def swing_sheet(st: dict[str, Any], to_kitchen: ToKitchen) -> tuple[list[tuple[float, float, float]], list[tuple[int, int, int]]] | None:
     """Flat fan from the hinge across the arc a door sweeps (``swing`` points, ``hinge``), 2 mm above the floor; None without both."""
-    arc = st.get("swing") or []
+    arc = as_list(st.get("swing")) or []
     hinge = st.get("hinge")
     if len(arc) < 2 or not hinge:
         return None
@@ -87,15 +92,16 @@ def swing_sheet(st: dict[str, Any], to_kitchen) -> tuple[list[tuple[float, float
     return [(x, y, z) for x, z in pts], [(0, i, i + 1) for i in range(1, len(pts) - 1)]
 
 
-def meshes(structures: list[dict[str, Any]], to_kitchen) -> list[MeshPart]:
+def meshes(structures: list[dict[str, Any]], to_kitchen: ToKitchen) -> list[MeshPart]:
     """``structures``: floorplan.structures() records (scene outline in mm). ``to_kitchen(x, z) -> (x, z)`` maps room-scene to kitchen frame."""
-    out = []
+    out: list[MeshPart] = []
     for st in structures:
         kind = st["kind"] if st["kind"] in KINDS else "area"
-        poly = [to_kitchen(p["x"], p["z"]) for p in st["outline"]]
+        poly: list[Pt] = [to_kitchen(p["x"], p["z"]) for p in st["outline"]]
         if len(poly) < 3:
             continue
         base = float(st.get("base") or 0.0)
+        solids: list[tuple[list[Pt], float, float]]
         if st["kind"] == "stair" and st.get("steps") and st.get("height", 0) > 0:
             solids = [(pp, base, base + h) for pp, h in _stair_steps({**st, "arrow": _map_arrow(st.get("arrow"), to_kitchen)}, poly)]
         elif st.get("height", 0) > 0:
@@ -111,7 +117,8 @@ def meshes(structures: list[dict[str, Any]], to_kitchen) -> list[MeshPart]:
     return out
 
 
-def _map_arrow(arrow, to_kitchen):
+def _map_arrow(value: Any, to_kitchen: ToKitchen) -> list[dict[str, float]] | None:
+    arrow = as_list(value)
     if not arrow or len(arrow) < 2:
         return None
     pts = [to_kitchen(p["x"], p["z"]) for p in arrow[:2]]

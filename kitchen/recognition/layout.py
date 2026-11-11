@@ -11,9 +11,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from ..jsonview import as_dict, as_list
 from ..numeric import round_half_away
 from ..spec import MODULE_TYPES
-from .draft import MAX_MODULES, MIN_CONFIDENCE, DraftModule, _conf, _num
+from .draft import MAX_MODULES, MIN_CONFIDENCE, DraftModule, confidence_of, number
 from .operation import fridge_bay
 
 SCHEMA = "recognized-runs/1"
@@ -53,19 +54,22 @@ class Layout:
 
 
 def _positive_list(value: Any, limit: int) -> list[float] | None:
-    if not isinstance(value, list) or not value or len(value) > limit:
+    items = as_list(value)
+    if not items or len(items) > limit:
         return None
-    nums = [_num(v) for v in value]
+    nums = [number(v) for v in items]
     return None if any(n is None or n <= 0 for n in nums) else [float(n) for n in nums if n is not None]
 
 
 def _sections(value: Any) -> list[dict[str, Any]] | None:
-    if not isinstance(value, list) or not value or len(value) > 8:
+    items = as_list(value)
+    if not items or len(items) > 8:
         return None
     out: list[dict[str, Any]] = []
-    for item in value:
-        height = _num(item.get("height")) if isinstance(item, dict) else None
-        if not isinstance(item, dict) or item.get("type") not in SECTION_TYPES or height is None or height <= 0:
+    for each in items:
+        item = as_dict(each)
+        height = number(item.get("height")) if item is not None else None
+        if item is None or item.get("type") not in SECTION_TYPES or height is None or height <= 0:
             return None
         out.append({"type": item["type"], "height": height})
     return out
@@ -83,11 +87,12 @@ CEILING_GAP = 30.0                  # air between the top of the cabinets and th
 
 def _levels(raw: Any) -> tuple[tuple[str, float], ...]:
     """The numeric levels of a recognised ``common`` that are plausible on their own (0 < v <= 4000 mm); the spec's own validation judges the set."""
-    if not isinstance(raw, dict):
+    obj = as_dict(raw)
+    if obj is None:
         return ()
     out: list[tuple[str, float]] = []
     for key in LEVELS:
-        v = _num(raw.get(key))
+        v = number(obj.get(key))
         if v is not None and 0 < v <= 4000:
             out.append((key, float(v)))
     return tuple(out)
@@ -132,9 +137,9 @@ def appliance_size(kind: str, width: float, niche: float | None = None) -> str |
 
 def _appliances(value: Any, width: float, niche: float | None) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
-    for item in value if isinstance(value, list) else []:
-        if isinstance(item, dict) and item.get("type") in APPLIANCE_TYPES and len(out) < MAX_APPLIANCES:
-            entry = {"type": item["type"], "name": str(item.get("name") or "")[:60]}
+    for item in (as_dict(x) for x in as_list(value) or []):
+        if item is not None and item.get("type") in APPLIANCE_TYPES and len(out) < MAX_APPLIANCES:
+            entry: dict[str, Any] = {"type": item["type"], "name": str(item.get("name") or "")[:60]}
             size = appliance_size(item["type"], width, niche)
             if size:
                 entry["dimensions"] = size
@@ -142,14 +147,15 @@ def _appliances(value: Any, width: float, niche: float | None) -> list[dict[str,
     return out
 
 
-def _module(raw: Any, length: float) -> tuple[dict[str, Any] | None, str]:
+def _module(value: Any, length: float) -> tuple[dict[str, Any] | None, str]:
     """``(module, "")`` or ``(None, reason)``."""
-    if not isinstance(raw, dict):
+    raw = as_dict(value)
+    if raw is None:
         return None, "not an object"
     mtype = raw.get("type")
     if mtype not in MODULE_TYPES or mtype == "corner-shelf":
         return None, f"unknown or unsupported module type {mtype!r}"
-    nums = {k: _num(raw.get(k)) for k in ("s", "width", "y", "height", "depth")}
+    nums = {k: number(raw.get(k)) for k in ("s", "width", "y", "height", "depth")}
     if any(v is None for v in nums.values()):
         return None, "s, width, y, height and depth must be numbers"
     s, width, y, height, depth = (float(nums[k] or 0.0) for k in ("s", "width", "y", "height", "depth"))
@@ -163,7 +169,7 @@ def _module(raw: Any, length: float) -> tuple[dict[str, Any] | None, str]:
     name = raw.get("name")
     if isinstance(name, str) and name.strip():
         out["name"] = name.strip()[:60]
-    blind = _num(raw.get("blindCorner"))
+    blind = number(raw.get("blindCorner"))
     if blind is not None and 0 < blind < width:
         out["blindCorner"] = blind
     doors = _positive_list(raw.get("doors"), 6)
@@ -177,16 +183,17 @@ def _module(raw: Any, length: float) -> tuple[dict[str, Any] | None, str]:
     shelves = raw.get("shelfCount")
     if isinstance(shelves, int) and not isinstance(shelves, bool) and 1 <= shelves <= 8:
         out["shelfCount"] = shelves
-    niches = [float(t["height"]) for t in out.get("frontSections") or [] if t.get("type") == "niche"]
+    fronts: list[dict[str, Any]] = out.get("frontSections") or []
+    niches = [float(t["height"]) for t in fronts if t.get("type") == "niche"]
     devices = _appliances(raw.get("appliances"), out["width"], niches[0] if niches else None)
     if mtype == "tall-fridge":
-        niche = _num(raw.get("niche"))
+        niche = number(raw.get("niche"))
         extra, fridge = fridge_bay(DraftModule(type=mtype, wall="back", width=out["width"], niche=niche if niche and niche > 0 else None), height, depth)
         out.update(extra)
         devices = [fridge, *[d for d in devices if d["type"] != "fridge"]]
     if devices:
         out["appliances"] = devices
-    confidence = _conf(raw.get("confidence"))
+    confidence = confidence_of(raw.get("confidence"))
     out["confidence"] = confidence
     out["needsReview"] = confidence < MIN_CONFIDENCE
     return out, ""
@@ -195,21 +202,23 @@ def _module(raw: Any, length: float) -> tuple[dict[str, Any] | None, str]:
 def build_layout(raw: Any) -> Layout | None:
     """A ``recognized-runs/1`` document -> ``Layout``; None when ``raw`` is not such a document or no cabinet in it is usable.
     Never raises on bad content: unusable cabinets and joints are listed in ``rejected`` / ``notes``."""
-    if not isinstance(raw, dict) or raw.get("schema") != SCHEMA or not isinstance(raw.get("runs"), list):
+    doc = as_dict(raw)
+    runs_raw = as_list(doc.get("runs")) if doc is not None else None
+    if doc is None or doc.get("schema") != SCHEMA or runs_raw is None:
         return None
     runs: list[LayoutRun] = []
     rejected: list[dict[str, Any]] = []
     notes: list[str] = []
     budget = MAX_MODULES
-    for item in raw["runs"]:
-        rid = item.get("id") if isinstance(item, dict) else None
-        length = _num(item.get("length")) if isinstance(item, dict) else None
+    for value in runs_raw:
+        item = as_dict(value) or {}
+        rid = item.get("id")
+        length = number(item.get("length"))
         if rid not in RUN_IDS or any(r.id == rid for r in runs) or length is None or not 0 < length <= MAX_LENGTH:
             notes.append(f"run {rid!r} was ignored (unknown id, repeated, or no usable length)")
             continue
         modules: list[dict[str, Any]] = []
-        raw_modules = item.get("modules")
-        for index, entry in enumerate(raw_modules if isinstance(raw_modules, list) else []):
+        for index, entry in enumerate(as_list(item.get("modules")) or []):
             if budget <= 0:
                 notes.append(f"cabinets beyond the first {MAX_MODULES} were ignored")
                 break
@@ -225,14 +234,14 @@ def build_layout(raw: Any) -> Layout | None:
         return None
     have = {r.id for r in runs}
     joints: list[tuple[str, str]] = []
-    raw_joints = raw.get("joints")
-    for joint in raw_joints if isinstance(raw_joints, list) else []:
-        a, b = (joint.get("a"), joint.get("b")) if isinstance(joint, dict) else (None, None)
-        angle = _num(joint.get("angle")) if isinstance(joint, dict) else None
+    for jv in as_list(doc.get("joints")) or []:
+        joint = as_dict(jv) or {}
+        a, b = joint.get("a"), joint.get("b")
+        angle = number(joint.get("angle"))
         if a not in have or b not in have or a == b or (str(a), str(b)) in joints:
             continue
         if angle is None or abs(angle - 90.0) > RIGHT_ANGLE_TOLERANCE:
             notes.append(f"the corner between {a} and {b} is not a right angle ({angle!r}); the two runs are not joined")
             continue
         joints.append((str(a), str(b)))
-    return Layout(tuple(runs), tuple(joints), tuple(rejected), tuple(notes), _levels(raw.get("common")))
+    return Layout(tuple(runs), tuple(joints), tuple(rejected), tuple(notes), _levels(doc.get("common")))

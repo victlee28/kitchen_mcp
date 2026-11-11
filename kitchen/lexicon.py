@@ -44,7 +44,7 @@ class E:
     wood_plain: str = ""           # (gỗ) nhãn khi đi kèm veneer/laminate…; label dùng khi đứng một mình
 
 
-def _e(id: str, kind: str, aliases: str, **kw) -> E:
+def _e(id: str, kind: str, aliases: str, **kw: Any) -> E:
     return E(id=id, kind=kind, aliases=tuple(a.strip() for a in aliases.split("|") if a.strip()), **kw)
 
 
@@ -258,7 +258,7 @@ def _alias_forms(alias: str) -> set[str]:
     return {_squash(_nfc(alias)), _squash(fold(alias))}
 
 
-_PATTERNS: list[tuple[re.Pattern, E, set[str] | None]] = []
+_PATTERNS: list[tuple[re.Pattern[str], E, set[str] | None]] = []
 for _e_ in ALL:
     for _a in _e_.aliases:
         pat = re.compile(r"(?<![a-z0-9])" + r"\s+".join(re.escape(w) for w in fold(_a).split()) + r"(?![a-z0-9])")
@@ -266,7 +266,7 @@ for _e_ in ALL:
 
 
 def _scan(f: str, raw: str) -> list[M]:
-    out = []
+    out: list[M] = []
     for pat, e, forms in _PATTERNS:
         for m in pat.finditer(f):
             r = raw[m.start():m.end()]
@@ -288,7 +288,8 @@ _SPLIT = re.compile(r"[,;:\n]|(?<!\d)\.(?!\d)|\s(?:va|and|voi|with|plus)\s|\s\+\
 
 
 def _clauses(f: str) -> list[tuple[int, int]]:
-    out, last = [], 0
+    out: list[tuple[int, int]] = []
+    last = 0
     for m in _SPLIT.finditer(f):
         out.append((last, m.start()))
         last = m.end()
@@ -299,9 +300,9 @@ def _clauses(f: str) -> list[tuple[int, int]]:
 # ------------------------------------------------------------------ kết quả
 @dataclass
 class Result:
-    updates: dict[str, Any] = field(default_factory=dict)       # trường của KitchenTemplate
-    items: list[dict[str, Any]] = field(default_factory=list)   # bảng diễn giải
-    blank: list[tuple[int, int]] = field(default_factory=list)  # đoạn đã dùng cho số đo (che khỏi regex số)
+    updates: dict[str, Any] = field(default_factory=dict[str, Any])       # trường của KitchenTemplate
+    items: list[dict[str, Any]] = field(default_factory=list[dict[str, Any]])   # bảng diễn giải
+    blank: list[tuple[int, int]] = field(default_factory=list[tuple[int, int]])  # đoạn đã dùng cho số đo (che khỏi regex số)
 
     def mask(self, text: str) -> str:
         t = _nfc(text)
@@ -377,8 +378,9 @@ def interpret(text: str) -> Result:
     chosen = _resolve(base)
     # 2. điều kiện theo phạm vi của mệnh đề
     clauses = _clauses(f)
-    scopes_in = lambda c: [m for m in chosen if m.e.kind == "scope" and c[0] <= m.start and m.end <= c[1]]  # noqa: E731
-    keep = []
+    def scopes_in(c: tuple[int, int]) -> list[M]:
+        return [m for m in chosen if m.e.kind == "scope" and c[0] <= m.start and m.end <= c[1]]
+    keep: list[M] = []
     for m in cond:
         c = next((c for c in clauses if c[0] <= m.start and m.end <= c[1]), (0, len(f)))
         sc = {s for x in scopes_in(c) for s in x.e.value}
@@ -412,7 +414,7 @@ def interpret(text: str) -> Result:
     # 4. phong cách
     smatch = [m for m in chosen if m.e.kind == "style"]
     bases = [m for m in smatch if m.e.value[0]]
-    tags = []
+    tags: list[str] = []
     if bases:
         pick = bases[-1]
         res.updates["style"] = pick.e.value[0]
@@ -524,7 +526,7 @@ def interpret(text: str) -> Result:
                 segs.append((list(s.e.value), s.raw, [m for m in mats if lo <= m.start < hi]))
         else:
             segs.append(([], "", mats))
-        for slots, sraw, ms in segs:
+        for slots, _sraw, ms in segs:
             if not ms:
                 continue
             guessed = ""
@@ -564,7 +566,8 @@ def interpret(text: str) -> Result:
     if material:
         res.updates["material"] = material
     # gom mục trùng (cùng term + target)
-    seen, out = set(), []
+    seen: set[tuple[Any, Any, Any]] = set()
+    out: list[dict[str, Any]] = []
     for it in items:
         k = (it["term"], it["id"], it["target"])
         if k not in seen:
