@@ -468,12 +468,14 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
         look = {k: v for k, v in (("model", mid), ("rendering", "model-3d" if cat.get("asset3d") else "box-placeholder"),
                                   ("box", cat.get("box"))) if v is not None}
         if tb.type in app_type or tb.type == "cooktop":
-            t = ("Cooktop_Gas" if energy in ("gas", "mixed") else "Cooktop_Induction") if tb.type == "cooktop" else \
+            hanging = tb.type == "hood" and host is not None and host.storey == "base"      # over the hob, out of a cabinet (appliance_kind)
+            t = ("Cooktop_Gas" if energy in ("gas", "mixed") else "Cooktop_Induction") if tb.type == "cooktop" else "Range_Hood_Canopy" if hanging else \
                 ("Microwave" if cat.get("box", {}).get("kind") == "microwave" else "BuiltIn_Oven") if tb.type == "oven" else app_type[tb.type]
             a = {"id": f"APP-{tb.id}", "type": t, "name": tb.name or tb.id, "assetId": "ASSET-APPLIANCE-BOX", "dimensions": dims,
                  "transform": _tf(fr.pos, fr.rot), "materialId": mats["cooktop"] if tb.type in ("cooktop", "tv") else mats["inox"], "sourceRef": tb.id,
                  "energy": energy or ("induction" if tb.type == "cooktop" else "electric"),
-                 "installation": {"mountType": {"fridge": "freestanding", "cooktop": "built_in", "hood": "built_in", "oven": "built_in", "tv": "wall_mounted"}[tb.type]}, **look}
+                 "installation": {"mountType": "wall_mounted" if hanging else {"fridge": "freestanding" if (tb.mount or "freestanding") != "built_in" else "built_in",
+                                                                                  "cooktop": "built_in", "hood": "built_in", "oven": "built_in", "tv": "wall_mounted"}[tb.type]}, **look}
             if cat.get("asset3d"):
                 a["modelUrl"] = cat["asset3d"]
             if host:
@@ -481,6 +483,11 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
             if tb.type == "cooktop" and "hood" in sel:
                 a["clearances"] = {"top": sel["hood"]["params"].get("gap_min", 650)}
             appliances.append(a)
+            for i, extra in enumerate(ps[1:], start=2):                 # more boxes of the same appliance (a hood's chimney)
+                efr = Frame.for_part(extra, wall)
+                lo, hi2 = efr.part_box(extra)
+                appliances.append({**a, "id": f"APP-{tb.id}-{i}", "dimensions": _dims(*(hi2[j] - lo[j] for j in range(3))),
+                                   "transform": _tf(efr.pos, efr.rot), "name": f"{a['name']} (ống khói)"})
         elif tb.type in ("sink", "faucet"):
             accessories.append({"id": f"ACC-{tb.id}", "type": ("Sink_Double" if cat.get("box", {}).get("basins") == 2 else "Sink_Single") if tb.type == "sink" else "Faucet_Classic", **look,
                                 "assetId": "ASSET-SINK" if tb.type == "sink" else "ASSET-FAUCET",

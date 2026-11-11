@@ -83,6 +83,9 @@ class Scene:
         return openings, hi
 
 
+HOOD_GAP = 650.0             # worktop to the canopy of a hood hanging over the hob (mm)
+HOOD_CANOPY = 150.0          # height of that canopy
+CHIMNEY = (300.0, 250.0)     # width, depth of its chimney
 BACKSPLASH_STANDARD = 600.0  # "standard" backsplash height above the countertop (mm)
 
 
@@ -393,6 +396,8 @@ class _Builder:
                     continue
             if m is not None and m.run:
                 self._run[tb.id] = self._run[m.id]       # an appliance stands in the run of its module
+            if tb.type == "fridge" and m and len(k) >= 3 and not m.niche and tb.mount == "built_in":
+                continue                                   # an integrated fridge: hidden behind the tall cabinet's doors
             if tb.type == "fridge" and m and len(k) >= 3:
                 w, h, d = k[:3]
                 sc = m.fromCorner + m.width / 2
@@ -404,6 +409,17 @@ class _Builder:
                 niche = next((t for t in m.frontSections if t.type == "niche"), None)
                 y0 = niche_top - (niche.height if niche else h) + 2 * c.doorThickness
                 self.box(tb.id, "oven", m.wall, sc - w / 2, sc + w / 2, 80, m.depth - 25, y0, y0 + h)
+            elif tb.type == "hood" and m and len(k) >= 2 and m.storey == "base":     # hanging over the hob: canopy + chimney (appliance_kind)
+                w = k[0]
+                sc = m.fromCorner + m.width / 2
+                d = float((tb.size or {}).get("d") or 480.0)
+                island = "island" in (tb.model or "")
+                d0 = (m.depth - d) / 2 if island else 0.0                  # an island hood hangs over the middle of the worktop
+                y0 = c.countertop + HOOD_GAP
+                self.box(tb.id, "hood", m.wall, sc - w / 2, sc + w / 2, d0, d0 + d, y0, y0 + HOOD_CANOPY)
+                top = c.ceiling if island else max(c.cabinetTop, y0 + HOOD_CANOPY + 100)
+                cd0 = d0 + (d - CHIMNEY[1]) / 2 if island else 0.0
+                self.box(tb.id, "hood", m.wall, sc - CHIMNEY[0] / 2, sc + CHIMNEY[0] / 2, cd0, cd0 + CHIMNEY[1], y0 + HOOD_CANOPY, top)
             elif tb.type == "hood" and m and len(k) >= 2:
                 w, h = k[:2]
                 sc = m.fromCorner + m.width / 2

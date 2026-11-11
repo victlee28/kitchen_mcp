@@ -53,7 +53,7 @@ class TestReplace(Base):
         got = {c["id"]: c["status"] for c in am.candidates(self.spec, self.app["cooktop"], "đổi sang bếp gas")}
         self.assertEqual(set(got), {"hob-mix-2z-73", "hob-gas-2b-75", "hob-gas-3b-86"})
         fr = {c["id"]: c["status"] for c in am.candidates(self.spec, self.app["fridge"])}
-        self.assertEqual((fr["fridge-1d-60"], fr["fridge-2d-60-tall"], fr["fridge-sbs-91"], fr["fridge-int-56"]), ("ok", "bad", "bad", "later"))
+        self.assertEqual((fr["fridge-1d-60"], fr["fridge-2d-60-tall"], fr["fridge-sbs-91"], fr["fridge-int-56"]), ("ok", "bad", "bad", "check"))
         self.assertEqual([c["id"] for c in am.candidates(self.spec, self.app["faucet"], "vòi rút dây")], ["faucet-pullout"])
 
     def test_update_appliance_keeps_id_and_place_and_the_3d_box_follows(self):
@@ -81,8 +81,10 @@ class TestReplace(Base):
         self.assertTrue(any("gas supply" in s for s in r["summary"]))
         self.assertEqual(r["aiFacts"]["energy"], "gas")
         self.assertEqual(self.svc.store.get(self.did)[1], self.rev, "a preview: nothing saved")
+        r = self.svc.template(self.did, {"kind": "replace-appliance", "id": self.app["fridge"].id, "model": "fridge-int-56"})   # another kind (11/11)
+        self.assertTrue(any("full-height doors" in s for s in r["summary"]))
         with self.assertRaises(InvalidInput):
-            self.svc.template(self.did, {"kind": "replace-appliance", "id": self.app["fridge"].id, "model": "fridge-int-56"})
+            self.svc.template(self.did, {"kind": "replace-appliance", "id": self.app["fridge"].id, "model": "no-such-model"})
 
     def test_a_model_too_wide_can_widen_its_cabinet(self):
         sink = self.app["sink"]

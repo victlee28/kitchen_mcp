@@ -90,6 +90,18 @@ def changes_for(m: dict) -> dict[str, Any]:
     return out
 
 
+def kind_of(m: dict | None) -> str:
+    """The kind of a model inside its type, which decides the cabinets around it: a hood ``insert`` (in a wall cabinet), ``chimney`` (on
+    the wall over the hob) or ``island`` (from the ceiling); a fridge ``freestanding`` (in an open niche) or ``integrated`` (behind doors)."""
+    if not m:
+        return ""
+    if m["type"] == "hood":
+        return "island" if "island" in m["id"] else "chimney" if m.get("mount") == "wall" else "insert"
+    if m["type"] == "fridge":
+        return "integrated" if m.get("mount") == "built_in" else "freestanding"
+    return ""
+
+
 def host(spec: KitchenSpec, app: Appliance) -> Module | None:
     """The cabinet the appliance stands in or on (the module at its place on the worktop for a sink, hob or tap)."""
     if app.type in ("sink", "cooktop", "faucet"):
@@ -100,13 +112,18 @@ def host(spec: KitchenSpec, app: Appliance) -> Module | None:
 
 
 def fit(spec: KitchenSpec, app: Appliance, m: dict) -> tuple[str, list[str]]:
-    """``(status, reasons)`` for model ``m`` in the place of ``app``: ``ok``, ``bad`` (does not fit), ``check`` (could not be checked: say why),
-    ``later`` (it changes the kind of appliance: not offered yet)."""
+    """``(status, reasons)`` for model ``m`` in the place of ``app``: ``ok``, ``bad`` (does not fit), ``check`` (could not be checked, or
+    another kind of appliance that changes the cabinets around it: say what happens), ``blocked`` (another kind that cannot go there)."""
     if m["type"] != app.type:
         return "bad", [f"{m['name']} is a {m['type']}, not a {app.type}"]
-    if m.get("changesType"):
-        return "later", [f"{m['name']} changes the cabinet around it ({m.get('fits', {}).get('needs') or m['mount']}): not available yet"]
     h = host(spec, app)
+    now = kind_of(BY_ID.get(model_id(app) or ""))
+    if kind_of(m) != now and app.type in ("hood", "fridge"):
+        reasons = changes_cabinets(spec, app, m, h)
+        if reasons is None:
+            return "bad", ["This change needs the cabinet the appliance stands in, which was not found"]
+        bad = [r for r in reasons if r.startswith("Cannot")]
+        return ("blocked", [b.removeprefix("Cannot: ") for b in bad]) if bad else ("check", reasons)
     if h is None:
         return ("ok", []) if app.type == "faucet" else ("check", ["No cabinet found under / around this appliance: check the fit by hand"])
     reasons: list[str] = []
@@ -122,7 +139,7 @@ def fit(spec: KitchenSpec, app: Appliance, m: dict) -> tuple[str, list[str]]:
         if hole["d"] + 2 * WORKTOP_EDGE > top:
             reasons.append(f"Cut-out {hole['d']:g} mm deep leaves less than {WORKTOP_EDGE:g} mm of worktop in front and behind ({top:g} mm deep)")
     elif app.type == "hood":
-        if s["w"] + 2 * HOOD_SIDE > h.width:
+        if kind_of(m) == "insert" and s["w"] + 2 * HOOD_SIDE > h.width:
             reasons.append(f"Hood {s['w']:g} mm does not fit inside {h.id} ({h.width:g} mm)")
         hob = next((a for a in spec.appliances if a.type == "cooktop" and (hm := host(spec, a)) is not None and hm.run == h.run
                     and hm.fromCorner < h.endAt and h.fromCorner < hm.endAt), None)
@@ -132,6 +149,8 @@ def fit(spec: KitchenSpec, app: Appliance, m: dict) -> tuple[str, list[str]]:
             return ("bad" if any("does not fit" in r for r in reasons) else "check"), reasons
     elif app.type == "fridge":
         niche = m.get("niche") or {"w": s["w"] + 20, "h": s["h"] + 20}
+        if kind_of(m) == "integrated":
+            niche = {**niche, "h": 0.0}           # behind full-height doors: no open niche to fit in
         if niche["w"] > h.width - 2 * SIDE:
             reasons.append(f"Needs a niche {niche['w']:g} mm wide; {h.id} gives {h.width - 2 * SIDE:g} mm")
         if h.niche and niche["h"] > h.niche:
@@ -143,6 +162,47 @@ def fit(spec: KitchenSpec, app: Appliance, m: dict) -> tuple[str, list[str]]:
         if niche["h"] > h.height:
             reasons.append(f"Needs a niche {niche['h']:g} mm high; {h.id} is {h.height:g} mm")
     return ("bad", reasons) if reasons else ("ok", [])
+
+
+def changes_cabinets(spec: KitchenSpec, app: Appliance, m: dict, h: Module | None) -> list[str] | None:
+    """What changing ``app`` to a model of another kind does to the cabinets around it (shown in the popup, "check"), or why it cannot
+    ("Cannot …", "bad"). None when the appliance's cabinet is not found."""
+    if h is None:
+        return None
+    to = kind_of(m)
+    if app.type == "hood":
+        if to == "insert":
+            if h.storey != "base":
+                return [f"Cannot: {app.id} already stands in a wall cabinet"]
+            if not h.run and h.wall == "island":
+                return ["Cannot: an island has no wall cabinet to hide the hood in"]
+            busy = [x.id for x in spec.module if x.storey in ("upper", "loft") and _over(x, h)]
+            if busy:
+                return [f"Cannot: wall cabinets {', '.join(busy)} already stand over the hob"]
+            return [f"A hood cabinet is built over {h.id} and the hood goes into it"]
+        hob = h if h.storey == "base" else next((x for x in spec.module if x.storey == "base" and _over(h, x)), None)
+        if hob is None:
+            return ["Cannot: no hob cabinet under the hood"]
+        out = [f"The hood hangs over {hob.id} ({'from the ceiling' if to == 'island' else 'on the wall, with its chimney'})"]
+        if h.storey != "base":
+            above = [x.id for x in spec.module if x.type == "upper-loft" and _over(x, h)]
+            out.append(f"Hood cabinet {h.id} is removed" + (f", with {', '.join(above)} above it" if above else ""))
+        return out
+    if app.type == "fridge":
+        need = needed_width(m) or 0.0
+        if h.width < need:
+            return [f"Cannot: {h.id} is {h.width:g} mm wide, the fridge needs {need:g} mm"]
+        if to == "integrated":
+            return [f"{h.id} gets full-height doors in front of the fridge (no open niche)"]
+        niche = (m.get("niche") or {"h": m["size"]["h"] + 20})["h"]
+        return [f"{h.id} gets an open niche {niche:g} mm high for the fridge"]
+    return []
+
+
+def _over(a: Module, b: Module) -> bool:
+    """Do the two cabinets share some length of the same row (one above the other)?"""
+    same = (a.run == b.run) if (a.run or b.run) else (a.wall == b.wall and (a.offset, a.facing) == (b.offset, b.facing))
+    return same and a.fromCorner < b.endAt - 1 and b.fromCorner < a.endAt - 1
 
 
 def needed_width(m: dict) -> float | None:
@@ -206,6 +266,11 @@ def energy_notes(app: Appliance, m: dict) -> list[str]:
 
 def where(spec: KitchenSpec, app: Appliance) -> str:
     h = host(spec, app)
+    kind = kind_of(BY_ID.get(model_id(app) or ""))
+    if app.type == "hood" and h is not None and h.storey == "base":
+        return f"{'hanging from the ceiling' if kind == 'island' else 'on the wall, with its chimney,'} over the hob of {h.id} ({h.name or h.type})"
+    if app.type == "fridge" and h is not None and kind == "integrated":
+        return f"hidden behind the full-height doors of {h.id} ({h.name or h.type})"
     place = {"cooktop": "built into the worktop above", "sink": "set into the worktop above", "faucet": "on the worktop behind the sink above",
              "hood": "inside the wall cabinet", "fridge": "in the tall cabinet", "oven": "built into the cabinet",
              "tv": "on the wall above the TV console"}.get(app.type, "in")

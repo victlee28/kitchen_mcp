@@ -140,7 +140,7 @@ def set_run_tv(spec: KitchenSpec, id: str, layout: Any) -> KitchenSpec:
     return from_data(KitchenSpec, to_data(s))
 
 
-APPLIANCE_FIELDS = ("model", "name", "dimensions", "size", "cutout", "mount", "energy")
+APPLIANCE_FIELDS = ("model", "name", "dimensions", "size", "cutout", "mount", "energy", "module")   # module: another kind (appliance_kind)
 
 
 def update_appliance(spec: KitchenSpec, id: str, model: Any = None, changes: dict | None = None) -> KitchenSpec:
@@ -161,6 +161,8 @@ def update_appliance(spec: KitchenSpec, id: str, model: Any = None, changes: dic
     if bad:
         raise InvalidInput(f"update-appliance cannot change {bad}; only {', '.join(APPLIANCE_FIELDS)}", code="bad-appliance-field")
     upd.update(changes or {})
+    if "module" in upd and not any(m.id == upd["module"] for m in s.module):
+        raise NotFound(f"No module {upd['module']!r}", code="module-not-found")
     data = {**to_data(hit), **upd}
     s.appliances = [from_data(Appliance, data) if a.id == id else a for a in s.appliances]
     return from_data(KitchenSpec, to_data(s))

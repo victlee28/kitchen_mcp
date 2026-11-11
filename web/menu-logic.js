@@ -253,11 +253,11 @@ export function edgeChoices(edges) {
 }
 
 export const APPLIANCE_VI = { cooktop: 'Bếp nấu', sink: 'Chậu rửa', faucet: 'Vòi nước', hood: 'Hút mùi', fridge: 'Tủ lạnh', oven: 'Lò' };
-const FIT_VI = { ok: 'vừa', check: 'cần kiểm tra', bad: 'không vừa', later: 'chưa hỗ trợ (đổi loại)' };
+const FIT_VI = { ok: 'vừa', check: 'cần kiểm tra', bad: 'không vừa', later: 'chưa hỗ trợ (đổi loại)', blocked: 'không đặt được ở đây' };
 
-/** Lines of the model popup: label, the fit and why; `later` cannot be picked. Sizes in mm. */
+/** Lines of the model popup: label, the fit and why; `later` and `blocked` (another kind that cannot go there) cannot be picked. Sizes in mm. */
 export function modelChoices(models) {
-  return (models || []).map((m) => ({ id: m.id, status: m.status, pickable: m.status !== 'later', reasons: m.reasons || [],
+  return (models || []).map((m) => ({ id: m.id, status: m.status, pickable: !['later', 'blocked'].includes(m.status), reasons: m.reasons || [],
     label: `${m.name} · ${m.size.w}×${m.size.d}${m.size.h ? `×${m.size.h}` : ''}${m.cutout ? ` · khoét ${m.cutout.w}×${m.cutout.d}` : ''} — ${FIT_VI[m.status] || m.status}` }));
 }
 

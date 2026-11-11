@@ -8,7 +8,7 @@ import re
 import os
 from pathlib import Path
 from typing import Any, Callable
-from . import appliance_models, cabinet_run, run_line, run_template, runs, system_replace, tv_system, wall_line, edit, edit_intent, geometry, intent, llm, recognition, regions, roomctx, render, rules, threejs_export
+from . import appliance_kind, appliance_models, cabinet_run, run_line, run_template, runs, system_replace, tv_system, wall_line, edit, edit_intent, geometry, intent, llm, recognition, regions, roomctx, render, rules, threejs_export
 from .intent import KitchenTemplate as KitchenTemplate
 from .spec import Common, KitchenSpec, Room, Wall, dump_spec, load_spec, to_data
 from .store import ConflictError, Store
@@ -299,11 +299,16 @@ class KitchenService:
         fit, reasons = appliance_models.fit(spec, app, m)
         if fit == 'later':
             raise InvalidInput(reasons[0], code='model-changes-type')
-        ops: list[dict[str, Any]] = [{'op': 'update-appliance', 'id': app.id, 'model': m['id']}]
+        if appliance_kind.changes_kind(app, m):          # another kind: the cabinets around it change too (appliance_kind)
+            ops, around = appliance_kind.plan(spec, app, m)
+            reasons = []
+        else:
+            ops, around = [{'op': 'update-appliance', 'id': app.id, 'model': m['id']}], []
         before = appliance_models.size_of(app) or {}
         summary = [f"{app.id}: {app.name or now} → {m['name']}",
                    f"Size {before.get('w', 0):g} × {before.get('d', 0):g} → {m['size']['w']:g} × {m['size']['d']:g} mm"
                    + (f"; cut-out {m['cutout']['w']:g} × {m['cutout']['d']:g} mm" if m.get('cutout') else '')]
+        summary += around
         summary += [f"Does not fit: {r}" if fit == 'bad' else f"Check: {r}" for r in reasons]
         summary += appliance_models.energy_notes(app, m)
         if template.get('resizeHost') and fit == 'bad':

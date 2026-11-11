@@ -58,6 +58,13 @@ returns `systems: {module: {system, tier, storey}}`; the page never works them o
 - Template `{"kind": "replace-appliance", "id", "model"?, "prompt"?, "resizeHost"?}`; op `update-appliance`; rules `APPLIANCE-MODEL-FIT`,
   `HOOD-WIDTH` (only for appliances that carry a model, so old designs show nothing new).
 
+## Another kind of appliance (11/11/2026)
+- The appliance popup also offers models of another kind; the cabinets around change with them (`kitchen/appliance_kind.py`), always
+  previewed: a hood insert -> wall chimney / island hood (the hood cabinet and the top-row cabinet over it go, the hood hangs over the hob
+  with its chimney) and back (a hood cabinet is built over the hob, refused where wall cabinets already stand); a freestanding fridge ->
+  integrated (the tall cabinet gets full-height doors, the fridge is hidden) and back (an open niche again). The popup says what happens
+  ("cần kiểm tra") or why it cannot ("không đặt được ở đây").
+
 ## TV wall units (hệ tủ tivi, 10/11/2026)
 - Right-click a piece of furniture (e.g. "Vách TV") and type "tạo hệ tủ tivi" (also "kệ tivi", "tủ TV") in the command box, or give that
   sentence for a drawn line: the object is replaced by a TV unit along its wall edge — a low console with drawers (450 mm) between two tall
