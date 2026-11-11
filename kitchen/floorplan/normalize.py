@@ -8,9 +8,9 @@ from ..numeric import round_int
 from ..errors import InvalidInput
 from ..errors import require
 
-from .back import room_edges
+from .back import RoomEdge, room_edges
 from .constants import DEFAULT_WALL_HEIGHT, DEFAULT_WALL_THICKNESS, SUPPORTED_CONTRACT, TOL, UNIT_MM
-from .document import REGION_MARGIN_MM, document_hash, element_bbox, element_field, field_value, frame_vectors, read_points
+from .document import REGION_MARGIN_MM, as_dict, as_list, document_hash, element_bbox, element_field, field_value, frame_vectors, read_points
 from .geom import Poly, Pt, angle_between, area2, boundary_dist, long_dir, point_in_poly, poly_dist, polys_cross, self_intersects, vcross, vdot, vsub
 from .regions import list_rooms, parse_region
 from .trim import trim_room
@@ -22,38 +22,38 @@ def normalize(data: dict[str, Any], room_id: str | None = None) -> dict[str, Any
 
     The result never contains the source document (it is stored once, under ``ref``); everything in it is derived.
     """
-    if not isinstance(data, dict) or data.get("kind") != "floorplan-audited":
+    if as_dict(data) is None or data.get("kind") != "floorplan-audited":
         raise InvalidInput("Expected a floorplan-audited JSON document")
-    warnings: list[dict] = []
+    warnings: list[dict[str, Any]] = []
     cv = str(data.get("contractVersion", ""))
     if not cv.startswith(SUPPORTED_CONTRACT):
         warnings.append({"code": "contract-version", "message": f"contractVersion '{cv}' was not tested (expected {SUPPORTED_CONTRACT}x)"})
     unit = data.get("unit")
     if unit not in UNIT_MM:
         raise InvalidInput("Floorplan unit must be cm, mm, or m")
-    frame_unit = (data.get("frame") or {}).get("unit")
+    frame_unit = (as_dict(data.get("frame")) or {}).get("unit")
     if frame_unit not in (None, unit):
         raise InvalidInput(f"frame.unit '{frame_unit}' differs from unit '{unit}'")
     k = UNIT_MM[unit]
     vx, vy = frame_vectors(data)
-    elements = data.get("elements")
-    if not isinstance(elements, list):
+    elements = as_list(data.get("elements"))
+    if elements is None:
         raise InvalidInput("Floorplan elements must be an array")
-    ids = [e.get("id") for e in elements]
+    ids: list[Any] = [e.get("id") for e in elements]
     dup = sorted({str(i) for i in ids if ids.count(i) > 1})
     if dup:
         raise InvalidInput("Duplicate element ids: " + ", ".join(dup))
 
     rooms = [r for r in list_rooms(data) if r["kind"] == "room"]
-    region = None
-    room_el = None
+    region: dict[str, Any] | None = None
+    room_el: dict[str, Any] | None = None
     if room_id is not None and str(room_id).startswith("region:"):
         region = parse_region(data, str(room_id))
         bb = region["bbox"]
         raw_room = [(bb[0], bb[1]), (bb[2], bb[1]), (bb[2], bb[3]), (bb[0], bb[3])]
         room_label = "Kitchen area (derived from walls)" if region["seeds"] else "Area (given as a box)"
         room_id = "region:around=" + ",".join(region["seeds"]) if region["seeds"] else "region:bbox=" + ",".join(f"{v:g}" for v in bb)
-        open_sides = [n for n, sd in (region["sides"] or {}).items() if sd["open"]]
+        open_sides: list[Any] = [n for n, sd in (as_dict(region["sides"]) or {}).items() if sd["open"]]
         warnings.append({"code": "region-derived", "message": f"{room_id} is not a drawn room: its sides stop at the walls around {', '.join(region['seeds'])}. Review the outline before relying on it."
                          if region["seeds"] else f"{room_id} is a box you gave, not a drawn room."})
         if open_sides:
@@ -69,10 +69,11 @@ def normalize(data: dict[str, Any], room_id: str | None = None) -> dict[str, Any
         if room_id not in {r["id"] for r in rooms}:
             raise InvalidInput(f"Room '{room_id}' not found. Rooms: " + ", ".join(str(r["id"]) for r in rooms))
         room_id = require(room_id, "room_id")
-        room_el = next(e for e in elements if e.get("id") == room_id)
-        room_label = field_value(room_el, "label")
-        raw_room = read_points(field_value(room_el, "geometry"), room_id)
-        rects = [(e["id"], bb) for e in elements if e.get("kind") == "wall" and e.get("id") and (bb := element_bbox(e))]
+        found: dict[str, Any] = next(e for e in elements if e.get("id") == room_id)
+        room_el = found
+        room_label = field_value(found, "label")
+        raw_room = read_points(field_value(found, "geometry"), room_id)
+        rects: list[tuple[str, list[float]]] = [(e["id"], bb) for e in elements if e.get("kind") == "wall" and e.get("id") and (bb := element_bbox(e))]
         raw_room, trimmed = trim_room(raw_room, rects, 60.0 / UNIT_MM[data["unit"]])
         if trimmed:
             warnings.append({"code": "room-trimmed", "message": f"the room outline overlapped wall elements {', '.join(trimmed)}; those parts were cut out of the room"})
@@ -103,37 +104,38 @@ def normalize(data: dict[str, Any], room_id: str | None = None) -> dict[str, Any
     for ed in edges:
         if ed["length"] < 1.0:
             raise InvalidInput(f"{room_id}: outline contains a zero-length edge at point {ed['i']}")
-        ed["skew"] = min(angle_between(ed["dir"], (1, 0)), angle_between(ed["dir"], (0, 1)))
-        if 0.5 < ed["skew"] < 10:
-            warnings.append({"code": "skewed-edge", "message": f"edge {ed['i']} is {ed['skew']:.1f} deg off the nearest axis; kept as drawn"})
+        skew = min(angle_between(ed["dir"], (1, 0)), angle_between(ed["dir"], (0, 1)))
+        if 0.5 < skew < 10:
+            warnings.append({"code": "skewed-edge", "message": f"edge {ed['i']} is {skew:.1f} deg off the nearest axis; kept as drawn"})
 
     # ---- elements in scene coordinates
-    prepared = []
+    prepared: list[tuple[dict[str, Any], Poly | None]] = []
     for e in elements:
         if e is room_el:
             continue
-        g = field_value(e, "geometry")
-        pts = None
-        if isinstance(g, dict):
+        g = as_dict(field_value(e, "geometry"))
+        pts: Poly | None = None
+        if g is not None:
             try:
                 pts = [to_scene(p) for p in read_points(g, str(e.get("id")))]
             except ValueError as err:
-                if isinstance(g.get("bbox"), list) and len(g["bbox"]) == 4:
-                    x0, y0, x1, y1 = g["bbox"]
+                bbox = as_list(g.get("bbox"))
+                if bbox is not None and len(bbox) == 4:
+                    x0, y0, x1, y1 = (float(v) for v in bbox)
                     pts = [to_scene(p) for p in ((x0, y0), (x1, y0), (x1, y1), (x0, y1))]
                 else:
                     warnings.append({"code": "bad-geometry", "element": e.get("id"), "message": str(err)})
         prepared.append((e, pts))
 
     # ---- measured walls: they set the thickness of the matching room edge
-    wall_for_edge: dict[int, dict] = {}
+    wall_for_edge: dict[int, dict[str, Any]] = {}
     max_t = DEFAULT_WALL_THICKNESS
     for e, pts in prepared:
         if e.get("kind") != "wall" or not pts:
             continue
-        g = field_value(e, "geometry") or {}
+        g = as_dict(field_value(e, "geometry")) or {}
         wd = long_dir(pts)
-        best = None
+        best: tuple[float, int, float] | None = None
         for ed in edges:
             if angle_between(wd, ed["dir"]) > 5.0:
                 continue
@@ -146,29 +148,31 @@ def normalize(data: dict[str, Any], room_id: str | None = None) -> dict[str, Any
                 thick = float(g["thickness"]) * k if isinstance(g.get("thickness"), (int, float)) else max(offs) - min(offs)
                 best = (ov, ed["i"], thick)
         if best:
-            el = field_value(e, "elev") if isinstance(field_value(e, "elev"), dict) else {}
+            el = as_dict(field_value(e, "elev")) or {}
             height = float(el["height"]) * k if isinstance(el.get("height"), (int, float)) else None
             wall_for_edge.setdefault(best[1], {"element": e.get("id"), "thickness": round_half_away(best[2], 3), "height": height})
             max_t = max(max_t, best[2])
 
     near = max_t + TOL
-    retained = []
+    retained: list[dict[str, Any]] = []
     for e, pts in prepared:
         kind = e.get("kind")
-        el = field_value(e, "elev") if isinstance(field_value(e, "elev"), dict) else None
-        rec = {"id": e.get("id"), "kind": kind, "tag": field_value(e, "tag"), "label": field_value(e, "label"),
+        el = as_dict(field_value(e, "elev"))
+        rec: dict[str, Any] = {"id": e.get("id"), "kind": kind, "tag": field_value(e, "tag"), "label": field_value(e, "label"),
                "review": {n: element_field(e, n).get("status") for n in ("geometry", "tag", "label") if element_field(e, n)},
                "elev": {"base": float(el.get("base", 0)) * k, "height": float(el["height"]) * k} if el and isinstance(el.get("height"), (int, float)) else None,
                "outline": [{"x": p[0], "z": p[1]} for p in pts] if pts else None}
-        g_raw = field_value(e, "geometry") if isinstance(field_value(e, "geometry"), dict) else {}
+        g_raw = as_dict(field_value(e, "geometry")) or {}
         for key in ("swing", "arrow"):
-            if isinstance(g_raw.get(key), list):
+            seq = as_list(g_raw.get(key))
+            if seq is not None:
                 try:
-                    rec[key] = [{"x": q[0], "z": q[1]} for q in (to_scene(pp) for pp in g_raw[key])]
+                    rec[key] = [{"x": q[0], "z": q[1]} for q in (to_scene(pp) for pp in seq)]
                 except (TypeError, ValueError, IndexError):
                     pass
-        if isinstance(g_raw.get("hinge"), list) and len(g_raw["hinge"]) == 2:
-            hq = to_scene(g_raw["hinge"])
+        hinge = as_list(g_raw.get("hinge"))
+        if hinge is not None and len(hinge) == 2:
+            hq = to_scene((hinge[0], hinge[1]))
             rec["hinge"] = {"x": hq[0], "z": hq[1]}
         if not pts:
             rec["membership"], rec["distance"] = "unknown", None
@@ -180,10 +184,10 @@ def normalize(data: dict[str, Any], room_id: str | None = None) -> dict[str, Any
         retained.append(rec)
 
     # ---- walls: inner face = outline edge, the box extends outward
-    heights = [w["height"] for w in wall_for_edge.values() if w["height"]]
+    heights: list[float] = [w["height"] for w in wall_for_edge.values() if w["height"]]
     height = max(heights) if heights else DEFAULT_WALL_HEIGHT
     height_source = "measured" if heights else "assumed"
-    walls = []
+    walls: list[dict[str, Any]] = []
     for ed in edges:
         m = wall_for_edge.get(ed["i"])
         walls.append({"id": f"WALL-FP-{ed['i'] + 1}", "edge": ed["i"], "thickness": m["thickness"] if m else DEFAULT_WALL_THICKNESS,
@@ -204,7 +208,7 @@ def normalize(data: dict[str, Any], room_id: str | None = None) -> dict[str, Any
     for rec, (e, pts) in zip(retained, prepared):
         if rec["kind"] != "opening":
             continue
-        note = []
+        note: list[str] = []
         rec["attached"] = _attach_opening(e, pts, rec, edges, walls, k, note)
         if rec["attached"] is None:
             rec["note"] = note[0] if note else "not attached"
@@ -223,7 +227,7 @@ def normalize(data: dict[str, Any], room_id: str | None = None) -> dict[str, Any
     for r in retained:
         counts[r["membership"]] = counts.get(r["membership"], 0) + 1
     return {"ref": document_hash(data), "planId": data.get("planId"), "contractVersion": cv,
-            "sourceSha256": (data.get("source") or {}).get("sha256"), "sourceUnit": unit,
+            "sourceSha256": (as_dict(data.get("source")) or {}).get("sha256"), "sourceUnit": unit,
             "roomId": room_id, "roomLabel": room_label, "rooms": rooms, "region": region,
             "origin": {"unit": unit, "right": r0 / k, "forward": f0 / k, "note": "scene.x = right - origin.right, scene.z = origin.forward - forward (file units)"},
             "outline": [{"x": p[0], "z": p[1]} for p in poly], "width": round_half_away(max(p[0] for p in poly), 3), "depth": round_half_away(max(p[1] for p in poly), 3),
@@ -244,7 +248,7 @@ def _membership(pts: Poly, poly: Poly, near: float) -> tuple[str, float]:
     return "outside", round_half_away(dist, 3)
 
 
-def _corner_extensions(edges: list[dict[str, Any]], walls: list[dict[str, Any]], ccw: bool) -> list[float]:
+def _corner_extensions(edges: list[RoomEdge], walls: list[dict[str, Any]], ccw: bool) -> list[float]:
     """How far the end of each wall box runs on over the outside corner of a convex vertex, so per-edge boxes leave no notch."""
     n = len(edges)
     ext = [0.0] * n
@@ -263,7 +267,7 @@ def _corner_extensions(edges: list[dict[str, Any]], walls: list[dict[str, Any]],
     return ext
 
 
-def _attach_opening(e: dict[str, Any], pts: Poly, rec: dict[str, Any], edges: list[dict[str, Any]], walls: list[dict[str, Any]], k: float, note: list[str]) -> dict[str, Any] | None:
+def _attach_opening(e: dict[str, Any], pts: Poly | None, rec: dict[str, Any], edges: list[RoomEdge], walls: list[dict[str, Any]], k: float, note: list[str]) -> dict[str, Any] | None:
     if not pts:
         note.append("no geometry")
         return None
@@ -271,12 +275,12 @@ def _attach_opening(e: dict[str, Any], pts: Poly, rec: dict[str, Any], edges: li
     if tag not in ("door", "window"):
         note.append(f"{rec['id']}: opening tag '{tag}' is not door/window; not attached")
         return None
-    g = field_value(e, "geometry") or {}
+    g = as_dict(field_value(e, "geometry")) or {}
     d = long_dir(pts)
     cx, cz = sum(p[0] for p in pts) / len(pts), sum(p[1] for p in pts) / len(pts)
     ext = [vdot(vsub(p, (cx, cz)), d) for p in pts]
     width = float(g["width"]) * k if isinstance(g.get("width"), (int, float)) else max(ext) - min(ext)
-    cands = []
+    cands: list[tuple[float, int, float]] = []
     for ed in edges:
         if angle_between(d, ed["dir"]) > 10.0:
             continue
@@ -293,8 +297,8 @@ def _attach_opening(e: dict[str, Any], pts: Poly, rec: dict[str, Any], edges: li
         note.append(f"{rec['id']} could belong to edges {cands[0][1]} and {cands[1][1]}; not attached")
         return None
     _, i, along = cands[0]
-    el = rec.get("elev") or {}
-    entry = {"id": f"{walls[i]['id']}-FP-{rec['id']}", "type": tag, "offset": round_half_away(max(0.0, along - width / 2), 3), "width": round_half_away(width, 3),
+    el: dict[str, Any] = rec.get("elev") or {}
+    entry: dict[str, Any] = {"id": f"{walls[i]['id']}-FP-{rec['id']}", "type": tag, "offset": round_half_away(max(0.0, along - width / 2), 3), "width": round_half_away(width, 3),
              "height": el.get("height") or (2200.0 if tag == "door" else 1200.0), "sillHeight": el.get("base") or 0.0, "sourceElement": rec["id"]}
     walls[i]["openings"].append(entry)
     return {"wall": walls[i]["id"], "edge": i, "offset": entry["offset"], "width": entry["width"]}

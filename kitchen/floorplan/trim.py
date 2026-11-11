@@ -56,7 +56,8 @@ def _trace(cells: set[tuple[int, int]], xs: list[float], ys: list[float]) -> lis
     if not nxt or any(len(v) != 1 for v in nxt.values()):
         return None
     start = next(iter(nxt))
-    loop, cur = [], start
+    loop: list[tuple[int, int]] = []
+    cur = start
     while True:
         loop.append(cur)
         cur = nxt[cur][0]
@@ -67,7 +68,7 @@ def _trace(cells: set[tuple[int, int]], xs: list[float], ys: list[float]) -> lis
     if len(loop) != len(nxt):
         return None
     pts = [(xs[i], ys[j]) for i, j in loop]
-    out = []
+    out: list[tuple[float, float]] = []
     for k, p in enumerate(pts):
         a, b = pts[k - 1], pts[(k + 1) % len(pts)]
         if abs((p[0] - a[0]) * (b[1] - p[1]) - (p[1] - a[1]) * (b[0] - p[0])) > 1e-9:
@@ -96,8 +97,10 @@ def trim_room(poly: list[tuple[float, float]], rects: list[tuple[str, list[float
     xs = sorted({*px, *(c for _, r in snapped for c in (r[0], r[2]))})
     ys = sorted({*py, *(c for _, r in snapped for c in (r[1], r[3]))})
     cell = {(i, j) for i in range(len(xs) - 1) for j in range(len(ys) - 1) if _inside(((xs[i] + xs[i + 1]) / 2, (ys[j] + ys[j + 1]) / 2), base)}
-    area = lambda cs: sum((xs[i + 1] - xs[i]) * (ys[j + 1] - ys[j]) for i, j in cs)   # noqa: E731
-    room_area, kept, cut = area(cell), set(cell), []
+    def area(cs: set[tuple[int, int]]) -> float:
+        return sum((xs[i + 1] - xs[i]) * (ys[j + 1] - ys[j]) for i, j in cs)
+    room_area, kept = area(cell), set(cell)
+    cut: list[str] = []
     for wid, r in snapped:
         wc = {(i, j) for i in range(len(xs) - 1) for j in range(len(ys) - 1) if xs[i] >= r[0] and xs[i + 1] <= r[2] and ys[j] >= r[1] and ys[j + 1] <= r[3]}
         inside = wc & kept
@@ -114,7 +117,8 @@ def trim_room(poly: list[tuple[float, float]], rects: list[tuple[str, list[float
     out = _trace(kept, xs, ys)
     if out is None:
         return list(poly), []
-    sign = lambda pts: sum(a[0] * b[1] - b[0] * a[1] for a, b in zip(pts, pts[1:] + pts[:1]))   # noqa: E731
+    def sign(pts: list[tuple[float, float]]) -> float:
+        return sum(a[0] * b[1] - b[0] * a[1] for a, b in zip(pts, pts[1:] + pts[:1]))
     if sign(out) * sign(list(poly)) < 0:
         out.reverse()
     return out, cut

@@ -32,14 +32,14 @@ def room_section(fp: dict[str, Any], binding: dict[str, Any] | None, wall_materi
             names.setdefault(binding["right"], "WALL-RIGHT")
         if binding.get("left") is not None:
             names.setdefault(binding["left"], "WALL-LEFT")
-    walls = []
+    walls: list[dict[str, Any]] = []
     for w in fp["walls"]:
         wid = names.get(w["edge"], w["id"])
         walls.append({"id": wid, "start": _v3(w["start"]), "end": _v3(w["end"]), "height": w["height"], "thickness": w["thickness"],
                       "thicknessSource": w["thicknessSource"], "visible": False, "materialId": wall_material, "interiorNormal": _v3(w["interiorNormal"]),
                       "openings": [{"id": f"{wid}-O{i + 1}", "type": "window" if o.get("type") == "window" else "door", "offset": o["offset"],
                                     "width": o["width"], "height": o["height"], "sillHeight": o.get("sillHeight", 0)} for i, o in enumerate(w["openings"])]})
-    out_structs = []
+    out_structs: list[dict[str, Any]] = []
     for st in (structs if structs is not None else structures(fp)):
         d = dict(st)
         for key in ("swing", "arrow"):

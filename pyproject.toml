@@ -33,4 +33,4 @@ pythonVersion = "3.11"
 typeCheckingMode = "basic"
 include = ["kitchen"]
 # Modules checked in strict mode (grow this list as modules become clean).
-strict = ["kitchen/placement.py", "kitchen/numeric.py", "kitchen/errors.py", "kitchen/proposal.py"]
+strict = ["kitchen/placement.py", "kitchen/numeric.py", "kitchen/errors.py", "kitchen/proposal.py", "kitchen/floorplan"]

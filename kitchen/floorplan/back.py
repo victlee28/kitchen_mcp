@@ -2,22 +2,33 @@
 from __future__ import annotations
 
 import math
-from typing import Any
+from typing import Any, TypedDict
 
 from ..numeric import round_half_away
 
 from .constants import PARALLEL_DEG, TOL
-from .geom import Poly, angle_between, area2, vdot, vnorm, vsub
+from .geom import Poly, Pt, angle_between, area2, vdot, vnorm, vsub
+
+
+class RoomEdge(TypedDict):
+    """Edge ``i`` of a room outline, from point ``a`` to ``b``: unit direction ``dir``, unit normal ``n`` into the room, length in mm."""
+    i: int
+    a: Pt
+    b: Pt
+    dir: Pt
+    n: Pt
+    length: float
 
 
 # ---------------------------------------------------------------- back face of a unit next to a wall
-def room_edges(room: Poly) -> list[dict[str, Any]]:
+def room_edges(room: Poly) -> list[RoomEdge]:
     ccw = area2(room) > 0
-    out = []
+    out: list[RoomEdge] = []
     for i, a in enumerate(room):
         b = room[(i + 1) % len(room)]
         d = vnorm(vsub(b, a))
-        out.append({"i": i, "a": a, "b": b, "dir": d, "n": (-d[1], d[0]) if ccw else (d[1], -d[0]), "length": math.hypot(*vsub(b, a))})
+        n: Pt = (-d[1], d[0]) if ccw else (d[1], -d[0])
+        out.append({"i": i, "a": a, "b": b, "dir": d, "n": n, "length": math.hypot(*vsub(b, a))})
     return out
 
 
@@ -35,7 +46,7 @@ def detect_back(outline: list[Any], fp: dict[str, Any], gap_tol: float = 100.0, 
     pts = outline_xy(outline)
     edges = room_edges(outline_xy(fp["outline"]))
     cen = (sum(p[0] for p in pts) / len(pts), sum(p[1] for p in pts) / len(pts))
-    found = []
+    found: list[dict[str, Any]] = []
     for j in range(len(pts)):
         p, q = pts[j], pts[(j + 1) % len(pts)]
         ln = math.hypot(*vsub(q, p))
@@ -75,7 +86,7 @@ def detect_back(outline: list[Any], fp: dict[str, Any], gap_tol: float = 100.0, 
 
 def detect_element_backs(fp: dict[str, Any], kinds: tuple[str, ...] = ("furniture",), tags: tuple[str, ...] | None = None) -> list[dict[str, Any]]:
     """detect_back for every retained furniture/cabinet that belongs to the room."""
-    out = []
+    out: list[dict[str, Any]] = []
     for e in fp["elements"]:
         if e["kind"] not in kinds or not e.get("outline") or e["membership"] not in ("inside", "overlapping", "adjacent"):
             continue

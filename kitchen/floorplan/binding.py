@@ -3,23 +3,23 @@ from __future__ import annotations
 
 import copy
 import math
-from typing import Any
+from typing import Any, TypedDict
 
 from ..numeric import round_half_away
 from ..placement import Placement
 from ..errors import InvalidInput
 
-from .back import detect_element_backs, outline_xy, room_edges
+from .back import RoomEdge, detect_element_backs, outline_xy, room_edges
 from .constants import TOL
-from .geom import angle_between, area2, seg_dist, vcross, vdot, vsub
+from .geom import Pt, angle_between, area2, seg_dist, vcross, vdot, vsub
 
 
 # ---------------------------------------------------------------- binding the kitchen frame to the room
 def kitchen_transform(fp: dict[str, Any], binding: dict[str, Any]) -> dict[str, Any]:
     """Rigid transform kitchen frame -> scene: origin = right-hand corner of the back wall (as seen from inside), +z = into the room."""
-    ed = room_edges(outline_xy(fp["outline"]))[binding["back"]]
+    ed = room_edges(outline_xy(fp["outline"]))[int(binding["back"])]
     n = ed["n"]
-    right = (n[1], -n[0])           # facing the wall (-n), the right-hand direction
+    right: Pt = (n[1], -n[0])           # facing the wall (-n), the right-hand direction
     r_end = max((ed["a"], ed["b"]), key=lambda p: vdot(p, right))
     off = float(binding.get("offset", 0.0))
     origin = (r_end[0] - right[0] * off, r_end[1] - right[1] * off)
@@ -27,7 +27,18 @@ def kitchen_transform(fp: dict[str, Any], binding: dict[str, Any]) -> dict[str, 
             "right": {"x": round_half_away(right[0], 6), "z": round_half_away(right[1], 6)}, "into": {"x": round_half_away(n[0], 6), "z": round_half_away(n[1], 6)}}
 
 
-def _perp(e1: dict[str, Any], e2: dict[str, Any]) -> bool:
+class Verdict(TypedDict):
+    """Whether room edge ``edge`` can carry the back run, why not, and how well it fits."""
+    edge: int
+    ok: bool
+    why: list[str]
+    warnings: list[str]
+    score: float
+    right: int | None
+    left: int | None
+
+
+def _perp(e1: RoomEdge, e2: RoomEdge) -> bool:
     return abs(angle_between(e1["dir"], e2["dir"]) - 90.0) <= 10.0
 
 
@@ -43,13 +54,14 @@ def bind_kitchen(fp: dict[str, Any], need: dict[str, Any], back_edge: int | None
     n_edges = len(edges)
     need_back, need_right, need_left = (float(need.get(k2) or 0.0) for k2 in ("back", "right", "left"))
     backs = {r["back"]["roomEdge"] for r in detect_element_backs(fp, ("furniture",), ("cabinet",)) if r["back"]}
-    verdicts = []
+    verdicts: list[Verdict] = []
     for ed in edges:
-        why, warns = [], []
+        why: list[str] = []
+        warns: list[str] = []
         if need_back > ed["length"] + 5.0:
             why.append(f"edge is {ed['length']:.0f} mm, back run needs {need_back:.0f} mm")
         n = ed["n"]
-        right = (n[1], -n[0])
+        right: Pt = (n[1], -n[0])
         r_end = max((ed["a"], ed["b"]), key=lambda p: vdot(p, right))
         at_start = r_end == ed["a"]
         nb = edges[(ed["i"] - 1) % n_edges] if at_start else edges[(ed["i"] + 1) % n_edges]
@@ -90,8 +102,9 @@ def bind_kitchen(fp: dict[str, Any], need: dict[str, Any], back_edge: int | None
             raise InvalidInput("The kitchen does not fit any wall of the room: " + "; ".join(f"edge {x['edge']}: {', '.join(x['why'])}" for x in verdicts)[:700], code="kitchen-fits-no-wall")
         chosen, source = ok[0], "auto"
         if len(ok) > 1 and abs(ok[0]["score"] - ok[1]["score"]) < 0.05:
-            chosen = {**chosen, "warnings": [*chosen["warnings"], f"edge {ok[1]['edge']} fits equally well; pass back_edge to choose"]}
-    b = {"back": chosen["edge"], "right": chosen["right"], "left": chosen["left"], "offset": float(offset), "source": source, "score": chosen["score"], "warnings": chosen["warnings"],
+            chosen = chosen.copy()
+            chosen["warnings"] = [*chosen["warnings"], f"edge {ok[1]['edge']} fits equally well; pass back_edge to choose"]
+    b: dict[str, Any] = {"back": chosen["edge"], "right": chosen["right"], "left": chosen["left"], "offset": float(offset), "source": source, "score": chosen["score"], "warnings": chosen["warnings"],
          "need": {"back": need_back, "right": need_right, "left": need_left}}
     b["transform"] = kitchen_transform(fp, b)
     return b
@@ -128,8 +141,9 @@ def apply_binding(doc: dict[str, Any], fp: dict[str, Any], binding: dict[str, An
         for key in ("position", "target"):
             if cam.get(key):
                 cam[key] = pos(cam[key])
-    cs = doc.get("coordinateSystem") or {}
-    for wf in cs.get("wallFrames", []):
+    cs: dict[str, Any] = doc.get("coordinateSystem") or {}
+    wall_frames: list[dict[str, Any]] = cs.get("wallFrames", [])
+    for wf in wall_frames:
         wf["origin"], wf["alongAxis"], wf["frontAxis"] = pos(wf["origin"]), vec(wf["alongAxis"]), vec(wf["frontAxis"])
         wf["rotationY"] = wrap(wf.get("rotationY", 0) + t["yaw"])
     if cs:

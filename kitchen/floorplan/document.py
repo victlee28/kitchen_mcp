@@ -4,26 +4,42 @@ from __future__ import annotations
 import hashlib
 import json
 import math
-from typing import Any
+from typing import Any, cast
 
 from ..errors import InvalidInput
 
 from .constants import AXIS
 
 
+# ---------------------------------------------------------------- typed views of untyped JSON values
+def as_dict(value: Any) -> dict[str, Any] | None:
+    """``value`` as a JSON object, or None when it is not one (a typed view for the checker; no copy)."""
+    return cast(dict[str, Any], value) if isinstance(value, dict) else None
+
+
+def as_list(value: Any) -> list[Any] | None:
+    """``value`` as a JSON array, or None when it is not one."""
+    return cast(list[Any], value) if isinstance(value, list) else None
+
+
+def elements_of(data: dict[str, Any]) -> list[dict[str, Any]]:
+    """The document's ``elements`` array ([] when missing); entries are JSON objects."""
+    return as_list(data.get("elements")) or []
+
+
 # ---------------------------------------------------------------- reading the document
 def frame_vectors(data: dict[str, Any]) -> tuple[Any, Any]:
-    frame = data.get("frame")
-    if not isinstance(frame, dict):
+    frame = as_dict(data.get("frame"))
+    if frame is None:
         raise InvalidInput("Floorplan has no 'frame'; axis directions would have to be guessed")
-    names = [frame.get(k) for k in ("x", "y", "z")]
+    names: list[Any] = [frame.get(k) for k in ("x", "y", "z")]
     if any(n not in AXIS for n in names):
         raise InvalidInput(f"Unsupported frame axes {names}; known names: {', '.join(AXIS)}")
     vx, vy, vz = (AXIS[str(n)] for n in names)
     if vx[2] or vy[2] or not vz[2]:
         raise InvalidInput("Frame must have horizontal x and y axes and a vertical z axis")
     det = (vx[0] * (vy[1] * vz[2] - vy[2] * vz[1]) - vx[1] * (vy[0] * vz[2] - vy[2] * vz[0]) + vx[2] * (vy[0] * vz[1] - vy[1] * vz[0]))
-    declared = frame.get("handed")
+    declared: Any = frame.get("handed")
     if declared in ("trai", "phai"):
         expected = -1 if declared == "trai" else 1
         if det != expected:
@@ -32,15 +48,16 @@ def frame_vectors(data: dict[str, Any]) -> tuple[Any, Any]:
 
 
 def read_points(value: Any, element_id: str, what: str = "outline") -> list[tuple[float, float]]:
-    outline = value.get(what) if isinstance(value, dict) else None
-    if not isinstance(outline, list) or len(outline) < 3:
+    obj = as_dict(value)
+    outline = as_list(obj.get(what)) if obj is not None else None
+    if outline is None or len(outline) < 3:
         raise InvalidInput(f"{element_id}: geometry.{what} must contain at least three points")
-    pts = []
+    pts: list[tuple[float, float]] = []
     for index, point in enumerate(outline):
-        if not isinstance(point, (list, tuple)) or len(point) != 2:
+        if not isinstance(point, (list, tuple)) or len(cast(list[Any], point)) != 2:
             raise InvalidInput(f"{element_id}: {what} point {index} must be [x, y]")
         try:
-            x, y = float(point[0]), float(point[1])
+            x, y = float(cast(list[Any], point)[0]), float(cast(list[Any], point)[1])
         except (TypeError, ValueError) as error:
             raise InvalidInput(f"{element_id}: {what} point {index} must be numeric") from error
         if not (math.isfinite(x) and math.isfinite(y)):
@@ -50,8 +67,8 @@ def read_points(value: Any, element_id: str, what: str = "outline") -> list[tupl
 
 
 def element_field(element: dict[str, Any], name: str) -> dict[str, Any]:
-    f = (element.get("fields") or {}).get(name)
-    return f if isinstance(f, dict) else {}
+    fields = as_dict(element.get("fields")) or {}
+    return as_dict(fields.get(name)) or {}
 
 
 def field_value(element: dict[str, Any], name: str) -> Any:
@@ -69,11 +86,12 @@ REGION_MARGIN_MM = 600.0    # how far an open side (no wall found) reaches beyon
 
 
 def element_bbox(e: dict[str, Any]) -> list[float] | None:
-    g = field_value(e, "geometry")
-    if not isinstance(g, dict):
+    g = as_dict(field_value(e, "geometry"))
+    if g is None:
         return None
-    if isinstance(g.get("bbox"), list) and len(g["bbox"]) == 4:
-        return [float(v) for v in g["bbox"]]
+    bbox = as_list(g.get("bbox"))
+    if bbox is not None and len(bbox) == 4:
+        return [float(v) for v in bbox]
     try:
         pts = read_points(g, str(e.get("id")))
     except ValueError:
