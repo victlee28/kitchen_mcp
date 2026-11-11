@@ -6,6 +6,8 @@ rỗng = áp dụng cả khu vực). Khi tra cứu/kiểm tra cho quốc gia C t
 Hòa điểm thì xét độ mạnh của nguồn: bat-buoc > tieu-chuan > khuyen-nghi > thuc-hanh > chua-ro.
 """
 from __future__ import annotations
+
+from typing import Any
 from .errors import InvalidInput
 
 import unicodedata
@@ -74,7 +76,7 @@ def from_description(text: str) -> tuple[str | None, str | None]:
     return (None, code) if code in REGIONS else (code, COUNTRIES[code][1])
 
 
-def priority_score(row: dict, country: str | None, region: str | None) -> int:
+def priority_score(row: dict[str, Any], country: str | None, region: str | None) -> int:
     ds = [x.strip().upper() for x in (row.get("country") or "").split(",") if x.strip()]
     kv = (row.get("region") or "GLOBAL").upper()
     if country and country in ds:
@@ -92,8 +94,8 @@ def priority_label(score: int) -> str:
     return {30: "quốc gia", 20: "khu vực", 15: "cùng khu vực (nước khác)", 10: "toàn cầu"}.get(score, "tham khảo nước ngoài")
 
 
-def sort_rows(rows: list[dict], country: str | None, region: str | None) -> list[dict]:
-    def key(r):
-        meta = r.get("metadata") or {}
+def sort_rows(rows: list[dict[str, Any]], country: str | None, region: str | None) -> list[dict[str, Any]]:
+    def key(r: dict[str, Any]) -> tuple[float, float, float]:
+        meta: dict[str, Any] = r.get("metadata") or {}
         return (-priority_score(r, country, region), -SOURCE_RANK.get(meta.get("sourceType", "unknown"), 0), -(r.get("id") or 0))
     return sorted(rows, key=key)

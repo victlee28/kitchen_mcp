@@ -5,6 +5,8 @@ chỉ cần (min, max). Mỗi chi tiết mang `module` để chọn/tô mask the
 """
 from __future__ import annotations
 
+from typing import Any
+
 from dataclasses import dataclass, field
 
 from .numeric import round_half_away
@@ -52,7 +54,7 @@ class Part:
     def orient(self) -> str:
         return "back" if self.frame is not None else (self.face or self.wall or "back")
 
-    def to_json(self) -> dict:
+    def to_json(self) -> dict[str, Any]:
         c = [(a + b) / 2 for a, b in zip(self.min, self.max)]
         s = [b - a for a, b in zip(self.min, self.max)]
         if self.frame is not None and self.lmin is not None and self.lmax is not None:  # oriented: centre of the real box, size in run axes, yaw
@@ -72,7 +74,7 @@ class Scene:
     parts: list[Part] = field(default_factory=list)
     lsau: float = 0
     lphai: float = 0
-    meshes: list = field(default_factory=list)  # lưới tam giác không thẳng trục (phào) — kitchen.moldings.MeshPart
+    meshes: list[Any] = field(default_factory=list)  # lưới tam giác không thẳng trục (phào) — kitchen.moldings.MeshPart
 
     def bounds(self, cabinets_only: bool = True) -> tuple[list[float], list[float]]:
         ps = [p for p in self.parts if p.type != "handle" and (not cabinets_only or p.type not in ("wall", "floor"))]
@@ -357,12 +359,12 @@ class _Builder:
             if joint.at - last[1] <= reach + 1 and 1 < other[0].fromCorner <= last[2] + c.countertopOverhang + 1:    # b starting AT the corner fills it itself
                 last[1] = joint.at
 
-    def corner_tops(self) -> list:
+    def corner_tops(self) -> list[Any]:
         """The wedge of worktop that closes a corner which is NOT square between two explicit runs: from the end of a's worktop, round the point
         where the two front edges cross, to the start of b's worktop. A box cannot be that shape, so it is a mesh (as the moldings are)."""
         from .moldings import MeshPart
         c = self.c
-        out: list = []
+        out: list[Any] = []
         for joint in self._joints:
             if joint.square:
                 continue
@@ -446,7 +448,7 @@ class _Builder:
                     self.box(tb.id, tb.type, wall, at.center - w / 2, at.center + w / 2, dc_ - d / 2, dc_ + d / 2,
                              c.countertop, c.countertop + height, isl=isl)
 
-    def structures(self) -> list:
+    def structures(self) -> list[Any]:
         """Meshes of the imported floorplan's elements in the kitchen frame (none without a floorplan or when the kitchen fits no wall)."""
         try:
             ctx = roomctx.for_spec(self.spec, self.lsau, self.lphai)
@@ -529,7 +531,7 @@ def cabinet_faces(spec: KitchenSpec, scene: Scene) -> list[camera_plan.Face]:
     """The front of every run of cabinets (wall runs and explicit runs) in the kitchen frame, for the camera planner."""
     faces: list[camera_plan.Face] = []
 
-    def face(key: str, name: str, mods: list, center, normal, owner: str) -> None:
+    def face(key: str, name: str, mods: list[Any], center, normal, owner: str) -> None:
         lo, hi = min(m.fromCorner for m in mods), max(m.endAt for m in mods)
         faces.append(camera_plan.Face(key, name, center(lo, hi, max(m.depth for m in mods)), normal, hi - lo, max(m.y + m.height for m in mods), owner))
 
@@ -632,7 +634,7 @@ def views_of(spec: KitchenSpec) -> dict[str, ViewAngle]:
     return dict(spec.cameraViews) if spec.cameraViews else default_views(spec)
 
 
-def scene_json(spec: KitchenSpec) -> dict:
+def scene_json(spec: KitchenSpec) -> dict[str, Any]:
     sc = compile_spec(spec)
     openings, hi = sc.bounds()
     return {

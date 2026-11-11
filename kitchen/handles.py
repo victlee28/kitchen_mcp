@@ -6,14 +6,16 @@ scope that equals the selected handles (every handle, whole storeys, or whole mo
 """
 from __future__ import annotations
 
+from typing import Any
+
 from collections import defaultdict
 
 from .geometry import Scene
-from .spec import KitchenSpec, effective_handle, to_data
+from .spec import HandleOverride, KitchenSpec, effective_handle, to_data
 from .errors import InvalidInput, require
 
 
-def _dump(override) -> dict:
+def _dump(override: HandleOverride | None) -> dict[str, Any]:
     return to_data(override, exclude_none=True) if override is not None else {}
 
 
@@ -31,7 +33,7 @@ def material_slot(spec: KitchenSpec, module_id: str | None) -> tuple[str, str]:
     return "common:handle", name
 
 
-def material_ops(spec: KitchenSpec, scene: Scene, part_ids: list[str], material: str) -> tuple[dict, str]:
+def material_ops(spec: KitchenSpec, scene: Scene, part_ids: list[str], material: str) -> tuple[dict[str, Any], str]:
     """Design op (and scope text) that gives exactly the selected handles the new material.
 
     Raises ValueError when the selection covers only part of a module's handles, because the spec stores handles
@@ -56,9 +58,9 @@ def material_ops(spec: KitchenSpec, scene: Scene, part_ids: list[str], material:
     module_of = {m.id: m for m in spec.module}
     chosen_modules, all_modules = set(chosen), set(all_by_module)
     by_storey = {k: _dump(v) for k, v in (spec.common.handleByStorey or {}).items()}
-    changes: dict = {}
+    changes: dict[str, Any] = {}
     covered: set[str] = set()
-    ops: list[dict] = []
+    ops: list[dict[str, Any]] = []
     if chosen_modules == all_modules:
         changes["handle"] = {**to_data(spec.common.handle), "material": material}
         for k in list(by_storey):
@@ -68,7 +70,7 @@ def material_ops(spec: KitchenSpec, scene: Scene, part_ids: list[str], material:
         changes["handleByStorey"] = by_storey or None
         covered, scope = all_modules, "mọi tay nắm"
     else:
-        storeys = []
+        storeys: list[str] = []
         for s in dict.fromkeys(storey_of[m] for m in sorted(all_modules)):
             members = {m for m in all_modules if storey_of[m] == s}
             if members <= chosen_modules:
@@ -91,17 +93,17 @@ def material_ops(spec: KitchenSpec, scene: Scene, part_ids: list[str], material:
     return (ops[0] if len(ops) == 1 else {"op": "multi", "ops": ops}), scope
 
 
-def clear_overrides(spec: KitchenSpec, fields: tuple[str, ...]) -> tuple[dict, list[dict]]:
+def clear_overrides(spec: KitchenSpec, fields: tuple[str, ...]) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     """Common-level changes and module update ops that drop the given override fields (variant, length, material),
     so that a common-level edit applies to every cabinet."""
     current = {k: _dump(v) for k, v in (spec.common.handleByStorey or {}).items()}
-    cleaned = {}
+    cleaned: dict[str, dict[str, Any]] = {}
     for k, v in current.items():
         rest = {f: x for f, x in v.items() if f not in fields}
         if rest:
             cleaned[k] = rest
-    changes = {"handleByStorey": cleaned or None} if cleaned != current else {}
-    ops = []
+    changes: dict[str, Any] = {"handleByStorey": cleaned or None} if cleaned != current else {}
+    ops: list[dict[str, Any]] = []
     for m in spec.module:
         if m.handle is None:
             continue

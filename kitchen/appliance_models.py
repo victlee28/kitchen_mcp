@@ -8,10 +8,12 @@ from __future__ import annotations
 
 import re
 import unicodedata
+from collections.abc import Callable
 from typing import Any
 
 from .appliance_catalog import MODELS
 from .errors import InvalidInput
+from .jsonview import as_dict
 from .runs import spot
 from .spec import Appliance, KitchenSpec, Module
 
@@ -22,13 +24,13 @@ HOOD_SIDE = 10.0         # mm: an integrated hood needs this much room each side
 TYPES = ("cooktop", "sink", "faucet", "hood", "fridge", "oven", "tv")
 
 
-def model(model_id: str) -> dict:
+def model(model_id: str) -> dict[str, Any]:
     if model_id not in BY_ID:
         raise InvalidInput(f"No appliance model {model_id!r}", code="model-not-found")
     return BY_ID[model_id]
 
 
-def default_for(kind: str) -> dict | None:
+def default_for(kind: str) -> dict[str, Any] | None:
     return next((m for m in MODELS if m["type"] == kind and m.get("default")), None)
 
 
@@ -51,8 +53,8 @@ def model_id(app: Appliance) -> str | None:
 
 def size_of(app: Appliance) -> dict[str, float] | None:
     """The appliance's size {w, d, h} (mm): its own ``size``, else read from ``dimensions`` in the order each type writes it."""
-    own = getattr(app, "size", None)
-    if isinstance(own, dict) and all(isinstance(own.get(k), (int, float)) for k in ("w", "d", "h")):
+    own = as_dict(getattr(app, "size", None))
+    if own is not None and all(isinstance(own.get(k), (int, float)) for k in ("w", "d", "h")):
         return {k: float(own[k]) for k in ("w", "d", "h")}
     k = app.numeric_dimensions()
     if app.type == "fridge" and len(k) >= 3:
@@ -66,11 +68,12 @@ def size_of(app: Appliance) -> dict[str, float] | None:
     return None
 
 
-def dimension_string(m: dict) -> str:
+def dimension_string(m: dict[str, Any]) -> str:
     """``dimensions`` as the 3D builder reads it for that type (fridge w×h×d, oven / hood w×h, sink / hob w×d, tap height)."""
     s = m["size"]
     t = m["type"]
-    f = lambda *xs: " × ".join(f"{x:g}" for x in xs)
+    def f(*xs: float) -> str:
+        return " × ".join(f"{x:g}" for x in xs)
     if t == "fridge":
         return f(s["w"], s["h"], s["d"])
     if t in ("oven", "hood"):
@@ -82,7 +85,7 @@ def dimension_string(m: dict) -> str:
     return f(s["w"], s["d"], s["h"])
 
 
-def changes_for(m: dict) -> dict[str, Any]:
+def changes_for(m: dict[str, Any]) -> dict[str, Any]:
     """What ``update-appliance`` writes on the appliance for model ``m``."""
     out: dict[str, Any] = {"model": m["id"], "name": m["name"], "dimensions": dimension_string(m), "size": dict(m["size"]),
                            "mount": m.get("mount"), "energy": m.get("energy")}
@@ -111,7 +114,7 @@ def host(spec: KitchenSpec, app: Appliance) -> Module | None:
     return next((m for m in spec.module if m.id == app.module), None) if app.module else None
 
 
-def fit(spec: KitchenSpec, app: Appliance, m: dict) -> tuple[str, list[str]]:
+def fit(spec: KitchenSpec, app: Appliance, m: dict[str, Any]) -> tuple[str, list[str]]:
     """``(status, reasons)`` for model ``m`` in the place of ``app``: ``ok``, ``bad`` (does not fit), ``check`` (could not be checked, or
     another kind of appliance that changes the cabinets around it: say what happens), ``blocked`` (another kind that cannot go there)."""
     if m["type"] != app.type:
@@ -205,7 +208,7 @@ def over(a: Module, b: Module) -> bool:
     return same and a.fromCorner < b.endAt - 1 and b.fromCorner < a.endAt - 1
 
 
-def needed_width(m: dict) -> float | None:
+def needed_width(m: dict[str, Any]) -> float | None:
     """The narrowest cabinet model ``m`` fits in (10 mm steps): the hole / niche plus both side panels, at least its ``fits.hostWidth``."""
     hole = m.get("cutout") or m.get("niche")
     if not hole:
@@ -214,7 +217,7 @@ def needed_width(m: dict) -> float | None:
     return float(-(-need // 10) * 10)
 
 
-WISHES = (       # words of the sentence (lower case, WITH diacritics: "đổi" is not "đôi", "tủ" is not "từ") -> what the model must have
+WISHES: tuple[tuple[str, Callable[[dict[str, Any]], bool]], ...] = (       # words of the sentence (lower case, WITH diacritics: "đổi" is not "đôi", "tủ" is not "từ") -> what the model must have
     (r"(?<!\w)từ(?!\w)|induction", lambda m: m.get("energy") == "induction"),
     (r"(?<!\w)gas(?!\w)|(?<!\w)ga(?!\w)", lambda m: m.get("energy") in ("gas", "mixed")),
     (r"hỗn hợp|từ \+ gas|từ và gas|mixed|hybrid", lambda m: m.get("energy") == "mixed"),
@@ -237,7 +240,7 @@ def candidates(spec: KitchenSpec, app: Appliance, text: str = "") -> list[dict[s
     now = model_id(app)
     same = [m for m in MODELS if m["type"] == app.type and m["id"] != now]
     picked = [m for m in same if all(w(m) for w in wanted)] or same
-    out = []
+    out: list[dict[str, Any]] = []
     for m in picked:
         status, reasons = fit(spec, app, m)
         out.append({"id": m["id"], "name": m["name"], "size": m["size"], "cutout": m.get("cutout"), "mount": m.get("mount"),
@@ -246,13 +249,13 @@ def candidates(spec: KitchenSpec, app: Appliance, text: str = "") -> list[dict[s
     return sorted(out, key=lambda c: order[c["status"]])
 
 
-def energy_notes(app: Appliance, m: dict) -> list[str]:
+def energy_notes(app: Appliance, m: dict[str, Any]) -> list[str]:
     """Warnings when the new model needs another supply (gas line, dedicated socket)."""
     before = getattr(app, "energy", None) or (BY_ID.get(model_id(app) or "", {}).get("energy"))
     after = m.get("energy")
     if before == after or app.type != "cooktop":
         return []
-    out = []
+    out: list[str] = []
     if after in ("gas", "mixed") and before not in ("gas", "mixed"):
         out.append("The new hob needs a gas supply (pipe or cylinder) and a gas valve under the worktop")
     if before in ("gas", "mixed") and after not in ("gas", "mixed"):
@@ -296,9 +299,9 @@ def ai_facts(spec: KitchenSpec, app: Appliance, rendering: str = "box-placeholde
     return out
 
 
-def sentence(facts: dict[str, Any], bbox: list | None = None) -> str:
+def sentence(facts: dict[str, Any], bbox: list[float] | None = None) -> str:
     """One sentence for a prompt: what to draw, how big, and where (``bbox``: x0, y0, x1, y1 of it in the picture)."""
-    s = facts.get("size_mm") or {}
+    s: dict[str, Any] = facts.get("size_mm") or {}
     size = f", about {s['w']:g} mm wide" if s.get("w") else ""
     at = f" (in the picture around x {bbox[0]}–{bbox[2]}, y {bbox[1]}–{bbox[3]})" if bbox else ""
     if facts.get("rendering") == "box-placeholder":

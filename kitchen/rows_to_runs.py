@@ -41,7 +41,7 @@ _SIDE = {"Left": "left", "Right": "right", "Top": "upper", "Bottom": "base"}
 def _hinge_sides(m: Module, scene: Any) -> list[str]:
     """The hinge side every door of a cabinet has now, in the order ``Module.hingeSides`` counts doors (rows from the bottom, left to right)."""
     doors = [p for p in scene.parts if p.module == m.id and p.type in ("door", "glass-door")]
-    boxes = []
+    boxes: list[tuple[float, float, float, float]] = []
     for p in doors:
         u0, u1, _ = runs.front_span(p.orient, p.min, p.max)
         boxes.append((u0, u1, p.min[1], p.max[1]))
@@ -117,7 +117,7 @@ def convert(spec: KitchenSpec) -> tuple[dict[str, Any], list[str]]:
     for mol in data.get("moldings", []):
         if mol.get("wall"):
             mol["wall"] = [wall_runs.get(w, w) for w in mol["wall"]]
-    room = data.get("room") or {"wall": []}
+    room: dict[str, Any] = data.get("room") or {"wall": []}
     have = {w.get("id") for w in room.get("wall", [])}
     room["wall"] = [*room.get("wall", []), *[{"id": w, "length": float(v)} for w, v in (("back", scene.lsau), ("right", scene.lphai)) if w not in have and v > 0]]
     data["room"] = room

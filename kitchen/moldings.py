@@ -7,6 +7,8 @@ trong web/scene-loader.js (sweepRings) và được test so khớp.
 """
 from __future__ import annotations
 
+from typing import Any
+
 import math
 from dataclasses import dataclass, field
 
@@ -112,7 +114,7 @@ def _place(spec: KitchenSpec, m: Module, on_wall: dict[str, str]) -> tuple[str, 
 
 def _intervals(spec: KitchenSpec, variant: str) -> tuple[dict[str, list[tuple[float, float, float, str]]], float]:
     """Đoạn (s0, s1, độ sâu mặt trước, mã module) theo từng tường + cao độ đường chạy."""
-    iv: dict[str, list] = {"back": [], "right": [], "left": []}
+    iv: dict[str, list[Any]] = {"back": [], "right": [], "left": []}
     on_wall = _on_wall(spec)
     if variant == "crown":
         cands = [m for m in spec.module if m.storey in ("upper", "loft", "tall", "corner")]
@@ -187,9 +189,9 @@ def _angled_runs(spec: KitchenSpec, mol: Molding, prof: MoldingProfile, y: float
     the start of b) and both have cabinets up to the corner: there the two chains are ONE, turning at the point where the two front lines
     cross, so the molding is mitred round the corner instead of two pieces ending in each other."""
     out: list[Run] = []
-    chains: dict[tuple[str, int], dict] = {}
+    chains: dict[tuple[str, int], dict[str, Any]] = {}
     order: list[tuple[str, int]] = []
-    segs_of: dict[str, list[dict]] = {}
+    segs_of: dict[str, list[dict[str, Any]]] = {}
     on_wall = _on_wall(spec)
     for r in spec.runs:
         if r.id in on_wall or (mol.wall and r.id not in mol.wall):   # a run against a wall is walked as that wall's row (``_intervals``)
@@ -297,7 +299,7 @@ def compute_runs(spec: KitchenSpec) -> list[Run]:
             return out
 
         polys = {w: wall_polys(w) for w in ("right", "back", "left")}
-        chains: list[dict] = []
+        chains: list[dict[str, Any]] = []
         if join_r:
             r_last = polys["right"].pop(0)  # đoạn chạm góc (s nhỏ nhất); theo chiều đi nó kết thúc ở góc
             b_first = polys["back"].pop(0)
@@ -413,7 +415,7 @@ def _flap(m: Module) -> bool:
     return (m.hingeSides[:1] == ["upper"]) or (not m.hingeSides and m.storey == "loft" and m.width > m.height * 1.2)
 
 
-def check(spec: KitchenSpec) -> list[dict]:
+def check(spec: KitchenSpec) -> list[dict[str, Any]]:
     c = spec.common
     out = []
     by_id = {m.id: m for m in spec.module}

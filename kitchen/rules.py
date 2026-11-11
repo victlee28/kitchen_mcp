@@ -6,6 +6,8 @@ code nào có bộ kiểm tra thì dùng tham số đó, code chưa có bộ ki�
 """
 from __future__ import annotations
 
+from typing import Any
+
 from itertools import combinations
 
 from . import appliance_models, knowledge_seed, moldings, regions, rules_kb, runs, tv_system
@@ -24,7 +26,7 @@ def _issue(code, level, mods, msg, measured=None, limit=None):
     return d
 
 
-def _envelopes(spec: KitchenSpec) -> list[tuple[str, tuple, tuple]]:
+def _envelopes(spec: KitchenSpec) -> list[tuple[str, tuple[Any, ...], tuple[Any, ...]]]:
     """Khối bao của từng module (corner-shelf tách 2 cánh) trong toạ độ thế giới."""
     out = []
     lsau = (spec.room.length("back") if spec.room else None) or max([m.endAt for m in spec.module if m.wall == "back"] + [0]) + 600
@@ -56,7 +58,7 @@ def _overlap(a, b) -> float:
     return v
 
 
-def check_geometry(spec: KitchenSpec) -> list[dict]:
+def check_geometry(spec: KitchenSpec) -> list[dict[str, Any]]:
     c = spec.common
     issues = []
     env = _envelopes(spec)
@@ -150,13 +152,13 @@ def check_geometry(spec: KitchenSpec) -> list[dict]:
     return issues
 
 
-def default_rows() -> list[dict]:
+def default_rows() -> list[dict[str, Any]]:
     """Kho nền dùng khi không có DB (test, hàm thuần)."""
     return [{"id": i + 1, **k} for i, k in enumerate(knowledge_seed.KNOWLEDGE) if k["kind"] in ("rule", "standard")]
 
 
-def validate(spec: KitchenSpec, kb_rules: list[dict] | None = None, country: str | None = None,
-             region: str | None = None) -> dict:
+def validate(spec: KitchenSpec, kb_rules: list[dict[str, Any]] | None = None, country: str | None = None,
+             region: str | None = None) -> dict[str, Any]:
     """kb_rules: các dòng tri thức kind rule/standard đang active (đã parse metadata); None -> kho nền.
     Quốc gia/khu vực: tham số > spec.quocGia/spec.khuVuc > không chỉ định (ưu tiên mục toàn cầu, rồi nguồn mạnh nhất)."""
     qg, kv = regions.normalize(country or spec.country, region or spec.region)

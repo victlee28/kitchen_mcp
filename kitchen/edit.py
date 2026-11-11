@@ -11,6 +11,7 @@ from .numeric import round_half_away
 from . import tv_system
 from .spec import Appliance, KitchenSpec, Module, Run, from_data, to_data
 from .errors import InvalidInput, NotFound
+from .jsonview import as_dict, as_list
 
 
 def _clone(spec: KitchenSpec) -> KitchenSpec:
@@ -58,7 +59,7 @@ def add_module(spec: KitchenSpec, module: dict[str, Any], after_module: str | No
     """Thêm module. Nếu có `sau_module`, đặt ngay sau module đó (cùng tường, cùng tầng nếu không nói khác)."""
     s = _clone(spec)
     data = dict(module)
-    devices = [d for d in [data.pop("appliance", None), *(data.pop("appliances", None) or [])] if isinstance(d, dict)]   # devices standing in/on this module
+    devices = [d for d in (as_dict(x) for x in [data.pop("appliance", None), *(as_list(data.pop("appliances", None)) or [])]) if d is not None]   # devices standing in/on this module
     if after_module:
         ref = s.find(after_module)
         data.setdefault("wall", ref.wall)
@@ -143,7 +144,7 @@ def set_run_tv(spec: KitchenSpec, id: str, layout: Any) -> KitchenSpec:
 APPLIANCE_FIELDS = ("model", "name", "dimensions", "size", "cutout", "mount", "energy", "module")   # module: another kind (appliance_kind)
 
 
-def update_appliance(spec: KitchenSpec, id: str, model: Any = None, changes: dict | None = None) -> KitchenSpec:
+def update_appliance(spec: KitchenSpec, id: str, model: Any = None, changes: dict[str, Any] | None = None) -> KitchenSpec:
     """Give an appliance another model (``appliance_catalog``): its name, dimensions, size, cut-out, mount and energy become the model's;
     its id, module, wall and centre stay, so it stays where it is. ``changes`` may set those fields by hand instead."""
     from .appliance_models import changes_for, model as model_of
@@ -171,15 +172,16 @@ def update_appliance(spec: KitchenSpec, id: str, model: Any = None, changes: dic
 def replace_element(spec: KitchenSpec, element: str, replaced: Any = True) -> KitchenSpec:
     """Mark a floorplan element (``elements[].id``, e.g. furniture_003) as replaced by cabinets, or bring it back (``replaced`` false): it is
     listed in ``floorplan.replaced`` and no longer built. The imported floorplan's elements are left as they are."""
-    if not isinstance(spec.floorplan, dict):
+    fp = as_dict(spec.floorplan)
+    if fp is None:
         raise InvalidInput("This design has no imported floorplan", code="no-floorplan")
-    ids = {str(e.get("id")) for e in spec.floorplan.get("elements") or [] if isinstance(e, dict)}
+    ids = {str(e.get("id")) for e in (as_dict(x) for x in as_list(fp.get("elements")) or []) if e is not None}
     if element not in ids:
         raise NotFound(f"No floorplan element {element!r}", code="element-not-found")
     if not isinstance(replaced, bool):
         raise InvalidInput("replaced must be true or false", code="bad-replaced")
     data = to_data(spec)
-    now = [x for x in data["floorplan"].get("replaced") or [] if x != element]
+    now: list[Any] = [x for x in as_list(data["floorplan"].get("replaced")) or [] if x != element]
     data["floorplan"]["replaced"] = [*now, element] if replaced else now
     if not data["floorplan"]["replaced"]:
         data["floorplan"].pop("replaced")
@@ -209,7 +211,7 @@ def stretch_run(spec: KitchenSpec, id: str, end: str, delta: float) -> KitchenSp
     from . import runs as runmod
     if end not in ("start", "end"):
         raise InvalidInput("end phải là 'start' hoặc 'end'", code="bad-run-end")
-    if isinstance(delta, bool) or not isinstance(delta, (int, float)) or not delta:
+    if isinstance(delta, bool) or not isinstance(delta, (int, float)) or not delta:   # pyright: ignore[reportUnnecessaryIsInstance] (JSON input)
         raise InvalidInput("delta phải là số khác 0 (mm)", code="bad-run-delta")
     s = _clone(spec)
     run = _run(s, id)
@@ -369,7 +371,7 @@ def apply_op(spec: KitchenSpec, op: dict[str, Any]) -> KitchenSpec:
         data["cameraViews"] = op.get("cameraViews") or {}
         return from_data(KitchenSpec, data)
     if kind == "multi":
-        ops = op.get("ops") or []
+        ops = [as_dict(o) or {} for o in as_list(op.get("ops")) or []]
         if not ops or any(o.get("op") == "multi" for o in ops):
             raise InvalidInput("op 'nhieu' cần danh sách ops (không lồng 'nhieu')")
         for o in ops:

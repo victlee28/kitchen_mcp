@@ -7,6 +7,8 @@ Nếu chỉ có tiêu chuẩn nước khác thì vẫn kiểm nhưng hạ xuốn
 """
 from __future__ import annotations
 
+from typing import Any
+
 import math
 
 from .numeric import round_half_away, round_int
@@ -24,9 +26,9 @@ TOPICS = {
 }
 
 
-def select(rows: list[dict], country: str | None, region: str | None) -> dict[str, dict]:
+def select(rows: list[dict[str, Any]], country: str | None, region: str | None) -> dict[str, dict[str, Any]]:
     """rows: các mục tri thức (đã parse metadata). Trả {chủ đề: {code, params, mucDo, uuTien, thamKhao}}."""
-    out: dict[str, dict] = {}
+    out: dict[str, dict[str, Any]] = {}
     for r in regions.sort_rows(rows, country, region):
         meta = r.get("metadata") or {}
         for topic in meta.get("validation") or []:
@@ -43,7 +45,7 @@ def select(rows: list[dict], country: str | None, region: str | None) -> dict[st
 
 
 class _Ctx:
-    def __init__(self, spec: KitchenSpec, sel: dict[str, dict]):
+    def __init__(self, spec: KitchenSpec, sel: dict[str, dict[str, Any]]):
         self.spec, self.sel, self.out = spec, sel, []
 
     def p(self, topic):
@@ -121,7 +123,7 @@ def _range(ctx, topic, value, lo_key, hi_key, label, mods=()):
         ctx.add(topic, mods, f"{label} {value:g} mm ngoài {lim} mm", value, [openings, hi])
 
 
-def check(spec: KitchenSpec, sel: dict[str, dict]) -> list[dict]:
+def check(spec: KitchenSpec, sel: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
     c = spec.common
     ctx = _Ctx(spec, sel)
     spots = {t.id: at for t in spec.appliances if t.type in ("sink", "cooktop") and (at := runs.spot(spec, t)) is not None}   # where each stands, by row

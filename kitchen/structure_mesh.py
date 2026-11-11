@@ -6,6 +6,8 @@ structure id, so ``seg.png`` (by kind), ``seg_module.png`` (by element) and ``in
 """
 from __future__ import annotations
 
+from typing import Any
+
 import math
 
 from .moldings import MeshPart, _ear_clip
@@ -54,7 +56,7 @@ def _clip_halfplane(poly: list[tuple[float, float]], d: tuple[float, float], t0:
     return out
 
 
-def _stair_steps(st: dict, poly: list[tuple[float, float]]) -> list[tuple[list[tuple[float, float]], float]]:
+def _stair_steps(st: dict[str, Any], poly: list[tuple[float, float]]) -> list[tuple[list[tuple[float, float]], float]]:
     """(footprint, top height above base) per step; step i covers the stair from its start to the far end and is (i+1)/n of the rise."""
     xs, zs = [p[0] for p in poly], [p[1] for p in poly]
     arrow = st.get("arrow")
@@ -74,7 +76,7 @@ def _stair_steps(st: dict, poly: list[tuple[float, float]]) -> list[tuple[list[t
     return out
 
 
-def swing_sheet(st: dict, to_kitchen) -> tuple[list[tuple[float, float, float]], list[tuple[int, int, int]]] | None:
+def swing_sheet(st: dict[str, Any], to_kitchen) -> tuple[list[tuple[float, float, float]], list[tuple[int, int, int]]] | None:
     """Flat fan from the hinge across the arc a door sweeps (``swing`` points, ``hinge``), 2 mm above the floor; None without both."""
     arc = st.get("swing") or []
     hinge = st.get("hinge")
@@ -85,7 +87,7 @@ def swing_sheet(st: dict, to_kitchen) -> tuple[list[tuple[float, float, float]],
     return [(x, y, z) for x, z in pts], [(0, i, i + 1) for i in range(1, len(pts) - 1)]
 
 
-def meshes(structures: list[dict], to_kitchen) -> list[MeshPart]:
+def meshes(structures: list[dict[str, Any]], to_kitchen) -> list[MeshPart]:
     """``structures``: floorplan.structures() records (scene outline in mm). ``to_kitchen(x, z) -> (x, z)`` maps room-scene to kitchen frame."""
     out = []
     for st in structures:

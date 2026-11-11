@@ -10,6 +10,8 @@ File xuất ra hợp lệ với CẢ schema gốc v1.0.0 lẫn bản mở rộng
 """
 from __future__ import annotations
 
+from typing import Any
+
 import math
 import re
 from collections import defaultdict
@@ -34,15 +36,15 @@ def _hex(rgb) -> str:
     return "#%02x%02x%02x" % tuple(int(v) for v in rgb)
 
 
-def _v(x, y, z) -> dict:
+def _v(x, y, z) -> dict[str, Any]:
     return {"x": round_half_away(float(x), 2), "y": round_half_away(float(y), 2), "z": round_half_away(float(z), 2)}
 
 
-def _tf(pos, rot_y=0.0) -> dict:
+def _tf(pos, rot_y=0.0) -> dict[str, Any]:
     return {"position": _v(*pos), "rotation": {"x": 0, "y": round_half_away(rot_y, 4), "z": 0, "unit": "deg"}}
 
 
-def _dims(w, h, d) -> dict:
+def _dims(w, h, d) -> dict[str, Any]:
     return {"width": round_half_away(max(w, 0.01), 2), "height": round_half_away(max(h, 0.01), 2), "depth": round_half_away(max(d, 0.01), 2)}
 
 
@@ -115,7 +117,7 @@ def _module_frame(m: Module, lsau: float, fr: "runs.RunFrame | None" = None) -> 
     return Frame((x, m.y, z), seat.yaw), (m.width, m.height, m.depth)
 
 
-def _guess(text: str) -> dict:
+def _guess(text: str) -> dict[str, Any]:
     g = _guess_base(text)
     w = vocab._find(text, vocab.WOOD)  # loài gỗ nêu rõ (óc chó, teak…) quyết định màu gỗ
     if w and "transmission" not in g:
@@ -126,7 +128,7 @@ def _guess(text: str) -> dict:
     return g
 
 
-def _guess_base(text: str) -> dict:
+def _guess_base(text: str) -> dict[str, Any]:
     t = (text or "").lower()
     if "kính" in t or "glass" in t:
         return {"threeMaterialType": "MeshPhysicalMaterial", "color": "#dfe9ec", "roughness": 0.05, "metalness": 0, "transmission": 0.9,
@@ -156,7 +158,7 @@ def _guess_base(text: str) -> dict:
     return {"color": "#d9c3a0", "roughness": 0.6}
 
 
-def _materials(spec: KitchenSpec) -> tuple[list[dict], dict[str, str]]:
+def _materials(spec: KitchenSpec) -> tuple[list[dict[str, Any]], dict[str, str]]:
     vl = spec.common.material
     defs = {  # vai trò -> (id, tên, mô tả nguồn)
         "base": ("MAT-FRONT-BASE", vl.get("base", "Laminate vân gỗ sồi sáng"), "front"),
@@ -234,7 +236,7 @@ ASSETS = [
 
 
 # ------------------------------------------------------------------ chi tiết module
-def _split_carcass(openings, hi, t, b) -> list[tuple[str, str | None, list, list]]:
+def _split_carcass(openings, hi, t, b) -> list[tuple[str, str | None, list[Any], list[Any]]]:
     """Thân hộp -> hông trái/phải, đáy, nóc, hậu (toạ độ cục bộ)."""
     (x0, y0, z0), (x1, y1, z1) = openings, hi
     if x1 - x0 < 3 * t or y1 - y0 < 3 * t or z1 - z0 < 80:
@@ -246,7 +248,7 @@ def _split_carcass(openings, hi, t, b) -> list[tuple[str, str | None, list, list
             ("back", None, [x0 + t, y0 + t, z0], [x1 - t, y1 - t, z0 + b])]
 
 
-def _handle(hn: Handle, material_id: str, w, h, d, tier, hinge, horizontal=False, source: str | None = None) -> dict | None:
+def _handle(hn: Handle, material_id: str, w, h, d, tier, hinge, horizontal=False, source: str | None = None) -> dict[str, Any] | None:
     hd = hardware.handle(hn, w, h, tier, hinge, horizontal)
     if hd is None:
         return None
@@ -257,7 +259,7 @@ def _handle(hn: Handle, material_id: str, w, h, d, tier, hinge, horizontal=False
     return out
 
 
-def _module_entry(spec: KitchenSpec, m: Module, parts: list[Part], frame: Frame, size, mats: dict, led: bool) -> dict:
+def _module_entry(spec: KitchenSpec, m: Module, parts: list[Part], frame: Frame, size, mats: dict[str, Any], led: bool) -> dict[str, Any]:
     c = spec.common
     storey = m.storey
     tier = TIER[storey]
@@ -366,7 +368,7 @@ def _module_entry(spec: KitchenSpec, m: Module, parts: list[Part], frame: Frame,
     return entry
 
 
-def _run_docs(spec: KitchenSpec, modules: list[dict]) -> list[dict]:
+def _run_docs(spec: KitchenSpec, modules: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """runs[]: one group per explicit run. Each module of a run gets placement.runId and a localTransform; its ``transform`` stays the world one
     and is checked to equal run.transform composed with localTransform (a mismatch is a bug in the exporter, so it raises)."""
     by_ref = {m["sourceRef"]: m for m in modules}
@@ -395,8 +397,8 @@ def _run_docs(spec: KitchenSpec, modules: list[dict]) -> list[dict]:
 UNSET_TIME = "1970-01-01T00:00:00+00:00"   # what an export made without a clock says; the service always passes the real time
 
 
-def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: list[dict] | None = None,
-           country: str | None = None, created_at: str = UNSET_TIME) -> dict:
+def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: list[dict[str, Any]] | None = None,
+           country: str | None = None, created_at: str = UNSET_TIME) -> dict[str, Any]:
     """Scene document for ``spec``. Pure: ``created_at`` (ISO-8601 UTC) comes from the caller's clock, never from the wall clock here."""
     from .rules import default_rows
     from .rules_kb import select
@@ -641,7 +643,7 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
     return doc
 
 
-def integrity(doc: dict) -> list[str]:
+def integrity(doc: dict[str, Any]) -> list[str]:
     """Kiểm tra tham chiếu mà JSON Schema không diễn đạt được (materialId/assetId/parentId tồn tại, id duy nhất)."""
     errs = []
     mats = {m["id"] for m in doc["materials"]}

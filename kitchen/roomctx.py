@@ -11,30 +11,30 @@ from dataclasses import dataclass
 from typing import Any
 
 from . import floorplan as fpmod
+from .jsonview import as_dict, as_list
 from .placement import IDENTITY, Placement
 
 # A memo, not state the result depends on: the key is the full content of the floorplan (digest) + binding + run lengths, so a hit is
 # always what a fresh computation would give. (In a Rust port this is an LRU in the shell.)
-_CACHE: dict[tuple, "RoomContext"] = {}
+_CACHE: dict[tuple[Any, ...], "RoomContext"] = {}
 _MAX = 32
 
 
 @dataclass(frozen=True)
 class RoomContext:
-    floorplan: dict
-    binding: dict | None
+    floorplan: dict[str, Any]
+    binding: dict[str, Any] | None
     placement: Placement
-    structures: list
+    structures: list[Any]
 
 
-def replaced(fp: dict) -> list[str]:
+def replaced(fp: dict[str, Any]) -> list[str]:
     """Ids of the floorplan elements the design has replaced with cabinets (``floorplan.replaced``): they are no longer built, drawn or
     rendered. The imported floorplan itself is never changed; going back a revision brings them back."""
-    raw = fp.get("replaced") or []
-    return [str(x) for x in raw] if isinstance(raw, list) else []
+    return [str(x) for x in as_list(fp.get("replaced")) or []]
 
 
-def need_for(spec: Any, back: float, side: float) -> dict | None:
+def need_for(spec: Any, back: float, side: float) -> dict[str, Any] | None:
     """Run lengths the kitchen needs from the room: back wall, and each side wall it uses; None for a design without cabinets."""
     mods = spec.module
     if not mods:
@@ -46,8 +46,8 @@ def need_for(spec: Any, back: float, side: float) -> dict | None:
 
 def for_spec(spec: Any, back: float, side: float) -> RoomContext | None:
     """None without a floorplan. Raises ValueError when the kitchen fits no wall (a wrong scene is never produced)."""
-    fp = getattr(spec, "floorplan", None)
-    if not isinstance(fp, dict):
+    fp = as_dict(getattr(spec, "floorplan", None))
+    if fp is None:
         return None
     need = need_for(spec, back, side)
     digest = hashlib.sha256(json.dumps(fp, sort_keys=True, default=str, ensure_ascii=False).encode("utf-8")).hexdigest()

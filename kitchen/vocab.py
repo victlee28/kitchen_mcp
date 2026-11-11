@@ -4,6 +4,8 @@ Dùng chung để màu trong ảnh albedo, JSON three.js và prompt cùng hiểu
 """
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 import re
 import unicodedata
 
@@ -47,12 +49,12 @@ def _strip_diacritics(t: str) -> str:
     return "".join(ch for ch in t if unicodedata.category(ch) != "Mn")
 
 
-def _norm(t: str) -> str:
+def norm(t: str) -> str:
     """Chuẩn hoá để so khớp: chữ thường, BỎ DẤU (người dùng hay gõ 'xanh luc' thay vì 'xanh lục'), gộp khoảng trắng."""
     return " " + re.sub(r"[\s,;/]+", " ", _strip_diacritics(unicodedata.normalize("NFC", (t or "").lower()))) + " "
 
 
-def _has(t: str, key: str) -> bool:
+def has(t: str, key: str) -> bool:
     return f" {_strip_diacritics(key)} " in t
 
 
@@ -76,8 +78,8 @@ def _matches(t: str, ta: str, key: str) -> bool:
     return False
 
 
-def _find(text: str, table):
-    t, ta = _norm(text), _accented(text)
+def _find(text: str, table: Sequence[tuple[str, ...]]) -> tuple[str, ...] | None:
+    t, ta = norm(text), _accented(text)
     for row in table:
         if _matches(t, ta, row[0]):
             return row
@@ -100,8 +102,9 @@ def to_english(text: str) -> str:
     """Cụm tiếng Anh ngắn cho prompt, vd 'Laminate xanh rêu mờ' -> 'sage green matte finish laminate'."""
     if not text:
         return ""
-    t, ta = _norm(text), _accented(text)
-    used, out = set(), []
+    t, ta = norm(text), _accented(text)
+    used: set[str] = set()
+    out: list[str] = []
     for table, col in ((COLORS, 2), (WOOD, 2), (CHAT, 1)):
         for row in table:
             k = row[0]

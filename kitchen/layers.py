@@ -10,6 +10,8 @@ và (nếu có) thao tác sửa thiết kế tương ứng khi người dùng ch
 """
 from __future__ import annotations
 
+from typing import Any
+
 from .geometry import Scene
 from .spec import KitchenSpec
 from . import handles, lexicon, vocab
@@ -74,7 +76,7 @@ def material_slot(spec: KitchenSpec, module: str | None, type: str) -> tuple[str
     return "common:carcass", _vl(spec, "carcass")
 
 
-def design_op(spec: KitchenSpec, layer: dict, material: str, scene: Scene | None = None) -> tuple[dict, str] | None:
+def design_op(spec: KitchenSpec, layer: dict[str, Any], material: str, scene: Scene | None = None) -> tuple[dict[str, Any], str] | None:
     """Thao tác sửa thiết kế để layer mang vật liệu mới. Trả (op, ghi chú phạm vi) hoặc None nếu không hỗ trợ.
 
     Tay nắm cần `scene` để biết tay nào thuộc module nào; ValueError nếu vùng chọn không biểu diễn đúng được trong spec."""
@@ -106,7 +108,7 @@ def design_op(spec: KitchenSpec, layer: dict, material: str, scene: Scene | None
     return None
 
 
-def catalogue(spec: KitchenSpec, scene: Scene) -> list[dict]:
+def catalogue(spec: KitchenSpec, scene: Scene) -> list[dict[str, Any]]:
     """Mọi chi tiết đơn + layer nhóm. Không gồm số pixel (phụ thuộc góc nhìn)."""
     out = []
     storey_of = {m.id: m.storey for m in spec.module}
@@ -164,7 +166,7 @@ TIER_NAME = {"base": "tủ dưới", "upper": "tủ trên", "tall": "tủ cao", 
 TIER_OF = {"base": "base", "upper": "upper", "loft": "upper", "tall": "tall", "corner": "corner"}  # storey -> material tier (loft shares upper)
 
 
-def _tier_groups(parts: list[dict]) -> list[dict]:
+def _tier_groups(parts: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Groups of one role within one tier: handle, door (door + glass door), drawer, front (all fronts), all (fronts + handles).
 
     ``tier:<tier>:<role>`` covers the whole design (saved image jobs refer to these ids). When the design has more than one cabinet system
@@ -177,7 +179,7 @@ def _tier_groups(parts: list[dict]) -> list[dict]:
     return out
 
 
-def _role_groups(parts: list[dict], prefix: str, suffix: str, system: str | None = None) -> list[dict]:
+def _role_groups(parts: list[dict[str, Any]], prefix: str, suffix: str, system: str | None = None) -> list[dict[str, Any]]:
     out = []
     for tier, tname in TIER_NAME.items():
         members = [x for x in parts if x.get("storey") and TIER_OF[x["storey"]] == tier]
@@ -201,7 +203,7 @@ def _role_groups(parts: list[dict], prefix: str, suffix: str, system: str | None
     return out
 
 
-def _front_updates(spec: KitchenSpec, scene: Scene, layer: dict, slot: str, material: str) -> tuple[dict, str] | None:
+def _front_updates(spec: KitchenSpec, scene: Scene, layer: dict[str, Any], slot: str, material: str) -> tuple[dict[str, Any], str] | None:
     """The fronts of a group that covers the fronts of only SOME of the modules using a common material slot (one cabinet system of
     several, a hand-picked selection): a material of their own on each of those modules, so the other modules keep theirs. The spec keeps
     a front material per module, so a module with doors and drawers gets it on both. None when the group reaches every module of the slot:
@@ -229,7 +231,7 @@ def changed_parts(old: KitchenSpec, new: KitchenSpec, scene: Scene) -> list[str]
             if material_slot(old, p.module, p.type)[1] != material_slot(new, p.module, p.type)[1]]
 
 
-def _adhoc(cat: list[dict], layer_id: str) -> tuple[dict, list[str]]:
+def _adhoc(cat: list[dict[str, Any]], layer_id: str) -> tuple[dict[str, Any], list[str]]:
     """`parts:<id>,<id>,…` -> a layer built from parts of one type chosen by the user (a task keeps one role for its prompt)."""
     ids = list(dict.fromkeys(i for i in layer_id[len("parts:"):].split(",") if i))
     by_id = {x["id"]: x for x in cat if x["variant"] == "part"}
@@ -249,7 +251,7 @@ def _adhoc(cat: list[dict], layer_id: str) -> tuple[dict, list[str]]:
     return layer, ids
 
 
-def resolve(cat: list[dict], layer_id: str) -> tuple[dict, list[str]]:
+def resolve(cat: list[dict[str, Any]], layer_id: str) -> tuple[dict[str, Any], list[str]]:
     """Layer -> (mô tả, danh sách ID chi tiết)."""
     if layer_id.startswith("parts:"):
         return _adhoc(cat, layer_id)

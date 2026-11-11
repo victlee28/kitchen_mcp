@@ -41,25 +41,25 @@ def _material_name(spec: KitchenSpec) -> list[str]:
 def _materials(spec: KitchenSpec | None, extra: list[str] | None = None) -> list[str]:
     """Mô tả bề mặt theo tên vật liệu (của cả thiết kế nếu có spec, cộng thêm extra), mỗi loại một câu ngắn, không lặp."""
     names = " ".join([*(_material_name(spec) if spec is not None else []), *(extra or [])]).lower()
-    t = vocab._norm(names)  # bỏ dấu, chữ thường
-    out = []
-    if any(vocab._has(t, k) for k in ("vân gỗ", "gỗ", "sồi", "óc chó", "tần bì", "xoan đào", "teak", "veneer")):
+    t = vocab.norm(names)  # bỏ dấu, chữ thường
+    out: list[str] = []
+    if any(vocab.has(t, k) for k in ("vân gỗ", "gỗ", "sồi", "óc chó", "tần bì", "xoan đào", "teak", "veneer")):
         out.append("wood surfaces show natural, non-repeating grain running consistently along each panel, with true-to-scale "
                    "grain size and subtle variation between boards")
-    if any(vocab._has(t, k) for k in ("laminate", "melamine")):
+    if any(vocab.has(t, k) for k in ("laminate", "melamine")):
         out.append("laminate and melamine panels have a fine low-sheen texture with soft, broad reflections")
-    if any(vocab._has(t, k) for k in ("bóng", "bóng gương", "acrylic")):
+    if any(vocab.has(t, k) for k in ("bóng", "bóng gương", "acrylic")):
         out.append("high-gloss fronts reflect the room softly and accurately, reflections follow the panel planes without warping")
-    if any(vocab._has(t, k) for k in ("mờ", "sơn")):
+    if any(vocab.has(t, k) for k in ("mờ", "sơn")):
         out.append("matte painted fronts have an even satin finish with no plastic shine")
-    if any(vocab._has(t, k) for k in ("đá", "thạch anh", "granite", "marble", "vân đá", "vân mây")):
+    if any(vocab.has(t, k) for k in ("đá", "thạch anh", "granite", "marble", "vân đá", "vân mây")):
         out.append("the stone countertop has a crisp eased edge, realistic veining that continues across the front edge, and "
                    "a light polished reflection of the wall cabinets")
-    if any(vocab._has(t, k) for k in ("inox", "nhôm", "đồng", "kim loại")):
+    if any(vocab.has(t, k) for k in ("inox", "nhôm", "đồng", "kim loại")):
         out.append("metal handles and appliances show brushed metal with directional micro-scratches and soft specular highlights")
-    if any(vocab._has(t, k) for k in ("kính",)):
+    if any(vocab.has(t, k) for k in ("kính",)):
         out.append("glass doors and the cooktop show faint reflections and slight transparency, not opaque flat color")
-    if any(vocab._has(t, k) for k in ("gạch",)):
+    if any(vocab.has(t, k) for k in ("gạch",)):
         out.append("tiles have thin recessed grout lines and slightly varying glaze reflections")
     return out
 

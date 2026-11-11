@@ -18,6 +18,7 @@ from typing import Any, cast
 from . import appliance_models, runs
 from .cabinet_run import fit_depth
 from .errors import InvalidInput
+from .jsonview import as_dict, as_list
 from .numeric import EPS_MM
 from .labels import STYLE_PRESETS
 from .spec import KitchenSpec, LaidModule, Module, to_data
@@ -105,7 +106,7 @@ def run_slots(spec: KitchenSpec, mods: list[Module]) -> list[Slot]:
             by_run.setdefault(m.run, []).append(m)
     if not by_run:
         raise InvalidInput("These cabinets stand in no run, so they cannot be laid out again; restyle them instead", code="no-run")
-    slots = []
+    slots: list[Slot] = []
     for run_id, ms in by_run.items():
         body = [m for m in ms if m.storey in ("base", "tall")] or ms
         start = min(m.fromCorner for m in body)
@@ -122,11 +123,11 @@ PLAIN_TYPE = {"base-sink": "base", "base-cooktop": "base", "base-oven": "base", 
 def plain_cabinets(modules: list[LaidModule]) -> list[LaidModule]:
     """The same cabinets without what belongs to the main run only: sink, hob, oven and hood cabinets become plain ones (their devices
     go), a fridge cabinet is left out. For the other runs of a system laid out from one sentence."""
-    out = []
+    out: list[LaidModule] = []
     for m in modules:
         if m["type"] == "tall-fridge":
             continue
-        entry = {k: v for k, v in m.items() if k not in ("appliances", "appliance", "niche")}
+        entry = cast(LaidModule, {k: v for k, v in m.items() if k not in ("appliances", "appliance", "niche")})
         if m["type"] in PLAIN_TYPE:
             entry["type"] = PLAIN_TYPE[m["type"]]
             entry.pop("name", None)
@@ -285,12 +286,15 @@ def relayout_ops(spec: KitchenSpec, mods: list[Module], laid: dict[str, list[Lai
             if models:
                 for key in ("appliance", "appliances"):
                     value = entry.get(key)
-                    devices = [value] if isinstance(value, dict) else value if isinstance(value, list) else []
-                    done = [_keep_device(d, models, entry["width"]) if isinstance(d, dict) else (d, None) for d in devices]
+                    one = as_dict(value)
+                    devices: list[Any] = [one] if one is not None else as_list(value) or []
+                    done: list[tuple[Any, str | None]] = [_keep_device(dd, models, entry["width"]) if (dd := as_dict(d)) is not None else (d, None)
+                                                         for d in devices]
                     kept += [note for _, note in done if note]
                     if devices:
                         entry[key] = done[0][0] if isinstance(value, dict) else [d for d, _ in done]
-            front = (fronts.get("material") or {}).get(storey) or (fronts.get("material") or {}).get("base" if storey == "tall" else storey)
+            mats: dict[str, Any] = fronts.get("material") or {}
+            front = mats.get(storey) or mats.get("base" if storey == "tall" else storey)
             keep = old.get(storey, {})
             if m["type"] not in FRONTLESS:
                 if front or keep.get("material"):

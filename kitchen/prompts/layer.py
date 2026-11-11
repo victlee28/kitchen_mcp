@@ -1,6 +1,8 @@
 """Prompt text for one layer / one scene: the English style sentence of the whole kitchen and the sentence for one edited part."""
 from __future__ import annotations
 
+from typing import Any
+
 from .. import lexicon, tv_system, vocab
 from ..layers import ROLES
 from ..spec import KitchenSpec
@@ -48,7 +50,7 @@ def tv_text(spec: KitchenSpec) -> str:
     return text
 
 
-def layer_prompt(spec: KitchenSpec, layer: dict, instruction: str = "", material: str | None = None) -> str:
+def layer_prompt(spec: KitchenSpec, layer: dict[str, Any], instruction: str = "", material: str | None = None) -> str:
     role = ROLES.get(layer.get("type") or "", (None, "kitchen element"))[1]
     material_text = material or layer.get("material") or ""
     en = vocab.to_english(material_text)
@@ -57,6 +59,6 @@ def layer_prompt(spec: KitchenSpec, layer: dict, instruction: str = "", material
     return ", ".join(p for p in parts if p)
 
 
-def edit_task_prompt(spec: KitchenSpec, layer: dict, instruction: str = "", material: str | None = None) -> str:
+def edit_task_prompt(spec: KitchenSpec, layer: dict[str, Any], instruction: str = "", material: str | None = None) -> str:
     """``layer_prompt`` plus the realism tail every region edit carries."""
     return layer_prompt(spec, layer, instruction, material) + ", photorealistic, matching scene lighting and grain, realistic texture, soft contact shadows"

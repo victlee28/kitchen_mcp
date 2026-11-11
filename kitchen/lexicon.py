@@ -299,8 +299,8 @@ def _clauses(f: str) -> list[tuple[int, int]]:
 # ------------------------------------------------------------------ kết quả
 @dataclass
 class Result:
-    updates: dict = field(default_factory=dict)       # trường của KitchenTemplate
-    items: list[dict] = field(default_factory=list)   # bảng diễn giải
+    updates: dict[str, Any] = field(default_factory=dict)       # trường của KitchenTemplate
+    items: list[dict[str, Any]] = field(default_factory=list)   # bảng diễn giải
     blank: list[tuple[int, int]] = field(default_factory=list)  # đoạn đã dùng cho số đo (che khỏi regex số)
 
     def mask(self, text: str) -> str:
@@ -310,7 +310,7 @@ class Result:
         return t
 
 
-def _item(m: M | None, e: E | None, canonical: str, scope: list[str] | str, target: str, status: str | None = None, message: str | None = None) -> dict:
+def _item(m: M | None, e: E | None, canonical: str, scope: list[str] | str, target: str, status: str | None = None, message: str | None = None) -> dict[str, Any]:
     e = e or (m.e if m else None)
     return {"term": (m.raw if m else ""), "id": e.id if e else "", "kind": e.kind if e else "", "canonical": canonical,
             "scope": scope if isinstance(scope, list) else [scope], "target": target,
@@ -574,7 +574,7 @@ def interpret(text: str) -> Result:
     return res
 
 
-def notes(items: list[dict]) -> list[str]:
+def notes(items: list[dict[str, Any]]) -> list[str]:
     """Ghi chú dạng chữ cho những mục chưa dựng được hoặc cần lưu ý."""
     return [f"[{i['status']}] {i['term'] or i['canonical']}: {i['message']}" for i in items if i["message"] and i["status"] != "built"]
 
