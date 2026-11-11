@@ -18,8 +18,9 @@ import re
 from collections import defaultdict
 
 from .numeric import round_half_away, round_int
-from . import appliance_models, runs, floorplan as fpmod, roomctx, hardware, regions, vocab
+from . import appliance_models, builtin, runs, floorplan as fpmod, roomctx, hardware, regions, vocab
 from .geometry import Part, backsplash_height, compile_spec, views_of
+from .catalog import Catalog
 from .errors import InvalidInput, require
 from .jsonview import as_dict, as_list
 from .palette import SEGMENT_COLORS, module_color as _module_color
@@ -410,7 +411,7 @@ UNSET_TIME = "1970-01-01T00:00:00+00:00"   # what an export made without a clock
 
 
 def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: list[dict[str, Any]] | None = None,
-           country: str | None = None, created_at: str = UNSET_TIME) -> dict[str, Any]:
+           country: str | None = None, created_at: str = UNSET_TIME, catalog: Catalog = builtin.CATALOG) -> dict[str, Any]:
     """Scene document for ``spec``. Pure: ``created_at`` (ISO-8601 UTC) comes from the caller's clock, never from the wall clock here."""
     from .rules import default_rows
     from .rules_kb import select
@@ -477,8 +478,8 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
         fr = Frame.for_part(p, wall)
         openings, hi = fr.part_box(p)
         dims = _dims(hi[0] - openings[0], hi[1] - openings[1], hi[2] - openings[2])
-        mid = appliance_models.model_id(tb)                       # its model, or (old designs) the guess from its name
-        cat: dict[str, Any] = appliance_models.BY_ID.get(mid or "", {})
+        mid = appliance_models.model_id(tb, catalog)              # its model, or (old designs) the guess from its name
+        cat: dict[str, Any] = appliance_models.models(catalog).get(mid or "", {})
         energy = tb.energy or cat.get("energy")
         look = {k: v for k, v in (("model", mid), ("rendering", "model-3d" if cat.get("asset3d") else "box-placeholder"),
                                   ("box", cat.get("box"))) if v is not None}

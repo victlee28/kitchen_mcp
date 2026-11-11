@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from kitchen import appliance_models as am, edit, geometry, threejs_export  # noqa: E402
-from kitchen.appliance_catalog import MODELS  # noqa: E402
+MODELS = list(am.models().values())
 from kitchen.errors import InvalidInput  # noqa: E402
 from kitchen.service import KitchenService  # noqa: E402
 

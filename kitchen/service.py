@@ -13,7 +13,7 @@ from .intent import KitchenTemplate as KitchenTemplate
 from .spec import Common, KitchenSpec, LaidModule, Room, Wall, dump_spec, load_spec, to_data
 from .store import ConflictError, Store
 from . import legacy as legacy_schema
-from . import catalog as cat, catalog_files, i18n
+from . import builtin, catalog as cat, catalog_files, i18n
 from .config import Config
 from .errors import InvalidInput, NotFound
 ROOT = Path(__file__).resolve().parent.parent
@@ -49,7 +49,7 @@ class KitchenService:
         self.render_dir = Path(render_dir or self.config.render_dir)
         legacy_schema.migrate_renders(self.render_dir)
         from .images import ImageJobs
-        self.images = ImageJobs(self.store, self.render_dir, self.apply, self.config)
+        self.images = ImageJobs(self.store, self.render_dir, self.apply, self.config, catalog=self.catalog)
 
     # ---------- catalog (data-driven business data: kitchen.catalog) and wording (kitchen.i18n)
     USER = "default"          # one user until accounts exist (decision of 11/11/2026)
@@ -285,7 +285,7 @@ class KitchenService:
             if base_revision is None or proposal.op_hash(operation, base_revision) != expect:
                 raise InvalidInput('The operation differs from the one that was previewed; preview it again before confirming', code='operation-differs-from-preview')
         spec, _current_revision = self.store.get(design_id)
-        updated_spec = edit.apply_op(spec, operation)
+        updated_spec = edit.apply_op(spec, operation, self.catalog())
         new_revision = self.store.add_revision(design_id, base_revision, updated_spec, operation, source)
         return self._summary(design_id, new_revision, updated_spec)
 
@@ -335,7 +335,7 @@ class KitchenService:
         if template.get('kind') == 'replace-appliance':   # {"kind": "replace-appliance", "id": "TB4", "model"?, "prompt"?, "resizeHost"?}
             return self._replace_appliance(design_id, spec, current, template, country)
         if template.get('kind') == 'replace-system':   # {"kind": "replace-system", "system": id, "prompt"?, "style"?}: a new system in place of one
-            plan = self._replace_system(spec, str(template.get('system') or ''), template.get('prompt'), template.get('style'), country)
+            plan = self._replace_system(spec, str(template.get('system') or ''), template.get('prompt'), template.get('style'), country, self.catalog())
             preview = self.propose(design_id, plan['operation'], current, None, country)
             return {'id': design_id, 'baseRev': current, 'status': 'ok', 'facing': None, 'system': plan['system'], 'mode': plan['mode'], 'style': plan.get('style'),
                     'summary': plan['summary'], 'operation': plan['operation'], 'proposal': preview}
@@ -416,16 +416,16 @@ class KitchenService:
             raise NotFound(f"No appliance {template.get('id')!r}", code='appliance-not-found')
         raw_prompt = template.get('prompt')
         prompt = raw_prompt if isinstance(raw_prompt, str) else ''
-        now = appliance_models.model_id(app)
+        now = appliance_models.model_id(app, self.catalog())
         info = {'id': app.id, 'type': app.type, 'name': app.name, 'model': now, 'size': appliance_models.size_of(app)}
         if not template.get('model'):
             return {'id': design_id, 'baseRev': current, 'status': 'choose-model', 'appliance': info,
-                    'models': appliance_models.candidates(spec, app, prompt)}
-        m = appliance_models.model(str(template['model']))
-        fit, reasons = appliance_models.fit(spec, app, m)
+                    'models': appliance_models.candidates(spec, app, prompt, self.catalog())}
+        m = appliance_models.model(str(template['model']), self.catalog())
+        fit, reasons = appliance_models.fit(spec, app, m, self.catalog())
         if fit == 'later':
             raise InvalidInput(reasons[0], code='model-changes-type')
-        if appliance_kind.changes_kind(app, m):          # another kind: the cabinets around it change too (appliance_kind)
+        if appliance_kind.changes_kind(app, m, self.catalog()):          # another kind: the cabinets around it change too (appliance_kind)
             ops, around = appliance_kind.plan(spec, app, m)
             reasons = []
         else:
@@ -436,12 +436,12 @@ class KitchenService:
                    + (f"; cut-out {m['cutout']['w']:g} × {m['cutout']['d']:g} mm" if m.get('cutout') else '')]
         summary += around
         summary += [f"Does not fit: {r}" if fit == 'bad' else f"Check: {r}" for r in reasons]
-        summary += appliance_models.energy_notes(app, m)
+        summary += appliance_models.energy_notes(app, m, self.catalog())
         if template.get('resizeHost') and fit == 'bad':
             ops += self._widen_host(spec, app, m, summary)
         operation = edit.combine_ops(ops)
-        after = edit.apply_op(spec, operation)
-        facts = appliance_models.ai_facts(after, next(a for a in after.appliances if a.id == app.id))
+        after = edit.apply_op(spec, operation, self.catalog())
+        facts = appliance_models.ai_facts(after, next(a for a in after.appliances if a.id == app.id), catalog=self.catalog())
         preview = self.propose(design_id, operation, current, None, country)
         return {'id': design_id, 'baseRev': current, 'status': 'ok', 'appliance': info, 'fit': fit, 'reasons': reasons,
                 'summary': summary, 'operation': operation, 'proposal': preview, 'aiFacts': facts}
@@ -496,7 +496,7 @@ class KitchenService:
             for i, p in enumerate(placed):
                 length = p.length // 10 * 10
                 if tv:
-                    modules = (tv_system.layout(length, to_data(spec)['common'], tv_system.style_of(prompt), tv_system.wants_panel(prompt))
+                    modules = (tv_system.layout(length, to_data(spec)['common'], tv_system.style_of(prompt), tv_system.wants_panel(prompt), self.catalog())
                                if i == 0 else tv_system.console(length))
                 elif described is None:
                     modules = run_line.base_cabinets(length, to_data(spec)['common'])
@@ -520,7 +520,7 @@ class KitchenService:
         return struct, plan
 
     @staticmethod
-    def _replace_system(spec: KitchenSpec, system: str, prompt: Any, style: Any, country: str | None) -> dict:
+    def _replace_system(spec: KitchenSpec, system: str, prompt: Any, style: Any, country: str | None, catalog: cat.Catalog = builtin.CATALOG) -> dict:
         """A whole cabinet system replaced (``system_replace``): with a sentence, its runs are laid again with the cabinets the sentence
         describes (the longest run gets all of it, the others plain cabinets of the same storeys); without one, its cabinets take a
         style preset (``style``: a preset id, or ``auto`` / None for the first one unlike what it shows now)."""
@@ -535,7 +535,7 @@ class KitchenService:
         was_tv = bool(own_runs) and all(r in tv_runs for r in own_runs)
         kitchen_asked = bool(re.search(r"tủ\s*bếp|chậu|bếp\s*(?:từ|gas|nấu)|tủ\s*lạnh|mặt\s*đá", prompt.lower()))
         if tv_system.asks_tv(prompt) or (was_tv and not kitchen_asked):
-            return KitchenService._relayout_tv(spec, system, mods, prompt)
+            return KitchenService._relayout_tv(spec, system, mods, prompt, catalog)
         undo_tv = [{'op': 'set-run-tv', 'id': r, 'layout': None} for r in own_runs if r in tv_runs]     # a TV unit made a kitchen again
         color, notes = intent.parse_prompt(prompt)
         if not color.country and country:
@@ -560,13 +560,13 @@ class KitchenService:
         if re.search(r"tủ\s*(?:trên|treo)", re.sub(no + r"tủ\s*(?:trên|treo)", "", said)):
             asked.add('upper')
         ops, summary = system_replace.relayout_ops(spec, mods, laid, fronts, frozenset(asked - refused), frozenset(refused),
-                                                   system_replace.kept_models(spec, mods, prompt))
+                                                   system_replace.kept_models(spec, mods, prompt, catalog))
         ops = [*undo_tv, *ops]
         kept = [n for n in notes if 'chiều dài' not in n]          # the run keeps its length: the "no length given" note does not apply
         return {'operation': edit.combine_ops(ops), 'system': system, 'mode': 'relayout', 'summary': [f"System {system} laid out again", *summary, *kept]}
 
     @staticmethod
-    def _relayout_tv(spec: KitchenSpec, system: str, mods: list, prompt: str) -> dict:
+    def _relayout_tv(spec: KitchenSpec, system: str, mods: list, prompt: str, catalog: cat.Catalog = builtin.CATALOG) -> dict:
         """A system laid out again as a TV unit (``tv_system.layout``): the layout the sentence names, else the one the unit has, else
         ``columns``; the longest run gets the TV, the others only a console. Its runs are marked as TV units."""
         slots = [s for s in system_replace.run_slots(spec, mods) if s.length >= 600]
@@ -576,13 +576,13 @@ class KitchenService:
         common = to_data(spec)['common']
         laid: dict[str, list[LaidModule]] = {}
         for i, slot in enumerate(slots):
-            modules = tv_system.layout(slot.length, common, style, tv_system.wants_panel(prompt)) if i == 0 else tv_system.console(slot.length)
+            modules = tv_system.layout(slot.length, common, style, tv_system.wants_panel(prompt), catalog) if i == 0 else tv_system.console(slot.length)
             laid[slot.run] = modules
         old = [m for m in mods if m.type not in system_replace.FRONTLESS and m.storey in ('tall', 'base') and m.material]
         front = old[0].material if old else tv_system.front_of(common)
         fronts = {'material': {storey: front for storey in ('base', 'upper', 'tall')}}       # one finish for the whole TV wall
         ops, summary = system_replace.relayout_ops(spec, mods, laid, fronts, frozenset({'upper', 'loft'}), frozenset(),
-                                                   system_replace.kept_models(spec, mods, prompt))
+                                                   system_replace.kept_models(spec, mods, prompt, catalog))
         marks = [{'op': 'set-run-tv', 'id': s.run, 'layout': style} for s in slots]
         names = {'columns': 'low console, TV niche, two columns', 'shelves': 'low console and open shelves', 'full': 'closed wall with a TV niche'}
         return {'operation': edit.combine_ops([*marks, *ops]), 'system': system, 'mode': 'relayout',
@@ -622,7 +622,7 @@ class KitchenService:
         for _ in range(3):
             plan = planner(place)
             try:
-                after = edit.apply_op(spec.model_copy(deep=True), plan['operation'])
+                after = edit.apply_op(spec.model_copy(deep=True), plan['operation'], self.catalog())
                 scene_after = geometry.compile_spec(after)
                 ctx_after = roomctx.for_spec(after, scene_after.lsau, scene_after.lphai)
             except Exception:       # the preview reports an operation that cannot be applied
@@ -680,7 +680,7 @@ class KitchenService:
             if tv:
                 style = tv_system.style_of(prompt)
                 plan = run_line.plan_on_line(spec, line, tv_system.layout(run_line.run_frame(line)['length'], to_data(spec)['common'], style,
-                                                                          tv_system.wants_panel(prompt)), run_fields=tv_system.run_fields(style))
+                                                                          tv_system.wants_panel(prompt), self.catalog()), run_fields=tv_system.run_fields(style))
             elif described is not None:
                 color, notes = described
                 if not color.country and country:
@@ -810,7 +810,7 @@ class KitchenService:
             changes = recognition.common_changes(to_data(spec)['common'], layout, draft.ceiling, dict(draft.materials))
             if changes:
                 before = [{'op': 'common', 'changes': changes}]
-                base = edit.apply_op(spec, before[0])
+                base = edit.apply_op(spec, before[0], self.catalog())
         clear = [m.id for m in spec.module] if mode == 'replace' else None
         if anchor is None:
             plan = run_line.plan_runs(base, run_line.back_wall_line(base, runs), runs, joints, clear)
@@ -843,7 +843,7 @@ class KitchenService:
             raise ConflictError(f'base_rev={base_revision}, but the latest revision is {current}; reload before editing')
         base = {'id': design_id, 'baseRev': current, 'operation': operation, 'opHash': proposal.op_hash(operation, current)}
         try:
-            updated = edit.apply_op(spec.model_copy(deep=True), operation)
+            updated = edit.apply_op(spec.model_copy(deep=True), operation, self.catalog())
         except ValidationError as error:
             msg = '; '.join(f"{'.'.join(map(str, e['loc']))}: {e['msg']}" for e in error.errors()[:5])
             return {**base, 'applicable': False, 'error': {'type': 'invalid-data', 'message': msg}}
@@ -903,7 +903,7 @@ class KitchenService:
         region = legacy.pop('region', region)
         if legacy:
             raise TypeError(f"Unexpected options: {', '.join(legacy)}")
-        return rules.validate(spec, self.store.rule_rows(), country, region)
+        return rules.validate(spec, self.store.rule_rows(), country, region, self.catalog())
 
     def validate(self, design_id: str, revision: int | None=None, country: str | None=None, region: str | None=None, **legacy: Any) -> dict:
         """Validate a stored revision using its default or overridden jurisdiction."""
@@ -925,7 +925,7 @@ class KitchenService:
         if legacy:
             raise TypeError(f"Unexpected options: {', '.join(legacy)}")
         spec, stored_revision = self.store.get(design_id, revision)
-        return threejs_export.export(spec, design_id, stored_revision, self.store.rule_rows(), country, self.clock())
+        return threejs_export.export(spec, design_id, stored_revision, self.store.rule_rows(), country, self.clock(), self.catalog_for_revision(design_id, stored_revision))
 
     def render(self, design_id: str, revision: int | None=None, views: list[str] | None=None, width: int=1280, height: int=960) -> dict:
         """Render control images for selected views and persist them by revision."""

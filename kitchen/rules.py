@@ -11,6 +11,8 @@ from typing import Any
 
 from itertools import combinations
 
+from . import builtin
+from .catalog import Catalog
 from . import appliance_models, knowledge_seed, moldings, regions, rules_kb, runs, tv_system
 from .errors import require
 from .jsonview import as_dict
@@ -160,14 +162,14 @@ def default_rows() -> list[dict[str, Any]]:
 
 
 def validate(spec: KitchenSpec, kb_rules: list[dict[str, Any]] | None = None, country: str | None = None,
-             region: str | None = None) -> dict[str, Any]:
+             region: str | None = None, catalog: Catalog = builtin.CATALOG) -> dict[str, Any]:
     """kb_rules: các dòng tri thức kind rule/standard đang active (đã parse metadata); None -> kho nền.
     Quốc gia/khu vực: tham số > spec.quocGia/spec.khuVuc > không chỉ định (ưu tiên mục toàn cầu, rồi nguồn mạnh nhất)."""
     qg, kv = regions.normalize(country or spec.country, region or spec.region)
     rows = default_rows() if kb_rules is None else kb_rules
     sel = rules_kb.select(rows, qg, kv)
     kitchen = tv_system.kitchen_only(spec)       # kitchen rules (worktop, depths, appliances...) do not look at TV units
-    issues = check_geometry(spec) + rules_kb.check(kitchen, sel) + moldings.check(spec) + appliance_models.check(kitchen)
+    issues = check_geometry(spec) + rules_kb.check(kitchen, sel) + moldings.check(spec) + appliance_models.check(kitchen, catalog)
     if not (qg or kv):
         issues.append({"rule": "VUNG", "severity": "info", "module": [], "content": "Chưa chọn quốc gia/khu vực (spec.quocGia): "
                        "chỉ tiêu chuẩn toàn cầu được áp, tiêu chuẩn của các nước chỉ để tham khảo"})

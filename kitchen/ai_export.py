@@ -111,8 +111,10 @@ def build(svc, did: str, rev: int | None = None, views: list[str] | None = None,
         sync = view_sync.view_status(svc.images, did, r)
     except Exception:  # noqa: BLE001 — the package must still build
         sync = {}
-    facts = {a.id: appliance_models.ai_facts(spec, a, "model-3d" if appliance_models.BY_ID.get(appliance_models.model_id(a) or "", {}).get("asset3d")
-                                             else "box-placeholder") for a in spec.appliances}      # plan A5: the AI must know each appliance
+    catalog = svc.catalog_for_revision(did, r)
+    by_id = appliance_models.models(catalog)
+    facts = {a.id: appliance_models.ai_facts(spec, a, "model-3d" if by_id.get(appliance_models.model_id(a, catalog) or "", {}).get("asset3d")
+                                             else "box-placeholder", catalog) for a in spec.appliances}      # plan A5: the AI must know each appliance
     v_out = []
     for v in chosen:
         g = all_views[v]

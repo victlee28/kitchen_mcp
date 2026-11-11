@@ -163,5 +163,38 @@ class TestFilesAndService(unittest.TestCase):
         self.assertEqual(b.messages.missing(), {"vi": [], "en": []}, "every wording key in both languages")
 
 
+class TestAppliancesFromTheCatalog(unittest.TestCase):
+    """Stage 1.1: appliance models are catalog items; a model the workshop adds is offered, fitted and exported like a builtin one."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        from kitchen.service import KitchenService
+        self.s = KitchenService(db_path=self.tmp / "k.db", render_dir=self.tmp / "r")       # the repository's data/
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_workshop_model_is_offered_and_used(self):
+        s = self.s
+        new = {"type": "cooktop", "name": {"vi": "Bếp từ xưởng 70", "en": "Workshop hob 70"}, "energy": "induction", "size": {"w": 700, "d": 410, "h": 60},
+               "cutout": {"w": 560, "d": 380}, "mount": "built_in", "fits": {"hostWidth": 600}, "prompt": "black induction hob"}
+        s.catalog_put("appliance", "hob-workshop-70", new, "workshop")
+        fixture = json.loads((ROOT / "fixtures" / "l-shaped-kitchen.json").read_text(encoding="utf-8"))
+        rec = s.create_from_spec(fixture)
+        got = s._replace_appliance(rec["id"], s.store.get(rec["id"])[0], rec["rev"], {"id": "TB4"}, None)
+        self.assertIn("hob-workshop-70", [m["id"] for m in got["models"]])
+        done = s._replace_appliance(rec["id"], s.store.get(rec["id"])[0], rec["rev"], {"id": "TB4", "model": "hob-workshop-70"}, None)
+        self.assertIn("update-appliance", json.dumps(done["operation"]))
+        with self.assertRaises(InvalidInput):
+            s.catalog_put("appliance", "x", new, "user")                     # users do not edit appliances (decision 11/11/2026)
+
+    def test_tv_from_the_catalog(self):
+        from kitchen import tv_system
+        self.assertEqual(tv_system.tv_for(1500)["model"], "tv-55")
+        bigger = {"type": "tv", "name": {"vi": "Tivi 75 inch"}, "size": {"w": 1680, "d": 30, "h": 960}, "fits": {"nicheFrom": 1900}, "prompt": "75-inch TV"}
+        self.s.catalog_put("appliance", "tv-75", bigger, "workshop")
+        self.assertEqual(tv_system.tv_for(2000, self.s.catalog())["model"], "tv-75")
+
+
 if __name__ == "__main__":
     unittest.main()

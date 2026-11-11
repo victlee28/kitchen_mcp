@@ -15,7 +15,8 @@ from collections import Counter
 from dataclasses import dataclass
 from typing import Any, cast
 
-from . import appliance_models, runs
+from . import appliance_models, builtin, runs
+from .catalog import Catalog
 from .cabinet_run import fit_depth
 from .errors import InvalidInput
 from .jsonview import as_dict, as_list
@@ -177,17 +178,18 @@ APPLIANCE_WORDS = {      # a sentence that names the appliance asks for a new on
 }
 
 
-def kept_models(spec: KitchenSpec, mods: list[Module], said: str = "") -> dict[str, dict[str, Any]]:
+def kept_models(spec: KitchenSpec, mods: list[Module], said: str = "", catalog: Catalog = builtin.CATALOG) -> dict[str, dict[str, Any]]:
     """The model each kind of appliance of the system was given (an explicit ``model``, e.g. a double sink picked in the popup), unless the
     sentence names that appliance: laying the system out again keeps it (it used to fall back to the default model)."""
     ids = {m.id for m in mods}
     text = (said or "").lower()
     out: dict[str, dict[str, Any]] = {}
+    by_id = appliance_models.models(catalog)
     for a in spec.appliances:
         mid = getattr(a, "model", None)
-        if a.module in ids and isinstance(mid, str) and mid in appliance_models.BY_ID and a.type not in out \
+        if a.module in ids and isinstance(mid, str) and mid in by_id and a.type not in out \
                 and not re.search(APPLIANCE_WORDS.get(a.type, r"(?!x)x"), text):
-            out[a.type] = appliance_models.BY_ID[mid]
+            out[a.type] = by_id[mid]
     return out
 
 

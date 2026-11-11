@@ -203,7 +203,7 @@ def main():
     apply["sourceRef"] = opt({"type": "string"}, "Mã thiết bị trong KitchenSpec")
     apply["parentModuleId"] = opt({"$ref": "#/$defs/id"}, "Module chứa thiết bị")
     apply["energy"] = opt({"type": "string", "enum": ["electric", "induction", "gas", "mixed", "none"]}, "Nguồn năng lượng")
-    look = {"model": opt({"type": "string"}, "Mẫu thiết bị trong kitchen/appliance_catalog.py (thiết kế cũ: mẫu đoán theo tên)"),
+    look = {"model": opt({"type": "string"}, "Mẫu thiết bị trong danh mục (data/items/appliance.json; thiết kế cũ: mẫu đoán theo tên)"),
             "rendering": opt({"type": "string", "enum": ["box-placeholder", "model-3d"]},
                              "box-placeholder: chưa có model 3D thật, khung xem vẽ hộp theo `box`; model-3d: dùng modelUrl"),
             "box": opt({"type": "object"}, "Cách vẽ hộp thay cho model thật (mặt kính, số vùng nấu / họng, số hố chậu, số cánh…)")}

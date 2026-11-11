@@ -23,6 +23,7 @@ from typing import Any, Callable
 
 from .. import geometry, geometry_edit, prompts, render
 from ..backends import BACKENDS
+from ..catalog import Catalog
 from ..config import Config
 from ..errors import InvalidInput
 from ..store import ConflictError
@@ -50,9 +51,12 @@ class ImageJobs:
     ``runners`` (backends and worker threads). The public methods below only forward to them.
     """
 
-    def __init__(self, store: Any, render_dir: str | Path, apply: Callable[..., dict[str, Any]], config: Config | None = None, runtime: Runtime | None = None):
+    def __init__(self, store: Any, render_dir: str | Path, apply: Callable[..., dict[str, Any]], config: Config | None = None, runtime: Runtime | None = None,
+                 catalog: Callable[[], Catalog] | None = None):
         render_dir = Path(render_dir)
         self.env = JobEnv(store, render_dir, apply, config or Config(db_path=Path(":memory:"), render_dir=render_dir), runtime or Runtime())
+        if catalog is not None:
+            self.env.catalog = catalog
         self.base = BaseImages(self.env)
         self.builder = RequestBuilder(self.env, self.base, self)
         self.packages = Packages(self.env)

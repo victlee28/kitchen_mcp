@@ -9,6 +9,8 @@ from typing import Any, Callable
 import numpy as np
 
 from .. import imaging
+from .. import builtin
+from ..catalog import Catalog
 from ..config import Config
 from .runtime import Runtime
 
@@ -55,6 +57,7 @@ class JobEnv:
     config: Config
     runtime: Runtime
     threads: dict[str, threading.Thread] = field(default_factory=dict)
+    catalog: Callable[[], Catalog] = lambda: builtin.CATALOG     # the merged catalog (the service passes its own)
 
 
 class Component:

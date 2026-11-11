@@ -78,7 +78,7 @@ class RequestBuilder(Component):
                     op = layers.design_op(cur, layers.resolve(layers.catalogue(cur, scene), t["targetLayer"])[0], t["material"], scene)
                     if op is None:
                         raise InvalidInput(f"Việc {i}: '{layer['name']}' chưa sửa được trong thiết kế; dùng chế độ quick")
-                    nxt = edit.apply_op(cur, op[0])
+                    nxt = edit.apply_op(cur, op[0], self.env.catalog())
                     if render.scene_hash(geometry.compile_spec(nxt)) != render.scene_hash(scene):
                         raise InvalidInput(f"Việc {i}: thao tác làm đổi hình học; sửa ảnh chỉ nhận thay đổi vật liệu")
                     selected = list(ids)
@@ -190,10 +190,10 @@ class RequestBuilder(Component):
         ops, desc, tt = geometry_edit.build_ops(spec, items or [])
         nxt = spec
         for op in ops:
-            nxt = edit.apply_op(nxt, op)
+            nxt = edit.apply_op(nxt, op, self.env.catalog())
         pin = geometry_edit.pin_cameras(spec, nxt)
         if pin:
-            nxt = edit.apply_op(nxt, pin)
+            nxt = edit.apply_op(nxt, pin, self.env.catalog())
             ops.append(pin)
         design_op = edit.combine_ops(ops)
         render.render_views(nxt, jdir / "moi", [view], W, H, meta={"designId": did, "rev": "unspecified"})
@@ -248,8 +248,7 @@ class RequestBuilder(Component):
         if instruction:
             task["instruction"] = instruction
 
-    @staticmethod
-    def _appliances_in(d: Path, region: Any, spec: Any) -> list[dict[str, Any]]:
+    def _appliances_in(self, d: Path, region: Any, spec: Any) -> list[dict[str, Any]]:
         """``appliance_models.ai_facts`` of every appliance the region of the picture covers (its pixels in instances.png)."""
         try:
             inst, meta = imaging.load_instances(d)
@@ -258,10 +257,12 @@ class RequestBuilder(Component):
         values = set(int(v) for v in np.unique(inst[region]))
         modules = {x.get("module") for x in meta.get("instances", []) if int(x.get("value", -1)) in values}
         out = []
+        catalog = self.env.catalog()
+        by_id = appliance_models.models(catalog)
         for a in spec.appliances:
             if a.id in modules:
-                rendering = "model-3d" if appliance_models.BY_ID.get(appliance_models.model_id(a) or "", {}).get("asset3d") else "box-placeholder"
-                out.append(appliance_models.ai_facts(spec, a, rendering))
+                rendering = "model-3d" if by_id.get(appliance_models.model_id(a, catalog) or "", {}).get("asset3d") else "box-placeholder"
+                out.append(appliance_models.ai_facts(spec, a, rendering, catalog))
         return out
 
     @staticmethod

@@ -1691,7 +1691,7 @@
         },
         "model": {
           "type": "string",
-          "description": "[Bổ sung v1.1 (VicKitchenCabinet)] Mẫu thiết bị trong kitchen/appliance_catalog.py (thiết kế cũ: mẫu đoán theo tên)"
+          "description": "[Bổ sung v1.1 (VicKitchenCabinet)] Mẫu thiết bị trong danh mục (data/items/appliance.json; thiết kế cũ: mẫu đoán theo tên)"
         },
         "rendering": {
           "type": "string",
@@ -1767,7 +1767,7 @@
         },
         "model": {
           "type": "string",
-          "description": "[Bổ sung v1.1 (VicKitchenCabinet)] Mẫu thiết bị trong kitchen/appliance_catalog.py (thiết kế cũ: mẫu đoán theo tên)"
+          "description": "[Bổ sung v1.1 (VicKitchenCabinet)] Mẫu thiết bị trong danh mục (data/items/appliance.json; thiết kế cũ: mẫu đoán theo tên)"
         },
         "rendering": {
           "type": "string",

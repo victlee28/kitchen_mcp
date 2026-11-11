@@ -11,7 +11,10 @@ import re
 import unicodedata
 from typing import Any
 
-from .labels import DEFAULT_FRONT, NAMES, tv_name
+from . import appliance_models, builtin
+from .catalog import Catalog
+from .errors import InvalidInput
+from .labels import DEFAULT_FRONT, NAMES
 from .numeric import round_int
 from .spec import KitchenSpec, LaidModule, Run, from_data, to_data
 
@@ -27,7 +30,6 @@ SIDE_SHELF_Y_MM, SIDE_GAP_MM = 1300.0, 300.0      # "shelves" layout: open shelv
 PANEL_THICKNESS_MM = 18.0
 STYLES = ("columns", "shelves", "full")
 TV_DEPTH_MM = 30.0
-TVS = ((1700.0, "65", 1450.0, 830.0), (1400.0, "55", 1230.0, 710.0), (0.0, "43", 960.0, 560.0))   # (niche from, inches, w, h)
 
 _WORD = re.compile(r"\b(?:ti\s*vi|tv|tivi)\b")
 
@@ -42,10 +44,18 @@ def asks_tv(text: str | None) -> bool:
     return bool(text) and bool(_WORD.search(_plain(str(text))))
 
 
-def tv_for(niche: float) -> dict[str, Any]:
-    """The TV that suits a niche ``niche`` mm wide: the biggest of 65" / 55" / 43" that leaves some wall on each side."""
-    _, inch, w, h = next(t for t in TVS if niche >= t[0])
-    return {"type": "tv", "name": tv_name(inch), "dimensions": f"{w:g}x{h:g}x{TV_DEPTH_MM:g}", "model": f"tv-{inch}"}
+def tv_for(niche: float, catalog: Catalog = builtin.CATALOG) -> dict[str, Any]:
+    """The TV that suits a niche ``niche`` mm wide: the biggest TV model of the catalog whose ``fits.nicheFrom`` the niche reaches (65" from
+    1700 mm, 55" from 1400 mm, else 43" with the builtin models)."""
+    def niche_from(m: dict[str, Any]) -> float:
+        fits: dict[str, Any] = m.get("fits") or {}
+        return float(fits.get("nicheFrom", 0))
+    tvs = sorted((m for m in appliance_models.models(catalog).values() if m["type"] == "tv"), key=lambda m: -niche_from(m))
+    m = next((t for t in tvs if niche >= niche_from(t)), tvs[-1] if tvs else None)
+    if m is None:
+        raise InvalidInput("The catalog has no TV model", code="no-tv-model")
+    s = m["size"]
+    return {"type": "tv", "name": m["name"], "dimensions": f"{s['w']:g}x{s['h']:g}x{s['d']:g}", "model": m["id"]}
 
 
 def _split(length: float, most: float = CONSOLE_MAX_MM) -> list[float]:
@@ -98,10 +108,11 @@ def _console(at: float, length: float) -> list[LaidModule]:
     return out
 
 
-def _put_tv(console: list[LaidModule], center: float, width: float, panel: tuple[float, float, float] | None) -> None:
+def _put_tv(console: list[LaidModule], center: float, width: float, panel: tuple[float, float, float] | None,
+            catalog: Catalog = builtin.CATALOG) -> None:
     """The TV (sized for ``width``) on the console cabinet under ``center``; the panel behind it (``(width, y0, y1)``) on the same cabinet."""
     host = next((c for c in console if c["s"] <= center < c["s"] + c["width"]), console[0])
-    tv = tv_for(width)
+    tv = tv_for(width, catalog)
     tv["center"] = center - host["s"]       # from the start of its cabinet: the TV moves with it (it may straddle two console cabinets)
     host["appliance"] = tv
     if panel is not None:
@@ -109,7 +120,7 @@ def _put_tv(console: list[LaidModule], center: float, width: float, panel: tuple
         host["backPanel"] = {"s0": center - pw / 2 - host["s"], "s1": center + pw / 2 - host["s"], "y0": y0, "y1": y1}
 
 
-def layout(length: float, common: dict[str, Any], style: str = "columns", panel: bool = True) -> list[LaidModule]:
+def layout(length: float, common: dict[str, Any], style: str = "columns", panel: bool = True, catalog: Catalog = builtin.CATALOG) -> list[LaidModule]:
     """The cabinets of a TV unit ``length`` mm long. ``common``: the design's ``common`` (``cabinetTop`` sets the tall cabinets' height).
     ``style``: ``columns`` (low console + niche + a tall column at each end from ``COLUMNS_FROM_MM``, a floating shelf over the TV),
     ``shelves`` (low console the whole length, open shelves on the wall beside the TV, no columns) or ``full`` (closed from floor to top
@@ -138,14 +149,14 @@ def layout(length: float, common: dict[str, Any], style: str = "columns", panel:
                 out.append({"type": "upper", "s": at, "width": w, "y": FULL_UPPER_Y_MM, "height": top - FULL_UPPER_Y_MM, "depth": SHELF_DEPTH_MM,
                             "name": NAMES["tv-upper"], "material": front})        # one finish for the whole wall, not the white of kitchen uppers
                 at += w
-        _put_tv(console, side + niche / 2, niche, (niche, CONSOLE_HEIGHT_MM, FULL_UPPER_Y_MM) if panel else None)
+        _put_tv(console, side + niche / 2, niche, (niche, CONSOLE_HEIGHT_MM, FULL_UPPER_Y_MM) if panel else None, catalog)
         return out
     if style == "shelves":
         console = _console(0.0, length)
         out += console
         center = length / 2
-        tv_w = float(tv_for(length - 900.0)["dimensions"].split("x")[0])
-        _put_tv(console, center, length - 900.0, (tv_w + 400.0, CONSOLE_HEIGHT_MM, FULL_UPPER_Y_MM) if panel else None)
+        tv_w = float(tv_for(length - 900.0, catalog)["dimensions"].split("x")[0])
+        _put_tv(console, center, length - 900.0, (tv_w + 400.0, CONSOLE_HEIGHT_MM, FULL_UPPER_Y_MM) if panel else None, catalog)
         side = (length - tv_w) / 2 - SIDE_GAP_MM
         if side >= 450:
             w = float(min(900.0, int(side // 10) * 10))
@@ -164,7 +175,7 @@ def layout(length: float, common: dict[str, Any], style: str = "columns", panel:
         out.append({"type": "tall", "s": s0, "width": col, "y": 0.0, "height": top, "depth": 400.0, "name": NAMES["tv-column"]})
     console = _console(col, niche)
     out += console
-    _put_tv(console, col + niche / 2, niche, (niche, CONSOLE_HEIGHT_MM, SHELF_Y_MM) if panel else None)
+    _put_tv(console, col + niche / 2, niche, (niche, CONSOLE_HEIGHT_MM, SHELF_Y_MM) if panel else None, catalog)
     if niche >= 600:
         out.append({"type": "upper-open", "s": col, "width": niche, "y": SHELF_Y_MM, "height": SHELF_HEIGHT_MM, "depth": SHELF_DEPTH_MM,
                     "name": NAMES["tv-shelf-over"], "shelfCount": 1})

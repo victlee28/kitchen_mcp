@@ -16,7 +16,7 @@ SINK = {"type": "base-sink", "width": 800.0, "s": 600.0, "y": 0.0, "height": 840
         "appliances": [{"type": "sink", "name": "Chậu", "dimensions": "760 × 430", "center": 1000.0}]}
 PLAIN = {"type": "base", "width": 450.0, "s": 1400.0, "y": 0.0, "height": 840.0, "depth": 580.0}
 LEFT = {"type": "base", "width": 600.0, "s": 0.0, "y": 0.0, "height": 840.0, "depth": 580.0}
-DOUBLE = appliance_models.BY_ID["sink-double-82"]
+DOUBLE = appliance_models.model("sink-double-82")
 
 
 def _run_spec() -> KitchenSpec:

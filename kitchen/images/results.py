@@ -119,7 +119,7 @@ class Results(Component):
                         skip.append(f"việc {i}: layer chưa sửa được trong thiết kế")
                         continue
                     op, pv = r
-                cur = edit.apply_op(cur, op)
+                cur = edit.apply_op(cur, op, self.env.catalog())
                 ops.append(op)
                 scope.append(pv)
             if not ops:

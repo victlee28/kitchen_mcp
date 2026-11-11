@@ -11,44 +11,52 @@ import unicodedata
 from collections.abc import Callable
 from typing import Any
 
-from .appliance_catalog import MODELS
+from . import builtin
+from .catalog import Catalog
 from .errors import InvalidInput
+from .i18n import pick
 from .jsonview import as_dict
 from .runs import row_of, spot
 from .spec import Appliance, KitchenSpec, Module
 
-BY_ID: dict[str, dict[str, Any]] = {m["id"]: m for m in MODELS}
 SIDE = 18.0              # mm: cabinet side panel; a hole must fit between the two
 WORKTOP_EDGE = 50.0      # mm: worktop left in front of and behind a hole
 HOOD_SIDE = 10.0         # mm: an integrated hood needs this much room each side inside its cabinet
 TYPES = ("cooktop", "sink", "faucet", "hood", "fridge", "oven", "tv")
 
 
-def model(model_id: str) -> dict[str, Any]:
-    if model_id not in BY_ID:
+def models(catalog: Catalog = builtin.CATALOG) -> dict[str, dict[str, Any]]:
+    """The appliance models of the catalog (kind ``appliance``), by id: each its data plus ``id``, ``name`` in Vietnamese (as designs store
+    it) and ``label`` (the localised name). ``catalog``: the merged catalog the service passes; the builtin layer when none is given."""
+    return {i.id: {"id": i.id, **i.data, "name": pick(i.data.get("name"), "vi"), "label": i.data.get("name")} for i in catalog.all("appliance")}
+
+
+def model(model_id: str, catalog: Catalog = builtin.CATALOG) -> dict[str, Any]:
+    found = models(catalog).get(model_id)
+    if found is None:
         raise InvalidInput(f"No appliance model {model_id!r}", code="model-not-found")
-    return BY_ID[model_id]
+    return found
 
 
-def default_for(kind: str) -> dict[str, Any] | None:
-    return next((m for m in MODELS if m["type"] == kind and m.get("default")), None)
+def default_for(kind: str, catalog: Catalog = builtin.CATALOG) -> dict[str, Any] | None:
+    return next((m for m in models(catalog).values() if m["type"] == kind and m.get("default")), None)
 
 
-def guessed(app: Appliance) -> str | None:
+def guessed(app: Appliance, catalog: Catalog = builtin.CATALOG) -> str | None:
     """The model a model-less appliance is read as (from its name, as before models existed)."""
     name = (app.name or "").lower()
     if app.type == "cooktop":
         return "hob-gas-2b-75" if "gas" in name else "hob-ind-2z-73"
     if app.type == "sink":
         return "sink-double-82" if "đôi" in name else "sink-single-60"
-    d = default_for(app.type)
+    d = default_for(app.type, catalog)
     return d["id"] if d else None
 
 
-def model_id(app: Appliance) -> str | None:
+def model_id(app: Appliance, catalog: Catalog = builtin.CATALOG) -> str | None:
     """The appliance's own model, else the guess."""
     own = getattr(app, "model", None)
-    return own if isinstance(own, str) and own in BY_ID else guessed(app)
+    return own if isinstance(own, str) and own in models(catalog) else guessed(app, catalog)
 
 
 def size_of(app: Appliance) -> dict[str, float] | None:
@@ -116,13 +124,13 @@ def host(spec: KitchenSpec, app: Appliance) -> Module | None:
     return next((m for m in spec.module if m.id == app.module), None) if app.module else None
 
 
-def fit(spec: KitchenSpec, app: Appliance, m: dict[str, Any]) -> tuple[str, list[str]]:
+def fit(spec: KitchenSpec, app: Appliance, m: dict[str, Any], catalog: Catalog = builtin.CATALOG) -> tuple[str, list[str]]:
     """``(status, reasons)`` for model ``m`` in the place of ``app``: ``ok``, ``bad`` (does not fit), ``check`` (could not be checked, or
     another kind of appliance that changes the cabinets around it: say what happens), ``blocked`` (another kind that cannot go there)."""
     if m["type"] != app.type:
         return "bad", [f"{m['name']} is a {m['type']}, not a {app.type}"]
     h = host(spec, app)
-    now = kind_of(BY_ID.get(model_id(app) or ""))
+    now = kind_of(models(catalog).get(model_id(app, catalog) or ""))
     if kind_of(m) != now and app.type in ("hood", "fridge"):
         around = changes_cabinets(spec, app, m, h)
         if around is None:
@@ -233,27 +241,27 @@ WISHES: tuple[tuple[str, Callable[[dict[str, Any]], bool]], ...] = (       # wor
 )
 
 
-def candidates(spec: KitchenSpec, app: Appliance, text: str = "") -> list[dict[str, Any]]:
+def candidates(spec: KitchenSpec, app: Appliance, text: str = "", catalog: Catalog = builtin.CATALOG) -> list[dict[str, Any]]:
     """The models that could take ``app``'s place, as the popup lists them: same type, filtered by what the sentence asks for (gas / từ,
     đôi / đơn, đen, granite, rút dây, side-by-side, vi sóng); its current model is left out. Each: ``{id, name, size, cutout, mount, energy,
     status, reasons}``, models that fit first. A sentence that filters everything out gives every model of the type."""
     said = unicodedata.normalize("NFC", (text or "").lower())
     wanted = [test for pattern, test in WISHES if re.search(pattern, said)]
-    now = model_id(app)
-    same = [m for m in MODELS if m["type"] == app.type and m["id"] != now]
+    now = model_id(app, catalog)
+    same = [m for m in models(catalog).values() if m["type"] == app.type and m["id"] != now]
     picked = [m for m in same if all(w(m) for w in wanted)] or same
     out: list[dict[str, Any]] = []
     for m in picked:
-        status, reasons = fit(spec, app, m)
+        status, reasons = fit(spec, app, m, catalog)
         out.append({"id": m["id"], "name": m["name"], "size": m["size"], "cutout": m.get("cutout"), "mount": m.get("mount"),
                     "energy": m.get("energy"), "status": status, "reasons": reasons})
     order = {"ok": 0, "check": 1, "bad": 2, "later": 3}
     return sorted(out, key=lambda c: order[c["status"]])
 
 
-def energy_notes(app: Appliance, m: dict[str, Any]) -> list[str]:
+def energy_notes(app: Appliance, m: dict[str, Any], catalog: Catalog = builtin.CATALOG) -> list[str]:
     """Warnings when the new model needs another supply (gas line, dedicated socket)."""
-    before = getattr(app, "energy", None) or (BY_ID.get(model_id(app) or "", {}).get("energy"))
+    before = getattr(app, "energy", None) or (models(catalog).get(model_id(app, catalog) or "", {}).get("energy"))
     after = m.get("energy")
     if before == after or app.type != "cooktop":
         return []
@@ -269,9 +277,9 @@ def energy_notes(app: Appliance, m: dict[str, Any]) -> list[str]:
 
 # ---- what the image AI needs (plan, decision A5)
 
-def where(spec: KitchenSpec, app: Appliance) -> str:
+def where(spec: KitchenSpec, app: Appliance, catalog: Catalog = builtin.CATALOG) -> str:
     h = host(spec, app)
-    kind = kind_of(BY_ID.get(model_id(app) or ""))
+    kind = kind_of(models(catalog).get(model_id(app, catalog) or ""))
     if app.type == "hood" and h is not None and h.storey == "base":
         return f"{'hanging from the ceiling' if kind == 'island' else 'on the wall, with its chimney,'} over the hob of {h.id} ({h.name or h.type})"
     if app.type == "fridge" and h is not None and kind == "integrated":
@@ -282,22 +290,22 @@ def where(spec: KitchenSpec, app: Appliance) -> str:
     return f"{place} {h.id} ({h.name or h.type})" if h is not None else "at its place in the kitchen"
 
 
-def ai_facts(spec: KitchenSpec, app: Appliance, rendering: str = "box-placeholder") -> dict[str, Any]:
+def ai_facts(spec: KitchenSpec, app: Appliance, rendering: str = "box-placeholder", catalog: Catalog = builtin.CATALOG) -> dict[str, Any]:
     """Everything the image AI must know about one appliance. ``rendering``: ``box-placeholder`` (the 3D shows a plain box: every visual fact
     goes in, with a note that the box is a stand-in) or ``model-3d`` (a real model is drawn: only what a picture cannot show goes in)."""
-    mid = model_id(app)
-    m = BY_ID.get(mid or "", {})
+    mid = model_id(app, catalog)
+    m = models(catalog).get(mid or "", {})
     size = size_of(app) or m.get("size")
     visual = m.get("visual", {})
     unseen = ["energy", "size", "mount"] + ([*visual.get("features", {})] + ["finish"] if rendering == "box-placeholder" else [])
     out: dict[str, Any] = {"id": app.id, "type": app.type, "model": mid, "name": app.name or m.get("name"), "rendering": rendering,
-                           "where": where(spec, app), "size_mm": size, "mount": getattr(app, "mount", None) or m.get("mount"),
+                           "where": where(spec, app, catalog), "size_mm": size, "mount": getattr(app, "mount", None) or m.get("mount"),
                            "energy": getattr(app, "energy", None) or m.get("energy"), "visual": visual,
                            "prompt": m.get("prompt") or app.name or app.type, "notShownInInputImage": unseen}
     if (getattr(app, "cutout", None) or m.get("cutout")) and app.type in ("sink", "cooktop"):
         out["cutout_mm"] = getattr(app, "cutout", None) or m.get("cutout")
     if rendering == "box-placeholder":
-        out["placeholderNote"] = (f"The plain box {where(spec, app)} is only a stand-in: draw it as {out['prompt']}, at the same place and size.")
+        out["placeholderNote"] = (f"The plain box {where(spec, app, catalog)} is only a stand-in: draw it as {out['prompt']}, at the same place and size.")
     return out
 
 
@@ -311,20 +319,21 @@ def sentence(facts: dict[str, Any], bbox: list[float] | None = None) -> str:
     return f"The {facts['type']} {facts['where']}{at} is {facts['prompt']}{size}."
 
 
-def check(spec: KitchenSpec) -> list[dict[str, Any]]:
+def check(spec: KitchenSpec, catalog: Catalog = builtin.CATALOG) -> list[dict[str, Any]]:
     """Rule issues for appliances that carry a model (designs without models are not checked here, so old designs show nothing new):
     ``APPLIANCE-MODEL-FIT`` (the model does not fit its cabinet: hole, niche, hood width — error; could not be checked — warning) and
     ``HOOD-WIDTH`` (a hood narrower than the hob below it — warning)."""
     issues: list[dict[str, Any]] = []
+    by_id = models(catalog)
     for app in spec.appliances:
         mid = getattr(app, "model", None)
-        if not (isinstance(mid, str) and mid in BY_ID):
+        if not (isinstance(mid, str) and mid in by_id):
             continue
-        status, reasons = fit(spec, app, BY_ID[mid])
+        status, reasons = fit(spec, app, by_id[mid], catalog)
         h = host(spec, app)
         mods = [app.id, *([h.id] if h is not None else [])]
         if status == "bad":
-            issues.extend({"rule": "APPLIANCE-MODEL-FIT", "severity": "error", "module": mods, "content": f"{app.id} ({BY_ID[mid]['name']}): {r}"}
+            issues.extend({"rule": "APPLIANCE-MODEL-FIT", "severity": "error", "module": mods, "content": f"{app.id} ({by_id[mid]['name']}): {r}"}
                           for r in reasons if "narrower than the hob" not in r)
         if status == "check":
             issues.extend({"rule": "APPLIANCE-MODEL-FIT", "severity": "warning", "module": mods, "content": f"{app.id}: {r}"}

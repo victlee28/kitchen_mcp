@@ -1,0 +1,222 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "appliance",
+ "type": "object",
+ "required": [
+  "type",
+  "name",
+  "size"
+ ],
+ "$defs": {
+  "localized": {
+   "type": "object",
+   "required": [
+    "vi"
+   ],
+   "properties": {
+    "vi": {
+     "type": "string",
+     "minLength": 1
+    },
+    "en": {
+     "type": "string"
+    }
+   },
+   "additionalProperties": false
+  }
+ },
+ "properties": {
+  "type": {
+   "enum": [
+    "cooktop",
+    "sink",
+    "faucet",
+    "hood",
+    "fridge",
+    "oven",
+    "tv"
+   ],
+   "x-label": {
+    "vi": "Loại",
+    "en": "Type"
+   }
+  },
+  "name": {
+   "$ref": "#/$defs/localized",
+   "x-label": {
+    "vi": "Tên",
+    "en": "Name"
+   }
+  },
+  "energy": {
+   "enum": [
+    "gas",
+    "induction",
+    "electric",
+    "mixed",
+    null
+   ],
+   "x-label": {
+    "vi": "Năng lượng",
+    "en": "Energy"
+   }
+  },
+  "size": {
+   "type": "object",
+   "required": [
+    "w",
+    "d",
+    "h"
+   ],
+   "properties": {
+    "w": {
+     "type": "number",
+     "minimum": 0
+    },
+    "d": {
+     "type": "number",
+     "minimum": 0
+    },
+    "h": {
+     "type": "number",
+     "minimum": 0
+    }
+   },
+   "additionalProperties": false,
+   "x-label": {
+    "vi": "Kích thước w/d/h (mm)",
+    "en": "Size w/d/h (mm)"
+   }
+  },
+  "cutout": {
+   "type": "object",
+   "properties": {
+    "w": {
+     "type": "number",
+     "exclusiveMinimum": 0
+    },
+    "d": {
+     "type": "number",
+     "exclusiveMinimum": 0
+    },
+    "h": {
+     "type": "number",
+     "exclusiveMinimum": 0
+    }
+   },
+   "additionalProperties": false,
+   "x-label": {
+    "vi": "Lỗ khoét mặt đá w/d (mm)",
+    "en": "Worktop cut-out w/d (mm)"
+   }
+  },
+  "niche": {
+   "type": "object",
+   "properties": {
+    "w": {
+     "type": "number",
+     "exclusiveMinimum": 0
+    },
+    "d": {
+     "type": "number",
+     "exclusiveMinimum": 0
+    },
+    "h": {
+     "type": "number",
+     "exclusiveMinimum": 0
+    }
+   },
+   "additionalProperties": false,
+   "x-label": {
+    "vi": "Hộc cần w/h/d (mm)",
+    "en": "Niche it needs w/h/d (mm)"
+   }
+  },
+  "mount": {
+   "enum": [
+    "built_in",
+    "freestanding",
+    "topmount",
+    "undermount",
+    "wall",
+    "island"
+   ],
+   "x-label": {
+    "vi": "Cách lắp",
+    "en": "Mount"
+   }
+  },
+  "fits": {
+   "type": "object",
+   "properties": {
+    "hostWidth": {
+     "type": "number",
+     "minimum": 0
+    },
+    "nicheFrom": {
+     "type": "number",
+     "minimum": 0
+    },
+    "needs": {
+     "type": "string",
+     "x-label": {
+      "vi": "Ghi chú lắp đặt",
+      "en": "Installation note"
+     }
+    }
+   },
+   "additionalProperties": false,
+   "x-label": {
+    "vi": "Yêu cầu tủ chứa",
+    "en": "Host cabinet needs"
+   }
+  },
+  "default": {
+   "type": "boolean",
+   "x-label": {
+    "vi": "Mẫu mặc định của loại",
+    "en": "Default model of its type"
+   }
+  },
+  "changesType": {
+   "type": "boolean",
+   "x-label": {
+    "vi": "Đổi kiểu tủ chứa",
+    "en": "Changes the host cabinet"
+   }
+  },
+  "box": {
+   "type": "object",
+   "x-label": {
+    "vi": "Hình hộp tạm trong 3D",
+    "en": "Placeholder box in 3D"
+   }
+  },
+  "visual": {
+   "type": "object",
+   "x-label": {
+    "vi": "Mô tả ngoại hình (cho AI)",
+    "en": "Look (for the image AI)"
+   }
+  },
+  "prompt": {
+   "type": "string",
+   "minLength": 1,
+   "x-label": {
+    "vi": "Câu mô tả cho AI ảnh (tiếng Anh)",
+    "en": "Sentence for the image AI"
+   }
+  },
+  "asset3d": {
+   "type": [
+    "string",
+    "null"
+   ],
+   "x-label": {
+    "vi": "Đường dẫn model 3D (GLB)",
+    "en": "3D model URL (GLB)"
+   }
+  }
+ },
+ "additionalProperties": false
+}

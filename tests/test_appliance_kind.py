@@ -37,8 +37,8 @@ class TestHood(unittest.TestCase):
         self.assertEqual(next(a for a in hung.appliances if a.id == "TB2").module, "TD1")
         self.assertEqual(len([p for p in geometry.compile_spec(hung).parts if p.module == "TB2"]), 2)      # canopy + chimney
         self.assertEqual([i for i in rules.validate(hung)["issues"] if i["severity"] == "error"], [])
-        back, _ = change(hung, "TB2", "hood-slim-60" if "hood-slim-60" in am.BY_ID else
-                         next(m["id"] for m in am.MODELS if m["type"] == "hood" and am.kind_of(m) == "insert"))
+        back, _ = change(hung, "TB2", "hood-slim-60" if "hood-slim-60" in am.models() else
+                         next(m["id"] for m in am.models().values() if m["type"] == "hood" and am.kind_of(m) == "insert"))
         cabinet = next(m for m in back.module if m.type == "upper-hood")
         self.assertEqual(next(a for a in back.appliances if a.id == "TB2").module, cabinet.id)
 
@@ -52,7 +52,7 @@ class TestHood(unittest.TestCase):
         hung, _ = change(SPEC, "TB2", "hood-wall-90")
         blocked = apply_op(hung, {"op": "add", "closeGap": False, "module": {"id": "TT9", "type": "upper", "wall": "back", "fromCorner": 0,
                                                                              "width": 800, "y": 1530, "height": 700, "depth": 320}})
-        insert = next(m["id"] for m in am.MODELS if m["type"] == "hood" and am.kind_of(m) == "insert")
+        insert = next(m["id"] for m in am.models().values() if m["type"] == "hood" and am.kind_of(m) == "insert")
         with self.assertRaises(InvalidInput):
             change(blocked, "TB2", insert)
         hood = next(a for a in blocked.appliances if a.id == "TB2")

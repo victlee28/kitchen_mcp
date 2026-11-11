@@ -8,7 +8,8 @@ from __future__ import annotations
 from typing import Any
 
 from .numeric import round_half_away
-from . import tv_system
+from . import builtin, tv_system
+from .catalog import Catalog
 from .spec import Appliance, KitchenSpec, Module, Run, from_data, to_data
 from .errors import InvalidInput, NotFound
 from .jsonview import as_dict, as_list
@@ -156,8 +157,9 @@ def set_run_tv(spec: KitchenSpec, id: str, layout: Any) -> KitchenSpec:
 APPLIANCE_FIELDS = ("model", "name", "dimensions", "size", "cutout", "mount", "energy", "module")   # module: another kind (appliance_kind)
 
 
-def update_appliance(spec: KitchenSpec, id: str, model: Any = None, changes: dict[str, Any] | None = None) -> KitchenSpec:
-    """Give an appliance another model (``appliance_catalog``): its name, dimensions, size, cut-out, mount and energy become the model's;
+def update_appliance(spec: KitchenSpec, id: str, model: Any = None, changes: dict[str, Any] | None = None,
+                     catalog: Catalog = builtin.CATALOG) -> KitchenSpec:
+    """Give an appliance another model (catalog kind ``appliance``): its name, dimensions, size, cut-out, mount and energy become the model's;
     its id, module, wall and centre stay, so it stays where it is. ``changes`` may set those fields by hand instead."""
     from .appliance_models import changes_for, model as model_of
     s = _clone(spec)
@@ -166,7 +168,7 @@ def update_appliance(spec: KitchenSpec, id: str, model: Any = None, changes: dic
         raise NotFound(f"No appliance {id!r}", code="appliance-not-found")
     upd: dict[str, Any] = {}
     if model is not None:
-        m = model_of(str(model))
+        m = model_of(str(model), catalog)
         if m["type"] != hit.type:
             raise InvalidInput(f"{m['name']} is a {m['type']}, {id} is a {hit.type}", code="model-wrong-type")
         upd.update(changes_for(m))
@@ -316,7 +318,7 @@ def update_common(spec: KitchenSpec, changes: dict[str, Any]) -> KitchenSpec:
     return from_data(KitchenSpec, data)
 
 
-def apply_op(spec: KitchenSpec, op: dict[str, Any]) -> KitchenSpec:
+def apply_op(spec: KitchenSpec, op: dict[str, Any], catalog: Catalog = builtin.CATALOG) -> KitchenSpec:
     """Lệnh dạng dữ liệu (dùng chung cho MCP và HTTP).
     {"op": "add-run", "run": {"id"?, "x", "z", "yaw"}}  — an explicit run at any angle; modules join it with wall="island", run=<id>
     {"op": "move-run", "id": "R1", "changes": {"x"?, "z"?, "yaw"?}} | {"op": "remove-run", "id": "R1"}  — the run with all its cabinets
@@ -345,7 +347,7 @@ def apply_op(spec: KitchenSpec, op: dict[str, Any]) -> KitchenSpec:
     if kind == "set-run-tv":
         return set_run_tv(spec, str(op.get("id") or ""), op.get("layout"))
     if kind == "update-appliance":
-        return update_appliance(spec, str(op.get("id") or ""), op.get("model"), op.get("changes") or {})
+        return update_appliance(spec, str(op.get("id") or ""), op.get("model"), op.get("changes") or {}, catalog)
     if kind == "replace-element":
         return replace_element(spec, str(op.get("id") or ""), op.get("replaced", True))
     if kind == "remove-run":
@@ -387,6 +389,6 @@ def apply_op(spec: KitchenSpec, op: dict[str, Any]) -> KitchenSpec:
         if not ops or any(o.get("op") == "multi" for o in ops):
             raise InvalidInput("op 'nhieu' cần danh sách ops (không lồng 'nhieu')")
         for o in ops:
-            spec = apply_op(spec, o)
+            spec = apply_op(spec, o, catalog)
         return spec
     raise InvalidInput(f"op không hợp lệ: {kind!r}")

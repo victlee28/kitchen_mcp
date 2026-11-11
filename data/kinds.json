@@ -1,1 +1,14 @@
-{}
+{
+ "appliance": {
+  "label": {
+   "vi": "Thiết bị",
+   "en": "Appliances"
+  },
+  "writers": [
+   "workshop"
+  ],
+  "usedBy": [
+   "appliances[].model"
+  ]
+ }
+}

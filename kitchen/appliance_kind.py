@@ -12,7 +12,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from . import appliance_models
+from . import appliance_models, builtin
+from .catalog import Catalog
 from .edit import new_id
 from .errors import InvalidInput
 from .labels import NAMES
@@ -22,8 +23,8 @@ HOOD_GAP_MM = 650.0          # worktop to the bottom of a hood (KITCHEN-DEFAULT 
 INSERT_HEIGHT_MM = 165.0     # the hood insert under its cabinet (intent: "y_hood = countertop + gap + 165")
 
 
-def changes_kind(app: Appliance, model: dict[str, Any]) -> bool:
-    now = appliance_models.BY_ID.get(appliance_models.model_id(app) or "")
+def changes_kind(app: Appliance, model: dict[str, Any], catalog: Catalog = builtin.CATALOG) -> bool:
+    now = appliance_models.models(catalog).get(appliance_models.model_id(app, catalog) or "")
     return app.type in ("hood", "fridge") and appliance_models.kind_of(model) != appliance_models.kind_of(now)
 
 

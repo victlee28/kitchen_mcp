@@ -67,7 +67,7 @@ class Packages(Component):
         op = job["request"].get("designOp")
         if op:
             try:
-                spec = edit.apply_op(spec, op)
+                spec = edit.apply_op(spec, op, self.env.catalog())
             except (KitchenError, ValueError, KeyError):  # the edit does not apply: describe the surface from the original design
                 pass
         if op:
