@@ -56,6 +56,20 @@ class TestCameraPlan(unittest.TestCase):
         for v in camera_plan.plan_views([face], ROOM, [stair, wardrobe]).values():
             self.assertFalse(camera_plan.in_body((v["position"][0] * 1000, v["position"][2] * 1000), [stair, wardrobe]), v)
 
+    def test_narrow_room_opens_the_lens_up_to_a_natural_limit_then_stands_outside_the_wall(self):
+        wall = Obstacle("STRUCT-W", "wall", ((-4000.0, 3200.0), (0.0, 3200.0), (0.0, 3400.0), (-4000.0, 3400.0)), 0.0, 2700.0)
+        face = Face("run-R1", "R1", (-2000.0, 600.0), (0.0, 1.0), 2400.0, 2200.0, "R1")
+        roomy = [(-4000.0, 0.0), (0.0, 0.0), (0.0, 3200.0), (-4000.0, 3200.0)]
+        v = camera_plan.plan_views([face], roomy, [wall])["run-R1"]       # 2.6 m in front of the run: a wider lens, still inside
+        self.assertTrue(camera_plan.stands_in_room((v["position"][0] * 1000, v["position"][2] * 1000), roomy))
+        self.assertLessEqual(v["verticalFov"], camera_plan.V_NATURAL)
+        narrow = [(-4000.0, 0.0), (0.0, 0.0), (0.0, 1500.0), (-4000.0, 1500.0)]
+        wall2 = Obstacle("STRUCT-W2", "wall", ((-4000.0, 1500.0), (0.0, 1500.0), (0.0, 1700.0), (-4000.0, 1700.0)), 0.0, 2700.0)
+        v = camera_plan.plan_views([face], narrow, [wall2])["run-R1"]     # 0.9 m: even a wide lens is not enough
+        self.assertLessEqual(v["verticalFov"], camera_plan.V_NATURAL)
+        self.assertGreater(v["position"][2] * 1000, 1500.0)                   # behind the wall...
+        self.assertEqual(v["hide"], ["STRUCT-W2"])                            # ...which is left out of the view
+
 
 class TestDefaultViews(unittest.TestCase):
     def test_legacy_keys_kept_and_eye_height(self):

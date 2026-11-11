@@ -19,11 +19,13 @@ Pt = tuple[float, float]
 
 EYE = 1600.0              # camera height (mm)
 ASPECT = 4 / 3            # the renderer's default 1280 x 960
-MIN_DIST = 1500.0         # nearest the camera stands to a run's front (mm)
+MIN_DIST = 1000.0         # nearest the camera stands to a run's front (mm): in a narrow room it steps in and opens the lens instead
 MAX_DIST = 5500.0
 STEP = 250.0
 WALL_CLEAR = 300.0        # nearest the camera stands to a wall (mm)
-V_MIN, V_MAX = 40.0, 78.0 # vertical field of view limits (degrees)
+V_MIN, V_MAX = 40.0, 78.0 # vertical field of view limits (degrees): the hard clamp
+V_NATURAL = 62.0          # widest lens that still looks like a photograph (~76° across at 4:3, a 22 mm full-frame lens): wider looks fake
+                          # (user, 11/11/2026: "ống kính góc rộng vừa đủ, không quá rộng"); past it the camera stands outside the wall instead
 OBLIQUE = math.radians(35.0)
 NON_BLOCKING = ("area", "opening")
 FRONT_PROBE = 300.0       # how far in front of a run its room is probed (mm)   # floor areas and door/window openings are not solids that hide cabinets
@@ -142,8 +144,10 @@ def in_body(p: Pt, bodies: list[Obstacle], clear: float = WALL_CLEAR) -> bool:
 
 def _best(face: Face, directions: list[Pt], width_factor: float, room: list[Pt] | None, obstacles: list[Obstacle],
           bodies: list[Obstacle]) -> tuple[Pt, float, list[str]]:
-    """Ranked: stands in the room and clear of cabinets and of other solids (stairs, columns, furniture); without a room, fewest target points seen across another run's cabinets (they cannot be hidden);
-    field of view not too wide; fewest solids to hide; farthest back."""
+    """Ranked: never inside or against a cabinet or another solid (stairs, columns, furniture); without a room, fewest target points seen
+    across another run's cabinets (they cannot be hidden); a lens no wider than ``V_NATURAL``; inside the room (else outside a wall, the
+    walls in the way hidden — the user's choice of 11/11/2026: a wide lens first, the wall only when even that is not enough); fewest solids
+    to hide; the narrowest lens among the too-wide ones; farthest back."""
     targets = face_targets(face)
     # seen over a run is still across it; only weighed where no room guides the camera (keeps the planned views of rooms as they were)
     others = [] if room else [Obstacle(b.id, b.kind, b.outline, -math.inf, math.inf) for b in bodies if b.kind != f"cabinet:{face.run}"]
@@ -155,10 +159,12 @@ def _best(face: Face, directions: list[Pt], width_factor: float, room: list[Pt] 
         for direction in directions:
             pos, fov = _candidate(face, direction, dist, width_factor)
             eye = (pos[0], EYE, pos[1])
-            ok = stands_in_room(pos, room) and not in_body(pos, bodies) and not in_body(pos, solids)
+            bad = in_body(pos, bodies) or in_body(pos, solids)
+            outside = not stands_in_room(pos, room)
             hidden = blockers(eye, targets, obstacles)
             behind = sum(any(blocks(eye, t, b) for b in others) for t in targets)
-            key = (not ok, behind, fov > V_MAX, len(hidden), -dist)
+            wide = fov > V_NATURAL
+            key = (bad, behind, wide, outside, len(hidden), fov if wide else 0.0, -dist)
             if best is None or key < best[0]:
                 best = (key, pos, fov, hidden)
         dist -= STEP
