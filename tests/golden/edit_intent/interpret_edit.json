@@ -1,0 +1,161 @@
+{
+ "function": "edit_intent.interpret_edit",
+ "cases": [
+  {
+   "name": "front colour of the base tier",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "text": "đổi màu tủ dưới thành xanh rêu"
+   },
+   "expected": {
+    "status": "ok",
+    "operation": {
+     "op": "common",
+     "changes": {
+      "material": {
+       "base": "Xanh rêu",
+       "tall": "Laminate vân gỗ sồi sáng",
+       "upper": "Trắng mờ",
+       "cornerShelf": "Vân gỗ sồi",
+       "countertop": "Đá nhân tạo trắng",
+       "wallTile": "Gạch thẻ trắng 75×300 xếp dọc"
+      }
+     }
+    },
+    "summary": [
+     "Vật liệu base: Xanh rêu"
+    ],
+    "targets": []
+   }
+  },
+  {
+   "name": "remove a named cabinet",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "text": "xóa tủ TD3"
+   },
+   "expected": {
+    "status": "ok",
+    "operation": {
+     "op": "remove",
+     "id": "TD3"
+    },
+    "summary": [
+     "Xóa TD3"
+    ],
+    "targets": [
+     "TD3"
+    ]
+   }
+  },
+  {
+   "name": "width of a named cabinet",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "text": "tủ TD3 rộng 500"
+   },
+   "expected": {
+    "status": "ok",
+    "operation": {
+     "op": "update",
+     "id": "TD3",
+     "changes": {
+      "width": 500.0
+     }
+    },
+    "summary": [
+     "Rộng 500 mm cho TD3"
+    ],
+    "targets": [
+     "TD3"
+    ]
+   }
+  },
+  {
+   "name": "handle variant for the whole design",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "text": "đổi tay nắm thành núm"
+   },
+   "expected": {
+    "status": "ok",
+    "operation": {
+     "op": "common",
+     "changes": {
+      "handle": {
+       "variant": "knob",
+       "length": 160.0,
+       "material": "Nhôm đen mờ"
+      }
+     }
+    },
+    "summary": [
+     "Tay nắm chung: {'variant': 'knob'}"
+    ],
+    "targets": []
+   }
+  },
+  {
+   "name": "selected cabinets when the text names none",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "text": "rộng 500",
+    "scope": [
+     "TD3"
+    ]
+   },
+   "expected": {
+    "status": "ok",
+    "operation": {
+     "op": "update",
+     "id": "TD3",
+     "changes": {
+      "width": 500.0
+     }
+    },
+    "summary": [
+     "Rộng 500 mm cho TD3"
+    ],
+    "targets": [
+     "TD3"
+    ]
+   }
+  },
+  {
+   "name": "empty sentence",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "text": "  "
+   },
+   "expected": {
+    "status": "unsupported",
+    "message": "Câu lệnh trống."
+   }
+  },
+  {
+   "name": "sentence not understood",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "text": "làm cho đẹp hơn"
+   },
+   "expected": {
+    "status": "unsupported",
+    "message": "Chưa hiểu câu lệnh này; thử: 'xóa TD3', 'TD2 rộng 800', 'cánh kính cho tủ trên', 'tay nắm âm'."
+   }
+  }
+ ]
+}

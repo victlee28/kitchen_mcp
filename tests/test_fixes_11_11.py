@@ -7,7 +7,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from kitchen import appliance_models, edit, system_replace as sr, vocab  # noqa: E402
+from kitchen import appliance_models, edit, rules, system_replace as sr, vocab  # noqa: E402
+from kitchen.spec import load_spec  # noqa: E402
 from kitchen.spec import KitchenSpec  # noqa: E402
 
 SINK = {"type": "base-sink", "width": 800.0, "s": 600.0, "y": 0.0, "height": 840.0, "depth": 580.0,
@@ -52,6 +53,26 @@ class TestVocab(unittest.TestCase):
         self.assertEqual(vocab.to_english("Sơn hồng phấn"), "pink painted")
         self.assertEqual(vocab.to_english("mau hong"), "pink")                     # typed without diacritics: still pink
         self.assertEqual(vocab.to_english("xanh luc"), "green")
+
+
+class TestCloseGapTall(unittest.TestCase):
+    """Removing a cabinet closes the gap, but a tall cabinet only slides into room that is free on every storey."""
+
+    def setUp(self):
+        import json
+        self.spec = load_spec(json.loads((ROOT / "fixtures" / "l-shaped-kitchen.json").read_text(encoding="utf-8")))
+
+    def test_removing_a_wall_cabinet_leaves_the_tall_fridge_in_place(self):
+        for gone in ("TT2", "TD1", "TT1"):            # the loft, base and wall cabinets stacked left of the fridge TC1
+            after = edit.apply_op(self.spec, {"op": "remove", "id": gone})
+            self.assertEqual(after.find("TC1").fromCorner, 1250.0, gone)
+            self.assertEqual([i["module"] for i in rules.validate(after)["issues"] if i["rule"] == "GEO-COLLISION"], [], gone)
+
+    def test_a_tall_cabinet_still_slides_when_the_whole_stack_goes(self):
+        after = self.spec
+        for gone in ("TT2", "TT1", "TD1"):
+            after = edit.apply_op(after, {"op": "remove", "id": gone})
+        self.assertLess(after.find("TC1").fromCorner, 1250.0)
 
 
 if __name__ == "__main__":

@@ -19,6 +19,7 @@ from kitchen.recognition import build_draft, build_layout, choose_recognizer, ge
 from kitchen import intent, run_template, tv_system, vocab  # noqa: E402
 from kitchen import appliance_kind, appliance_models, camera_plan, system_replace, wall_line  # noqa: E402
 from kitchen import handles, hardware, lexicon, regions  # noqa: E402
+from kitchen import cabinet_run, edit_intent, rows_to_runs, threejs_export  # noqa: E402
 from kitchen.spec import Handle, Module  # noqa: E402
 from kitchen.placement import Placement  # noqa: E402
 from kitchen.spec import load_spec, to_data  # noqa: E402
@@ -339,7 +340,78 @@ def floorplan_detect_back(i):
     return {"back": floorplan.detect_back(i["outline"], _floorplan(i))}
 
 
+def _r3(v):
+    return [round(float(x), 3) for x in v]
+
+
+def geometry_compile_spec(i):
+    """Projection: the frame lengths, the part count per type and every part as [id, module, type, min, max] (mm, 0.001)."""
+    scene = geometry.compile_spec(_spec_after(i))
+    counts = {}
+    for p in scene.parts:
+        counts[p.type] = counts.get(p.type, 0) + 1
+    return {"lsau": scene.lsau, "lphai": scene.lphai, "counts": dict(sorted(counts.items())),
+            "parts": [[p.id, p.module, p.type, _r3(p.min), _r3(p.max)] for p in scene.parts], "meshes": [[m.id, m.type, len(m.vertices)] for m in scene.meshes]}
+
+
+def threejs_export_export(i):
+    """Projection: per section the ids with their kind, size and place (mm, 0.01), the camera rigs, the material ids and the integrity check."""
+    doc = threejs_export.export(_spec_after(i), "golden", 1, created_at="2026-01-01T00:00:00+00:00")
+
+    def dims(x):
+        d = x["dimensions"]
+        return [d["width"], d["height"], d["depth"]]
+
+    def place(x):
+        t = x["transform"]
+        return [t["position"]["x"], t["position"]["y"], t["position"]["z"], t["rotation"]["y"]]
+    return {"schemaVersion": doc["schemaVersion"], "room": dims(doc["room"]), "walls": [w["id"] for w in doc["room"]["walls"]],
+            "modules": [[m["id"], m["moduleType"], dims(m), place(m), len(m["parts"]), len(m["doors"]), len(m["drawers"])] for m in doc["modules"]],
+            "appliances": [[a["id"], a["type"], dims(a), place(a)] for a in doc["appliances"]],
+            "accessories": [[a["id"], a["type"], dims(a), len(a.get("cutouts", []))] for a in doc["accessories"]],
+            "decorations": [[d["id"], d["type"], len(d["path"]["points"])] for d in doc["decorations"]],
+            "cameras": [[c["id"], [c["position"][k] for k in "xyz"], [c["target"][k] for k in "xyz"], c["fov"]] for c in doc["cameras"]],
+            "materials": [m["id"] for m in doc["materials"]], "integrity": threejs_export.integrity(doc)}
+
+
+def edit_intent_interpret_edit(i):
+    return edit_intent.interpret_edit(_spec_after(i), i["text"], i.get("scope"))
+
+
+def cabinet_run_split_widths(i):
+    return {"widths": cabinet_run.split_widths(i["length"])}
+
+
+def cabinet_run_plan_i_run(i):
+    return cabinet_run.plan_i_run(_spec_after(i), [tuple(p) for p in i["outline"]], tuple(i["point"]), i.get("moduleType", "base"))
+
+
+def rows_to_runs_convert(i):
+    """Projection: the runs made, each module as [id, run, fromCorner, width, depth], the notes, and what differs after the conversion."""
+    spec = _spec_after(i)
+    data, notes = rows_to_runs.convert(spec)
+    after = load_spec(data)
+    return {"runs": data.get("runs", []), "modules": [[m["id"], m.get("run"), m.get("fromCorner"), m.get("width"), m.get("depth")] for m in data["module"]],
+            "notes": notes, "differences": rows_to_runs.equivalent(spec, after)}
+
+
+def proposal_spec_diff(i):
+    before = _spec(i)
+    after = before
+    for op in i["ops"]:
+        after = edit.apply_op(after, op)
+    diff = proposal.spec_diff(before, after)
+    return {**diff, "affected": proposal.affected_modules(diff)}
+
+
 FUNCTIONS = {
+    "geometry.compile_spec": geometry_compile_spec,
+    "threejs_export.export": threejs_export_export,
+    "edit_intent.interpret_edit": edit_intent_interpret_edit,
+    "cabinet_run.split_widths": cabinet_run_split_widths,
+    "cabinet_run.plan_i_run": cabinet_run_plan_i_run,
+    "rows_to_runs.convert": rows_to_runs_convert,
+    "proposal.spec_diff": proposal_spec_diff,
     "placement.to_room": placement_to_room,
     "placement.to_kitchen": placement_to_kitchen,
     "numeric.round_half_away": numeric_round_half_away,

@@ -31,6 +31,11 @@ def _shift(spec: KitchenSpec, ref: Module, shift_from: float, delta: float, skip
     if not delta:
         return
     moved = [m for m in spec.module if m.id not in skip and _same_run(m, ref) and m.fromCorner >= shift_from - 1]
+    if delta < 0:   # closing a gap: a tall cabinet slides only into room that is free on every storey; else it and what follows it stay
+        blocked = [t for t in moved if t.storey == "tall" and _tall_blocked(spec, t, delta, moved, skip)]
+        if blocked:
+            stop = min(t.fromCorner for t in blocked)
+            moved = [m for m in moved if m.fromCorner < stop - 1]
     # tủ cao bị dịch thì kéo theo mọi module cùng tường phía sau nó (mọi tầng)
     for tall in [m for m in moved if m.storey == "tall"]:
         moved += [m for m in spec.module if m.wall == tall.wall and m.run == tall.run and (m.offset, m.facing) == (tall.offset, tall.facing)
@@ -40,6 +45,13 @@ def _shift(spec: KitchenSpec, ref: Module, shift_from: float, delta: float, skip
     for tb in spec.appliances:  # thiết bị gắn vị trí trên tường dịch cùng
         if tb.wall == ref.wall and tb.center is not None and ref.storey == "base" and tb.center >= shift_from - 1:
             tb.center += delta
+
+
+def _tall_blocked(spec: KitchenSpec, tall: Module, delta: float, moved: list[Module], skip: set[str]) -> bool:
+    """Whether a cabinet that stays put stands where ``tall`` would go after sliding by ``delta`` (same wall row, any storey)."""
+    lo, hi = tall.fromCorner + delta, tall.endAt + delta
+    return any(m.id not in skip and m not in moved and m.wall == tall.wall and m.run == tall.run and (m.offset, m.facing) == (tall.offset, tall.facing)
+               and m.fromCorner < hi - 1 and m.endAt > lo + 1 for m in spec.module)
 
 
 def new_id(spec: KitchenSpec, prefix: str) -> str:

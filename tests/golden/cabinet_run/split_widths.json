@@ -1,0 +1,82 @@
+{
+ "function": "cabinet_run.split_widths",
+ "cases": [
+  {
+   "name": "whole 600s",
+   "input": {
+    "length": 2400
+   },
+   "expected": {
+    "widths": [
+     600.0,
+     600.0,
+     600.0,
+     600.0
+    ]
+   }
+  },
+  {
+   "name": "remainder under 300 widens the last",
+   "input": {
+    "length": 2450
+   },
+   "expected": {
+    "widths": [
+     600.0,
+     600.0,
+     600.0,
+     650.0
+    ]
+   }
+  },
+  {
+   "name": "remainder of 300 or more stands alone",
+   "input": {
+    "length": 2700
+   },
+   "expected": {
+    "widths": [
+     600.0,
+     600.0,
+     600.0,
+     600.0,
+     300.0
+    ]
+   }
+  },
+  {
+   "name": "shorter than one cabinet",
+   "input": {
+    "length": 250
+   },
+   "error": {
+    "kind": "validation",
+    "code": "run-too-short"
+   }
+  },
+  {
+   "name": "one cabinet",
+   "input": {
+    "length": 450
+   },
+   "expected": {
+    "widths": [
+     450.0
+    ]
+   }
+  },
+  {
+   "name": "fractional length rounds half away",
+   "input": {
+    "length": 1800.5
+   },
+   "expected": {
+    "widths": [
+     600.0,
+     600.0,
+     601.0
+    ]
+   }
+  }
+ ]
+}

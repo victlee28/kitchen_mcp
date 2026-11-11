@@ -1,0 +1,134 @@
+{
+ "function": "proposal.spec_diff",
+ "cases": [
+  {
+   "name": "remove closes the gap and moves the appliance",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "ops": [
+     {
+      "op": "remove",
+      "id": "TD3"
+     }
+    ]
+   },
+   "expected": {
+    "modules": {
+     "added": [],
+     "removed": [
+      "TD3"
+     ],
+     "changed": {
+      "TD5": [
+       {
+        "field": "fromCorner",
+        "old": 2440.0,
+        "new": 2070.0
+       }
+      ],
+      "TD4": [
+       {
+        "field": "fromCorner",
+        "old": 1810.0,
+        "new": 1440.0
+       }
+      ]
+     }
+    },
+    "other": [
+     {
+      "path": "appliances[TB4].center",
+      "old": 2130.0,
+      "new": 1760.0
+     }
+    ],
+    "truncated": false,
+    "affected": [
+     "TD3",
+     "TD4",
+     "TD5"
+    ]
+   }
+  },
+  {
+   "name": "common material change",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "ops": [
+     {
+      "op": "common",
+      "changes": {
+       "material": {
+        "base": "Xanh rêu"
+       }
+      }
+     }
+    ]
+   },
+   "expected": {
+    "modules": {
+     "added": [],
+     "removed": [],
+     "changed": {}
+    },
+    "other": [
+     {
+      "path": "common.material.base",
+      "old": "Laminate vân gỗ sồi sáng",
+      "new": "Xanh rêu"
+     },
+     {
+      "path": "common.material.cornerShelf",
+      "old": "Vân gỗ sồi",
+      "new": null
+     },
+     {
+      "path": "common.material.countertop",
+      "old": "Đá nhân tạo trắng",
+      "new": null
+     },
+     {
+      "path": "common.material.tall",
+      "old": "Laminate vân gỗ sồi sáng",
+      "new": null
+     },
+     {
+      "path": "common.material.upper",
+      "old": "Trắng mờ",
+      "new": null
+     },
+     {
+      "path": "common.material.wallTile",
+      "old": "Gạch thẻ trắng 75×300 xếp dọc",
+      "new": null
+     }
+    ],
+    "truncated": false,
+    "affected": []
+   }
+  },
+  {
+   "name": "no change",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "ops": []
+   },
+   "expected": {
+    "modules": {
+     "added": [],
+     "removed": [],
+     "changed": {}
+    },
+    "other": [],
+    "truncated": false,
+    "affected": []
+   }
+  }
+ ]
+}

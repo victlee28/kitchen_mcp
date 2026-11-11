@@ -1,0 +1,362 @@
+{
+ "function": "cabinet_run.plan_i_run",
+ "cases": [
+  {
+   "name": "island box, nearest edge parallel to the back wall",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "outline": [
+     [
+      -2400,
+      1600
+     ],
+     [
+      -1000,
+      1600
+     ],
+     [
+      -1000,
+      2200
+     ],
+     [
+      -2400,
+      2200
+     ]
+    ],
+    "point": [
+     -1700,
+     1500
+    ]
+   },
+   "expected": {
+    "operation": {
+     "op": "multi",
+     "ops": [
+      {
+       "op": "add-run",
+       "run": {
+        "id": "R1",
+        "x": -1000.0,
+        "z": 1600.0,
+        "yaw": -180.0
+       }
+      },
+      {
+       "op": "add",
+       "closeGap": false,
+       "module": {
+        "type": "base",
+        "wall": "island",
+        "run": "R1",
+        "fromCorner": 0.0,
+        "width": 600.0,
+        "y": 0.0,
+        "height": 840.0,
+        "depth": 550.0
+       }
+      },
+      {
+       "op": "add",
+       "closeGap": false,
+       "module": {
+        "type": "base",
+        "wall": "island",
+        "run": "R1",
+        "fromCorner": 600.0,
+        "width": 800.0,
+        "y": 0.0,
+        "height": 840.0,
+        "depth": 550.0
+       }
+      }
+     ]
+    },
+    "facing": "-z",
+    "run": {
+     "id": "R1",
+     "x": -1000.0,
+     "z": 1600.0,
+     "yaw": -180.0
+    },
+    "yaw": -180.0,
+    "length": 1400.0,
+    "widths": [
+     600.0,
+     800.0
+    ],
+    "summary": [
+     "2 base cabinets, 1400 mm, doors facing -z (towards the back wall) (run R1)"
+    ]
+   }
+  },
+  {
+   "name": "island box, nearest edge parallel to the right wall",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "outline": [
+     [
+      -2400,
+      1600
+     ],
+     [
+      -1000,
+      1600
+     ],
+     [
+      -1000,
+      2200
+     ],
+     [
+      -2400,
+      2200
+     ]
+    ],
+    "point": [
+     -900,
+     1900
+    ]
+   },
+   "expected": {
+    "operation": {
+     "op": "multi",
+     "ops": [
+      {
+       "op": "add-run",
+       "run": {
+        "id": "R1",
+        "x": -1000.0,
+        "z": 2200.0,
+        "yaw": 90.0
+       }
+      },
+      {
+       "op": "add",
+       "closeGap": false,
+       "module": {
+        "type": "base",
+        "wall": "island",
+        "run": "R1",
+        "fromCorner": 0.0,
+        "width": 600.0,
+        "y": 0.0,
+        "height": 840.0,
+        "depth": 550.0
+       }
+      }
+     ]
+    },
+    "facing": "+x",
+    "run": {
+     "id": "R1",
+     "x": -1000.0,
+     "z": 2200.0,
+     "yaw": 90.0
+    },
+    "yaw": 90.0,
+    "length": 600.0,
+    "widths": [
+     600.0
+    ],
+    "summary": [
+     "1 base cabinets, 600 mm, doors facing +x (run R1)"
+    ]
+   }
+  },
+  {
+   "name": "diagonal edge",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "outline": [
+     [
+      -2400,
+      1600
+     ],
+     [
+      -1000,
+      2400
+     ],
+     [
+      -2400,
+      2400
+     ]
+    ],
+    "point": [
+     -1600,
+     1900
+    ]
+   },
+   "expected": {
+    "operation": {
+     "op": "multi",
+     "ops": [
+      {
+       "op": "add-run",
+       "run": {
+        "id": "R1",
+        "x": -1000.0,
+        "z": 2400.0,
+        "yaw": 150.26
+       }
+      },
+      {
+       "op": "add",
+       "closeGap": false,
+       "module": {
+        "type": "base",
+        "wall": "island",
+        "run": "R1",
+        "fromCorner": 0.0,
+        "width": 600.0,
+        "y": 0.0,
+        "height": 840.0,
+        "depth": 550.0
+       }
+      },
+      {
+       "op": "add",
+       "closeGap": false,
+       "module": {
+        "type": "base",
+        "wall": "island",
+        "run": "R1",
+        "fromCorner": 600.0,
+        "width": 600.0,
+        "y": 0.0,
+        "height": 840.0,
+        "depth": 550.0
+       }
+      },
+      {
+       "op": "add",
+       "closeGap": false,
+       "module": {
+        "type": "base",
+        "wall": "island",
+        "run": "R1",
+        "fromCorner": 1200.0,
+        "width": 412.0,
+        "y": 0.0,
+        "height": 840.0,
+        "depth": 550.0
+       }
+      }
+     ]
+    },
+    "facing": null,
+    "run": {
+     "id": "R1",
+     "x": -1000.0,
+     "z": 2400.0,
+     "yaw": 150.26
+    },
+    "yaw": 150.26,
+    "length": 1612.0,
+    "widths": [
+     600.0,
+     600.0,
+     412.0
+    ],
+    "summary": [
+     "3 base cabinets, 1612 mm, along an edge at 150.26° (run R1)"
+    ]
+   }
+  },
+  {
+   "name": "tall cabinets",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "outline": [
+     [
+      -2400,
+      1600
+     ],
+     [
+      -1000,
+      1600
+     ],
+     [
+      -1000,
+      2200
+     ],
+     [
+      -2400,
+      2200
+     ]
+    ],
+    "point": [
+     -1700,
+     1500
+    ],
+    "moduleType": "tall"
+   },
+   "expected": {
+    "operation": {
+     "op": "multi",
+     "ops": [
+      {
+       "op": "add-run",
+       "run": {
+        "id": "R1",
+        "x": -1000.0,
+        "z": 1600.0,
+        "yaw": -180.0
+       }
+      },
+      {
+       "op": "add",
+       "closeGap": false,
+       "module": {
+        "type": "tall",
+        "wall": "island",
+        "run": "R1",
+        "fromCorner": 0.0,
+        "width": 600.0,
+        "y": 0.0,
+        "height": 840.0,
+        "depth": 550.0
+       }
+      },
+      {
+       "op": "add",
+       "closeGap": false,
+       "module": {
+        "type": "tall",
+        "wall": "island",
+        "run": "R1",
+        "fromCorner": 600.0,
+        "width": 800.0,
+        "y": 0.0,
+        "height": 840.0,
+        "depth": 550.0
+       }
+      }
+     ]
+    },
+    "facing": "-z",
+    "run": {
+     "id": "R1",
+     "x": -1000.0,
+     "z": 1600.0,
+     "yaw": -180.0
+    },
+    "yaw": -180.0,
+    "length": 1400.0,
+    "widths": [
+     600.0,
+     800.0
+    ],
+    "summary": [
+     "2 base cabinets, 1400 mm, doors facing -z (towards the back wall) (run R1)"
+    ]
+   }
+  }
+ ]
+}
