@@ -1,0 +1,384 @@
+{
+ "function": "appliance_models.fit",
+ "cases": [
+  {
+   "name": "same kind, fits",
+   "input": {
+    "spec": {
+     "module": [
+      {
+       "id": "TD1",
+       "type": "base-cooktop",
+       "wall": "back",
+       "fromCorner": 0,
+       "width": 800,
+       "height": 840,
+       "depth": 580
+      },
+      {
+       "id": "TC1",
+       "type": "tall-fridge",
+       "wall": "back",
+       "fromCorner": 800,
+       "width": 700,
+       "height": 2400,
+       "depth": 640,
+       "niche": 1650
+      },
+      {
+       "id": "TT1",
+       "type": "upper-hood",
+       "wall": "back",
+       "fromCorner": 0,
+       "width": 800,
+       "y": 1665,
+       "height": 615,
+       "depth": 320
+      },
+      {
+       "id": "TN1",
+       "type": "upper-loft",
+       "wall": "back",
+       "fromCorner": 0,
+       "width": 800,
+       "y": 2280,
+       "height": 330,
+       "depth": 320
+      }
+     ],
+     "appliances": [
+      {
+       "id": "TB1",
+       "type": "cooktop",
+       "module": "TD1",
+       "dimensions": "730 × 430"
+      },
+      {
+       "id": "TB2",
+       "type": "hood",
+       "module": "TT1",
+       "dimensions": "730 × 165"
+      },
+      {
+       "id": "TB3",
+       "type": "fridge",
+       "module": "TC1",
+       "dimensions": "600 × 1600 × 620"
+      }
+     ]
+    },
+    "appliance": "TB3",
+    "model": "fridge-1d-60"
+   },
+   "expected": {
+    "status": "ok",
+    "reasons": []
+   }
+  },
+  {
+   "name": "same kind, too tall for the niche",
+   "input": {
+    "spec": {
+     "module": [
+      {
+       "id": "TD1",
+       "type": "base-cooktop",
+       "wall": "back",
+       "fromCorner": 0,
+       "width": 800,
+       "height": 840,
+       "depth": 580
+      },
+      {
+       "id": "TC1",
+       "type": "tall-fridge",
+       "wall": "back",
+       "fromCorner": 800,
+       "width": 700,
+       "height": 2400,
+       "depth": 640,
+       "niche": 1650
+      },
+      {
+       "id": "TT1",
+       "type": "upper-hood",
+       "wall": "back",
+       "fromCorner": 0,
+       "width": 800,
+       "y": 1665,
+       "height": 615,
+       "depth": 320
+      },
+      {
+       "id": "TN1",
+       "type": "upper-loft",
+       "wall": "back",
+       "fromCorner": 0,
+       "width": 800,
+       "y": 2280,
+       "height": 330,
+       "depth": 320
+      }
+     ],
+     "appliances": [
+      {
+       "id": "TB1",
+       "type": "cooktop",
+       "module": "TD1",
+       "dimensions": "730 × 430"
+      },
+      {
+       "id": "TB2",
+       "type": "hood",
+       "module": "TT1",
+       "dimensions": "730 × 165"
+      },
+      {
+       "id": "TB3",
+       "type": "fridge",
+       "module": "TC1",
+       "dimensions": "600 × 1600 × 620"
+      }
+     ]
+    },
+    "appliance": "TB3",
+    "model": "fridge-2d-60-tall"
+   },
+   "expected": {
+    "status": "bad",
+    "reasons": [
+     "Needs a niche 1870 mm high; TC1 gives 1650 mm"
+    ]
+   }
+  },
+  {
+   "name": "another kind: says what changes",
+   "input": {
+    "spec": {
+     "module": [
+      {
+       "id": "TD1",
+       "type": "base-cooktop",
+       "wall": "back",
+       "fromCorner": 0,
+       "width": 800,
+       "height": 840,
+       "depth": 580
+      },
+      {
+       "id": "TC1",
+       "type": "tall-fridge",
+       "wall": "back",
+       "fromCorner": 800,
+       "width": 700,
+       "height": 2400,
+       "depth": 640,
+       "niche": 1650
+      },
+      {
+       "id": "TT1",
+       "type": "upper-hood",
+       "wall": "back",
+       "fromCorner": 0,
+       "width": 800,
+       "y": 1665,
+       "height": 615,
+       "depth": 320
+      },
+      {
+       "id": "TN1",
+       "type": "upper-loft",
+       "wall": "back",
+       "fromCorner": 0,
+       "width": 800,
+       "y": 2280,
+       "height": 330,
+       "depth": 320
+      }
+     ],
+     "appliances": [
+      {
+       "id": "TB1",
+       "type": "cooktop",
+       "module": "TD1",
+       "dimensions": "730 × 430"
+      },
+      {
+       "id": "TB2",
+       "type": "hood",
+       "module": "TT1",
+       "dimensions": "730 × 165"
+      },
+      {
+       "id": "TB3",
+       "type": "fridge",
+       "module": "TC1",
+       "dimensions": "600 × 1600 × 620"
+      }
+     ]
+    },
+    "appliance": "TB2",
+    "model": "hood-wall-90"
+   },
+   "expected": {
+    "status": "check",
+    "reasons": [
+     "The hood hangs over TD1 (on the wall, with its chimney)",
+     "Hood cabinet TT1 is removed, with TN1 above it"
+    ]
+   }
+  },
+  {
+   "name": "a hood narrower than the hob",
+   "input": {
+    "spec": {
+     "module": [
+      {
+       "id": "TD1",
+       "type": "base-cooktop",
+       "wall": "back",
+       "fromCorner": 0,
+       "width": 800,
+       "height": 840,
+       "depth": 580
+      },
+      {
+       "id": "TC1",
+       "type": "tall-fridge",
+       "wall": "back",
+       "fromCorner": 800,
+       "width": 700,
+       "height": 2400,
+       "depth": 640,
+       "niche": 1650
+      },
+      {
+       "id": "TT1",
+       "type": "upper-hood",
+       "wall": "back",
+       "fromCorner": 0,
+       "width": 800,
+       "y": 1665,
+       "height": 615,
+       "depth": 320
+      },
+      {
+       "id": "TN1",
+       "type": "upper-loft",
+       "wall": "back",
+       "fromCorner": 0,
+       "width": 800,
+       "y": 2280,
+       "height": 330,
+       "depth": 320
+      }
+     ],
+     "appliances": [
+      {
+       "id": "TB1",
+       "type": "cooktop",
+       "module": "TD1",
+       "dimensions": "730 × 430"
+      },
+      {
+       "id": "TB2",
+       "type": "hood",
+       "module": "TT1",
+       "dimensions": "730 × 165"
+      },
+      {
+       "id": "TB3",
+       "type": "fridge",
+       "module": "TC1",
+       "dimensions": "600 × 1600 × 620"
+      }
+     ]
+    },
+    "appliance": "TB2",
+    "model": "hood-insert-60"
+   },
+   "expected": {
+    "status": "check",
+    "reasons": [
+     "Hood 560 mm is narrower than the hob below (730 mm)"
+    ]
+   }
+  },
+  {
+   "name": "another type is refused",
+   "input": {
+    "spec": {
+     "module": [
+      {
+       "id": "TD1",
+       "type": "base-cooktop",
+       "wall": "back",
+       "fromCorner": 0,
+       "width": 800,
+       "height": 840,
+       "depth": 580
+      },
+      {
+       "id": "TC1",
+       "type": "tall-fridge",
+       "wall": "back",
+       "fromCorner": 800,
+       "width": 700,
+       "height": 2400,
+       "depth": 640,
+       "niche": 1650
+      },
+      {
+       "id": "TT1",
+       "type": "upper-hood",
+       "wall": "back",
+       "fromCorner": 0,
+       "width": 800,
+       "y": 1665,
+       "height": 615,
+       "depth": 320
+      },
+      {
+       "id": "TN1",
+       "type": "upper-loft",
+       "wall": "back",
+       "fromCorner": 0,
+       "width": 800,
+       "y": 2280,
+       "height": 330,
+       "depth": 320
+      }
+     ],
+     "appliances": [
+      {
+       "id": "TB1",
+       "type": "cooktop",
+       "module": "TD1",
+       "dimensions": "730 × 430"
+      },
+      {
+       "id": "TB2",
+       "type": "hood",
+       "module": "TT1",
+       "dimensions": "730 × 165"
+      },
+      {
+       "id": "TB3",
+       "type": "fridge",
+       "module": "TC1",
+       "dimensions": "600 × 1600 × 620"
+      }
+     ]
+    },
+    "appliance": "TB2",
+    "model": "fridge-2d-60"
+   },
+   "expected": {
+    "status": "bad",
+    "reasons": [
+     "Tủ lạnh 2 cánh 60 cm is a fridge, not a hood"
+    ]
+   }
+  }
+ ]
+}

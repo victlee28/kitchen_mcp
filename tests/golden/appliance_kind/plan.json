@@ -1,0 +1,603 @@
+{
+ "function": "appliance_kind.plan",
+ "cases": [
+  {
+   "name": "hood insert to wall chimney: the hood cabinet and the loft over it go",
+   "input": {
+    "spec": {
+     "module": [
+      {
+       "id": "TD1",
+       "type": "base-cooktop",
+       "wall": "back",
+       "fromCorner": 0,
+       "width": 800,
+       "height": 840,
+       "depth": 580
+      },
+      {
+       "id": "TC1",
+       "type": "tall-fridge",
+       "wall": "back",
+       "fromCorner": 800,
+       "width": 700,
+       "height": 2400,
+       "depth": 640,
+       "niche": 1650
+      },
+      {
+       "id": "TT1",
+       "type": "upper-hood",
+       "wall": "back",
+       "fromCorner": 0,
+       "width": 800,
+       "y": 1665,
+       "height": 615,
+       "depth": 320
+      },
+      {
+       "id": "TN1",
+       "type": "upper-loft",
+       "wall": "back",
+       "fromCorner": 0,
+       "width": 800,
+       "y": 2280,
+       "height": 330,
+       "depth": 320
+      }
+     ],
+     "appliances": [
+      {
+       "id": "TB1",
+       "type": "cooktop",
+       "module": "TD1",
+       "dimensions": "730 × 430"
+      },
+      {
+       "id": "TB2",
+       "type": "hood",
+       "module": "TT1",
+       "dimensions": "730 × 165"
+      },
+      {
+       "id": "TB3",
+       "type": "fridge",
+       "module": "TC1",
+       "dimensions": "600 × 1600 × 620"
+      }
+     ]
+    },
+    "appliance": "TB2",
+    "model": "hood-wall-90"
+   },
+   "expected": {
+    "ops": [
+     {
+      "op": "update-appliance",
+      "id": "TB2",
+      "model": "hood-wall-90",
+      "changes": {
+       "module": "TD1"
+      }
+     },
+     {
+      "op": "remove",
+      "id": "TN1",
+      "closeGap": false
+     },
+     {
+      "op": "remove",
+      "id": "TT1",
+      "closeGap": false
+     }
+    ],
+    "summary": [
+     "The hood hangs over TD1 (on the wall, with its chimney)",
+     "Hood cabinet TT1 is removed, with TN1 above it"
+    ]
+   }
+  },
+  {
+   "name": "hood insert to island hood",
+   "input": {
+    "spec": {
+     "module": [
+      {
+       "id": "TD1",
+       "type": "base-cooktop",
+       "wall": "back",
+       "fromCorner": 0,
+       "width": 800,
+       "height": 840,
+       "depth": 580
+      },
+      {
+       "id": "TC1",
+       "type": "tall-fridge",
+       "wall": "back",
+       "fromCorner": 800,
+       "width": 700,
+       "height": 2400,
+       "depth": 640,
+       "niche": 1650
+      },
+      {
+       "id": "TT1",
+       "type": "upper-hood",
+       "wall": "back",
+       "fromCorner": 0,
+       "width": 800,
+       "y": 1665,
+       "height": 615,
+       "depth": 320
+      },
+      {
+       "id": "TN1",
+       "type": "upper-loft",
+       "wall": "back",
+       "fromCorner": 0,
+       "width": 800,
+       "y": 2280,
+       "height": 330,
+       "depth": 320
+      }
+     ],
+     "appliances": [
+      {
+       "id": "TB1",
+       "type": "cooktop",
+       "module": "TD1",
+       "dimensions": "730 × 430"
+      },
+      {
+       "id": "TB2",
+       "type": "hood",
+       "module": "TT1",
+       "dimensions": "730 × 165"
+      },
+      {
+       "id": "TB3",
+       "type": "fridge",
+       "module": "TC1",
+       "dimensions": "600 × 1600 × 620"
+      }
+     ]
+    },
+    "appliance": "TB2",
+    "model": "hood-island-90"
+   },
+   "expected": {
+    "ops": [
+     {
+      "op": "update-appliance",
+      "id": "TB2",
+      "model": "hood-island-90",
+      "changes": {
+       "module": "TD1"
+      }
+     },
+     {
+      "op": "remove",
+      "id": "TN1",
+      "closeGap": false
+     },
+     {
+      "op": "remove",
+      "id": "TT1",
+      "closeGap": false
+     }
+    ],
+    "summary": [
+     "The hood hangs over TD1 (from the ceiling)",
+     "Hood cabinet TT1 is removed, with TN1 above it"
+    ]
+   }
+  },
+  {
+   "name": "chimney back to insert: a hood cabinet is built over the hob",
+   "input": {
+    "spec": {
+     "module": [
+      {
+       "id": "TD1",
+       "type": "base-cooktop",
+       "wall": "back",
+       "fromCorner": 0,
+       "width": 800,
+       "height": 840,
+       "depth": 580
+      },
+      {
+       "id": "TC1",
+       "type": "tall-fridge",
+       "wall": "back",
+       "fromCorner": 800,
+       "width": 700,
+       "height": 2400,
+       "depth": 640,
+       "niche": 1650
+      },
+      {
+       "id": "TT1",
+       "type": "upper-hood",
+       "wall": "back",
+       "fromCorner": 0,
+       "width": 800,
+       "y": 1665,
+       "height": 615,
+       "depth": 320
+      },
+      {
+       "id": "TN1",
+       "type": "upper-loft",
+       "wall": "back",
+       "fromCorner": 0,
+       "width": 800,
+       "y": 2280,
+       "height": 330,
+       "depth": 320
+      }
+     ],
+     "appliances": [
+      {
+       "id": "TB1",
+       "type": "cooktop",
+       "module": "TD1",
+       "dimensions": "730 × 430"
+      },
+      {
+       "id": "TB2",
+       "type": "hood",
+       "module": "TT1",
+       "dimensions": "730 × 165"
+      },
+      {
+       "id": "TB3",
+       "type": "fridge",
+       "module": "TC1",
+       "dimensions": "600 × 1600 × 620"
+      }
+     ]
+    },
+    "ops": [
+     {
+      "op": "update-appliance",
+      "id": "TB2",
+      "model": "hood-wall-90",
+      "changes": {
+       "module": "TD1"
+      }
+     },
+     {
+      "op": "remove",
+      "id": "TN1",
+      "closeGap": false
+     },
+     {
+      "op": "remove",
+      "id": "TT1",
+      "closeGap": false
+     }
+    ],
+    "appliance": "TB2",
+    "model": "hood-insert-60"
+   },
+   "expected": {
+    "ops": [
+     {
+      "op": "add",
+      "closeGap": false,
+      "module": {
+       "id": "TT1",
+       "type": "upper-hood",
+       "name": "Tủ trên hút mùi",
+       "wall": "back",
+       "fromCorner": 0.0,
+       "width": 800.0,
+       "y": 1715.0,
+       "height": 565.0,
+       "depth": 320.0,
+       "doors": [
+        400.0,
+        400.0
+       ]
+      }
+     },
+     {
+      "op": "update-appliance",
+      "id": "TB2",
+      "model": "hood-insert-60",
+      "changes": {
+       "module": "TT1"
+      }
+     }
+    ],
+    "summary": [
+     "A hood cabinet is built over TD1 and the hood goes into it"
+    ]
+   }
+  },
+  {
+   "name": "insert refused where wall cabinets stand",
+   "input": {
+    "spec": {
+     "module": [
+      {
+       "id": "TD1",
+       "type": "base-cooktop",
+       "wall": "back",
+       "fromCorner": 0,
+       "width": 800,
+       "height": 840,
+       "depth": 580
+      },
+      {
+       "id": "TC1",
+       "type": "tall-fridge",
+       "wall": "back",
+       "fromCorner": 800,
+       "width": 700,
+       "height": 2400,
+       "depth": 640,
+       "niche": 1650
+      },
+      {
+       "id": "TT1",
+       "type": "upper-hood",
+       "wall": "back",
+       "fromCorner": 0,
+       "width": 800,
+       "y": 1665,
+       "height": 615,
+       "depth": 320
+      },
+      {
+       "id": "TN1",
+       "type": "upper-loft",
+       "wall": "back",
+       "fromCorner": 0,
+       "width": 800,
+       "y": 2280,
+       "height": 330,
+       "depth": 320
+      }
+     ],
+     "appliances": [
+      {
+       "id": "TB1",
+       "type": "cooktop",
+       "module": "TD1",
+       "dimensions": "730 × 430"
+      },
+      {
+       "id": "TB2",
+       "type": "hood",
+       "module": "TT1",
+       "dimensions": "730 × 165"
+      },
+      {
+       "id": "TB3",
+       "type": "fridge",
+       "module": "TC1",
+       "dimensions": "600 × 1600 × 620"
+      }
+     ]
+    },
+    "ops": [
+     {
+      "op": "update-appliance",
+      "id": "TB2",
+      "model": "hood-wall-90",
+      "changes": {
+       "module": "TD1"
+      }
+     },
+     {
+      "op": "remove",
+      "id": "TN1",
+      "closeGap": false
+     },
+     {
+      "op": "remove",
+      "id": "TT1",
+      "closeGap": false
+     },
+     {
+      "op": "add",
+      "closeGap": false,
+      "module": {
+       "id": "TT9",
+       "type": "upper",
+       "wall": "back",
+       "fromCorner": 0,
+       "width": 800,
+       "y": 1530,
+       "height": 700,
+       "depth": 320
+      }
+     }
+    ],
+    "appliance": "TB2",
+    "model": "hood-insert-60"
+   },
+   "error": {
+    "kind": "validation",
+    "code": "model-kind-blocked"
+   }
+  },
+  {
+   "name": "fridge freestanding to integrated",
+   "input": {
+    "spec": {
+     "module": [
+      {
+       "id": "TD1",
+       "type": "base-cooktop",
+       "wall": "back",
+       "fromCorner": 0,
+       "width": 800,
+       "height": 840,
+       "depth": 580
+      },
+      {
+       "id": "TC1",
+       "type": "tall-fridge",
+       "wall": "back",
+       "fromCorner": 800,
+       "width": 700,
+       "height": 2400,
+       "depth": 640,
+       "niche": 1650
+      },
+      {
+       "id": "TT1",
+       "type": "upper-hood",
+       "wall": "back",
+       "fromCorner": 0,
+       "width": 800,
+       "y": 1665,
+       "height": 615,
+       "depth": 320
+      },
+      {
+       "id": "TN1",
+       "type": "upper-loft",
+       "wall": "back",
+       "fromCorner": 0,
+       "width": 800,
+       "y": 2280,
+       "height": 330,
+       "depth": 320
+      }
+     ],
+     "appliances": [
+      {
+       "id": "TB1",
+       "type": "cooktop",
+       "module": "TD1",
+       "dimensions": "730 × 430"
+      },
+      {
+       "id": "TB2",
+       "type": "hood",
+       "module": "TT1",
+       "dimensions": "730 × 165"
+      },
+      {
+       "id": "TB3",
+       "type": "fridge",
+       "module": "TC1",
+       "dimensions": "600 × 1600 × 620"
+      }
+     ]
+    },
+    "appliance": "TB3",
+    "model": "fridge-int-56"
+   },
+   "expected": {
+    "ops": [
+     {
+      "op": "update",
+      "id": "TC1",
+      "changes": {
+       "niche": null
+      },
+      "closeGap": false
+     },
+     {
+      "op": "update-appliance",
+      "id": "TB3",
+      "model": "fridge-int-56"
+     }
+    ],
+    "summary": [
+     "TC1 gets full-height doors in front of the fridge (no open niche)"
+    ]
+   }
+  },
+  {
+   "name": "integrated fridge too wide for its cabinet",
+   "input": {
+    "spec": {
+     "module": [
+      {
+       "id": "TD1",
+       "type": "base-cooktop",
+       "wall": "back",
+       "fromCorner": 0,
+       "width": 800,
+       "height": 840,
+       "depth": 580
+      },
+      {
+       "id": "TC1",
+       "type": "tall-fridge",
+       "wall": "back",
+       "fromCorner": 800,
+       "width": 700,
+       "height": 2400,
+       "depth": 640,
+       "niche": 1650
+      },
+      {
+       "id": "TT1",
+       "type": "upper-hood",
+       "wall": "back",
+       "fromCorner": 0,
+       "width": 800,
+       "y": 1665,
+       "height": 615,
+       "depth": 320
+      },
+      {
+       "id": "TN1",
+       "type": "upper-loft",
+       "wall": "back",
+       "fromCorner": 0,
+       "width": 800,
+       "y": 2280,
+       "height": 330,
+       "depth": 320
+      }
+     ],
+     "appliances": [
+      {
+       "id": "TB1",
+       "type": "cooktop",
+       "module": "TD1",
+       "dimensions": "730 × 430"
+      },
+      {
+       "id": "TB2",
+       "type": "hood",
+       "module": "TT1",
+       "dimensions": "730 × 165"
+      },
+      {
+       "id": "TB3",
+       "type": "fridge",
+       "module": "TC1",
+       "dimensions": "600 × 1600 × 620"
+      }
+     ]
+    },
+    "ops": [
+     {
+      "op": "update",
+      "id": "TC1",
+      "changes": {
+       "width": 580
+      },
+      "closeGap": false
+     }
+    ],
+    "appliance": "TB3",
+    "model": "fridge-int-56"
+   },
+   "error": {
+    "kind": "validation",
+    "code": "model-kind-blocked"
+   }
+  }
+ ]
+}

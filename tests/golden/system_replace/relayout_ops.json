@@ -1,0 +1,630 @@
+{
+ "function": "system_replace.relayout_ops",
+ "cases": [
+  {
+   "name": "keeps the double sink, widening its cabinet from the plain one next to it",
+   "input": {
+    "spec": {
+     "runs": [
+      {
+       "id": "R1",
+       "x": 0,
+       "z": 0,
+       "yaw": 0
+      }
+     ],
+     "module": [
+      {
+       "id": "TD1",
+       "type": "base",
+       "wall": "island",
+       "run": "R1",
+       "fromCorner": 0,
+       "width": 600,
+       "height": 840,
+       "depth": 580
+      },
+      {
+       "id": "TD2",
+       "type": "base-sink",
+       "wall": "island",
+       "run": "R1",
+       "fromCorner": 600,
+       "width": 830,
+       "height": 840,
+       "depth": 580
+      },
+      {
+       "id": "TD3",
+       "type": "base",
+       "wall": "island",
+       "run": "R1",
+       "fromCorner": 1430,
+       "width": 420,
+       "height": 840,
+       "depth": 580
+      },
+      {
+       "id": "TT1",
+       "type": "upper",
+       "wall": "island",
+       "run": "R1",
+       "fromCorner": 0,
+       "width": 600,
+       "y": 1530,
+       "height": 700,
+       "depth": 320
+      }
+     ],
+     "appliances": [
+      {
+       "id": "TB1",
+       "type": "sink",
+       "module": "TD2",
+       "model": "sink-double-82",
+       "dimensions": "820 × 450"
+      }
+     ]
+    },
+    "system": "auto-R1",
+    "laid": {
+     "R1": [
+      {
+       "type": "base",
+       "s": 0,
+       "width": 600,
+       "y": 0,
+       "height": 840,
+       "depth": 580
+      },
+      {
+       "type": "base-sink",
+       "s": 600,
+       "width": 800,
+       "y": 0,
+       "height": 840,
+       "depth": 580,
+       "appliances": [
+        {
+         "type": "sink",
+         "name": "Chậu",
+         "dimensions": "760 × 430",
+         "center": 1000
+        }
+       ]
+      },
+      {
+       "type": "base",
+       "s": 1400,
+       "width": 450,
+       "y": 0,
+       "height": 840,
+       "depth": 580
+      },
+      {
+       "type": "upper",
+       "s": 0,
+       "width": 600,
+       "y": 1530,
+       "height": 700,
+       "depth": 320
+      }
+     ]
+    },
+    "sentence": "thêm tủ nóc"
+   },
+   "expected": {
+    "ops": [
+     {
+      "op": "add",
+      "closeGap": false,
+      "module": {
+       "type": "base",
+       "wall": "island",
+       "run": "R1",
+       "fromCorner": 0.0,
+       "width": 600.0,
+       "y": 0.0,
+       "height": 840.0,
+       "depth": 580.0
+      }
+     },
+     {
+      "op": "add",
+      "closeGap": false,
+      "module": {
+       "type": "upper",
+       "wall": "island",
+       "run": "R1",
+       "fromCorner": 0.0,
+       "width": 600.0,
+       "y": 1530.0,
+       "height": 700.0,
+       "depth": 320.0
+      }
+     },
+     {
+      "op": "add",
+      "closeGap": false,
+      "module": {
+       "type": "base-sink",
+       "wall": "island",
+       "run": "R1",
+       "fromCorner": 600.0,
+       "width": 830.0,
+       "y": 0.0,
+       "height": 840.0,
+       "depth": 580.0,
+       "appliances": [
+        {
+         "type": "sink",
+         "name": "Chậu đôi inox 82 cm",
+         "dimensions": "820 × 450",
+         "center": 1015.0,
+         "model": "sink-double-82",
+         "size": {
+          "w": 820,
+          "d": 450,
+          "h": 220
+         },
+         "mount": "topmount",
+         "cutout": {
+          "w": 790,
+          "d": 420
+         }
+        }
+       ]
+      }
+     },
+     {
+      "op": "add",
+      "closeGap": false,
+      "module": {
+       "type": "base",
+       "wall": "island",
+       "run": "R1",
+       "fromCorner": 1430.0,
+       "width": 420.0,
+       "y": 0.0,
+       "height": 840.0,
+       "depth": 580.0
+      }
+     },
+     {
+      "op": "remove",
+      "id": "TD1",
+      "closeGap": false
+     },
+     {
+      "op": "remove",
+      "id": "TD2",
+      "closeGap": false
+     },
+     {
+      "op": "remove",
+      "id": "TD3",
+      "closeGap": false
+     },
+     {
+      "op": "remove",
+      "id": "TT1",
+      "closeGap": false
+     }
+    ],
+    "summary": [
+     "Run R1: 4 cabinets over 1850 mm",
+     "Chậu đôi inox 82 cm kept"
+    ]
+   }
+  },
+  {
+   "name": "a sentence naming the sink takes the default one",
+   "input": {
+    "spec": {
+     "runs": [
+      {
+       "id": "R1",
+       "x": 0,
+       "z": 0,
+       "yaw": 0
+      }
+     ],
+     "module": [
+      {
+       "id": "TD1",
+       "type": "base",
+       "wall": "island",
+       "run": "R1",
+       "fromCorner": 0,
+       "width": 600,
+       "height": 840,
+       "depth": 580
+      },
+      {
+       "id": "TD2",
+       "type": "base-sink",
+       "wall": "island",
+       "run": "R1",
+       "fromCorner": 600,
+       "width": 830,
+       "height": 840,
+       "depth": 580
+      },
+      {
+       "id": "TD3",
+       "type": "base",
+       "wall": "island",
+       "run": "R1",
+       "fromCorner": 1430,
+       "width": 420,
+       "height": 840,
+       "depth": 580
+      },
+      {
+       "id": "TT1",
+       "type": "upper",
+       "wall": "island",
+       "run": "R1",
+       "fromCorner": 0,
+       "width": 600,
+       "y": 1530,
+       "height": 700,
+       "depth": 320
+      }
+     ],
+     "appliances": [
+      {
+       "id": "TB1",
+       "type": "sink",
+       "module": "TD2",
+       "model": "sink-double-82",
+       "dimensions": "820 × 450"
+      }
+     ]
+    },
+    "system": "auto-R1",
+    "laid": {
+     "R1": [
+      {
+       "type": "base",
+       "s": 0,
+       "width": 600,
+       "y": 0,
+       "height": 840,
+       "depth": 580
+      },
+      {
+       "type": "base-sink",
+       "s": 600,
+       "width": 800,
+       "y": 0,
+       "height": 840,
+       "depth": 580,
+       "appliances": [
+        {
+         "type": "sink",
+         "name": "Chậu",
+         "dimensions": "760 × 430",
+         "center": 1000
+        }
+       ]
+      },
+      {
+       "type": "base",
+       "s": 1400,
+       "width": 450,
+       "y": 0,
+       "height": 840,
+       "depth": 580
+      },
+      {
+       "type": "upper",
+       "s": 0,
+       "width": 600,
+       "y": 1530,
+       "height": 700,
+       "depth": 320
+      }
+     ]
+    },
+    "sentence": "đổi sang chậu đơn"
+   },
+   "expected": {
+    "ops": [
+     {
+      "op": "add",
+      "closeGap": false,
+      "module": {
+       "type": "base",
+       "wall": "island",
+       "run": "R1",
+       "fromCorner": 0.0,
+       "width": 600.0,
+       "y": 0.0,
+       "height": 840.0,
+       "depth": 580.0
+      }
+     },
+     {
+      "op": "add",
+      "closeGap": false,
+      "module": {
+       "type": "upper",
+       "wall": "island",
+       "run": "R1",
+       "fromCorner": 0.0,
+       "width": 600.0,
+       "y": 1530.0,
+       "height": 700.0,
+       "depth": 320.0
+      }
+     },
+     {
+      "op": "add",
+      "closeGap": false,
+      "module": {
+       "type": "base-sink",
+       "wall": "island",
+       "run": "R1",
+       "fromCorner": 600.0,
+       "width": 800.0,
+       "y": 0.0,
+       "height": 840.0,
+       "depth": 580.0,
+       "appliances": [
+        {
+         "type": "sink",
+         "name": "Chậu",
+         "dimensions": "760 × 430",
+         "center": 1000
+        }
+       ]
+      }
+     },
+     {
+      "op": "add",
+      "closeGap": false,
+      "module": {
+       "type": "base",
+       "wall": "island",
+       "run": "R1",
+       "fromCorner": 1400.0,
+       "width": 450.0,
+       "y": 0.0,
+       "height": 840.0,
+       "depth": 580.0
+      }
+     },
+     {
+      "op": "remove",
+      "id": "TD1",
+      "closeGap": false
+     },
+     {
+      "op": "remove",
+      "id": "TD2",
+      "closeGap": false
+     },
+     {
+      "op": "remove",
+      "id": "TD3",
+      "closeGap": false
+     },
+     {
+      "op": "remove",
+      "id": "TT1",
+      "closeGap": false
+     }
+    ],
+    "summary": [
+     "Run R1: 4 cabinets over 1850 mm"
+    ]
+   }
+  },
+  {
+   "name": "wall cabinets refused",
+   "input": {
+    "spec": {
+     "runs": [
+      {
+       "id": "R1",
+       "x": 0,
+       "z": 0,
+       "yaw": 0
+      }
+     ],
+     "module": [
+      {
+       "id": "TD1",
+       "type": "base",
+       "wall": "island",
+       "run": "R1",
+       "fromCorner": 0,
+       "width": 600,
+       "height": 840,
+       "depth": 580
+      },
+      {
+       "id": "TD2",
+       "type": "base-sink",
+       "wall": "island",
+       "run": "R1",
+       "fromCorner": 600,
+       "width": 830,
+       "height": 840,
+       "depth": 580
+      },
+      {
+       "id": "TD3",
+       "type": "base",
+       "wall": "island",
+       "run": "R1",
+       "fromCorner": 1430,
+       "width": 420,
+       "height": 840,
+       "depth": 580
+      },
+      {
+       "id": "TT1",
+       "type": "upper",
+       "wall": "island",
+       "run": "R1",
+       "fromCorner": 0,
+       "width": 600,
+       "y": 1530,
+       "height": 700,
+       "depth": 320
+      }
+     ],
+     "appliances": [
+      {
+       "id": "TB1",
+       "type": "sink",
+       "module": "TD2",
+       "model": "sink-double-82",
+       "dimensions": "820 × 450"
+      }
+     ]
+    },
+    "system": "auto-R1",
+    "laid": {
+     "R1": [
+      {
+       "type": "base",
+       "s": 0,
+       "width": 600,
+       "y": 0,
+       "height": 840,
+       "depth": 580
+      },
+      {
+       "type": "base-sink",
+       "s": 600,
+       "width": 800,
+       "y": 0,
+       "height": 840,
+       "depth": 580,
+       "appliances": [
+        {
+         "type": "sink",
+         "name": "Chậu",
+         "dimensions": "760 × 430",
+         "center": 1000
+        }
+       ]
+      },
+      {
+       "type": "base",
+       "s": 1400,
+       "width": 450,
+       "y": 0,
+       "height": 840,
+       "depth": 580
+      },
+      {
+       "type": "upper",
+       "s": 0,
+       "width": 600,
+       "y": 1530,
+       "height": 700,
+       "depth": 320
+      }
+     ]
+    },
+    "refused": [
+     "upper"
+    ]
+   },
+   "expected": {
+    "ops": [
+     {
+      "op": "add",
+      "closeGap": false,
+      "module": {
+       "type": "base",
+       "wall": "island",
+       "run": "R1",
+       "fromCorner": 0.0,
+       "width": 600.0,
+       "y": 0.0,
+       "height": 840.0,
+       "depth": 580.0
+      }
+     },
+     {
+      "op": "add",
+      "closeGap": false,
+      "module": {
+       "type": "base-sink",
+       "wall": "island",
+       "run": "R1",
+       "fromCorner": 600.0,
+       "width": 830.0,
+       "y": 0.0,
+       "height": 840.0,
+       "depth": 580.0,
+       "appliances": [
+        {
+         "type": "sink",
+         "name": "Chậu đôi inox 82 cm",
+         "dimensions": "820 × 450",
+         "center": 1015.0,
+         "model": "sink-double-82",
+         "size": {
+          "w": 820,
+          "d": 450,
+          "h": 220
+         },
+         "mount": "topmount",
+         "cutout": {
+          "w": 790,
+          "d": 420
+         }
+        }
+       ]
+      }
+     },
+     {
+      "op": "add",
+      "closeGap": false,
+      "module": {
+       "type": "base",
+       "wall": "island",
+       "run": "R1",
+       "fromCorner": 1430.0,
+       "width": 420.0,
+       "y": 0.0,
+       "height": 840.0,
+       "depth": 580.0
+      }
+     },
+     {
+      "op": "remove",
+      "id": "TD1",
+      "closeGap": false
+     },
+     {
+      "op": "remove",
+      "id": "TD2",
+      "closeGap": false
+     },
+     {
+      "op": "remove",
+      "id": "TD3",
+      "closeGap": false
+     },
+     {
+      "op": "remove",
+      "id": "TT1",
+      "closeGap": false
+     }
+    ],
+    "summary": [
+     "Run R1: 3 cabinets over 1850 mm",
+     "Chậu đôi inox 82 cm kept",
+     "1 upper cabinets left out: the sentence asks so"
+    ]
+   }
+  }
+ ]
+}

@@ -1,0 +1,266 @@
+{
+ "function": "appliance_models.candidates",
+ "cases": [
+  {
+   "name": "every other hood",
+   "input": {
+    "spec": {
+     "module": [
+      {
+       "id": "TD1",
+       "type": "base-cooktop",
+       "wall": "back",
+       "fromCorner": 0,
+       "width": 800,
+       "height": 840,
+       "depth": 580
+      },
+      {
+       "id": "TC1",
+       "type": "tall-fridge",
+       "wall": "back",
+       "fromCorner": 800,
+       "width": 700,
+       "height": 2400,
+       "depth": 640,
+       "niche": 1650
+      },
+      {
+       "id": "TT1",
+       "type": "upper-hood",
+       "wall": "back",
+       "fromCorner": 0,
+       "width": 800,
+       "y": 1665,
+       "height": 615,
+       "depth": 320
+      },
+      {
+       "id": "TN1",
+       "type": "upper-loft",
+       "wall": "back",
+       "fromCorner": 0,
+       "width": 800,
+       "y": 2280,
+       "height": 330,
+       "depth": 320
+      }
+     ],
+     "appliances": [
+      {
+       "id": "TB1",
+       "type": "cooktop",
+       "module": "TD1",
+       "dimensions": "730 × 430"
+      },
+      {
+       "id": "TB2",
+       "type": "hood",
+       "module": "TT1",
+       "dimensions": "730 × 165"
+      },
+      {
+       "id": "TB3",
+       "type": "fridge",
+       "module": "TC1",
+       "dimensions": "600 × 1600 × 620"
+      }
+     ]
+    },
+    "appliance": "TB2"
+   },
+   "expected": {
+    "models": [
+     [
+      "hood-insert-60",
+      "check"
+     ],
+     [
+      "hood-wall-90",
+      "check"
+     ],
+     [
+      "hood-island-90",
+      "check"
+     ]
+    ]
+   }
+  },
+  {
+   "name": "the sentence filters: gas hobs",
+   "input": {
+    "spec": {
+     "module": [
+      {
+       "id": "TD1",
+       "type": "base-cooktop",
+       "wall": "back",
+       "fromCorner": 0,
+       "width": 800,
+       "height": 840,
+       "depth": 580
+      },
+      {
+       "id": "TC1",
+       "type": "tall-fridge",
+       "wall": "back",
+       "fromCorner": 800,
+       "width": 700,
+       "height": 2400,
+       "depth": 640,
+       "niche": 1650
+      },
+      {
+       "id": "TT1",
+       "type": "upper-hood",
+       "wall": "back",
+       "fromCorner": 0,
+       "width": 800,
+       "y": 1665,
+       "height": 615,
+       "depth": 320
+      },
+      {
+       "id": "TN1",
+       "type": "upper-loft",
+       "wall": "back",
+       "fromCorner": 0,
+       "width": 800,
+       "y": 2280,
+       "height": 330,
+       "depth": 320
+      }
+     ],
+     "appliances": [
+      {
+       "id": "TB1",
+       "type": "cooktop",
+       "module": "TD1",
+       "dimensions": "730 × 430"
+      },
+      {
+       "id": "TB2",
+       "type": "hood",
+       "module": "TT1",
+       "dimensions": "730 × 165"
+      },
+      {
+       "id": "TB3",
+       "type": "fridge",
+       "module": "TC1",
+       "dimensions": "600 × 1600 × 620"
+      }
+     ]
+    },
+    "appliance": "TB1",
+    "text": "đổi sang bếp gas"
+   },
+   "expected": {
+    "models": [
+     [
+      "hob-mix-2z-73",
+      "ok"
+     ],
+     [
+      "hob-gas-2b-75",
+      "ok"
+     ],
+     [
+      "hob-gas-3b-86",
+      "bad"
+     ]
+    ]
+   }
+  },
+  {
+   "name": "a sentence that filters out everything gives every model",
+   "input": {
+    "spec": {
+     "module": [
+      {
+       "id": "TD1",
+       "type": "base-cooktop",
+       "wall": "back",
+       "fromCorner": 0,
+       "width": 800,
+       "height": 840,
+       "depth": 580
+      },
+      {
+       "id": "TC1",
+       "type": "tall-fridge",
+       "wall": "back",
+       "fromCorner": 800,
+       "width": 700,
+       "height": 2400,
+       "depth": 640,
+       "niche": 1650
+      },
+      {
+       "id": "TT1",
+       "type": "upper-hood",
+       "wall": "back",
+       "fromCorner": 0,
+       "width": 800,
+       "y": 1665,
+       "height": 615,
+       "depth": 320
+      },
+      {
+       "id": "TN1",
+       "type": "upper-loft",
+       "wall": "back",
+       "fromCorner": 0,
+       "width": 800,
+       "y": 2280,
+       "height": 330,
+       "depth": 320
+      }
+     ],
+     "appliances": [
+      {
+       "id": "TB1",
+       "type": "cooktop",
+       "module": "TD1",
+       "dimensions": "730 × 430"
+      },
+      {
+       "id": "TB2",
+       "type": "hood",
+       "module": "TT1",
+       "dimensions": "730 × 165"
+      },
+      {
+       "id": "TB3",
+       "type": "fridge",
+       "module": "TC1",
+       "dimensions": "600 × 1600 × 620"
+      }
+     ]
+    },
+    "appliance": "TB3",
+    "text": "màu tím"
+   },
+   "expected": {
+    "models": [
+     [
+      "fridge-1d-60",
+      "ok"
+     ],
+     [
+      "fridge-int-56",
+      "check"
+     ],
+     [
+      "fridge-2d-60-tall",
+      "bad"
+     ],
+     [
+      "fridge-sbs-91",
+      "bad"
+     ]
+    ]
+   }
+  }
+ ]
+}

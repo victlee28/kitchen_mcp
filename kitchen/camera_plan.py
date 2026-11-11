@@ -147,7 +147,8 @@ def _best(face: Face, directions: list[Pt], width_factor: float, room: list[Pt] 
     """Ranked: never inside or against a cabinet or another solid (stairs, columns, furniture); without a room, fewest target points seen
     across another run's cabinets (they cannot be hidden); a lens no wider than ``V_NATURAL``; inside the room (else outside a wall, the
     walls in the way hidden — the user's choice of 11/11/2026: a wide lens first, the wall only when even that is not enough); fewest solids
-    to hide; the narrowest lens among the too-wide ones; farthest back."""
+    to hide; the narrowest lens among the too-wide ones; inside, farthest back (least distortion), outside the wall, nearest to it (the
+    picture stays a view into the room, not from across the next one)."""
     targets = face_targets(face)
     # seen over a run is still across it; only weighed where no room guides the camera (keeps the planned views of rooms as they were)
     others = [] if room else [Obstacle(b.id, b.kind, b.outline, -math.inf, math.inf) for b in bodies if b.kind != f"cabinet:{face.run}"]
@@ -164,7 +165,7 @@ def _best(face: Face, directions: list[Pt], width_factor: float, room: list[Pt] 
             hidden = blockers(eye, targets, obstacles)
             behind = sum(any(blocks(eye, t, b) for b in others) for t in targets)
             wide = fov > V_NATURAL
-            key = (bad, behind, wide, outside, len(hidden), fov if wide else 0.0, -dist)
+            key = (bad, behind, wide, outside, len(hidden), fov if wide else 0.0, dist if outside else -dist)
             if best is None or key < best[0]:
                 best = (key, pos, fov, hidden)
         dist -= STEP

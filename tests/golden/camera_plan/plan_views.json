@@ -1,0 +1,307 @@
+{
+ "function": "camera_plan.plan_views",
+ "cases": [
+  {
+   "name": "roomy: inside, a natural lens",
+   "input": {
+    "faces": [
+     {
+      "key": "run-R1",
+      "name": "R1",
+      "center": [
+       -2000,
+       600
+      ],
+      "normal": [
+       0,
+       1
+      ],
+      "length": 2400,
+      "height": 2200,
+      "run": "R1"
+     }
+    ],
+    "room": [
+     [
+      -4000,
+      0
+     ],
+     [
+      0,
+      0
+     ],
+     [
+      0,
+      3200
+     ],
+     [
+      -4000,
+      3200
+     ]
+    ],
+    "obstacles": [
+     {
+      "id": "STRUCT-W",
+      "kind": "wall",
+      "outline": [
+       [
+        -4000,
+        3200
+       ],
+       [
+        0,
+        3200
+       ],
+       [
+        0,
+        3400
+       ],
+       [
+        -4000,
+        3400
+       ]
+      ],
+      "y0": 0,
+      "y1": 2700
+     }
+    ]
+   },
+   "expected": {
+    "views": {
+     "run-R1": {
+      "position": [
+       -2.0,
+       1.6,
+       2.85
+      ],
+      "lookAt": [
+       -2.0,
+       1.1,
+       0.6
+      ],
+      "verticalFov": 56.5,
+      "hide": []
+     },
+     "run-R1-oblique": {
+      "position": [
+       -0.423,
+       1.6,
+       2.853
+      ],
+      "lookAt": [
+       -2.0,
+       1.1,
+       0.6
+      ],
+      "verticalFov": 47.5,
+      "hide": []
+     }
+    }
+   }
+  },
+  {
+   "name": "narrow: outside the wall, the wall hidden",
+   "input": {
+    "faces": [
+     {
+      "key": "run-R1",
+      "name": "R1",
+      "center": [
+       -2000,
+       600
+      ],
+      "normal": [
+       0,
+       1
+      ],
+      "length": 2400,
+      "height": 2200,
+      "run": "R1"
+     }
+    ],
+    "room": [
+     [
+      -4000,
+      0
+     ],
+     [
+      0,
+      0
+     ],
+     [
+      0,
+      1500
+     ],
+     [
+      -4000,
+      1500
+     ]
+    ],
+    "obstacles": [
+     {
+      "id": "STRUCT-W2",
+      "kind": "wall",
+      "outline": [
+       [
+        -4000,
+        1500
+       ],
+       [
+        0,
+        1500
+       ],
+       [
+        0,
+        1700
+       ],
+       [
+        -4000,
+        1700
+       ]
+      ],
+      "y0": 0,
+      "y1": 2700
+     }
+    ]
+   },
+   "expected": {
+    "views": {
+     "run-R1": {
+      "position": [
+       -2.0,
+       1.6,
+       2.85
+      ],
+      "lookAt": [
+       -2.0,
+       1.1,
+       0.6
+      ],
+      "verticalFov": 56.5,
+      "hide": [
+       "STRUCT-W2"
+      ]
+     },
+     "run-R1-oblique": {
+      "position": [
+       -0.709,
+       1.6,
+       2.443
+      ],
+      "lookAt": [
+       -2.0,
+       1.1,
+       0.6
+      ],
+      "verticalFov": 56.5,
+      "hide": [
+       "STRUCT-W2"
+      ]
+     }
+    }
+   }
+  },
+  {
+   "name": "outside the room: never in a stair",
+   "input": {
+    "faces": [
+     {
+      "key": "run-R7",
+      "name": "R7",
+      "center": [
+       9000,
+       2300
+      ],
+      "normal": [
+       -1,
+       0
+      ],
+      "length": 1900,
+      "height": 870,
+      "run": "R7"
+     }
+    ],
+    "room": [
+     [
+      -4000,
+      0
+     ],
+     [
+      0,
+      0
+     ],
+     [
+      0,
+      3500
+     ],
+     [
+      -4000,
+      3500
+     ]
+    ],
+    "obstacles": [
+     {
+      "id": "STRUCT-stair",
+      "kind": "stair",
+      "outline": [
+       [
+        6000,
+        1000
+       ],
+       [
+        8200,
+        1000
+       ],
+       [
+        8200,
+        3600
+       ],
+       [
+        6000,
+        3600
+       ]
+      ],
+      "y0": 0,
+      "y1": 1800
+     }
+    ]
+   },
+   "expected": {
+    "views": {
+     "run-R7": {
+      "position": [
+       3.5,
+       1.6,
+       2.3
+      ],
+      "lookAt": [
+       9.0,
+       0.45,
+       2.3
+      ],
+      "verticalFov": 40.0,
+      "hide": [
+       "STRUCT-stair"
+      ]
+     },
+     "run-R7-oblique": {
+      "position": [
+       4.495,
+       1.6,
+       5.455
+      ],
+      "lookAt": [
+       9.0,
+       0.45,
+       2.3
+      ],
+      "verticalFov": 40.0,
+      "hide": [
+       "STRUCT-stair"
+      ]
+     }
+    }
+   }
+  }
+ ]
+}

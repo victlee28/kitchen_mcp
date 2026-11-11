@@ -17,6 +17,7 @@ from kitchen.spec import KitchenSpec  # noqa: E402
 from kitchen import edit, floorplan, geometry, layers, moldings, numeric, proposal, rules, run_line, runs, structure_mesh  # noqa: E402
 from kitchen.recognition import build_draft, build_layout, choose_recognizer, gemini_wire, recognizer_wire, runs_from_draft  # noqa: E402
 from kitchen import intent, run_template, tv_system, vocab  # noqa: E402
+from kitchen import appliance_kind, appliance_models, camera_plan, system_replace, wall_line  # noqa: E402
 from kitchen.placement import Placement  # noqa: E402
 from kitchen.spec import load_spec, to_data  # noqa: E402
 
@@ -208,6 +209,59 @@ def vocab_to_english(i):
     return {"english": vocab.to_english(i["text"]), "color": vocab.color(i["text"])}
 
 
+def _app(spec, i):
+    return next(a for a in spec.appliances if a.id == i["appliance"])
+
+
+def appliance_kind_plan(i):
+    spec = _spec_after(i)
+    ops, summary = appliance_kind.plan(spec, _app(spec, i), appliance_models.model(i["model"]))
+    return {"ops": ops, "summary": summary}
+
+
+def appliance_models_fit(i):
+    spec = _spec_after(i)
+    status, reasons = appliance_models.fit(spec, _app(spec, i), appliance_models.model(i["model"]))
+    return {"status": status, "reasons": reasons}
+
+
+def appliance_models_candidates(i):
+    spec = _spec_after(i)
+    return {"models": [[c["id"], c["status"]] for c in appliance_models.candidates(spec, _app(spec, i), i.get("text", ""))]}
+
+
+def system_replace_relayout_ops(i):
+    """``laid``: {run: [modules]}; ``sentence`` decides which appliance models are kept (``kept_models``)."""
+    spec = _spec_after(i)
+    mods = system_replace.members(spec, i["system"])
+    ops, summary = system_replace.relayout_ops(spec, mods, i["laid"], i.get("fronts", {}), frozenset(i.get("asked", [])),
+                                               frozenset(i.get("refused", [])), system_replace.kept_models(spec, mods, i.get("sentence", "")))
+    return {"ops": ops, "summary": summary}
+
+
+def _pts(xs):
+    return [(float(p[0]), float(p[1])) for p in xs]
+
+
+def wall_line_replace_lines(i):
+    walls = [seg for poly in i["walls"] for seg in wall_line.segments(_pts(poly))]
+    r = wall_line.replace_lines(_pts(i["object"]), walls, i.get("backEdge"))
+    if r["status"] == "choose-edge":
+        return {"status": "choose-edge", "edges": [[e.index, e.length, e.gap] for e in r["edges"]]}
+    return {"status": "ok", "runs": [[list(p.a), list(p.b), list(p.doors), p.depth, p.edge] for p in r["runs"]]}
+
+
+def camera_plan_plan_views(i):
+    faces = [camera_plan.Face(f["key"], f["name"], tuple(f["center"]), tuple(f["normal"]), f["length"], f["height"], f.get("run", ""))
+             for f in i["faces"]]
+    obs = [camera_plan.Obstacle(o["id"], o["kind"], tuple(_pts(o["outline"])), o["y0"], o["y1"]) for o in i.get("obstacles", [])]
+    bodies = [camera_plan.Obstacle(o["id"], o["kind"], tuple(_pts(o["outline"])), o["y0"], o["y1"]) for o in i.get("bodies", [])]
+    room = _pts(i["room"]) if i.get("room") else None
+    views = camera_plan.plan_views(faces, room, obs, bodies)
+    return {"views": {k: {"position": list(v["position"]), "lookAt": list(v["lookAt"]), "verticalFov": v["verticalFov"], "hide": v["hide"]}
+                      for k, v in sorted(views.items())}}
+
+
 FUNCTIONS = {
     "placement.to_room": placement_to_room,
     "placement.to_kitchen": placement_to_kitchen,
@@ -240,4 +294,10 @@ FUNCTIONS = {
     "recognition.recognizer_wire.job_progress": recognizer_wire_job_progress,
     "tv_system.layout": tv_system_layout,
     "vocab.to_english": vocab_to_english,
+    "appliance_kind.plan": appliance_kind_plan,
+    "appliance_models.fit": appliance_models_fit,
+    "appliance_models.candidates": appliance_models_candidates,
+    "system_replace.relayout_ops": system_replace_relayout_ops,
+    "wall_line.replace_lines": wall_line_replace_lines,
+    "camera_plan.plan_views": camera_plan_plan_views,
 }
