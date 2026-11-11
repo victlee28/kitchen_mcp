@@ -4,8 +4,10 @@ import { partIndex, shiftGroupId, ctrlIds, toggleIds, layerIdFor, partitionByTyp
 import { $, el } from './dom.js';
 import { api, createStatus } from './api-client.js';
 import { styleFromOptions, styleFromValue } from './assist-logic.js';
-import { modelChoices, APPLIANCE_VI } from './menu-logic.js';
+import { modelChoices } from './menu-logic.js';
+import './boot.js';
 import { PALETTES } from './palette-client.js';
+import { applianceName } from './i18n.js';
 const S = { id: null, view: null, data: null, layer: null, job: null, jobs: [], poll: null, maskImg: null, tasks: [], maskCache: {}, sel: [], key: '' };
 const PALETTE = (PALETTES.zone || []).map((z) => z.rgb).concat(PALETTES.zone?.length ? [] : [[255, 0, 0]]);   // numbered edit zones (catalog palette "zone")
 const MAX_TASKS = 8;
@@ -96,7 +98,7 @@ async function renderSwap(layer) {
     status(`Đã đổi ${id} sang ${preview.aiFacts?.name || pick.value}. Ảnh nền sẽ được render lại; bấm "Tạo job sửa" để AI vẽ mẫu mới`, 'ok');
     out.replaceChildren(); apply.hidden = true;
   }));
-  box.append(el('b', { textContent: `Đổi mẫu ${APPLIANCE_VI[layer.type] || layer.type} ${id}` }),
+  box.append(el('b', { textContent: `Đổi mẫu ${applianceName(layer.type)} ${id}` }),
     el('label', {}, 'Mẫu', pick), el('label', { class: 'inline' }, widen, ' Nới tủ đỡ nếu không vừa'),
     el('button', { type: 'button', class: 'ghost', onclick: show }, 'Xem trước'), apply, out);
 }

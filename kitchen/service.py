@@ -13,7 +13,7 @@ from .intent import KitchenTemplate as KitchenTemplate
 from .spec import Common, KitchenSpec, LaidModule, Room, Wall, dump_spec, load_spec, to_data
 from .store import ConflictError, Store
 from . import legacy as legacy_schema
-from . import builtin, catalog as cat, catalog_files, i18n
+from . import builtin, catalog as cat, catalog_csv, catalog_files, i18n
 from .config import Config
 from .errors import InvalidInput, NotFound
 ROOT = Path(__file__).resolve().parent.parent
@@ -175,6 +175,33 @@ class KitchenService:
                 self.catalog_put(kind, item.get('id'), item.get('data') or {}, role, bool(item.get('disabled')))
                 done += 1
         return {'imported': done}
+
+    def material_preview(self, text: Any) -> dict:
+        """How a material name is understood with the merged catalog: English for the prompts, display colour, 3D look."""
+        from . import vocab
+        name = str(text or '')[:200]
+        c = self.catalog()
+        return {'text': name, 'english': vocab.to_english(name, c), 'color': vocab.color(name, c), 'look': threejs_export.material_look(name, c)}
+
+    def catalog_csv(self, kind: str) -> dict:
+        """The merged items of a kind as CSV (one row per item; see ``catalog_csv``)."""
+        self._kind(kind)
+        return {'kind': kind, 'csv': catalog_csv.to_csv((i.id, i.data) for i in self.catalog().all(kind))}
+
+    def catalog_csv_import(self, kind: str, text: Any, role: str) -> dict:
+        """Write every row of a CSV into the role's layer. Every row is checked (schema, permission) before the first is written."""
+        info = self._kind(kind)
+        cat.check_write(info, role)
+        if not isinstance(text, str):
+            raise InvalidInput("csv must be text", code="catalog-bad-csv")
+        rows = catalog_csv.from_csv(text, self.builtin.schemas[kind])
+        problems = [f"{id or '(no id)'}: {e}" for id, data in rows for e in (catalog_files.schema_errors(self.builtin.schemas[kind], data)
+                                                                            if id and self.ID_PATTERN.match(id) else ["bad id"])]
+        if problems:
+            raise catalog_files.CatalogInvalid('; '.join(problems[:10]))
+        for id, data in rows:
+            self.catalog_put(kind, id, data, role)
+        return {'kind': kind, 'imported': len(rows)}
 
     def _summary(self, design_id: str, revision: int, spec: KitchenSpec, **extra) -> dict:
         """Build the established API summary for a design revision."""

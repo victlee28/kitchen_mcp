@@ -23,10 +23,27 @@ const labelOf = (key, prop) => (prop && prop['x-label'] ? pick(prop['x-label']) 
 const isLocalized = (p) => p && p.type === 'object' && p.properties && 'vi' in p.properties && Object.keys(p.properties).every((k) => ['vi', 'en'].includes(k));
 const resolve = (schema, p) => (p && p.$ref && p.$ref.startsWith('#/$defs/') ? schema.$defs?.[p.$ref.slice(8)] || p : p);
 
+const swatch = (hex) => el('span', { style: `display:inline-block;width:12px;height:12px;background:${hex};border:1px solid #999;margin-right:4px` });
+const MATERIAL_KINDS = ['material', 'material-word', 'material-look', 'style'];
+
 function summary(data) {
-  const name = data.name ? pick(data.name) : '';
-  const hex = typeof data.hex === 'string' ? data.hex : null;
-  return el('span', {}, ...(hex ? [el('span', { style: `display:inline-block;width:12px;height:12px;background:${hex};border:1px solid #999;margin-right:4px` })] : []), name);
+  const name = data.name ? pick(data.name) : (data.word || data.text || (data.any ? data.any.join(', ') || '*' : ''));
+  const hex = typeof data.hex === 'string' ? data.hex : typeof data.look?.color === 'string' ? data.look.color : null;
+  return el('span', {}, ...(hex ? [swatch(hex)] : []), name, data.en ? ` → ${data.en}` : '', data.front ? ` · ${data.front}` : '');
+}
+
+/** Try a material name against the merged catalog: the English the prompts get, the display colour and the 3D look (stage 1.7). */
+function materialTry() {
+  const input = el('input', { type: 'text', placeholder: t('catalog.tryPlaceholder'), size: 32 });
+  const out = el('span', {});
+  const run = () => guard(async () => {
+    const r = await catalog.materialPreview(input.value);
+    const look = r.look || {};
+    out.replaceChildren(swatch(look.color || '#ffffff'), `${t('catalog.tryEnglish')}: ${r.english || '—'} · ${t('catalog.tryColor')}: ${r.color || '—'} · `
+      + `${t('catalog.tryLook')}: ${look.color || ''} roughness ${look.roughness ?? '—'}${look.metalness ? ` metalness ${look.metalness}` : ''}${look.transmission ? ' glass' : ''}`);
+  });
+  input.addEventListener('change', run);
+  return el('p', { className: 'row' }, el('b', { textContent: t('catalog.try') }), input, el('button', { type: 'button', textContent: '▶', onclick: run }), out);
 }
 
 async function showKinds() {
@@ -57,6 +74,8 @@ async function showKind(kind) {
   const head = el('tr', {}, ...['catalog.id', '', '', 'catalog.version', ''].map((k) => el('th', { textContent: k ? t(k) : '' })));
   const parts = [el('h2', { textContent: listing.label }),
     listing.writable ? el('button', { textContent: t('catalog.add'), onclick: () => edit(null) }) : el('p', { className: 'muted', textContent: t('catalog.readonly') }),
+    csvTools(listing),
+    ...(MATERIAL_KINDS.includes(listing.kind) ? [materialTry()] : []),
     listing.items.length ? el('table', {}, head, ...rows) : el('p', { textContent: t('catalog.empty') })];
   if (listing.hidden.length) parts.push(el('p', { className: 'muted', textContent: t('catalog.hide') + ': ' + listing.hidden.join(', ') }));
   $('list').replaceChildren(...parts);
@@ -126,6 +145,24 @@ function edit(item) {
 async function reset(id) { await catalog.remove(current, id); say(t('catalog.deleted', { kind: listing.label, id }), 'ok'); await showKind(current); }
 async function hide(id) { await catalog.put(current, id, {}, true); await showKind(current); }
 async function undo(id) { await catalog.undo(current, id); await showKind(current); }
+
+/** CSV of the kind (every merged item; a spreadsheet can edit it) and, for a writable kind, reading one back into the role's layer. */
+function csvTools(listing) {
+  const kind = listing.kind;
+  const down = el('button', { type: 'button', textContent: t('catalog.csvExport'), onclick: () => guard(async () => {
+    const csv = await catalog.csvOf(kind);
+    el('a', { href: URL.createObjectURL(new Blob(['\ufeff' + csv], { type: 'text/csv' })), download: `${kind}.csv` }).click();
+  }) });
+  if (!listing.writable) return el('p', { className: 'row' }, down);
+  const up = el('input', { type: 'file', accept: '.csv,text/csv' });
+  up.onchange = () => guard(async () => {
+    const file = up.files[0]; if (!file) return;
+    const r = await catalog.importCsv(kind, await file.text());
+    say(`${t('catalog.csvImport')}: ${r.imported}`, 'ok');
+    await showKinds(); await showKind(kind);
+  });
+  return el('p', { className: 'row' }, down, el('label', { className: 'row' }, el('span', { textContent: t('catalog.csvImport') }), up));
+}
 
 async function start() {
   await loadLang();

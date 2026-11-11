@@ -26,6 +26,12 @@ export function t(key, params = {}) {
   return template.replace(/\{(\w+)\}/g, (m, name) => (name in params ? String(params[name]) : m));
 }
 
+/** `t(key)`, or `fallback` when the table has no text for the key. */
+export function tOr(key, fallback) { return key in table ? t(key) : fallback; }
+
+/** The name of an appliance type (cooktop, sink...) in the current language. */
+export const applianceName = (type) => tOr(`appliance.type.${type}`, type || '');
+
 /** The text of a localised value {vi, en} (a plain string is the same in every language). */
 export function pick(value) {
   if (typeof value === 'string') return value;

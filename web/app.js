@@ -13,7 +13,7 @@ import { createMoldingPanel } from './molding-panel.js';
 import { createDesignCreatePanel } from './design-create-panel.js';
 import { createFloorplanPanel } from './floorplan-panel.js';
 import { createHeaderControls } from './header-controls.js';
-import './palette-client.js';   // the catalog palettes, loaded before the viewer draws (appliance box colours)
+import './boot.js';   // wording + catalog palettes, loaded before the viewer draws
 
 const { setStatus, run } = createStatus($('status'));
 const controller = createDesignController({ api, renderList: renderDesignList, onOpened: showDesign });

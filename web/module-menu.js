@@ -3,10 +3,10 @@
 import { el } from './dom.js';
 import { request } from './api-client.js';
 import { interpretBody, describeInterpret, templateIntent, systemIntent, mentionsReference, checkUpload, recognizeBody, recognizeJobBody, anchorFor, describeRecognition, recognitionLines } from './assist-logic.js';
-import { actionsFor, buildGroupOp, buildOp, describeProposal, groupActions, layerFor, lineTemplate, menuPosition, DOOR_STYLES, HANDLE_VARIANTS, RUN_ACTIONS, RUN_TURNS, systemTemplate, edgeChoices, modelChoices, APPLIANCE_VI, applianceLayer, lineAlongWall, wallSegments } from './menu-logic.js';
+import { actionsFor, buildGroupOp, buildOp, describeProposal, groupActions, layerFor, lineTemplate, menuPosition, DOOR_STYLES, HANDLE_VARIANTS, RUN_ACTIONS, RUN_TURNS, systemTemplate, edgeChoices, modelChoices, applianceLayer, lineAlongWall, wallSegments } from './menu-logic.js';
 import { groupLabel, groupLayerIds, manySystems } from './design-logic.js';
 import * as catalog from './catalog-client.js';
-import { lang } from './i18n.js';
+import { applianceName, lang } from './i18n.js';
 
 let styles = [];                     // the style presets of a whole cabinet system (catalog kind "style"), named in a sentence
 catalog.list('style', lang()).then((d) => {
@@ -56,7 +56,7 @@ export function createModuleMenu(ctx) {
     const { spec } = ctx.getState();
     const partName = { door: 'Cánh', drawer: 'Mặt ngăn kéo', handle: 'Tay nắm', countertop: 'Mặt bàn' }[target.part];
     const appl = target.kind === 'appliance' ? spec.appliances?.find((a) => a.id === target.id) : null;
-    const title = appl ? `${APPLIANCE_VI[appl.type] || appl.type} ${appl.id}${appl.name ? ` · ${appl.name}` : ''}` : target.kind === 'part' ? (target.part === 'countertop' ? 'Mặt bàn' : `${partName} · ${target.id}`)
+    const title = appl ? `${applianceName(appl.type)} ${appl.id}${appl.name ? ` · ${appl.name}` : ''}` : target.kind === 'part' ? (target.part === 'countertop' ? 'Mặt bàn' : `${partName} · ${target.id}`)
       : target.kind === 'module' ? `Module ${target.id}` : target.kind === 'floor' ? (lineFrom ? 'Sàn · đang vẽ dãy tủ' : 'Sàn')
         : `Thành phần mặt bằng ${target.id.replace(/^STRUCT-/, '')}`;
     box.onkeydown = null;
@@ -354,7 +354,7 @@ export function createModuleMenu(ctx) {
       busy = false;
       if (status === 409) return stale('cmd');
       if (!data || data.error) return redraw(text, data?.error || `Lỗi ${status}`);
-      ctx.setStatus(`${data.models?.length || 0} mẫu ${APPLIANCE_VI[data.appliance?.type] || ''} có thể thay`, 'ok');
+      ctx.setStatus(`${data.models?.length || 0} mẫu ${applianceName(data.appliance?.type)} có thể thay`, 'ok');
       chooseModel(data, text);
     } catch (e) { busy = false; redraw(text, e.message); }
   }
@@ -364,7 +364,7 @@ export function createModuleMenu(ctx) {
     const rows = modelChoices(data.models).map((c) => el('li', {}, el('button', { type: 'button', disabled: !c.pickable, title: c.reasons.join('\n'),
       onclick: () => (c.status === 'bad' ? fitChoice(c, text) : replaceAppliance(c.id, false, text)) }, c.label),
       ...(c.reasons.length ? [el('small', { class: 'muted' }, c.reasons[0])] : [])));
-    box.replaceChildren(header(`Đổi mẫu · ${APPLIANCE_VI[now.type] || now.type} ${now.id}`),
+    box.replaceChildren(header(`Đổi mẫu · ${applianceName(now.type)} ${now.id}`),
       el('p', { class: 'ctx-msg' }, `Đang dùng: ${now.name || now.model}${now.size ? ` (${now.size.w}×${now.size.d} mm)` : ''}`),
       rows.length ? el('ul', { class: 'ctx-list' }, ...rows) : err('Không có mẫu nào khác cùng loại'),
       el('div', { class: 'row' }, el('button', { type: 'button', class: 'ghost', onclick: list }, 'Quay lại')));

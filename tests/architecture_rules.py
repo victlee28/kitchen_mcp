@@ -24,7 +24,7 @@ CORE_ALL = CORE_MODULES + tuple(m for pkg in CORE_PACKAGES for m in _package_mod
 # Data-model modules a core module may import (the boundary types); everything else it imports from kitchen must be core.
 DATA_MODULES = ("spec", "knowledge_seed", "labels", "builtin")   # boundary types; constant data tables (their SQL helpers take a connection argument)
 
-SHELL_MODULES = ("store", "migrations", "service", "backends", "ai_export", "legacy", "config", "intent", "run_template", "llm", "recognizers", "catalog_files")      # touch disk, network, env, clock
+SHELL_MODULES = ("store", "migrations", "service", "backends", "ai_export", "legacy", "config", "intent", "run_template", "llm", "recognizers", "catalog_files", "catalog_csv")      # touch disk, network, env, clock
 PIXEL_MODULES = ("render", "imaging", "geometry_edit", "request_check", "view_sync")        # the image-job package kitchen/images/ is pixel zone as a whole (see test_architecture)
 PIXEL_PACKAGES = ("images",)                                                                   # numpy / PIL / job orchestration (every file in the package)
 ENV_READERS = ("config", "service")                                                # may read os.environ / getenv

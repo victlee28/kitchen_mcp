@@ -32,5 +32,19 @@
  "error.catalog-not-allowed": "Vai trò {role} không được sửa {kind}",
  "error.catalog-item-not-found": "Không có {kind} {id} trong danh mục",
  "error.catalog-kind-not-found": "Không có loại dữ liệu {kind}",
- "error.bad-role": "Vai trò không hợp lệ: {role}"
+ "error.bad-role": "Vai trò không hợp lệ: {role}",
+ "appliance.type.cooktop": "Bếp nấu",
+ "appliance.type.sink": "Chậu rửa",
+ "appliance.type.faucet": "Vòi nước",
+ "appliance.type.hood": "Hút mùi",
+ "appliance.type.fridge": "Tủ lạnh",
+ "appliance.type.oven": "Lò",
+ "appliance.type.tv": "Tivi",
+ "catalog.csvExport": "Tải CSV",
+ "catalog.csvImport": "Nhập CSV",
+ "catalog.try": "Thử tên vật liệu",
+ "catalog.tryPlaceholder": "vd Laminate xanh rêu mờ",
+ "catalog.tryEnglish": "Prompt",
+ "catalog.tryColor": "Màu ảnh phẳng",
+ "catalog.tryLook": "3D"
 }

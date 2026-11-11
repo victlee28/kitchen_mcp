@@ -293,5 +293,40 @@ class TestBackendsFromTheCatalog(unittest.TestCase):
         self.assertEqual(recognition.choose_recognizer(["fake"], None, None, c), "fake")              # a plug-in under its own name
 
 
+class TestCsvAndPreview(unittest.TestCase):
+    """Stage 1.7: a kind as CSV and back (the workshop's real appliance list), and trying a material name."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        from kitchen.service import KitchenService
+        self.s = KitchenService(db_path=self.tmp / "k.db", render_dir=self.tmp / "r")
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_appliances_round_trip(self):
+        from kitchen import catalog_csv
+        text = self.s.catalog_csv("appliance")["csv"]
+        back = dict(catalog_csv.from_csv(text, self.s.builtin.schemas["appliance"]))
+        for it in self.s.catalog().all("appliance"):
+            self.assertEqual(json.dumps(back[it.id], sort_keys=True), json.dumps(dict(it.data), sort_keys=True), it.id)   # ints stay ints
+
+    def test_import_checks_every_row_first(self):
+        head = "id,type,name.vi,size.w,size.d,size.h,prompt\n"
+        good = "hob-x,cooktop,Bếp X,700,400,60,black hob\n"
+        with self.assertRaises(InvalidInput):
+            self.s.catalog_csv_import("appliance", head + good + "hob-y,cooktop,Bếp Y,rộng,400,60,x\n", "workshop")
+        self.assertIsNone(self.s.catalog().find("appliance", "hob-x"))                                 # nothing written
+        with self.assertRaises(InvalidInput):
+            self.s.catalog_csv_import("appliance", head + good, "user")                                  # users do not edit appliances
+        self.assertEqual(self.s.catalog_csv_import("appliance", head + good, "workshop")["imported"], 1)
+        self.assertEqual(self.s.catalog().data("appliance", "hob-x")["size"], {"w": 700, "d": 400, "h": 60})
+
+    def test_material_preview(self):
+        r = self.s.material_preview("Laminate xanh rêu mờ")
+        self.assertEqual(r["english"], "sage green matte finish laminate")
+        self.assertEqual(r["look"]["color"], "#7d8a5f")
+
+
 if __name__ == "__main__":
     unittest.main()

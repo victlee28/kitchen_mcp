@@ -125,6 +125,11 @@ def _module_frame(m: Module, lsau: float, fr: "runs.RunFrame | None" = None) -> 
     return Frame((x, m.y, z), seat.yaw), (m.width, m.height, m.depth)
 
 
+def material_look(text: str, catalog: Catalog = builtin.CATALOG) -> dict[str, Any]:
+    """The three.js material parameters of a material name (what the export gives a front with that name, before the defaults)."""
+    return _guess(text, catalog)
+
+
 def _guess(text: str, catalog: Catalog) -> dict[str, Any]:
     g = _guess_base(text, catalog)
     w = vocab.find(text, vocab.woods(catalog))  # loài gỗ nêu rõ (óc chó, teak…) quyết định màu gỗ

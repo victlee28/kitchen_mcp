@@ -250,7 +250,6 @@ export function edgeChoices(edges) {
     label: `Lưng tủ trên cạnh dài ${Math.round(e.length)} mm${e.gapToWall == null ? '' : ` · cách tường ${Math.round(e.gapToWall)} mm`}` }));
 }
 
-export const APPLIANCE_VI = { cooktop: 'Bếp nấu', sink: 'Chậu rửa', faucet: 'Vòi nước', hood: 'Hút mùi', fridge: 'Tủ lạnh', oven: 'Lò' };
 const FIT_VI = { ok: 'vừa', check: 'cần kiểm tra', bad: 'không vừa', later: 'chưa hỗ trợ (đổi loại)', blocked: 'không đặt được ở đây' };
 
 /** Lines of the model popup: label, the fit and why; `later` and `blocked` (another kind that cannot go there) cannot be picked. Sizes in mm. */

@@ -18,6 +18,8 @@ API:
   DELETE /api/catalog/<kind>/<id>          xóa dòng của vai trò (trả về mặc định)
   GET  /api/catalog/<kind>/<id>/history    POST .../undo
   GET  /api/catalog-export                 POST /api/catalog-import
+  GET  /api/material-preview?text=         cách hiểu một tên vật liệu (tiếng Anh, màu, thông số 3D)
+  GET  /api/catalog-csv/<kind>             {csv}; POST {csv}: ghi từng dòng vào lớp của vai trò
   GET  /api/regions                       khu vực, quốc gia, số mục
   GET  /api/designs/<id>/history         lịch sử
   POST /api/designs/<id>/ops             {"baseRev": N, "op": {...}, "expect"?: opHash của /propose: chỉ lưu đúng thao tác đã xem trước}
@@ -147,6 +149,13 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(200, s.catalog_export(self._role()))
         if p == "/api/catalog-import" and method == "POST":
             return self._json(200, s.catalog_import(self._body(), self._role()))
+        if p == "/api/material-preview" and method == "GET":
+            return self._json(200, s.material_preview(q.get("text")))
+        m = re.fullmatch(r"/api/catalog-csv/([a-z0-9-]+)", p)
+        if m and method == "GET":
+            return self._json(200, s.catalog_csv(m.group(1)))
+        if m and method == "POST":
+            return self._json(200, s.catalog_csv_import(m.group(1), self._body().get("csv"), self._role()))
         if p == "/api/catalog" and method == "GET":
             return self._json(200, {"kinds": s.catalog_kinds(self._role(), q.get("lang"))})
         m = re.fullmatch(r"/api/catalog/([a-z0-9-]+)(?:/([A-Za-z0-9_.:%-]+)(?:/(history|undo))?)?", p)
