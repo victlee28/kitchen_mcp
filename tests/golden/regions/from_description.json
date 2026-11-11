@@ -1,0 +1,75 @@
+{
+ "function": "regions.from_description",
+ "cases": [
+  {
+   "name": "after a place word: Australia",
+   "input": {
+    "text": "bếp chuẩn Úc"
+   },
+   "expected": {
+    "country": "AU",
+    "region": "OC"
+   }
+  },
+  {
+   "name": "in Vietnam",
+   "input": {
+    "text": "thiết kế tại Việt Nam"
+   },
+   "expected": {
+    "country": "VN",
+    "region": "SEA"
+   }
+  },
+  {
+   "name": "a region",
+   "input": {
+    "text": "theo thị trường châu Âu"
+   },
+   "expected": {
+    "country": null,
+    "region": "EU"
+   }
+  },
+  {
+   "name": "the United Kingdom",
+   "input": {
+    "text": "tiêu chuẩn Anh Quốc"
+   },
+   "expected": {
+    "country": "GB",
+    "region": "EU"
+   }
+  },
+  {
+   "name": "'cho anh' is not the UK",
+   "input": {
+    "text": "làm cho anh bếp chữ L"
+   },
+   "expected": {
+    "country": null,
+    "region": null
+   }
+  },
+  {
+   "name": "no place word: nothing",
+   "input": {
+    "text": "thẩm mỹ kiểu ý tưởng"
+   },
+   "expected": {
+    "country": null,
+    "region": null
+   }
+  },
+  {
+   "name": "Italy itself",
+   "input": {
+    "text": "bếp kiểu Ý cổ điển"
+   },
+   "expected": {
+    "country": "IT",
+    "region": "EU"
+   }
+  }
+ ]
+}

@@ -1,0 +1,46 @@
+{
+ "function": "floorplan.list_rooms",
+ "cases": [
+  {
+   "name": "rooms and kitchen regions",
+   "input": {
+    "floorplan": {
+     "$fixture": "tests/data/floorplan-building.json"
+    }
+   },
+   "expected": {
+    "rooms": [
+     [
+      "room_003",
+      "PHÒNG KHÁCH"
+     ],
+     [
+      "region:around=furniture_003",
+      "Kitchen area around Tủ bếp"
+     ],
+     [
+      "region:around=furniture_017",
+      "Kitchen area around Tủ bếp 2"
+     ]
+    ]
+   }
+  },
+  {
+   "name": "rooms only",
+   "input": {
+    "floorplan": {
+     "$fixture": "tests/data/floorplan-building.json"
+    },
+    "regions": false
+   },
+   "expected": {
+    "rooms": [
+     [
+      "room_003",
+      "PHÒNG KHÁCH"
+     ]
+    ]
+   }
+  }
+ ]
+}

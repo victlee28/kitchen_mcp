@@ -1,0 +1,277 @@
+{
+ "function": "floorplan.normalize",
+ "cases": [
+  {
+   "name": "building plan, first room",
+   "input": {
+    "floorplan": {
+     "$fixture": "tests/data/floorplan-building.json"
+    }
+   },
+   "expected": {
+    "roomId": "room_003",
+    "width": 5625.0,
+    "depth": 4715.45,
+    "height": 3000.0,
+    "outline": [
+     {
+      "x": 5625.0,
+      "z": 4615.45
+     },
+     {
+      "x": 3925.0,
+      "z": 4615.45
+     },
+     {
+      "x": 3925.0,
+      "z": 4715.45
+     },
+     {
+      "x": 0.0,
+      "z": 4715.45
+     },
+     {
+      "x": 0.0,
+      "z": 390.45
+     },
+     {
+      "x": 4.85,
+      "z": 390.45
+     },
+     {
+      "x": 4.85,
+      "z": 0.0
+     },
+     {
+      "x": 3935.0,
+      "z": 0.0
+     },
+     {
+      "x": 3935.0,
+      "z": 125.45
+     },
+     {
+      "x": 5625.0,
+      "z": 125.45
+     }
+    ],
+    "walls": 10,
+    "elements": [
+     "column_001",
+     "furniture_001",
+     "furniture_003",
+     "furniture_017",
+     "furniture_019",
+     "furniture_021",
+     "opening_002",
+     "shaft_001",
+     "stair_001",
+     "wall_002",
+     "wall_003",
+     "wall_006",
+     "wall_009",
+     "wall_010",
+     "wall_011",
+     "wall_012",
+     "wall_013",
+     "wall_015",
+     "wall_h02",
+     "wall_h03",
+     "wall_h04",
+     "wall_h05",
+     "wall_h06",
+     "wall_h07",
+     "wall_h08",
+     "wall_h09",
+     "wall_h10"
+    ],
+    "counts": {
+     "adjacent": 6,
+     "outside": 19,
+     "inside": 1,
+     "overlapping": 1
+    },
+    "warnings": [
+     "assumed-wall-height",
+     "assumed-wall-thickness",
+     "outside-room",
+     "room-trimmed",
+     "unreviewed"
+    ],
+    "sha256": "9c6bbd8cf5f44b218cf7e2dc3e4e5467e5865c5aa0892277796fd056dd3dacbe"
+   }
+  },
+  {
+   "name": "sample plan",
+   "input": {
+    "floorplan": {
+     "$fixture": "tests/data/floorplan-sample.json"
+    }
+   },
+   "expected": {
+    "roomId": "room_003",
+    "width": 6030.0,
+    "depth": 4720.9,
+    "height": 3000.0,
+    "outline": [
+     {
+      "x": 4330.0,
+      "z": 4720.9
+     },
+     {
+      "x": 410.0,
+      "z": 4710.9
+     },
+     {
+      "x": 400.0,
+      "z": 4350.9
+     },
+     {
+      "x": 0.0,
+      "z": 4350.9
+     },
+     {
+      "x": 0.0,
+      "z": 390.9
+     },
+     {
+      "x": 420.0,
+      "z": 390.9
+     },
+     {
+      "x": 399.7,
+      "z": 0.0
+     },
+     {
+      "x": 4340.0,
+      "z": 0.9
+     },
+     {
+      "x": 4340.0,
+      "z": 130.9
+     },
+     {
+      "x": 6030.0,
+      "z": 120.9
+     },
+     {
+      "x": 6030.0,
+      "z": 4610.9
+     },
+     {
+      "x": 4330.0,
+      "z": 4620.9
+     }
+    ],
+    "walls": 12,
+    "elements": [
+     "column_001",
+     "furniture_001",
+     "opening_002",
+     "shaft_001",
+     "wall_006"
+    ],
+    "counts": {
+     "adjacent": 2,
+     "outside": 3
+    },
+    "warnings": [
+     "assumed-wall-thickness",
+     "outside-room",
+     "skewed-edge",
+     "unreviewed"
+    ],
+    "sha256": "9c6bbd8cf5f44b218cf7e2dc3e4e5467e5865c5aa0892277796fd056dd3dacbe"
+   }
+  },
+  {
+   "name": "a region around the kitchen set",
+   "input": {
+    "floorplan": {
+     "$fixture": "tests/data/floorplan-building.json"
+    },
+    "roomId": "region:around=furniture_003"
+   },
+   "expected": {
+    "roomId": "region:around=furniture_003",
+    "width": 1650.0,
+    "depth": 3210.0,
+    "height": 3000.0,
+    "outline": [
+     {
+      "x": 0.0,
+      "z": 3210.0
+     },
+     {
+      "x": 0.0,
+      "z": 0.0
+     },
+     {
+      "x": 1650.0,
+      "z": 0.0
+     },
+     {
+      "x": 1650.0,
+      "z": 3210.0
+     }
+    ],
+    "walls": 4,
+    "elements": [
+     "column_001",
+     "furniture_001",
+     "furniture_003",
+     "furniture_017",
+     "furniture_019",
+     "furniture_021",
+     "opening_002",
+     "room_003",
+     "shaft_001",
+     "stair_001",
+     "wall_002",
+     "wall_003",
+     "wall_006",
+     "wall_009",
+     "wall_010",
+     "wall_011",
+     "wall_012",
+     "wall_013",
+     "wall_015",
+     "wall_h02",
+     "wall_h03",
+     "wall_h04",
+     "wall_h05",
+     "wall_h06",
+     "wall_h07",
+     "wall_h08",
+     "wall_h09",
+     "wall_h10"
+    ],
+    "counts": {
+     "outside": 17,
+     "adjacent": 10,
+     "inside": 1
+    },
+    "warnings": [
+     "assumed-wall-height",
+     "assumed-wall-thickness",
+     "outside-room",
+     "region-derived"
+    ],
+    "sha256": "9c6bbd8cf5f44b218cf7e2dc3e4e5467e5865c5aa0892277796fd056dd3dacbe"
+   }
+  },
+  {
+   "name": "no such room",
+   "input": {
+    "floorplan": {
+     "$fixture": "tests/data/floorplan-building.json"
+    },
+    "roomId": "room_999"
+   },
+   "error": {
+    "kind": "validation",
+    "code": "invalid-input"
+   }
+  }
+ ]
+}

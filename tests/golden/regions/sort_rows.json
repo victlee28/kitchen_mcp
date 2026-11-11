@@ -1,0 +1,135 @@
+{
+ "function": "regions.sort_rows",
+ "cases": [
+  {
+   "name": "no country: global first, foreign last",
+   "input": {
+    "rows": [
+     {
+      "id": 1,
+      "code": "G1",
+      "region": "GLOBAL",
+      "metadata": {
+       "sourceType": "standard"
+      }
+     },
+     {
+      "id": 2,
+      "code": "VN1",
+      "country": "VN",
+      "region": "SEA",
+      "metadata": {
+       "sourceType": "standard"
+      }
+     },
+     {
+      "id": 3,
+      "code": "TH1",
+      "country": "TH",
+      "region": "SEA",
+      "metadata": {
+       "sourceType": "practice"
+      }
+     },
+     {
+      "id": 4,
+      "code": "SEA1",
+      "region": "SEA",
+      "metadata": {}
+     },
+     {
+      "id": 5,
+      "code": "US1",
+      "country": "US",
+      "region": "NA",
+      "metadata": {
+       "sourceType": "standard"
+      }
+     }
+    ]
+   },
+   "expected": {
+    "order": [
+     "G1",
+     "US1",
+     "VN1",
+     "TH1",
+     "SEA1"
+    ],
+    "scores": [
+     10,
+     1,
+     1,
+     1,
+     1
+    ]
+   }
+  },
+  {
+   "name": "Vietnam: own rule, region, same region elsewhere, global",
+   "input": {
+    "rows": [
+     {
+      "id": 1,
+      "code": "G1",
+      "region": "GLOBAL",
+      "metadata": {
+       "sourceType": "standard"
+      }
+     },
+     {
+      "id": 2,
+      "code": "VN1",
+      "country": "VN",
+      "region": "SEA",
+      "metadata": {
+       "sourceType": "standard"
+      }
+     },
+     {
+      "id": 3,
+      "code": "TH1",
+      "country": "TH",
+      "region": "SEA",
+      "metadata": {
+       "sourceType": "practice"
+      }
+     },
+     {
+      "id": 4,
+      "code": "SEA1",
+      "region": "SEA",
+      "metadata": {}
+     },
+     {
+      "id": 5,
+      "code": "US1",
+      "country": "US",
+      "region": "NA",
+      "metadata": {
+       "sourceType": "standard"
+      }
+     }
+    ],
+    "country": "VN",
+    "region": "SEA"
+   },
+   "expected": {
+    "order": [
+     "VN1",
+     "SEA1",
+     "TH1",
+     "G1",
+     "US1"
+    ],
+    "scores": [
+     30,
+     20,
+     15,
+     10,
+     1
+    ]
+   }
+  }
+ ]
+}

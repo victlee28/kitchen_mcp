@@ -1,0 +1,115 @@
+{
+ "function": "hardware.handle",
+ "cases": [
+  {
+   "name": "bar on a door",
+   "input": {
+    "handle": {
+     "variant": "bar",
+     "length": 160
+    },
+    "w": 400,
+    "h": 720,
+    "tier": "base",
+    "hinge": "Left"
+   },
+   "expected": {
+    "handle": {
+     "type": "Pull_Handle",
+     "assetId": "ASSET-HANDLE-BAR",
+     "x": 348.0,
+     "y": 500.0,
+     "size": [
+      12.0,
+      160.0,
+      30.0
+     ]
+    }
+   }
+  },
+  {
+   "name": "bar on a drawer",
+   "input": {
+    "handle": {
+     "variant": "bar",
+     "length": 320
+    },
+    "w": 600,
+    "h": 180,
+    "tier": "base",
+    "hinge": null,
+    "horizontal": true
+   },
+   "expected": {
+    "handle": {
+     "type": "Pull_Handle",
+     "assetId": "ASSET-HANDLE-BAR",
+     "x": 140.0,
+     "y": 128.0,
+     "size": [
+      320.0,
+      12.0,
+      30.0
+     ]
+    }
+   }
+  },
+  {
+   "name": "knob",
+   "input": {
+    "handle": {
+     "variant": "knob"
+    },
+    "w": 400,
+    "h": 720,
+    "tier": "wall",
+    "hinge": "Right"
+   },
+   "expected": {
+    "handle": {
+     "type": "Knob",
+     "assetId": "ASSET-HANDLE-KNOB",
+     "x": 40,
+     "y": 60,
+     "size": [
+      30.0,
+      30.0,
+      25.0
+     ]
+    }
+   }
+  },
+  {
+   "name": "concealed: no handle",
+   "input": {
+    "handle": {
+     "variant": "concealed"
+    },
+    "w": 400,
+    "h": 720,
+    "tier": "base",
+    "hinge": "Left"
+   },
+   "expected": {
+    "handle": null
+   }
+  },
+  {
+   "name": "too short for the bar",
+   "input": {
+    "handle": {
+     "variant": "bar",
+     "length": 160
+    },
+    "w": 50,
+    "h": 100,
+    "tier": "base",
+    "hinge": null,
+    "horizontal": true
+   },
+   "expected": {
+    "handle": null
+   }
+  }
+ ]
+}

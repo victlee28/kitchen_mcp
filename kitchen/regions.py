@@ -34,7 +34,7 @@ _KEYWORDS = {
     "việt nam": "VN", "vn": "VN", "thái lan": "TH", "singapore": "SG", "malaysia": "MY",
     "trung quốc": "CN", "nhật": "JP", "hàn quốc": "KR", "đài loan": "TW",
     "mỹ": "US", "hoa kỳ": "US", "usa": "US", "canada": "CA",
-    "anh quốc": "GB", "vương quốc anh": "GB", "image": "GB", "uk": "GB", "đức": "DE", "pháp": "FR", "italy": "IT", "ý": "IT",
+    "anh quốc": "GB", "vương quốc anh": "GB", "uk": "GB", "đức": "DE", "pháp": "FR", "italy": "IT", "ý": "IT",
     "úc": "AU", "australia": "AU", "new zealand": "NZ",
     "châu âu": "EU", "đông nam á": "SEA", "đông á": "EA", "bắc mỹ": "NA",
 }
@@ -57,6 +57,7 @@ def normalize(country: str | None = None, region: str | None = None) -> tuple[st
 
 
 _PREFIX = r"(?:chuẩn|tiêu chuẩn|tại|ở|thị trường|theo|kiểu|cho|sang|nước|khách|nhà)"
+_Y_WORDS = r"\s+(?:tưởng|kiến|nghĩa|muốn|định|thích|thức|chí|niệm)(?![a-zà-ỹ])"   # "ý" as the first syllable of a word, not Italy
 
 
 def from_description(text: str) -> tuple[str | None, str | None]:
@@ -65,7 +66,8 @@ def from_description(text: str) -> tuple[str | None, str | None]:
     import re
     t = unicodedata.normalize("NFC", text).lower()
     kws = "|".join(re.escape(k) for k in sorted(_KEYWORDS, key=len, reverse=True))
-    m = re.search(_PREFIX + r"\s+(" + kws + r")(?![a-zà-ỹ])", t)
+    m = next((x for x in re.finditer(_PREFIX + r"\s+(" + kws + r")(?![a-zà-ỹ])", t)
+              if not (x.group(1) == "ý" and re.match(_Y_WORDS, t[x.end():]))), None)   # "kiểu ý tưởng" is an idea, not Italy
     if not m:
         return None, None
     code = _KEYWORDS[m.group(1)]

@@ -1,0 +1,88 @@
+{
+ "function": "handles.clear_overrides",
+ "cases": [
+  {
+   "name": "a cabinet's own handle variant is cleared",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "ops": [
+     {
+      "op": "update",
+      "id": "TD1",
+      "changes": {
+       "handle": {
+        "variant": "knob",
+        "material": "Đồng"
+       }
+      }
+     }
+    ],
+    "fields": [
+     "variant"
+    ]
+   },
+   "expected": {
+    "op": {},
+    "cleared": [
+     {
+      "op": "update",
+      "id": "TD1",
+      "changes": {
+       "handle": {
+        "material": "Đồng"
+       }
+      }
+     }
+    ]
+   }
+  },
+  {
+   "name": "storey overrides are cleared",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "ops": [
+     {
+      "op": "common",
+      "changes": {
+       "handleByStorey": {
+        "upper": {
+         "variant": "knob",
+         "length": 96
+        }
+       }
+      }
+     }
+    ],
+    "fields": [
+     "variant",
+     "length"
+    ]
+   },
+   "expected": {
+    "op": {
+     "handleByStorey": null
+    },
+    "cleared": []
+   }
+  },
+  {
+   "name": "nothing to clear",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "fields": [
+     "material"
+    ]
+   },
+   "expected": {
+    "op": {},
+    "cleared": []
+   }
+  }
+ ]
+}

@@ -1,0 +1,160 @@
+{
+ "function": "hardware.hinges",
+ "cases": [
+  {
+   "name": "one door: left",
+   "input": {
+    "module": {
+     "id": "TD1",
+     "type": "base",
+     "wall": "back",
+     "fromCorner": 0,
+     "width": 800,
+     "height": 720,
+     "depth": 560
+    },
+    "doors": [
+     [
+      0,
+      800,
+      0,
+      720
+     ]
+    ]
+   },
+   "expected": {
+    "hinges": [
+     "Left"
+    ]
+   }
+  },
+  {
+   "name": "two doors open away from each other",
+   "input": {
+    "module": {
+     "id": "TD1",
+     "type": "base",
+     "wall": "back",
+     "fromCorner": 0,
+     "width": 800,
+     "height": 720,
+     "depth": 560
+    },
+    "doors": [
+     [
+      0,
+      400,
+      0,
+      720
+     ],
+     [
+      400,
+      800,
+      0,
+      720
+     ]
+    ]
+   },
+   "expected": {
+    "hinges": [
+     "Left",
+     "Right"
+    ]
+   }
+  },
+  {
+   "name": "the hinges the module asks for",
+   "input": {
+    "module": {
+     "id": "TD1",
+     "type": "base",
+     "wall": "back",
+     "fromCorner": 0,
+     "width": 800,
+     "height": 720,
+     "depth": 560,
+     "hingeSides": [
+      "right",
+      "left"
+     ]
+    },
+    "doors": [
+     [
+      0,
+      400,
+      0,
+      720
+     ],
+     [
+      400,
+      800,
+      0,
+      720
+     ]
+    ]
+   },
+   "expected": {
+    "hinges": [
+     "Right",
+     "Left"
+    ]
+   }
+  },
+  {
+   "name": "a wide top-row door lifts up",
+   "input": {
+    "module": {
+     "id": "TD1",
+     "type": "upper-loft",
+     "wall": "back",
+     "fromCorner": 0,
+     "width": 800,
+     "height": 330,
+     "depth": 560,
+     "y": 2280
+    },
+    "doors": [
+     [
+      0,
+      800,
+      0,
+      330
+     ]
+    ]
+   },
+   "expected": {
+    "hinges": [
+     "Top"
+    ]
+   }
+  },
+  {
+   "name": "blind corner: right",
+   "input": {
+    "module": {
+     "id": "TD1",
+     "type": "base",
+     "wall": "back",
+     "fromCorner": 0,
+     "width": 800,
+     "height": 720,
+     "depth": 560,
+     "blindCorner": 200
+    },
+    "doors": [
+     [
+      200,
+      800,
+      0,
+      720
+     ]
+    ]
+   },
+   "expected": {
+    "hinges": [
+     "Right"
+    ]
+   }
+  }
+ ]
+}

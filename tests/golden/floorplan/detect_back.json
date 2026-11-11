@@ -1,0 +1,78 @@
+{
+ "function": "floorplan.detect_back",
+ "cases": [
+  {
+   "name": "a unit against the back wall",
+   "input": {
+    "floorplan": {
+     "$fixture": "tests/data/floorplan-sample.json"
+    },
+    "normalized": true,
+    "outline": [
+     {
+      "x": 1000,
+      "z": 4110
+     },
+     {
+      "x": 3000,
+      "z": 4110
+     },
+     {
+      "x": 3000,
+      "z": 4710
+     },
+     {
+      "x": 1000,
+      "z": 4710
+     }
+    ]
+   },
+   "expected": {
+    "back": {
+     "elementEdge": 2,
+     "roomEdge": 0,
+     "gap": 5.0,
+     "overlap": 2000.0,
+     "run": 2000.0,
+     "facing": {
+      "x": 0.002551,
+      "z": -0.999997
+     },
+     "depth": 602.5,
+     "confidence": 0.95,
+     "status": "wall-backed"
+    }
+   }
+  },
+  {
+   "name": "a unit in the middle of the room",
+   "input": {
+    "floorplan": {
+     "$fixture": "tests/data/floorplan-sample.json"
+    },
+    "normalized": true,
+    "outline": [
+     {
+      "x": 2000,
+      "z": 2000
+     },
+     {
+      "x": 3000,
+      "z": 2000
+     },
+     {
+      "x": 3000,
+      "z": 2600
+     },
+     {
+      "x": 2000,
+      "z": 2600
+     }
+    ]
+   },
+   "expected": {
+    "back": null
+   }
+  }
+ ]
+}

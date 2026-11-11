@@ -1,0 +1,43 @@
+{
+ "function": "lexicon.tag_phrases",
+ "cases": [
+  {
+   "name": "known tags",
+   "input": {
+    "tags": [
+     "Japandi",
+     "Scandinavian"
+    ]
+   },
+   "expected": {
+    "phrases": [
+     "Japandi style: calm natural wood, muted warm neutrals, minimal clean lines, handcrafted details",
+     "Scandinavian style: pale woods, soft white surfaces, simple clean lines, light airy feel"
+    ]
+   }
+  },
+  {
+   "name": "unknown tags are left out",
+   "input": {
+    "tags": [
+     "modern",
+     "Luxury"
+    ]
+   },
+   "expected": {
+    "phrases": [
+     "luxury high-end finish: premium materials, refined detailing"
+    ]
+   }
+  },
+  {
+   "name": "none",
+   "input": {
+    "tags": null
+   },
+   "expected": {
+    "phrases": []
+   }
+  }
+ ]
+}

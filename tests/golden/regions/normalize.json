@@ -1,0 +1,45 @@
+{
+ "function": "regions.normalize",
+ "cases": [
+  {
+   "name": "nothing given",
+   "input": {},
+   "expected": {
+    "country": null,
+    "region": null
+   }
+  },
+  {
+   "name": "lower case country",
+   "input": {
+    "country": "vn"
+   },
+   "expected": {
+    "country": "VN",
+    "region": "SEA"
+   }
+  },
+  {
+   "name": "country and region",
+   "input": {
+    "country": "VN",
+    "region": "sea"
+   },
+   "expected": {
+    "country": "VN",
+    "region": "SEA"
+   }
+  },
+  {
+   "name": "unknown region is an error",
+   "input": {
+    "country": "vn",
+    "region": "hcm"
+   },
+   "error": {
+    "kind": "validation",
+    "code": "invalid-input"
+   }
+  }
+ ]
+}

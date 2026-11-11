@@ -1,0 +1,124 @@
+{
+ "function": "lexicon.interpret",
+ "cases": [
+  {
+   "name": "shape, sizes, finishes",
+   "input": {
+    "text": "bếp chữ L 3m x 2,4m, tủ trên kính, mặt đá đen, tay nắm âm"
+   },
+   "expected": {
+    "updates": {
+     "geometry_edit": "L",
+     "handleVariant": "concealed",
+     "aiHints": [
+      "integrated finger-pull grooves instead of handles"
+     ],
+     "material": {
+      "countertop": "Đá nhân tạo đen"
+     }
+    },
+    "items": [
+     {
+      "term": "chữ l",
+      "id": "layout.L",
+      "kind": "layout",
+      "canonical": "L",
+      "scope": [
+       "whole"
+      ],
+      "target": "geometry_edit",
+      "status": "built",
+      "message": ""
+     },
+     {
+      "term": "tay nắm âm",
+      "id": "handle.concealed",
+      "kind": "handlevar",
+      "canonical": "concealed",
+      "scope": [
+       "handle"
+      ],
+      "target": "common.handle.variant",
+      "status": "built",
+      "message": ""
+     },
+     {
+      "term": "đen",
+      "id": "color.đen",
+      "kind": "color",
+      "canonical": "Đá nhân tạo đen",
+      "scope": [
+       "countertop"
+      ],
+      "target": "common.material.countertop",
+      "status": "built",
+      "message": ""
+     }
+    ]
+   }
+  },
+  {
+   "name": "fridge and loft",
+   "input": {
+    "text": "bếp chữ I dài 3,6m có tủ lạnh, thêm tủ nóc, cánh gỗ sồi"
+   },
+   "expected": {
+    "updates": {
+     "geometry_edit": "I",
+     "loft": true,
+     "material": {
+      "base": "Laminate vân gỗ sồi sáng"
+     }
+    },
+    "items": [
+     {
+      "term": "chữ i",
+      "id": "layout.I",
+      "kind": "layout",
+      "canonical": "I",
+      "scope": [
+       "whole"
+      ],
+      "target": "geometry_edit",
+      "status": "built",
+      "message": ""
+     },
+     {
+      "term": "tủ nóc",
+      "id": "struct.loft",
+      "kind": "loft",
+      "canonical": "tủ nóc / kịch trần",
+      "scope": [
+       "whole"
+      ],
+      "target": "loft",
+      "status": "built",
+      "message": ""
+     },
+     {
+      "term": "gỗ sồi",
+      "id": "wood.generic",
+      "kind": "wood",
+      "canonical": "Laminate vân gỗ sồi sáng",
+      "scope": [
+       "base"
+      ],
+      "target": "common.material.base",
+      "status": "built",
+      "message": "Không nêu phạm vi nên áp cho 'base' (đoán theo loại vật liệu)."
+     }
+    ]
+   }
+  },
+  {
+   "name": "empty",
+   "input": {
+    "text": ""
+   },
+   "expected": {
+    "updates": {},
+    "items": []
+   }
+  }
+ ]
+}

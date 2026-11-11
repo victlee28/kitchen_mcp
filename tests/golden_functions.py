@@ -18,6 +18,8 @@ from kitchen import edit, floorplan, geometry, layers, moldings, numeric, propos
 from kitchen.recognition import build_draft, build_layout, choose_recognizer, gemini_wire, recognizer_wire, runs_from_draft  # noqa: E402
 from kitchen import intent, run_template, tv_system, vocab  # noqa: E402
 from kitchen import appliance_kind, appliance_models, camera_plan, system_replace, wall_line  # noqa: E402
+from kitchen import handles, hardware, lexicon, regions  # noqa: E402
+from kitchen.spec import Handle, Module  # noqa: E402
 from kitchen.placement import Placement  # noqa: E402
 from kitchen.spec import load_spec, to_data  # noqa: E402
 
@@ -262,6 +264,81 @@ def camera_plan_plan_views(i):
                       for k, v in sorted(views.items())}}
 
 
+def _floorplan(i):
+    """The case's floorplan document: inline, or ``{"$fixture": path}`` (UTF-8 with or without BOM); ``normalized: true`` normalises it."""
+    src = i["floorplan"]
+    if isinstance(src, dict) and "$fixture" in src:
+        src = json.loads((ROOT / src["$fixture"]).read_text(encoding="utf-8-sig"))
+    return floorplan.normalize(src, i.get("roomId")) if i.get("normalized") else src
+
+
+def regions_normalize(i):
+    c, r = regions.normalize(i.get("country"), i.get("region"))
+    return {"country": c, "region": r}
+
+
+def regions_from_description(i):
+    c, r = regions.from_description(i["text"])
+    return {"country": c, "region": r}
+
+
+def regions_sort_rows(i):
+    rows = regions.sort_rows(i["rows"], i.get("country"), i.get("region"))
+    return {"order": [r["code"] for r in rows], "scores": [regions.priority_score(r, i.get("country"), i.get("region")) for r in rows]}
+
+
+def hardware_hinges(i):
+    return {"hinges": hardware.hinges(Module.model_validate(i["module"]), [tuple(d) for d in i["doors"]])}
+
+
+def hardware_handle(i):
+    return {"handle": hardware.handle(Handle.model_validate(i.get("handle", {})), i["w"], i["h"], i["tier"], i.get("hinge"), i.get("horizontal", False))}
+
+
+def handles_clear_overrides(i):
+    op, cleared = handles.clear_overrides(_spec_after(i), tuple(i["fields"]))
+    return {"op": op, "cleared": cleared}
+
+
+def handles_material_slot(i):
+    slot, name = handles.material_slot(_spec_after(i), i.get("module"))
+    return {"slot": slot, "material": name}
+
+
+def lexicon_interpret(i):
+    r = lexicon.interpret(i["text"])
+    return {"updates": r.updates, "items": r.items}
+
+
+def lexicon_tag_phrases(i):
+    return {"phrases": lexicon.tag_phrases(i.get("tags"))}
+
+
+def floorplan_normalize(i):
+    """Projection: the room's size, outline, element and wall counts, warning codes and the source hash."""
+    fp = floorplan.normalize(_floorplan(i), i.get("roomId"))
+    return {"roomId": fp["roomId"], "width": fp["width"], "depth": fp["depth"], "height": fp["height"], "outline": fp["outline"],
+            "walls": len(fp["walls"]), "elements": sorted(e["id"] for e in fp["elements"]), "counts": fp["counts"],
+            "warnings": sorted({w["code"] for w in fp["warnings"]}), "sha256": fp["sourceSha256"]}
+
+
+def floorplan_list_rooms(i):
+    return {"rooms": [[r["id"], r.get("label")] for r in floorplan.list_rooms(_floorplan(i), i.get("regions", True))]}
+
+
+def floorplan_bind_kitchen(i):
+    b = floorplan.bind_kitchen(_floorplan(i), i["need"], i.get("backEdge"), i.get("offset", 0.0))
+    return {k: b[k] for k in ("back", "right", "left", "offset", "source", "score", "warnings", "transform")}
+
+
+def floorplan_structures(i):
+    return {"structures": [[st["id"], st["kind"], st.get("base"), st.get("height"), len(st["outline"])] for st in floorplan.structures(_floorplan(i))]}
+
+
+def floorplan_detect_back(i):
+    return {"back": floorplan.detect_back(i["outline"], _floorplan(i))}
+
+
 FUNCTIONS = {
     "placement.to_room": placement_to_room,
     "placement.to_kitchen": placement_to_kitchen,
@@ -300,4 +377,18 @@ FUNCTIONS = {
     "system_replace.relayout_ops": system_replace_relayout_ops,
     "wall_line.replace_lines": wall_line_replace_lines,
     "camera_plan.plan_views": camera_plan_plan_views,
+    "regions.normalize": regions_normalize,
+    "regions.from_description": regions_from_description,
+    "regions.sort_rows": regions_sort_rows,
+    "hardware.hinges": hardware_hinges,
+    "hardware.handle": hardware_handle,
+    "handles.clear_overrides": handles_clear_overrides,
+    "handles.material_slot": handles_material_slot,
+    "lexicon.interpret": lexicon_interpret,
+    "lexicon.tag_phrases": lexicon_tag_phrases,
+    "floorplan.normalize": floorplan_normalize,
+    "floorplan.list_rooms": floorplan_list_rooms,
+    "floorplan.bind_kitchen": floorplan_bind_kitchen,
+    "floorplan.structures": floorplan_structures,
+    "floorplan.detect_back": floorplan_detect_back,
 }

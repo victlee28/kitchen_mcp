@@ -1,0 +1,54 @@
+{
+ "function": "handles.material_slot",
+ "cases": [
+  {
+   "name": "a cabinet with the common handle",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "module": "TD1"
+   },
+   "expected": {
+    "slot": "common:handle",
+    "material": "Nhôm đen mờ"
+   }
+  },
+  {
+   "name": "a cabinet with its own handle material",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "ops": [
+     {
+      "op": "update",
+      "id": "TD1",
+      "changes": {
+       "handle": {
+        "material": "Đồng"
+       }
+      }
+     }
+    ],
+    "module": "TD1"
+   },
+   "expected": {
+    "slot": "module-handle:TD1",
+    "material": "Đồng"
+   }
+  },
+  {
+   "name": "no module",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    }
+   },
+   "expected": {
+    "slot": "common:handle",
+    "material": "Nhôm đen mờ"
+   }
+  }
+ ]
+}

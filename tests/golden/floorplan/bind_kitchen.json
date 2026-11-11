@@ -1,0 +1,96 @@
+{
+ "function": "floorplan.bind_kitchen",
+ "cases": [
+  {
+   "name": "auto: the detected cabinet back",
+   "input": {
+    "floorplan": {
+     "$fixture": "tests/data/floorplan-building.json"
+    },
+    "normalized": true,
+    "need": {
+     "back": 3000
+    }
+   },
+   "expected": {
+    "back": 2,
+    "right": null,
+    "left": null,
+    "offset": 0.0,
+    "source": "auto",
+    "score": 0.764,
+    "warnings": [
+     "edge 6 fits equally well; pass back_edge to choose"
+    ],
+    "transform": {
+     "origin": {
+      "x": 0.0,
+      "z": 4715.45
+     },
+     "yaw": -180.0,
+     "right": {
+      "x": -1.0,
+      "z": 0.0
+     },
+     "into": {
+      "x": -0.0,
+      "z": -1.0
+     }
+    }
+   }
+  },
+  {
+   "name": "too long for every wall",
+   "input": {
+    "floorplan": {
+     "$fixture": "tests/data/floorplan-building.json"
+    },
+    "normalized": true,
+    "need": {
+     "back": 9000
+    }
+   },
+   "error": {
+    "kind": "validation",
+    "code": "kitchen-fits-no-wall"
+   }
+  },
+  {
+   "name": "an L",
+   "input": {
+    "floorplan": {
+     "$fixture": "tests/data/floorplan-building.json"
+    },
+    "normalized": true,
+    "need": {
+     "back": 3000,
+     "right": 1800
+    }
+   },
+   "expected": {
+    "back": 2,
+    "right": 3,
+    "left": null,
+    "offset": 0.0,
+    "source": "auto",
+    "score": 0.764,
+    "warnings": [],
+    "transform": {
+     "origin": {
+      "x": 0.0,
+      "z": 4715.45
+     },
+     "yaw": -180.0,
+     "right": {
+      "x": -1.0,
+      "z": 0.0
+     },
+     "into": {
+      "x": -0.0,
+      "z": -1.0
+     }
+    }
+   }
+  }
+ ]
+}
