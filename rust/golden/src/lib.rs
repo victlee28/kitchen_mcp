@@ -1,6 +1,8 @@
 pub mod core;
 pub mod json;
 pub mod sha256;
+pub mod tv_system;
+pub mod vocab;
 
 use json::Json;
 use std::collections::BTreeMap;
@@ -22,6 +24,25 @@ pub fn call(function: &str, input: &Json) -> Result<Json, String> {
             let op = input.get("operation").ok_or("missing operation")?;
             let rev = input.get("baseRev").ok_or("missing baseRev")?;
             Ok(obj(vec![("hash", Json::Str(core::op_hash(op, rev)?))]))
+        }
+        "tv_system.layout" => {
+            let top = input.get("common").and_then(|c| c.get("cabinetTop")).and_then(Json::f64);
+            let style = match input.get("style").and_then(|s| s.str()) { None => tv_system::Style::Columns,
+                Some(s) => tv_system::Style::parse(s).ok_or(format!("unknown style '{}'", s))? };
+            let panel = !matches!(input.get("panel"), Some(Json::Bool(false)));
+            let mods = tv_system::layout(num(input, "length")?, top, style, panel);
+            let f = Json::Float;
+            Ok(obj(vec![
+                ("modules", Json::Arr(mods.iter().map(|m| Json::Arr(vec![Json::Str(m.kind.to_string()), f(m.s), f(m.width), f(m.y), f(m.height)])).collect())),
+                ("tv", Json::Arr(mods.iter().filter_map(|m| m.tv_model.clone().map(Json::Str)).collect())),
+                ("panel", Json::Arr(mods.iter().filter_map(|m| m.back_panel.as_ref().map(|p|
+                    obj(vec![("s0", f(p.s0)), ("s1", f(p.s1)), ("y0", f(p.y0)), ("y1", f(p.y1))]))).collect())),
+            ]))
+        }
+        "vocab.to_english" => {
+            let text = input.get("text").and_then(|t| t.str()).ok_or("missing text")?;
+            Ok(obj(vec![("english", Json::Str(vocab::to_english(text))),
+                        ("color", vocab::color(text).map_or(Json::Null, |c| Json::Str(c.to_string())))]))
         }
         other => Err(format!("not ported: {}", other)),
     }
