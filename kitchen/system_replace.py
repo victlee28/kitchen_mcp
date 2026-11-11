@@ -19,6 +19,7 @@ from . import appliance_models, runs
 from .cabinet_run import fit_depth
 from .errors import InvalidInput
 from .numeric import EPS_MM
+from .labels import STYLE_PRESETS
 from .spec import KitchenSpec, LaidModule, Module, to_data
 
 FRONTLESS = ("corner-shelf", "upper-open")            # no doors or drawer fronts: no front material, door style or handle
@@ -36,14 +37,7 @@ class Style:
     handle_material: str
 
 
-STYLES: tuple[Style, ...] = (
-    Style("modern-white", "Hiện đại trắng bóng", "Acrylic trắng bóng", "flat", "concealed", "Nhôm"),
-    Style("warm-oak", "Gỗ sồi ấm", "Laminate vân gỗ sồi sáng", "flat", "bar", "Nhôm đen mờ"),
-    Style("classic-sage", "Cổ điển xanh rêu", "Sơn xanh rêu mờ", "frame", "knob", "Đồng thau"),
-    Style("minimal-grey", "Tối giản xám đậm", "Acrylic xám đậm", "flat", "concealed", "Nhôm"),
-    Style("shaker-cream", "Shaker kem", "Sơn kem mờ", "frame", "bar", "Đồng thau xước"),
-    Style("walnut-luxe", "Gỗ óc chó sang trọng", "Veneer gỗ óc chó", "flat", "bar", "Đồng vàng"),
-)
+STYLES: tuple[Style, ...] = tuple(Style(*row) for row in STYLE_PRESETS)    # the table itself is data (labels.STYLE_PRESETS)
 STYLE_BY_ID = {s.id: s for s in STYLES}
 AUTO = "auto"
 
