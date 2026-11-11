@@ -22,7 +22,7 @@ def _package_modules(pkg: str) -> tuple[str, ...]:
 CORE_ALL = CORE_MODULES + tuple(m for pkg in CORE_PACKAGES for m in _package_modules(pkg))   # what the core checks run over
 
 # Data-model modules a core module may import (the boundary types); everything else it imports from kitchen must be core.
-DATA_MODULES = ("spec", "knowledge_seed", "appliance_catalog")   # boundary types; constant data tables (their SQL helpers take a connection argument)
+DATA_MODULES = ("spec", "knowledge_seed", "appliance_catalog", "labels")   # boundary types; constant data tables (their SQL helpers take a connection argument)
 
 SHELL_MODULES = ("store", "migrations", "service", "backends", "ai_export", "legacy", "config", "intent", "run_template", "llm", "recognizers")      # touch disk, network, env, clock
 PIXEL_MODULES = ("render", "imaging", "geometry_edit", "request_check", "view_sync")        # the image-job package kitchen/images/ is pixel zone as a whole (see test_architecture)

@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any, Callable
 from . import appliance_kind, appliance_models, cabinet_run, run_line, run_template, runs, system_replace, tv_system, wall_line, edit, edit_intent, geometry, intent, llm, recognition, regions, roomctx, render, rules, threejs_export
 from .intent import KitchenTemplate as KitchenTemplate
-from .spec import Common, KitchenSpec, Room, Wall, dump_spec, load_spec, to_data
+from .spec import Common, KitchenSpec, LaidModule, Room, Wall, dump_spec, load_spec, to_data
 from .store import ConflictError, Store
 from . import legacy as legacy_schema
 from .config import Config
@@ -365,7 +365,7 @@ class KitchenService:
                 return {'status': 'choose-edge', 'edges': [{'index': e.index, 'length': round(e.length), 'gapToWall': None if e.gap is None else round(e.gap),
                                                              'a': room_pt(e.a), 'b': room_pt(e.b)} for e in where['edges']]}
             placed = where['runs']
-            laid: list[list[dict[str, Any]]] = []
+            laid: list[list[LaidModule]] = []
             after: list[dict[str, Any]] = []
             for i, p in enumerate(placed):
                 length = p.length // 10 * 10
@@ -415,7 +415,7 @@ class KitchenService:
         if not color.country and country:
             color = color.model_copy(update={'country': country})
         slots = system_replace.run_slots(spec, mods)
-        laid: dict[str, list[dict[str, Any]]] = {}
+        laid: dict[str, list[LaidModule]] = {}
         fronts: dict[str, Any] = {}
         for i, slot in enumerate(slots):
             if slot.length < 600:
@@ -448,7 +448,7 @@ class KitchenService:
             raise InvalidInput(f"System {system} has no run long enough for a TV unit (600 mm)", code='run-too-short')
         style = tv_system.explicit_style(prompt) or tv_system.layout_of(spec, slots[0].run) or 'columns'
         common = to_data(spec)['common']
-        laid: dict[str, list[dict[str, Any]]] = {}
+        laid: dict[str, list[LaidModule]] = {}
         for i, slot in enumerate(slots):
             modules = tv_system.layout(slot.length, common, style, tv_system.wants_panel(prompt)) if i == 0 else tv_system.console(slot.length)
             laid[slot.run] = modules

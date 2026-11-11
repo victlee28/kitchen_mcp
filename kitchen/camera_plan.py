@@ -24,7 +24,7 @@ MAX_DIST = 5500.0
 STEP = 250.0
 WALL_CLEAR = 300.0        # nearest the camera stands to a wall (mm)
 V_MIN, V_MAX = 40.0, 78.0 # vertical field of view limits (degrees): the hard clamp
-V_NATURAL = 62.0          # widest lens that still looks like a photograph (~76° across at 4:3, a 22 mm full-frame lens): wider looks fake
+V_NATURAL_DEG = 62.0          # widest lens that still looks like a photograph (~76° across at 4:3, a 22 mm full-frame lens): wider looks fake
                           # (user, 11/11/2026: "ống kính góc rộng vừa đủ, không quá rộng"); past it the camera stands outside the wall instead
 OBLIQUE = math.radians(35.0)
 NON_BLOCKING = ("area", "opening")
@@ -145,7 +145,7 @@ def in_body(p: Pt, bodies: list[Obstacle], clear: float = WALL_CLEAR) -> bool:
 def _best(face: Face, directions: list[Pt], width_factor: float, room: list[Pt] | None, obstacles: list[Obstacle],
           bodies: list[Obstacle]) -> tuple[Pt, float, list[str]]:
     """Ranked: never inside or against a cabinet or another solid (stairs, columns, furniture); without a room, fewest target points seen
-    across another run's cabinets (they cannot be hidden); a lens no wider than ``V_NATURAL``; inside the room (else outside a wall, the
+    across another run's cabinets (they cannot be hidden); a lens no wider than ``V_NATURAL_DEG``; inside the room (else outside a wall, the
     walls in the way hidden — the user's choice of 11/11/2026: a wide lens first, the wall only when even that is not enough); fewest solids
     to hide; the narrowest lens among the too-wide ones; inside, farthest back (least distortion), outside the wall, nearest to it (the
     picture stays a view into the room, not from across the next one)."""
@@ -164,7 +164,7 @@ def _best(face: Face, directions: list[Pt], width_factor: float, room: list[Pt] 
             outside = not stands_in_room(pos, room)
             hidden = blockers(eye, targets, obstacles)
             behind = sum(any(blocks(eye, t, b) for b in others) for t in targets)
-            wide = fov > V_NATURAL
+            wide = fov > V_NATURAL_DEG
             key = (bad, behind, wide, outside, len(hidden), fov if wide else 0.0, dist if outside else -dist)
             if best is None or key < best[0]:
                 best = (key, pos, fov, hidden)

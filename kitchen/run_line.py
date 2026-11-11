@@ -8,13 +8,13 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 from .edit import apply_op, combine_ops, next_run_id
 from .errors import InvalidInput
 from .floorplan.geom import point_in_poly
 from .numeric import round_half_away
-from .spec import KitchenSpec
+from .spec import KitchenSpec, LaidModule
 
 Pt = tuple[float, float]
 MIN_LENGTH = 1.0
@@ -80,10 +80,10 @@ def drawn_line(a: Pt, b: Pt, front: Pt) -> Line:
     return Line(a, b, (nx, nz) if side > 0 else (-nx, -nz))
 
 
-def base_cabinets(length: float, common: dict[str, Any]) -> list[dict[str, Any]]:
+def base_cabinets(length: float, common: dict[str, Any]) -> list[LaidModule]:
     """Plain base cabinets filling ``length`` (``cabinet_run.split_widths``: 600s, a short remainder widening the last), ready for ``plan_on_line``."""
     from .cabinet_run import split_widths
-    out: list[dict[str, Any]] = []
+    out: list[LaidModule] = []
     at = 0.0
     for w in split_widths(float(int(length // 10) * 10)):
         out.append({"type": "base", "s": at, "width": w, "y": 0.0, "height": float(common["baseTop"]), "depth": float(common["baseDepth"])})
@@ -106,7 +106,7 @@ def run_frame(line: Line) -> dict[str, float]:
 EXTRA_FIELDS = ("name", "niche", "appliance", "appliances", "doors", "frontSections", "hingeSides", "doorStyle", "blindCorner", "blindSide", "shelfCount", "backPanel", "material")   # what a module may carry besides its box
 
 
-def plan_on_line(spec: KitchenSpec, line: Line, modules: list[dict[str, Any]], clear: list[str] | None = None,
+def plan_on_line(spec: KitchenSpec, line: Line, modules: list[LaidModule], clear: list[str] | None = None,
                  after: list[dict[str, Any]] | None = None, system: str | None = None, run_fields: dict[str, Any] | None = None) -> dict[str, Any]:
     """The operation that puts ``modules`` in a new run on ``line``. Each module is ``{"type", "width", "s", "y", "height", "depth", "name"?}`` with
     ``s`` measured along the run from its start. ``clear``: ids of cabinets to remove first (replace instead of add); ``after``: operations to run once the cabinets are in.
@@ -120,9 +120,10 @@ def plan_on_line(spec: KitchenSpec, line: Line, modules: list[dict[str, Any]], c
     for m in sorted(modules, key=lambda item: item["s"]):
         entry = {"type": m["type"], "wall": "island", "run": run["id"], "fromCorner": float(m["s"]), "width": float(m["width"]), "y": float(m["y"]),
                  "height": float(m["height"]), "depth": float(m["depth"])}
+        extra = cast("dict[str, Any]", m)                     # the optional fields, read by name
         for key in EXTRA_FIELDS:
-            if m.get(key):
-                entry[key] = m[key]
+            if extra.get(key):
+                entry[key] = extra[key]
         ops.append({"op": "add", "closeGap": False, "module": entry})
         reach = max(reach, entry["fromCorner"] + entry["width"])
     ops.extend(after or [])
@@ -184,7 +185,7 @@ def plan_runs(spec: KitchenSpec, line: Line, runs: list[dict[str, Any]], joints:
     made: list[dict[str, Any]] = []
     current = spec
     for index, (run, at) in enumerate(placed):
-        plan = plan_on_line(current, at, [dict(m) for m in run["modules"]], clear if index == 0 else None, system=system)
+        plan = plan_on_line(current, at, [cast(LaidModule, dict(m)) for m in run["modules"]], clear if index == 0 else None, system=system)
         ops.append(plan["operation"])
         summary.extend(plan["summary"] if index == 0 else [f"{run['id']}: {plan['summary'][0]}"])
         made.append({"source": run["id"], "run": plan["run"]})

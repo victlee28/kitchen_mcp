@@ -12,7 +12,7 @@ Quy ước toạ độ (theo file gốc): gốc ở góc trong giữa tường s
 from __future__ import annotations
 
 import re
-from typing import Any, Literal
+from typing import Any, Literal, TypedDict
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -128,6 +128,33 @@ class BackPanel(_Base):
     s1: float
     y0: float
     y1: float
+
+
+class _LaidBox(TypedDict):
+    type: str
+    s: float          # mm along the run from the start of the line / slot it is laid in
+    width: float      # mm
+    y: float          # mm above the floor
+    height: float     # mm
+    depth: float      # mm
+
+
+class LaidModule(_LaidBox, total=False):
+    """A cabinet being laid out along a line, before it is added (``run_line.plan_on_line``, ``system_replace.relayout_ops``,
+    ``tv_system.layout``, ``run_template``): its box plus what it may carry (``run_line.EXTRA_FIELDS``). Plain JSON data."""
+    name: str
+    niche: float
+    appliance: dict[str, Any]
+    appliances: list[dict[str, Any]]
+    doors: list[float]
+    frontSections: list[dict[str, Any]]
+    hingeSides: list[str]
+    doorStyle: str
+    blindCorner: float
+    blindSide: str
+    shelfCount: int
+    backPanel: dict[str, float]
+    material: str
 
 
 class FrontSection(_Base):

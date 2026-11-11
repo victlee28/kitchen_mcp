@@ -83,9 +83,9 @@ class Scene:
         return openings, hi
 
 
-HOOD_GAP = 650.0             # worktop to the canopy of a hood hanging over the hob (mm)
-HOOD_CANOPY = 150.0          # height of that canopy
-CHIMNEY = (300.0, 250.0)     # width, depth of its chimney
+HOOD_GAP_MM = 650.0             # worktop to the canopy of a hood hanging over the hob (mm)
+HOOD_CANOPY_MM = 150.0          # height of that canopy
+CHIMNEY_MM = (300.0, 250.0)     # width, depth of its chimney
 BACKSPLASH_STANDARD = 600.0  # "standard" backsplash height above the countertop (mm)
 
 
@@ -250,7 +250,7 @@ class _Builder:
         """A TV unit's panel on the wall behind the TV (``Module.backPanel``: s0 / s1 along the run from the cabinet's start, y0 / y1)."""
         bp = m.backPanel
         if bp is not None and bp.s1 > bp.s0 and bp.y1 > bp.y0:
-            self.box(m.id, "side-panel", m.wall, m.fromCorner + bp.s0, m.fromCorner + bp.s1, 0, tv_system.PANEL_THICKNESS, bp.y0, bp.y1)
+            self.box(m.id, "side-panel", m.wall, m.fromCorner + bp.s0, m.fromCorner + bp.s1, 0, tv_system.PANEL_THICKNESS_MM, bp.y0, bp.y1)
 
     def upper(self, m: Module):
         dc = self.c.doorThickness
@@ -415,11 +415,11 @@ class _Builder:
                 d = float((tb.size or {}).get("d") or 480.0)
                 island = "island" in (tb.model or "")
                 d0 = (m.depth - d) / 2 if island else 0.0                  # an island hood hangs over the middle of the worktop
-                y0 = c.countertop + HOOD_GAP
-                self.box(tb.id, "hood", m.wall, sc - w / 2, sc + w / 2, d0, d0 + d, y0, y0 + HOOD_CANOPY)
-                top = c.ceiling if island else max(c.cabinetTop, y0 + HOOD_CANOPY + 100)
-                cd0 = d0 + (d - CHIMNEY[1]) / 2 if island else 0.0
-                self.box(tb.id, "hood", m.wall, sc - CHIMNEY[0] / 2, sc + CHIMNEY[0] / 2, cd0, cd0 + CHIMNEY[1], y0 + HOOD_CANOPY, top)
+                y0 = c.countertop + HOOD_GAP_MM
+                self.box(tb.id, "hood", m.wall, sc - w / 2, sc + w / 2, d0, d0 + d, y0, y0 + HOOD_CANOPY_MM)
+                top = c.ceiling if island else max(c.cabinetTop, y0 + HOOD_CANOPY_MM + 100)
+                cd0 = d0 + (d - CHIMNEY_MM[1]) / 2 if island else 0.0
+                self.box(tb.id, "hood", m.wall, sc - CHIMNEY_MM[0] / 2, sc + CHIMNEY_MM[0] / 2, cd0, cd0 + CHIMNEY_MM[1], y0 + HOOD_CANOPY_MM, top)
             elif tb.type == "hood" and m and len(k) >= 2:
                 w, h = k[:2]
                 sc = m.fromCorner + m.width / 2
@@ -427,9 +427,9 @@ class _Builder:
             elif tb.type == "tv" and m and len(k) >= 2:      # a flat TV on the wall above its console, ``center`` from the start of that cabinet
                 w, h = k[:2]
                 sc = m.fromCorner + (tb.center if tb.center is not None else m.width / 2)      # a TV's centre is measured from its cabinet
-                d = k[2] if len(k) >= 3 else tv_system.TV_DEPTH
-                y0 = max(m.y + m.height + 100.0, tv_system.TV_CENTER - h / 2)
-                d0 = tv_system.PANEL_THICKNESS + 2      # in front of the panel behind it, if any
+                d = k[2] if len(k) >= 3 else tv_system.TV_DEPTH_MM
+                y0 = max(m.y + m.height + 100.0, tv_system.TV_CENTER_MM - h / 2)
+                d0 = tv_system.PANEL_THICKNESS_MM + 2      # in front of the panel behind it, if any
                 self.box(tb.id, "tv", m.wall, sc - w / 2, sc + w / 2, d0, d0 + d, y0, y0 + h)
             elif tb.type in ("sink", "cooktop", "faucet") and (at := runmod.spot(self.spec, tb)) is not None:
                 host = m if tb.wall is None else None                      # placed by its module: it stands in that module's row

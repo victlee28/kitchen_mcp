@@ -15,10 +15,11 @@ from typing import Any
 from . import appliance_models
 from .edit import new_id
 from .errors import InvalidInput
+from .labels import NAMES
 from .spec import Appliance, KitchenSpec, Module
 
-HOOD_GAP = 650.0          # worktop to the bottom of a hood (KITCHEN-DEFAULT hood gap; intent uses the same default)
-INSERT_HEIGHT = 165.0     # the hood insert under its cabinet (intent: "y_hood = countertop + gap + 165")
+HOOD_GAP_MM = 650.0          # worktop to the bottom of a hood (KITCHEN-DEFAULT hood gap; intent uses the same default)
+INSERT_HEIGHT_MM = 165.0     # the hood insert under its cabinet (intent: "y_hood = countertop + gap + 165")
 
 
 def changes_kind(app: Appliance, model: dict[str, Any]) -> bool:
@@ -59,10 +60,10 @@ def _hang_hood(spec: KitchenSpec, app: Appliance, model: dict[str, Any], h: Modu
 
 def _build_hood_cabinet(spec: KitchenSpec, app: Appliance, model: dict[str, Any], hob: Module) -> list[dict[str, Any]]:
     c = spec.common
-    y = max(c.upperBottom + 150.0, c.countertop + HOOD_GAP + INSERT_HEIGHT)
+    y = max(c.upperBottom + 150.0, c.countertop + HOOD_GAP_MM + INSERT_HEIGHT_MM)
     cid = new_id(spec, "TT")
     w = hob.width
-    cabinet: dict[str, Any] = {"id": cid, "type": "upper-hood", "name": "Tủ trên hút mùi", "wall": hob.wall, "fromCorner": hob.fromCorner,
+    cabinet: dict[str, Any] = {"id": cid, "type": "upper-hood", "name": NAMES["upper-hood"], "wall": hob.wall, "fromCorner": hob.fromCorner,
                                "width": w, "y": y, "height": max(300.0, c.upperTierSplit - y), "depth": c.upperDepth,
                                "doors": [w / 2, w / 2] if w >= 600 else [w]}
     for key in ("run", "offset", "facing"):

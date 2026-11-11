@@ -13,13 +13,13 @@ from __future__ import annotations
 import re
 from collections import Counter
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 from . import appliance_models, runs
 from .cabinet_run import fit_depth
 from .errors import InvalidInput
 from .numeric import EPS_MM
-from .spec import KitchenSpec, Module, to_data
+from .spec import KitchenSpec, LaidModule, Module, to_data
 
 FRONTLESS = ("corner-shelf", "upper-open")            # no doors or drawer fronts: no front material, door style or handle
 OWN_DOOR = ("upper-glass",)                           # the door style is the cabinet's own (glass): left as it is
@@ -125,7 +125,7 @@ def run_slots(spec: KitchenSpec, mods: list[Module]) -> list[Slot]:
 PLAIN_TYPE = {"base-sink": "base", "base-cooktop": "base", "base-oven": "base", "base-corner-sink": "base", "upper-hood": "upper"}
 
 
-def plain_cabinets(modules: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def plain_cabinets(modules: list[LaidModule]) -> list[LaidModule]:
     """The same cabinets without what belongs to the main run only: sink, hob, oven and hood cabinets become plain ones (their devices
     go), a fridge cabinet is left out. For the other runs of a system laid out from one sentence."""
     out = []
@@ -207,10 +207,10 @@ def _keep_device(device: dict[str, Any], keep: dict[str, dict[str, Any]], width_
     return {**device, **{k: v for k, v in appliance_models.changes_for(model).items() if v is not None}}, f"{model['name']} kept"
 
 
-def _make_room(modules: list[dict[str, Any]], models: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+def _make_room(modules: list[LaidModule], models: dict[str, dict[str, Any]]) -> list[LaidModule]:
     """Widen the cabinet of a kept appliance that needs more room (a double sink in an 800 cabinet) by taking it from a plain base cabinet
-    next to it (left at least ``MIN_PLAIN`` wide); the worktop devices on it stay centred on it."""
-    out = sorted((dict(m) for m in modules), key=lambda m: m["s"])
+    next to it (left at least ``MIN_PLAIN_MM`` wide); the worktop devices on it stay centred on it."""
+    out: list[LaidModule] = sorted((cast(LaidModule, dict(m)) for m in modules), key=lambda m: m["s"])
     for host in out:
         devices = [d for d in [host.get("appliance"), *(host.get("appliances") or [])] if isinstance(d, dict)]
         need = max((appliance_models.needed_width(models[d["type"]]) or 0.0 for d in devices if d.get("type") in models), default=0.0)
@@ -221,7 +221,7 @@ def _make_room(modules: list[dict[str, Any]], models: dict[str, dict[str, Any]])
         after = [(True, n) for n in out if abs(n["s"] - end) <= 1]                         # the cabinet just right of it, then just left
         before = [(False, n) for n in out if abs(n["s"] + n["width"] - host["s"]) <= 1]
         for right, n in after + before:
-            if n["type"] != "base" or n.get("appliance") or n.get("appliances") or float(n["width"]) - delta < MIN_PLAIN:
+            if n["type"] != "base" or n.get("appliance") or n.get("appliances") or float(n["width"]) - delta < MIN_PLAIN_MM:
                 continue
             old_mid = host["s"] + host["width"] / 2
             n["width"] = float(n["width"]) - delta
@@ -231,21 +231,20 @@ def _make_room(modules: list[dict[str, Any]], models: dict[str, dict[str, Any]])
                 host["s"] = float(host["s"]) - delta
             host["width"] = float(host["width"]) + delta
             shift = host["s"] + host["width"] / 2 - old_mid
-            for key in ("appliance", "appliances"):
-                v = host.get(key)
-                fix = lambda d: {**d, "center": d["center"] + shift} if isinstance(d, dict) and isinstance(d.get("center"), (int, float)) else d
-                if isinstance(v, dict):
-                    host[key] = fix(v)
-                elif isinstance(v, list):
-                    host[key] = [fix(d) for d in v]
+            def fix(d: dict[str, Any]) -> dict[str, Any]:
+                return {**d, "center": d["center"] + shift} if isinstance(d.get("center"), (int, float)) else d
+            if "appliance" in host:
+                host["appliance"] = fix(host["appliance"])
+            if "appliances" in host:
+                host["appliances"] = [fix(d) for d in host["appliances"]]
             break
     return out
 
 
-MIN_PLAIN = 300.0
+MIN_PLAIN_MM = 300.0
 
 
-def relayout_ops(spec: KitchenSpec, mods: list[Module], laid: dict[str, list[dict[str, Any]]], fronts: dict[str, Any],
+def relayout_ops(spec: KitchenSpec, mods: list[Module], laid: dict[str, list[LaidModule]], fronts: dict[str, Any],
                  asked: frozenset[str] = frozenset(), refused: frozenset[str] = frozenset(),
                  models: dict[str, dict[str, Any]] | None = None) -> tuple[list[dict[str, Any]], list[str]]:
     """``(operations, summary)``: add ``laid[run]`` to each run, then remove every old cabinet of the system (modules as ``run_template`` gives
@@ -285,9 +284,10 @@ def relayout_ops(spec: KitchenSpec, mods: list[Module], laid: dict[str, list[dic
                    for r, c0, c1, z0, z1 in corner):
                 blocked += 1
                 continue
+            extra = cast("dict[str, Any]", m)                 # the optional fields, read by name
             for key in EXTRA_FIELDS:
-                if m.get(key):
-                    entry[key] = m[key]
+                if extra.get(key):
+                    entry[key] = extra[key]
             if models:
                 for key in ("appliance", "appliances"):
                     value = entry.get(key)

@@ -15,7 +15,7 @@ from .floorplan.geom import point_in_poly
 from .numeric import round_half_away
 from . import runs as runmod
 from .run_line import Line, nearest_edge as _nearest_edge, outward as _outward, plan_on_line, run_frame
-from .spec import KitchenSpec
+from .spec import KitchenSpec, LaidModule
 
 MODULE_WIDTH = 600.0         # preferred cabinet width
 MIN_WIDTH = 300.0            # narrowest cabinet we make
@@ -175,7 +175,7 @@ def plan_corner(spec: KitchenSpec, run_a: str, run_b: str, width: float = 900.0,
 SHALLOW = 350.0      # mm: an object this shallow or shallower also sets the depth of wall cabinets and the loft row
 
 
-def fit_depth(modules: list[dict[str, Any]], depth: float) -> list[dict[str, Any]]:
+def fit_depth(modules: list[LaidModule], depth: float) -> list[LaidModule]:
     """The cabinets made as deep as the object they replace: base and tall cabinets always; wall cabinets and the loft row only when the
     object is ``SHALLOW`` or shallower (otherwise they keep their own depth)."""
     out = []
@@ -186,7 +186,7 @@ def fit_depth(modules: list[dict[str, Any]], depth: float) -> list[dict[str, Any
     return out
 
 
-def plan_replace(spec: KitchenSpec, element: str, placed: list[Any], laid: list[list[dict[str, Any]]],
+def plan_replace(spec: KitchenSpec, element: str, placed: list[Any], laid: list[list[LaidModule]],
                  after: list[dict[str, Any]] | None = None, run_fields: dict[str, Any] | None = None) -> dict[str, Any]:
     """The operation that replaces floorplan element ``element`` with cabinets: one run per ``placed`` (``wall_line.Placed``) holding
     ``laid[i]`` (cabinets as ``plan_on_line`` takes them, already as deep as they should be), each run in system ``element``; then the

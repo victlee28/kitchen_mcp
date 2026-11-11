@@ -25,7 +25,7 @@ class TestLayout(unittest.TestCase):
         self.assertEqual([(m["s"], m["width"], m["height"]) for m in tall], [(0.0, 600.0, 2610.0), (3380.0, 600.0, 2610.0)])
         console = [m for m in mods if m["type"] == "base"]
         self.assertEqual(sum(m["width"] for m in console), 2780.0)
-        self.assertTrue(all(m["height"] == tv.CONSOLE_HEIGHT and m["width"] <= tv.CONSOLE_MAX for m in console))
+        self.assertTrue(all(m["height"] == tv.CONSOLE_HEIGHT_MM and m["width"] <= tv.CONSOLE_MAX_MM for m in console))
         shelf = [m for m in mods if m["type"] == "upper-open"]
         self.assertEqual((shelf[0]["s"], shelf[0]["width"]), (600.0, 2780.0))
         sets = [m["appliance"] for m in mods if m.get("appliance")]
@@ -57,7 +57,7 @@ class TestLayout(unittest.TestCase):
     def test_panel_behind_the_tv_unless_refused(self):
         host = next(m for m in tv.layout(3980, COMMON) if m.get("appliance"))
         bp = host["backPanel"]
-        self.assertEqual((host["s"] + bp["s0"], host["s"] + bp["s1"], bp["y0"], bp["y1"]), (600.0, 3380.0, 450.0, tv.SHELF_Y))
+        self.assertEqual((host["s"] + bp["s0"], host["s"] + bp["s1"], bp["y0"], bp["y1"]), (600.0, 3380.0, 450.0, tv.SHELF_Y_MM))
         self.assertFalse(tv.wants_panel("tạo hệ tủ tivi không ốp"))
         self.assertFalse(any(m.get("backPanel") for m in tv.layout(3980, COMMON, panel=False)))
 
