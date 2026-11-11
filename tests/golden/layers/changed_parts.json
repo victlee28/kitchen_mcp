@@ -1,0 +1,88 @@
+{
+ "function": "layers.changed_parts",
+ "cases": [
+  {
+   "name": "base front colour",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "change": [
+     {
+      "op": "common",
+      "changes": {
+       "material": {
+        "base": "Xanh rêu"
+       }
+      }
+     }
+    ]
+   },
+   "expected": {
+    "changed": [
+     "TC1-side-panel-1",
+     "TC1-side-panel-2",
+     "TC1-door-1",
+     "TC1-door-2",
+     "TD1-door-1",
+     "TD1-door-2",
+     "KG1-shelf-1",
+     "KG1-shelf-2",
+     "KG1-shelf-3",
+     "KG1-shelf-4",
+     "KG1-side-panel-1",
+     "KG1-shelf-5",
+     "KG1-shelf-6",
+     "KG1-shelf-7",
+     "KG1-shelf-8",
+     "KG1-side-panel-2",
+     "TD2-door-1",
+     "TD2-door-2",
+     "TD3-door-1",
+     "TD4-drawer-1",
+     "TD4-drawer-2",
+     "TD5-side-panel-1",
+     "TD5-door-1"
+    ]
+   }
+  },
+  {
+   "name": "one cabinet's handle",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "change": [
+     {
+      "op": "update",
+      "id": "TD1",
+      "changes": {
+       "handle": {
+        "material": "Đồng"
+       }
+      },
+      "closeGap": false
+     }
+    ]
+   },
+   "expected": {
+    "changed": [
+     "TD1-handle-1",
+     "TD1-handle-2"
+    ]
+   }
+  },
+  {
+   "name": "nothing",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "change": []
+   },
+   "expected": {
+    "changed": []
+   }
+  }
+ ]
+}

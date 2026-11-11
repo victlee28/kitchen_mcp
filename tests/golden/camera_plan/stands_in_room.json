@@ -1,0 +1,108 @@
+{
+ "function": "camera_plan.stands_in_room",
+ "cases": [
+  {
+   "name": "middle of the room",
+   "input": {
+    "p": [
+     -2000,
+     1600
+    ],
+    "room": [
+     [
+      -4000,
+      0
+     ],
+     [
+      0,
+      0
+     ],
+     [
+      0,
+      3200
+     ],
+     [
+      -4000,
+      3200
+     ]
+    ]
+   },
+   "expected": {
+    "inside": true
+   }
+  },
+  {
+   "name": "too close to a wall",
+   "input": {
+    "p": [
+     -2000,
+     3150
+    ],
+    "room": [
+     [
+      -4000,
+      0
+     ],
+     [
+      0,
+      0
+     ],
+     [
+      0,
+      3200
+     ],
+     [
+      -4000,
+      3200
+     ]
+    ]
+   },
+   "expected": {
+    "inside": false
+   }
+  },
+  {
+   "name": "outside",
+   "input": {
+    "p": [
+     -2000,
+     4000
+    ],
+    "room": [
+     [
+      -4000,
+      0
+     ],
+     [
+      0,
+      0
+     ],
+     [
+      0,
+      3200
+     ],
+     [
+      -4000,
+      3200
+     ]
+    ]
+   },
+   "expected": {
+    "inside": false
+   }
+  },
+  {
+   "name": "no room",
+   "input": {
+    "p": [
+     0,
+     0
+    ],
+    "room": null
+   },
+   "expected": {
+    "inside": true
+   }
+  }
+ ]
+}

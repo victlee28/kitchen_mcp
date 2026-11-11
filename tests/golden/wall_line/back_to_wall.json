@@ -1,0 +1,162 @@
+{
+ "function": "wall_line.back_to_wall",
+ "cases": [
+  {
+   "name": "doors already away from the wall",
+   "input": {
+    "a": [
+     500,
+     100
+    ],
+    "b": [
+     3000,
+     100
+    ],
+    "normal": [
+     0,
+     1
+    ],
+    "walls": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       5000,
+       0
+      ],
+      [
+       5000,
+       -200
+      ],
+      [
+       0,
+       -200
+      ]
+     ]
+    ]
+   },
+   "expected": {
+    "doors": [
+     0.0,
+     1.0
+    ],
+    "against": true
+   }
+  },
+  {
+   "name": "doors towards the wall are turned",
+   "input": {
+    "a": [
+     500,
+     100
+    ],
+    "b": [
+     3000,
+     100
+    ],
+    "normal": [
+     0,
+     -1
+    ],
+    "walls": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       5000,
+       0
+      ],
+      [
+       5000,
+       -200
+      ],
+      [
+       0,
+       -200
+      ]
+     ]
+    ]
+   },
+   "expected": {
+    "doors": [
+     -0.0,
+     1.0
+    ],
+    "against": true
+   }
+  },
+  {
+   "name": "wall too far",
+   "input": {
+    "a": [
+     500,
+     900
+    ],
+    "b": [
+     3000,
+     900
+    ],
+    "normal": [
+     0,
+     1
+    ],
+    "walls": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       5000,
+       0
+      ],
+      [
+       5000,
+       -200
+      ],
+      [
+       0,
+       -200
+      ]
+     ]
+    ]
+   },
+   "expected": {
+    "doors": [
+     0,
+     1
+    ],
+    "against": false
+   }
+  },
+  {
+   "name": "no wall",
+   "input": {
+    "a": [
+     500,
+     100
+    ],
+    "b": [
+     3000,
+     100
+    ],
+    "normal": [
+     0,
+     1
+    ],
+    "walls": []
+   },
+   "expected": {
+    "doors": [
+     0,
+     1
+    ],
+    "against": false
+   }
+  }
+ ]
+}

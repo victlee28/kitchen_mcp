@@ -1,0 +1,64 @@
+{
+ "function": "palette.module_color",
+ "cases": [
+  {
+   "name": "ids",
+   "input": {
+    "ids": [
+     "TD1",
+     "TD2",
+     "TT1",
+     "R1-1",
+     "module-with-a-long-id"
+    ]
+   },
+   "expected": {
+    "colors": {
+     "TD1": [
+      242,
+      67,
+      60
+     ],
+     "TD2": [
+      117,
+      242,
+      60
+     ],
+     "TT1": [
+      242,
+      60,
+      86
+     ],
+     "R1-1": [
+      219,
+      60,
+      242
+     ],
+     "module-with-a-long-id": [
+      175,
+      242,
+      60
+     ]
+    }
+   }
+  },
+  {
+   "name": "same id twice",
+   "input": {
+    "ids": [
+     "TD1",
+     "TD1"
+    ]
+   },
+   "expected": {
+    "colors": {
+     "TD1": [
+      242,
+      67,
+      60
+     ]
+    }
+   }
+  }
+ ]
+}

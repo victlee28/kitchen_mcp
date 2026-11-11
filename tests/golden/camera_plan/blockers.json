@@ -1,0 +1,128 @@
+{
+ "function": "camera_plan.blockers",
+ "cases": [
+  {
+   "name": "column hides the middle targets",
+   "input": {
+    "eye": [
+     -2000,
+     1600,
+     3000
+    ],
+    "targets": [
+     [
+      -2000,
+      1200,
+      600
+     ],
+     [
+      -500,
+      1200,
+      600
+     ]
+    ],
+    "obstacles": [
+     {
+      "id": "STRUCT-C",
+      "kind": "column",
+      "outline": [
+       [
+        -2200,
+        1500
+       ],
+       [
+        -1800,
+        1500
+       ],
+       [
+        -1800,
+        1900
+       ],
+       [
+        -2200,
+        1900
+       ]
+      ],
+      "y0": 0,
+      "y1": 2700
+     },
+     {
+      "id": "STRUCT-T",
+      "kind": "furniture",
+      "outline": [
+       [
+        -2200,
+        1500
+       ],
+       [
+        -1800,
+        1500
+       ],
+       [
+        -1800,
+        1900
+       ],
+       [
+        -2200,
+        1900
+       ]
+      ],
+      "y0": 0,
+      "y1": 750
+     }
+    ]
+   },
+   "expected": {
+    "blockers": [
+     "STRUCT-C"
+    ]
+   }
+  },
+  {
+   "name": "nothing in the way",
+   "input": {
+    "eye": [
+     -500,
+     1600,
+     3000
+    ],
+    "targets": [
+     [
+      -500,
+      1200,
+      600
+     ]
+    ],
+    "obstacles": [
+     {
+      "id": "STRUCT-C",
+      "kind": "column",
+      "outline": [
+       [
+        -2200,
+        1500
+       ],
+       [
+        -1800,
+        1500
+       ],
+       [
+        -1800,
+        1900
+       ],
+       [
+        -2200,
+        1900
+       ]
+      ],
+      "y0": 0,
+      "y1": 2700
+     }
+    ]
+   },
+   "expected": {
+    "blockers": []
+   }
+  }
+ ]
+}

@@ -1,0 +1,131 @@
+{
+ "function": "layers.material_slot",
+ "cases": [
+  {
+   "name": "parts of the L fixture",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "parts": [
+     [
+      "TD1",
+      "door"
+     ],
+     [
+      "TT1",
+      "door"
+     ],
+     [
+      "TC1",
+      "door"
+     ],
+     [
+      "KG1",
+      "shelf"
+     ],
+     [
+      "TD1",
+      "carcass"
+     ],
+     [
+      "TD1",
+      "handle"
+     ],
+     [
+      null,
+      "countertop"
+     ],
+     [
+      null,
+      "wall-tile"
+     ],
+     [
+      null,
+      "wall"
+     ]
+    ]
+   },
+   "expected": {
+    "slots": {
+     "TD1/door": [
+      "common:base",
+      "Laminate vân gỗ sồi sáng"
+     ],
+     "TT1/door": [
+      "common:upper",
+      "Trắng mờ"
+     ],
+     "TC1/door": [
+      "common:tall",
+      "Laminate vân gỗ sồi sáng"
+     ],
+     "KG1/shelf": [
+      "common:cornerShelf",
+      "Vân gỗ sồi"
+     ],
+     "TD1/carcass": [
+      "common:carcass",
+      "Melamine trắng"
+     ],
+     "TD1/handle": [
+      "common:handle",
+      "Nhôm đen mờ"
+     ],
+     "None/countertop": [
+      "common:countertop",
+      "Đá nhân tạo trắng"
+     ],
+     "None/wall-tile": [
+      "common:carcass",
+      "Melamine trắng"
+     ],
+     "None/wall": [
+      "common:wall",
+      "Sơn tường trắng ngà"
+     ]
+    }
+   }
+  },
+  {
+   "name": "module with its own front",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "ops": [
+     {
+      "op": "update",
+      "id": "TD1",
+      "changes": {
+       "material": "Gỗ óc chó"
+      },
+      "closeGap": false
+     }
+    ],
+    "parts": [
+     [
+      "TD1",
+      "door"
+     ],
+     [
+      "TD2",
+      "door"
+     ]
+    ]
+   },
+   "expected": {
+    "slots": {
+     "TD1/door": [
+      "module:TD1",
+      "Gỗ óc chó"
+     ],
+     "TD2/door": [
+      "common:base",
+      "Laminate vân gỗ sồi sáng"
+     ]
+    }
+   }
+  }
+ ]
+}

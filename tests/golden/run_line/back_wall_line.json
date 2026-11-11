@@ -1,0 +1,68 @@
+{
+ "function": "run_line.back_wall_line",
+ "cases": [
+  {
+   "name": "L fixture, one run",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "runs": [
+     {
+      "id": "back",
+      "length": 3000,
+      "modules": []
+     }
+    ]
+   },
+   "expected": {
+    "a": [
+     -3000.0,
+     0.0
+    ],
+    "b": [
+     0.0,
+     0.0
+    ],
+    "normal": [
+     0.0,
+     1.0
+    ]
+   }
+  },
+  {
+   "name": "L fixture, back and right",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "runs": [
+     {
+      "id": "back",
+      "length": 3000,
+      "modules": []
+     },
+     {
+      "id": "right",
+      "length": 2000,
+      "modules": []
+     }
+    ]
+   },
+   "expected": {
+    "a": [
+     -3000.0,
+     0.0
+    ],
+    "b": [
+     0.0,
+     0.0
+    ],
+    "normal": [
+     0.0,
+     1.0
+    ]
+   }
+  }
+ ]
+}

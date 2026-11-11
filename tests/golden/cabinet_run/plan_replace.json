@@ -1,0 +1,301 @@
+{
+ "function": "cabinet_run.plan_replace",
+ "cases": [
+  {
+   "name": "one run against a wall",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "element": "furniture_003",
+    "placed": [
+     {
+      "a": [
+       3000,
+       0
+      ],
+      "b": [
+       500,
+       0
+      ],
+      "doors": [
+       0,
+       1
+      ],
+      "depth": 600,
+      "edge": 0
+     }
+    ],
+    "laid": [
+     [
+      {
+       "type": "base",
+       "s": 0,
+       "width": 600,
+       "y": 0,
+       "height": 840,
+       "depth": 580
+      },
+      {
+       "type": "base-sink",
+       "s": 600,
+       "width": 800,
+       "y": 0,
+       "height": 840,
+       "depth": 580,
+       "appliance": {
+        "type": "sink"
+       }
+      }
+     ]
+    ]
+   },
+   "expected": {
+    "operation": {
+     "op": "multi",
+     "ops": [
+      {
+       "op": "add-run",
+       "run": {
+        "id": "R1",
+        "x": 500.0,
+        "z": 0.0,
+        "yaw": 0.0,
+        "system": "furniture_003"
+       }
+      },
+      {
+       "op": "add",
+       "closeGap": false,
+       "module": {
+        "type": "base",
+        "wall": "island",
+        "run": "R1",
+        "fromCorner": 0.0,
+        "width": 600.0,
+        "y": 0.0,
+        "height": 840.0,
+        "depth": 580.0
+       }
+      },
+      {
+       "op": "add",
+       "closeGap": false,
+       "module": {
+        "type": "base-sink",
+        "wall": "island",
+        "run": "R1",
+        "fromCorner": 600.0,
+        "width": 800.0,
+        "y": 0.0,
+        "height": 840.0,
+        "depth": 580.0,
+        "appliance": {
+         "type": "sink"
+        }
+       }
+      },
+      {
+       "op": "replace-element",
+       "id": "furniture_003",
+       "replaced": true
+      }
+     ]
+    },
+    "runs": [
+     {
+      "id": "R1",
+      "x": 500.0,
+      "z": 0.0,
+      "yaw": 0.0,
+      "system": "furniture_003"
+     }
+    ],
+    "removed": [],
+    "appliancesRemoved": [],
+    "summary": [
+     "furniture_003 is replaced by 1 run(s) of cabinets and is no longer drawn",
+     "Run R1: 2 cabinets, 2500 mm long, 600 mm deep, back on edge 0 against the wall"
+    ],
+    "length": 2500.0
+   }
+  },
+  {
+   "name": "two runs of an L",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "element": "furniture_003",
+    "placed": [
+     {
+      "a": [
+       2400,
+       0
+      ],
+      "b": [
+       0,
+       0
+      ],
+      "doors": [
+       0,
+       1
+      ],
+      "depth": 600,
+      "edge": 0
+     },
+     {
+      "a": [
+       0,
+       0
+      ],
+      "b": [
+       0,
+       1800
+      ],
+      "doors": [
+       1,
+       0
+      ],
+      "depth": 600,
+      "edge": 5
+     }
+    ],
+    "laid": [
+     [
+      {
+       "type": "base",
+       "s": 0,
+       "width": 600,
+       "y": 0,
+       "height": 840,
+       "depth": 580
+      },
+      {
+       "type": "base-sink",
+       "s": 600,
+       "width": 800,
+       "y": 0,
+       "height": 840,
+       "depth": 580,
+       "appliance": {
+        "type": "sink"
+       }
+      }
+     ],
+     [
+      {
+       "type": "base",
+       "s": 0,
+       "width": 600,
+       "y": 0,
+       "height": 840,
+       "depth": 580
+      }
+     ]
+    ]
+   },
+   "expected": {
+    "operation": {
+     "op": "multi",
+     "ops": [
+      {
+       "op": "add-run",
+       "run": {
+        "id": "R1",
+        "x": 0.0,
+        "z": 0.0,
+        "yaw": 0.0,
+        "system": "furniture_003"
+       }
+      },
+      {
+       "op": "add",
+       "closeGap": false,
+       "module": {
+        "type": "base",
+        "wall": "island",
+        "run": "R1",
+        "fromCorner": 0.0,
+        "width": 600.0,
+        "y": 0.0,
+        "height": 840.0,
+        "depth": 580.0
+       }
+      },
+      {
+       "op": "add",
+       "closeGap": false,
+       "module": {
+        "type": "base-sink",
+        "wall": "island",
+        "run": "R1",
+        "fromCorner": 600.0,
+        "width": 800.0,
+        "y": 0.0,
+        "height": 840.0,
+        "depth": 580.0,
+        "appliance": {
+         "type": "sink"
+        }
+       }
+      },
+      {
+       "op": "add-run",
+       "run": {
+        "id": "R2",
+        "x": 0.0,
+        "z": 1800.0,
+        "yaw": 90.0,
+        "system": "furniture_003"
+       }
+      },
+      {
+       "op": "add",
+       "closeGap": false,
+       "module": {
+        "type": "base",
+        "wall": "island",
+        "run": "R2",
+        "fromCorner": 0.0,
+        "width": 600.0,
+        "y": 0.0,
+        "height": 840.0,
+        "depth": 580.0
+       }
+      },
+      {
+       "op": "replace-element",
+       "id": "furniture_003",
+       "replaced": true
+      }
+     ]
+    },
+    "runs": [
+     {
+      "id": "R1",
+      "x": 0.0,
+      "z": 0.0,
+      "yaw": 0.0,
+      "system": "furniture_003"
+     },
+     {
+      "id": "R2",
+      "x": 0.0,
+      "z": 1800.0,
+      "yaw": 90.0,
+      "system": "furniture_003"
+     }
+    ],
+    "removed": [],
+    "appliancesRemoved": [],
+    "summary": [
+     "furniture_003 is replaced by 2 run(s) of cabinets and is no longer drawn",
+     "Run R1: 2 cabinets, 2400 mm long, 600 mm deep, back on edge 0 against the wall",
+     "Run R2: 1 cabinets, 1800 mm long, 600 mm deep, back on edge 5 against the wall"
+    ],
+    "length": 4200.0
+   }
+  }
+ ]
+}

@@ -1,0 +1,89 @@
+{
+ "function": "system_replace.members",
+ "cases": [
+  {
+   "name": "the L after conversion",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "convertRows": true,
+    "system": "auto-R1"
+   },
+   "expected": {
+    "members": [
+     "TC1",
+     "TD1",
+     "TT1",
+     "TT2",
+     "KG1",
+     "TD2",
+     "TD3",
+     "TD4",
+     "TD5",
+     "TT3",
+     "TT4",
+     "TT5",
+     "TT6",
+     "TT7",
+     "TT8",
+     "TT9"
+    ],
+    "front": "Laminate vân gỗ sồi sáng",
+    "slots": [
+     {
+      "run": "R2",
+      "start": 0.0,
+      "length": 2830.0,
+      "storeys": [
+       "base",
+       "loft",
+       "upper"
+      ],
+      "depth": 550.0
+     },
+     {
+      "run": "R1",
+      "start": 0.0,
+      "length": 1370.0,
+      "storeys": [
+       "base",
+       "corner",
+       "loft",
+       "tall",
+       "upper"
+      ],
+      "depth": 640.0
+     }
+    ]
+   }
+  },
+  {
+   "name": "no such system",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "convertRows": true,
+    "system": "nope"
+   },
+   "error": {
+    "kind": "validation",
+    "code": "system-not-found"
+   }
+  },
+  {
+   "name": "wall rows: the design system",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "system": "design"
+   },
+   "error": {
+    "kind": "validation",
+    "code": "no-run"
+   }
+  }
+ ]
+}

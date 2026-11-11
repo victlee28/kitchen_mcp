@@ -1,0 +1,49 @@
+{
+ "function": "numeric.round_int",
+ "cases": [
+  {
+   "name": "halves away from zero",
+   "input": {
+    "xs": [
+     0.5,
+     1.5,
+     2.5,
+     -0.5,
+     -1.5,
+     2.4999,
+     1000000000.5
+    ]
+   },
+   "expected": {
+    "values": [
+     1,
+     2,
+     3,
+     -1,
+     -2,
+     2,
+     1000000001
+    ]
+   }
+  },
+  {
+   "name": "whole numbers",
+   "input": {
+    "xs": [
+     0,
+     7,
+     -3,
+     600.0
+    ]
+   },
+   "expected": {
+    "values": [
+     0,
+     7,
+     -3,
+     600
+    ]
+   }
+  }
+ ]
+}

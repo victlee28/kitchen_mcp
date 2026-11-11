@@ -1,0 +1,111 @@
+{
+ "function": "camera_plan.faces_room",
+ "cases": [
+  {
+   "name": "front looks into the room",
+   "input": {
+    "face": {
+     "key": "run-R1",
+     "name": "R1",
+     "center": [
+      -2000,
+      600
+     ],
+     "normal": [
+      0,
+      1
+     ],
+     "length": 2400,
+     "height": 2200,
+     "run": "R1"
+    },
+    "room": [
+     [
+      -4000,
+      0
+     ],
+     [
+      0,
+      0
+     ],
+     [
+      0,
+      3200
+     ],
+     [
+      -4000,
+      3200
+     ]
+    ]
+   },
+   "expected": {
+    "facesRoom": true
+   }
+  },
+  {
+   "name": "front against the wall looks out",
+   "input": {
+    "face": {
+     "key": "run-R1",
+     "name": "R1",
+     "center": [
+      -2000,
+      10
+     ],
+     "normal": [
+      0,
+      -1
+     ],
+     "length": 2400,
+     "height": 2200,
+     "run": "R1"
+    },
+    "room": [
+     [
+      -4000,
+      0
+     ],
+     [
+      0,
+      0
+     ],
+     [
+      0,
+      3200
+     ],
+     [
+      -4000,
+      3200
+     ]
+    ]
+   },
+   "expected": {
+    "facesRoom": false
+   }
+  },
+  {
+   "name": "no room",
+   "input": {
+    "face": {
+     "key": "run-R1",
+     "name": "R1",
+     "center": [
+      -2000,
+      600
+     ],
+     "normal": [
+      0,
+      1
+     ],
+     "length": 2400,
+     "height": 2200,
+     "run": "R1"
+    },
+    "room": null
+   },
+   "expected": {
+    "facesRoom": true
+   }
+  }
+ ]
+}

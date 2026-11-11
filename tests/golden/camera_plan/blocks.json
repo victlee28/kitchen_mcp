@@ -1,0 +1,131 @@
+{
+ "function": "camera_plan.blocks",
+ "cases": [
+  {
+   "name": "column between eye and target",
+   "input": {
+    "eye": [
+     -2000,
+     1600,
+     3000
+    ],
+    "target": [
+     -2000,
+     1200,
+     600
+    ],
+    "obstacle": {
+     "id": "STRUCT-C",
+     "kind": "column",
+     "outline": [
+      [
+       -2200,
+       1500
+      ],
+      [
+       -1800,
+       1500
+      ],
+      [
+       -1800,
+       1900
+      ],
+      [
+       -2200,
+       1900
+      ]
+     ],
+     "y0": 0,
+     "y1": 2700
+    }
+   },
+   "expected": {
+    "blocks": true
+   }
+  },
+  {
+   "name": "low table under the line of sight",
+   "input": {
+    "eye": [
+     -2000,
+     1600,
+     3000
+    ],
+    "target": [
+     -2000,
+     1200,
+     600
+    ],
+    "obstacle": {
+     "id": "STRUCT-T",
+     "kind": "furniture",
+     "outline": [
+      [
+       -2200,
+       1500
+      ],
+      [
+       -1800,
+       1500
+      ],
+      [
+       -1800,
+       1900
+      ],
+      [
+       -2200,
+       1900
+      ]
+     ],
+     "y0": 0,
+     "y1": 750
+    }
+   },
+   "expected": {
+    "blocks": false
+   }
+  },
+  {
+   "name": "column to the side",
+   "input": {
+    "eye": [
+     -500,
+     1600,
+     3000
+    ],
+    "target": [
+     -500,
+     1200,
+     600
+    ],
+    "obstacle": {
+     "id": "STRUCT-C",
+     "kind": "column",
+     "outline": [
+      [
+       -2200,
+       1500
+      ],
+      [
+       -1800,
+       1500
+      ],
+      [
+       -1800,
+       1900
+      ],
+      [
+       -2200,
+       1900
+      ]
+     ],
+     "y0": 0,
+     "y1": 2700
+    }
+   },
+   "expected": {
+    "blocks": false
+   }
+  }
+ ]
+}

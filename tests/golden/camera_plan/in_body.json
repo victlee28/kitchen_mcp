@@ -1,0 +1,119 @@
+{
+ "function": "camera_plan.in_body",
+ "cases": [
+  {
+   "name": "inside a cabinet",
+   "input": {
+    "p": [
+     -2000,
+     1700
+    ],
+    "bodies": [
+     {
+      "id": "STRUCT-C",
+      "kind": "column",
+      "outline": [
+       [
+        -2200,
+        1500
+       ],
+       [
+        -1800,
+        1500
+       ],
+       [
+        -1800,
+        1900
+       ],
+       [
+        -2200,
+        1900
+       ]
+      ],
+      "y0": 0,
+      "y1": 2700
+     }
+    ]
+   },
+   "expected": {
+    "inBody": true
+   }
+  },
+  {
+   "name": "near it",
+   "input": {
+    "p": [
+     -2000,
+     2000
+    ],
+    "bodies": [
+     {
+      "id": "STRUCT-C",
+      "kind": "column",
+      "outline": [
+       [
+        -2200,
+        1500
+       ],
+       [
+        -1800,
+        1500
+       ],
+       [
+        -1800,
+        1900
+       ],
+       [
+        -2200,
+        1900
+       ]
+      ],
+      "y0": 0,
+      "y1": 2700
+     }
+    ]
+   },
+   "expected": {
+    "inBody": true
+   }
+  },
+  {
+   "name": "clear",
+   "input": {
+    "p": [
+     -500,
+     500
+    ],
+    "bodies": [
+     {
+      "id": "STRUCT-C",
+      "kind": "column",
+      "outline": [
+       [
+        -2200,
+        1500
+       ],
+       [
+        -1800,
+        1500
+       ],
+       [
+        -1800,
+        1900
+       ],
+       [
+        -2200,
+        1900
+       ]
+      ],
+      "y0": 0,
+      "y1": 2700
+     }
+    ]
+   },
+   "expected": {
+    "inBody": false
+   }
+  }
+ ]
+}

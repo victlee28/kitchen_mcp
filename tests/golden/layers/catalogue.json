@@ -1,0 +1,990 @@
+{
+ "function": "layers.catalogue",
+ "cases": [
+  {
+   "name": "L fixture",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    }
+   },
+   "expected": {
+    "counts": {
+     "part": 98,
+     "group": 68
+    },
+    "groups": [
+     [
+      "frontSections:TC1",
+      "door",
+      "Laminate vân gỗ sồi sáng",
+      "common:tall",
+      2
+     ],
+     [
+      "handle:TC1",
+      "handle",
+      "Nhôm đen mờ",
+      "common:handle",
+      2
+     ],
+     [
+      "module:TC1",
+      "module",
+      null,
+      "",
+      8
+     ],
+     [
+      "frontSections:TD1",
+      "door",
+      "Laminate vân gỗ sồi sáng",
+      "common:base",
+      2
+     ],
+     [
+      "handle:TD1",
+      "handle",
+      "Nhôm đen mờ",
+      "common:handle",
+      2
+     ],
+     [
+      "module:TD1",
+      "module",
+      null,
+      "",
+      6
+     ],
+     [
+      "frontSections:TT1",
+      "door",
+      "Trắng mờ",
+      "common:upper",
+      2
+     ],
+     [
+      "handle:TT1",
+      "handle",
+      "Nhôm đen mờ",
+      "common:handle",
+      2
+     ],
+     [
+      "module:TT1",
+      "module",
+      null,
+      "",
+      5
+     ],
+     [
+      "frontSections:TT2",
+      "door",
+      "Trắng mờ",
+      "common:upper",
+      1
+     ],
+     [
+      "handle:TT2",
+      "handle",
+      "Nhôm đen mờ",
+      "common:handle",
+      1
+     ],
+     [
+      "module:TT2",
+      "module",
+      null,
+      "",
+      3
+     ],
+     [
+      "module:KG1",
+      "module",
+      null,
+      "",
+      10
+     ],
+     [
+      "frontSections:TD2",
+      "door",
+      "Laminate vân gỗ sồi sáng",
+      "common:base",
+      2
+     ],
+     [
+      "handle:TD2",
+      "handle",
+      "Nhôm đen mờ",
+      "common:handle",
+      2
+     ],
+     [
+      "module:TD2",
+      "module",
+      null,
+      "",
+      7
+     ],
+     [
+      "frontSections:TD3",
+      "door",
+      "Laminate vân gỗ sồi sáng",
+      "common:base",
+      1
+     ],
+     [
+      "handle:TD3",
+      "handle",
+      "Nhôm đen mờ",
+      "common:handle",
+      1
+     ],
+     [
+      "module:TD3",
+      "module",
+      null,
+      "",
+      4
+     ],
+     [
+      "frontSections:TD4",
+      "door",
+      "Laminate vân gỗ sồi sáng",
+      "common:base",
+      2
+     ],
+     [
+      "handle:TD4",
+      "handle",
+      "Nhôm đen mờ",
+      "common:handle",
+      2
+     ],
+     [
+      "module:TD4",
+      "module",
+      null,
+      "",
+      12
+     ],
+     [
+      "frontSections:TD5",
+      "door",
+      "Laminate vân gỗ sồi sáng",
+      "common:base",
+      1
+     ],
+     [
+      "handle:TD5",
+      "handle",
+      "Nhôm đen mờ",
+      "common:handle",
+      1
+     ],
+     [
+      "module:TD5",
+      "module",
+      null,
+      "",
+      5
+     ],
+     [
+      "frontSections:TT3",
+      "door",
+      "Kính cánh tủ",
+      "appliances:glass",
+      2
+     ],
+     [
+      "handle:TT3",
+      "handle",
+      "Nhôm đen mờ",
+      "common:handle",
+      2
+     ],
+     [
+      "module:TT3",
+      "module",
+      null,
+      "",
+      5
+     ],
+     [
+      "frontSections:TT4",
+      "door",
+      "Trắng mờ",
+      "common:upper",
+      1
+     ],
+     [
+      "handle:TT4",
+      "handle",
+      "Nhôm đen mờ",
+      "common:handle",
+      1
+     ],
+     [
+      "module:TT4",
+      "module",
+      null,
+      "",
+      3
+     ],
+     [
+      "frontSections:TT5",
+      "door",
+      "Trắng mờ",
+      "common:upper",
+      2
+     ],
+     [
+      "handle:TT5",
+      "handle",
+      "Nhôm đen mờ",
+      "common:handle",
+      2
+     ],
+     [
+      "module:TT5",
+      "module",
+      null,
+      "",
+      5
+     ],
+     [
+      "frontSections:TT6",
+      "door",
+      "Trắng mờ",
+      "common:upper",
+      1
+     ],
+     [
+      "handle:TT6",
+      "handle",
+      "Nhôm đen mờ",
+      "common:handle",
+      1
+     ],
+     [
+      "module:TT6",
+      "module",
+      null,
+      "",
+      3
+     ],
+     [
+      "frontSections:TT7",
+      "door",
+      "Trắng mờ",
+      "common:upper",
+      1
+     ],
+     [
+      "handle:TT7",
+      "handle",
+      "Nhôm đen mờ",
+      "common:handle",
+      1
+     ],
+     [
+      "module:TT7",
+      "module",
+      null,
+      "",
+      3
+     ],
+     [
+      "frontSections:TT8",
+      "door",
+      "Trắng mờ",
+      "common:upper",
+      1
+     ],
+     [
+      "handle:TT8",
+      "handle",
+      "Nhôm đen mờ",
+      "common:handle",
+      1
+     ],
+     [
+      "module:TT8",
+      "module",
+      null,
+      "",
+      3
+     ],
+     [
+      "frontSections:TT9",
+      "door",
+      "Trắng mờ",
+      "common:upper",
+      1
+     ],
+     [
+      "handle:TT9",
+      "handle",
+      "Nhôm đen mờ",
+      "common:handle",
+      1
+     ],
+     [
+      "module:TT9",
+      "module",
+      null,
+      "",
+      3
+     ],
+     [
+      "type:side-panel",
+      "side-panel",
+      null,
+      "",
+      7
+     ],
+     [
+      "type:carcass",
+      "carcass",
+      "Melamine trắng",
+      "common:carcass",
+      19
+     ],
+     [
+      "type:door",
+      "door",
+      null,
+      "",
+      18
+     ],
+     [
+      "type:handle",
+      "handle",
+      "Nhôm đen mờ",
+      "common:handle",
+      22
+     ],
+     [
+      "type:plinth",
+      "plinth",
+      "Chân tủ nhựa xám đậm",
+      "common:plinth",
+      5
+     ],
+     [
+      "type:shelf",
+      "shelf",
+      null,
+      "",
+      10
+     ],
+     [
+      "type:drawer",
+      "drawer",
+      "Laminate vân gỗ sồi sáng",
+      "common:base",
+      2
+     ],
+     [
+      "type:glass-door",
+      "glass-door",
+      "Kính cánh tủ",
+      "appliances:glass",
+      2
+     ],
+     [
+      "type:countertop",
+      "countertop",
+      "Đá nhân tạo trắng",
+      "common:countertop",
+      2
+     ],
+     [
+      "type:wall-tile",
+      "wall-tile",
+      "Melamine trắng",
+      "common:carcass",
+      2
+     ],
+     [
+      "type:wall",
+      "wall",
+      "Sơn tường trắng ngà",
+      "common:wall",
+      2
+     ],
+     [
+      "tier:base:handle",
+      "handle",
+      "Nhôm đen mờ",
+      "common:handle",
+      8
+     ],
+     [
+      "tier:base:door",
+      "door",
+      "Laminate vân gỗ sồi sáng",
+      "common:base",
+      6
+     ],
+     [
+      "tier:base:drawer",
+      "drawer",
+      "Laminate vân gỗ sồi sáng",
+      "common:base",
+      2
+     ],
+     [
+      "tier:base:front",
+      "door",
+      "Laminate vân gỗ sồi sáng",
+      "common:base",
+      8
+     ],
+     [
+      "tier:base:all",
+      "module",
+      null,
+      "",
+      16
+     ],
+     [
+      "tier:upper:handle",
+      "handle",
+      "Nhôm đen mờ",
+      "common:handle",
+      12
+     ],
+     [
+      "tier:upper:door",
+      "door",
+      null,
+      "",
+      12
+     ],
+     [
+      "tier:upper:all",
+      "module",
+      null,
+      "",
+      24
+     ],
+     [
+      "tier:tall:handle",
+      "handle",
+      "Nhôm đen mờ",
+      "common:handle",
+      2
+     ],
+     [
+      "tier:tall:door",
+      "door",
+      "Laminate vân gỗ sồi sáng",
+      "common:tall",
+      2
+     ],
+     [
+      "tier:tall:all",
+      "module",
+      null,
+      "",
+      4
+     ]
+    ]
+   }
+  },
+  {
+   "name": "after conversion (one system)",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "convertRows": true
+   },
+   "expected": {
+    "counts": {
+     "part": 98,
+     "group": 68
+    },
+    "groups": [
+     [
+      "frontSections:TC1",
+      "door",
+      "Laminate vân gỗ sồi sáng",
+      "common:tall",
+      2
+     ],
+     [
+      "handle:TC1",
+      "handle",
+      "Nhôm đen mờ",
+      "common:handle",
+      2
+     ],
+     [
+      "module:TC1",
+      "module",
+      null,
+      "",
+      8
+     ],
+     [
+      "frontSections:TD1",
+      "door",
+      "Laminate vân gỗ sồi sáng",
+      "common:base",
+      2
+     ],
+     [
+      "handle:TD1",
+      "handle",
+      "Nhôm đen mờ",
+      "common:handle",
+      2
+     ],
+     [
+      "module:TD1",
+      "module",
+      null,
+      "",
+      6
+     ],
+     [
+      "frontSections:TT1",
+      "door",
+      "Trắng mờ",
+      "common:upper",
+      2
+     ],
+     [
+      "handle:TT1",
+      "handle",
+      "Nhôm đen mờ",
+      "common:handle",
+      2
+     ],
+     [
+      "module:TT1",
+      "module",
+      null,
+      "",
+      5
+     ],
+     [
+      "frontSections:TT2",
+      "door",
+      "Trắng mờ",
+      "common:upper",
+      1
+     ],
+     [
+      "handle:TT2",
+      "handle",
+      "Nhôm đen mờ",
+      "common:handle",
+      1
+     ],
+     [
+      "module:TT2",
+      "module",
+      null,
+      "",
+      3
+     ],
+     [
+      "module:KG1",
+      "module",
+      null,
+      "",
+      10
+     ],
+     [
+      "frontSections:TD2",
+      "door",
+      "Laminate vân gỗ sồi sáng",
+      "common:base",
+      2
+     ],
+     [
+      "handle:TD2",
+      "handle",
+      "Nhôm đen mờ",
+      "common:handle",
+      2
+     ],
+     [
+      "module:TD2",
+      "module",
+      null,
+      "",
+      7
+     ],
+     [
+      "frontSections:TD3",
+      "door",
+      "Laminate vân gỗ sồi sáng",
+      "common:base",
+      1
+     ],
+     [
+      "handle:TD3",
+      "handle",
+      "Nhôm đen mờ",
+      "common:handle",
+      1
+     ],
+     [
+      "module:TD3",
+      "module",
+      null,
+      "",
+      4
+     ],
+     [
+      "frontSections:TD4",
+      "door",
+      "Laminate vân gỗ sồi sáng",
+      "common:base",
+      2
+     ],
+     [
+      "handle:TD4",
+      "handle",
+      "Nhôm đen mờ",
+      "common:handle",
+      2
+     ],
+     [
+      "module:TD4",
+      "module",
+      null,
+      "",
+      12
+     ],
+     [
+      "frontSections:TD5",
+      "door",
+      "Laminate vân gỗ sồi sáng",
+      "common:base",
+      1
+     ],
+     [
+      "handle:TD5",
+      "handle",
+      "Nhôm đen mờ",
+      "common:handle",
+      1
+     ],
+     [
+      "module:TD5",
+      "module",
+      null,
+      "",
+      5
+     ],
+     [
+      "frontSections:TT3",
+      "door",
+      "Kính cánh tủ",
+      "appliances:glass",
+      2
+     ],
+     [
+      "handle:TT3",
+      "handle",
+      "Nhôm đen mờ",
+      "common:handle",
+      2
+     ],
+     [
+      "module:TT3",
+      "module",
+      null,
+      "",
+      5
+     ],
+     [
+      "frontSections:TT4",
+      "door",
+      "Trắng mờ",
+      "common:upper",
+      1
+     ],
+     [
+      "handle:TT4",
+      "handle",
+      "Nhôm đen mờ",
+      "common:handle",
+      1
+     ],
+     [
+      "module:TT4",
+      "module",
+      null,
+      "",
+      3
+     ],
+     [
+      "frontSections:TT5",
+      "door",
+      "Trắng mờ",
+      "common:upper",
+      2
+     ],
+     [
+      "handle:TT5",
+      "handle",
+      "Nhôm đen mờ",
+      "common:handle",
+      2
+     ],
+     [
+      "module:TT5",
+      "module",
+      null,
+      "",
+      5
+     ],
+     [
+      "frontSections:TT6",
+      "door",
+      "Trắng mờ",
+      "common:upper",
+      1
+     ],
+     [
+      "handle:TT6",
+      "handle",
+      "Nhôm đen mờ",
+      "common:handle",
+      1
+     ],
+     [
+      "module:TT6",
+      "module",
+      null,
+      "",
+      3
+     ],
+     [
+      "frontSections:TT7",
+      "door",
+      "Trắng mờ",
+      "common:upper",
+      1
+     ],
+     [
+      "handle:TT7",
+      "handle",
+      "Nhôm đen mờ",
+      "common:handle",
+      1
+     ],
+     [
+      "module:TT7",
+      "module",
+      null,
+      "",
+      3
+     ],
+     [
+      "frontSections:TT8",
+      "door",
+      "Trắng mờ",
+      "common:upper",
+      1
+     ],
+     [
+      "handle:TT8",
+      "handle",
+      "Nhôm đen mờ",
+      "common:handle",
+      1
+     ],
+     [
+      "module:TT8",
+      "module",
+      null,
+      "",
+      3
+     ],
+     [
+      "frontSections:TT9",
+      "door",
+      "Trắng mờ",
+      "common:upper",
+      1
+     ],
+     [
+      "handle:TT9",
+      "handle",
+      "Nhôm đen mờ",
+      "common:handle",
+      1
+     ],
+     [
+      "module:TT9",
+      "module",
+      null,
+      "",
+      3
+     ],
+     [
+      "type:side-panel",
+      "side-panel",
+      null,
+      "",
+      7
+     ],
+     [
+      "type:carcass",
+      "carcass",
+      "Melamine trắng",
+      "common:carcass",
+      19
+     ],
+     [
+      "type:door",
+      "door",
+      null,
+      "",
+      18
+     ],
+     [
+      "type:handle",
+      "handle",
+      "Nhôm đen mờ",
+      "common:handle",
+      22
+     ],
+     [
+      "type:plinth",
+      "plinth",
+      "Chân tủ nhựa xám đậm",
+      "common:plinth",
+      5
+     ],
+     [
+      "type:shelf",
+      "shelf",
+      null,
+      "",
+      10
+     ],
+     [
+      "type:drawer",
+      "drawer",
+      "Laminate vân gỗ sồi sáng",
+      "common:base",
+      2
+     ],
+     [
+      "type:glass-door",
+      "glass-door",
+      "Kính cánh tủ",
+      "appliances:glass",
+      2
+     ],
+     [
+      "type:countertop",
+      "countertop",
+      "Đá nhân tạo trắng",
+      "common:countertop",
+      2
+     ],
+     [
+      "type:wall-tile",
+      "wall-tile",
+      "Melamine trắng",
+      "common:carcass",
+      2
+     ],
+     [
+      "type:wall",
+      "wall",
+      "Sơn tường trắng ngà",
+      "common:wall",
+      2
+     ],
+     [
+      "tier:base:handle",
+      "handle",
+      "Nhôm đen mờ",
+      "common:handle",
+      8
+     ],
+     [
+      "tier:base:door",
+      "door",
+      "Laminate vân gỗ sồi sáng",
+      "common:base",
+      6
+     ],
+     [
+      "tier:base:drawer",
+      "drawer",
+      "Laminate vân gỗ sồi sáng",
+      "common:base",
+      2
+     ],
+     [
+      "tier:base:front",
+      "door",
+      "Laminate vân gỗ sồi sáng",
+      "common:base",
+      8
+     ],
+     [
+      "tier:base:all",
+      "module",
+      null,
+      "",
+      16
+     ],
+     [
+      "tier:upper:handle",
+      "handle",
+      "Nhôm đen mờ",
+      "common:handle",
+      12
+     ],
+     [
+      "tier:upper:door",
+      "door",
+      null,
+      "",
+      12
+     ],
+     [
+      "tier:upper:all",
+      "module",
+      null,
+      "",
+      24
+     ],
+     [
+      "tier:tall:handle",
+      "handle",
+      "Nhôm đen mờ",
+      "common:handle",
+      2
+     ],
+     [
+      "tier:tall:door",
+      "door",
+      "Laminate vân gỗ sồi sáng",
+      "common:tall",
+      2
+     ],
+     [
+      "tier:tall:all",
+      "module",
+      null,
+      "",
+      4
+     ]
+    ]
+   }
+  }
+ ]
+}

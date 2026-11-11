@@ -1,0 +1,63 @@
+{
+ "function": "system_replace.kept_models",
+ "cases": [
+  {
+   "name": "nothing has a model",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "convertRows": true,
+    "system": "auto-R1",
+    "sentence": "thêm tủ nóc"
+   },
+   "expected": {
+    "kept": {}
+   }
+  },
+  {
+   "name": "sink model kept",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "convertRows": true,
+    "system": "auto-R1",
+    "ops": [
+     {
+      "op": "update-appliance",
+      "id": "TB2",
+      "model": "sink-double-82"
+     }
+    ],
+    "sentence": "thêm tủ nóc"
+   },
+   "expected": {
+    "kept": {
+     "sink": "sink-double-82"
+    }
+   }
+  },
+  {
+   "name": "sentence names the sink",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "convertRows": true,
+    "system": "auto-R1",
+    "ops": [
+     {
+      "op": "update-appliance",
+      "id": "TB2",
+      "model": "sink-double-82"
+     }
+    ],
+    "sentence": "đổi chậu đơn"
+   },
+   "expected": {
+    "kept": {}
+   }
+  }
+ ]
+}

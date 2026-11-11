@@ -1,0 +1,173 @@
+{
+ "function": "cabinet_run.fit_depth",
+ "cases": [
+  {
+   "name": "deep object: wall cabinets keep theirs",
+   "input": {
+    "modules": [
+     {
+      "type": "base",
+      "s": 0,
+      "width": 600,
+      "y": 0,
+      "height": 840,
+      "depth": 580
+     },
+     {
+      "type": "base-sink",
+      "s": 600,
+      "width": 800,
+      "y": 0,
+      "height": 840,
+      "depth": 580,
+      "appliance": {
+       "type": "sink"
+      }
+     },
+     {
+      "type": "tall-fridge",
+      "s": 1400,
+      "width": 700,
+      "y": 0,
+      "height": 2200,
+      "depth": 620
+     },
+     {
+      "type": "upper-hood",
+      "s": 0,
+      "width": 600,
+      "y": 1450,
+      "height": 700,
+      "depth": 350,
+      "name": "Tủ hút mùi"
+     }
+    ],
+    "depth": 600
+   },
+   "expected": {
+    "modules": [
+     {
+      "type": "base",
+      "s": 0,
+      "width": 600,
+      "y": 0,
+      "height": 840,
+      "depth": 600.0
+     },
+     {
+      "type": "base-sink",
+      "s": 600,
+      "width": 800,
+      "y": 0,
+      "height": 840,
+      "depth": 600.0,
+      "appliance": {
+       "type": "sink"
+      }
+     },
+     {
+      "type": "tall-fridge",
+      "s": 1400,
+      "width": 700,
+      "y": 0,
+      "height": 2200,
+      "depth": 600.0
+     },
+     {
+      "type": "upper-hood",
+      "s": 0,
+      "width": 600,
+      "y": 1450,
+      "height": 700,
+      "depth": 350,
+      "name": "Tủ hút mùi"
+     }
+    ]
+   }
+  },
+  {
+   "name": "shallow object: all as deep",
+   "input": {
+    "modules": [
+     {
+      "type": "base",
+      "s": 0,
+      "width": 600,
+      "y": 0,
+      "height": 840,
+      "depth": 580
+     },
+     {
+      "type": "base-sink",
+      "s": 600,
+      "width": 800,
+      "y": 0,
+      "height": 840,
+      "depth": 580,
+      "appliance": {
+       "type": "sink"
+      }
+     },
+     {
+      "type": "tall-fridge",
+      "s": 1400,
+      "width": 700,
+      "y": 0,
+      "height": 2200,
+      "depth": 620
+     },
+     {
+      "type": "upper-hood",
+      "s": 0,
+      "width": 600,
+      "y": 1450,
+      "height": 700,
+      "depth": 350,
+      "name": "Tủ hút mùi"
+     }
+    ],
+    "depth": 300
+   },
+   "expected": {
+    "modules": [
+     {
+      "type": "base",
+      "s": 0,
+      "width": 600,
+      "y": 0,
+      "height": 840,
+      "depth": 300.0
+     },
+     {
+      "type": "base-sink",
+      "s": 600,
+      "width": 800,
+      "y": 0,
+      "height": 840,
+      "depth": 300.0,
+      "appliance": {
+       "type": "sink"
+      }
+     },
+     {
+      "type": "tall-fridge",
+      "s": 1400,
+      "width": 700,
+      "y": 0,
+      "height": 2200,
+      "depth": 300.0
+     },
+     {
+      "type": "upper-hood",
+      "s": 0,
+      "width": 600,
+      "y": 1450,
+      "height": 700,
+      "depth": 300.0,
+      "name": "Tủ hút mùi"
+     }
+    ]
+   }
+  }
+ ]
+}

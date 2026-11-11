@@ -1,0 +1,199 @@
+{
+ "function": "run_line.plan_on_line",
+ "cases": [
+  {
+   "name": "three cabinets on a line",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "line": {
+     "a": [
+      -2000,
+      1500
+     ],
+     "b": [
+      0,
+      1500
+     ],
+     "normal": [
+      0,
+      1
+     ]
+    },
+    "modules": [
+     {
+      "type": "base",
+      "s": 0,
+      "width": 600,
+      "y": 0,
+      "height": 840,
+      "depth": 580
+     },
+     {
+      "type": "base-sink",
+      "s": 600,
+      "width": 800,
+      "y": 0,
+      "height": 840,
+      "depth": 580,
+      "appliance": {
+       "type": "sink"
+      }
+     }
+    ]
+   },
+   "expected": {
+    "operation": {
+     "op": "multi",
+     "ops": [
+      {
+       "op": "add-run",
+       "run": {
+        "id": "R1",
+        "x": -2000.0,
+        "z": 1500.0,
+        "yaw": 0.0
+       }
+      },
+      {
+       "op": "add",
+       "closeGap": false,
+       "module": {
+        "type": "base",
+        "wall": "island",
+        "run": "R1",
+        "fromCorner": 0.0,
+        "width": 600.0,
+        "y": 0.0,
+        "height": 840.0,
+        "depth": 580.0
+       }
+      },
+      {
+       "op": "add",
+       "closeGap": false,
+       "module": {
+        "type": "base-sink",
+        "wall": "island",
+        "run": "R1",
+        "fromCorner": 600.0,
+        "width": 800.0,
+        "y": 0.0,
+        "height": 840.0,
+        "depth": 580.0,
+        "appliance": {
+         "type": "sink"
+        }
+       }
+      }
+     ]
+    },
+    "run": {
+     "id": "R1",
+     "x": -2000.0,
+     "z": 1500.0,
+     "yaw": 0.0
+    },
+    "length": 1400.0,
+    "summary": [
+     "2 cabinets, 1400 mm, along an edge at 0° (run R1)"
+    ]
+   }
+  },
+  {
+   "name": "replace two cabinets, TV fields",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "line": {
+     "a": [
+      -2000,
+      1500
+     ],
+     "b": [
+      0,
+      1500
+     ],
+     "normal": [
+      0,
+      1
+     ]
+    },
+    "modules": [
+     {
+      "type": "base",
+      "s": 0,
+      "width": 600,
+      "y": 0,
+      "height": 840,
+      "depth": 580
+     }
+    ],
+    "clear": [
+     "TD1",
+     "TT1"
+    ],
+    "runFields": {
+     "purpose": "tv",
+     "tvLayout": "columns"
+    }
+   },
+   "expected": {
+    "operation": {
+     "op": "multi",
+     "ops": [
+      {
+       "op": "remove",
+       "id": "TD1",
+       "closeGap": false
+      },
+      {
+       "op": "remove",
+       "id": "TT1",
+       "closeGap": false
+      },
+      {
+       "op": "add-run",
+       "run": {
+        "id": "R1",
+        "x": -2000.0,
+        "z": 1500.0,
+        "yaw": 0.0,
+        "purpose": "tv",
+        "tvLayout": "columns"
+       }
+      },
+      {
+       "op": "add",
+       "closeGap": false,
+       "module": {
+        "type": "base",
+        "wall": "island",
+        "run": "R1",
+        "fromCorner": 0.0,
+        "width": 600.0,
+        "y": 0.0,
+        "height": 840.0,
+        "depth": 580.0
+       }
+      }
+     ]
+    },
+    "run": {
+     "id": "R1",
+     "x": -2000.0,
+     "z": 1500.0,
+     "yaw": 0.0,
+     "purpose": "tv",
+     "tvLayout": "columns"
+    },
+    "length": 600.0,
+    "summary": [
+     "1 cabinets, 600 mm, along an edge at 0° (run R1)"
+    ]
+   }
+  }
+ ]
+}

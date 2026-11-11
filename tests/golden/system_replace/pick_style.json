@@ -1,0 +1,423 @@
+{
+ "function": "system_replace.pick_style",
+ "cases": [
+  {
+   "name": "named preset",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "convertRows": true,
+    "system": "auto-R1",
+    "wanted": "warm-oak"
+   },
+   "expected": {
+    "style": {
+     "id": "warm-oak",
+     "name": "Gỗ sồi ấm",
+     "front": "Laminate vân gỗ sồi sáng",
+     "door": "flat",
+     "handle": "bar",
+     "handle_material": "Nhôm đen mờ"
+    },
+    "ops": [
+     {
+      "op": "update",
+      "id": "TC1",
+      "changes": {
+       "material": "Laminate vân gỗ sồi sáng",
+       "handle": {
+        "variant": "bar",
+        "material": "Nhôm đen mờ"
+       },
+       "doorStyle": "flat"
+      }
+     },
+     {
+      "op": "update",
+      "id": "TD1",
+      "changes": {
+       "material": "Laminate vân gỗ sồi sáng",
+       "handle": {
+        "variant": "bar",
+        "material": "Nhôm đen mờ"
+       },
+       "doorStyle": "flat"
+      }
+     },
+     {
+      "op": "update",
+      "id": "TT1",
+      "changes": {
+       "material": "Laminate vân gỗ sồi sáng",
+       "handle": {
+        "variant": "bar",
+        "material": "Nhôm đen mờ"
+       },
+       "doorStyle": "flat"
+      }
+     },
+     {
+      "op": "update",
+      "id": "TT2",
+      "changes": {
+       "material": "Laminate vân gỗ sồi sáng",
+       "handle": {
+        "variant": "bar",
+        "material": "Nhôm đen mờ"
+       },
+       "doorStyle": "flat"
+      }
+     },
+     {
+      "op": "update",
+      "id": "TD2",
+      "changes": {
+       "material": "Laminate vân gỗ sồi sáng",
+       "handle": {
+        "variant": "bar",
+        "material": "Nhôm đen mờ"
+       },
+       "doorStyle": "flat"
+      }
+     },
+     {
+      "op": "update",
+      "id": "TD3",
+      "changes": {
+       "material": "Laminate vân gỗ sồi sáng",
+       "handle": {
+        "variant": "bar",
+        "material": "Nhôm đen mờ"
+       },
+       "doorStyle": "flat"
+      }
+     },
+     {
+      "op": "update",
+      "id": "TD4",
+      "changes": {
+       "material": "Laminate vân gỗ sồi sáng",
+       "handle": {
+        "variant": "bar",
+        "material": "Nhôm đen mờ"
+       },
+       "doorStyle": "flat"
+      }
+     },
+     {
+      "op": "update",
+      "id": "TD5",
+      "changes": {
+       "material": "Laminate vân gỗ sồi sáng",
+       "handle": {
+        "variant": "bar",
+        "material": "Nhôm đen mờ"
+       },
+       "doorStyle": "flat"
+      }
+     },
+     {
+      "op": "update",
+      "id": "TT3",
+      "changes": {
+       "material": "Laminate vân gỗ sồi sáng",
+       "handle": {
+        "variant": "bar",
+        "material": "Nhôm đen mờ"
+       }
+      }
+     },
+     {
+      "op": "update",
+      "id": "TT4",
+      "changes": {
+       "material": "Laminate vân gỗ sồi sáng",
+       "handle": {
+        "variant": "bar",
+        "material": "Nhôm đen mờ"
+       },
+       "doorStyle": "flat"
+      }
+     },
+     {
+      "op": "update",
+      "id": "TT5",
+      "changes": {
+       "material": "Laminate vân gỗ sồi sáng",
+       "handle": {
+        "variant": "bar",
+        "material": "Nhôm đen mờ"
+       },
+       "doorStyle": "flat"
+      }
+     },
+     {
+      "op": "update",
+      "id": "TT6",
+      "changes": {
+       "material": "Laminate vân gỗ sồi sáng",
+       "handle": {
+        "variant": "bar",
+        "material": "Nhôm đen mờ"
+       },
+       "doorStyle": "flat"
+      }
+     },
+     {
+      "op": "update",
+      "id": "TT7",
+      "changes": {
+       "material": "Laminate vân gỗ sồi sáng",
+       "handle": {
+        "variant": "bar",
+        "material": "Nhôm đen mờ"
+       },
+       "doorStyle": "flat"
+      }
+     },
+     {
+      "op": "update",
+      "id": "TT8",
+      "changes": {
+       "material": "Laminate vân gỗ sồi sáng",
+       "handle": {
+        "variant": "bar",
+        "material": "Nhôm đen mờ"
+       },
+       "doorStyle": "flat"
+      }
+     },
+     {
+      "op": "update",
+      "id": "TT9",
+      "changes": {
+       "material": "Laminate vân gỗ sồi sáng",
+       "handle": {
+        "variant": "bar",
+        "material": "Nhôm đen mờ"
+       },
+       "doorStyle": "flat"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "name": "auto: the first that differs from now",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "convertRows": true,
+    "system": "auto-R1"
+   },
+   "expected": {
+    "style": {
+     "id": "modern-white",
+     "name": "Hiện đại trắng bóng",
+     "front": "Acrylic trắng bóng",
+     "door": "flat",
+     "handle": "concealed",
+     "handle_material": "Nhôm"
+    },
+    "ops": [
+     {
+      "op": "update",
+      "id": "TC1",
+      "changes": {
+       "material": "Acrylic trắng bóng",
+       "handle": {
+        "variant": "concealed",
+        "material": "Nhôm"
+       },
+       "doorStyle": "flat"
+      }
+     },
+     {
+      "op": "update",
+      "id": "TD1",
+      "changes": {
+       "material": "Acrylic trắng bóng",
+       "handle": {
+        "variant": "concealed",
+        "material": "Nhôm"
+       },
+       "doorStyle": "flat"
+      }
+     },
+     {
+      "op": "update",
+      "id": "TT1",
+      "changes": {
+       "material": "Acrylic trắng bóng",
+       "handle": {
+        "variant": "concealed",
+        "material": "Nhôm"
+       },
+       "doorStyle": "flat"
+      }
+     },
+     {
+      "op": "update",
+      "id": "TT2",
+      "changes": {
+       "material": "Acrylic trắng bóng",
+       "handle": {
+        "variant": "concealed",
+        "material": "Nhôm"
+       },
+       "doorStyle": "flat"
+      }
+     },
+     {
+      "op": "update",
+      "id": "TD2",
+      "changes": {
+       "material": "Acrylic trắng bóng",
+       "handle": {
+        "variant": "concealed",
+        "material": "Nhôm"
+       },
+       "doorStyle": "flat"
+      }
+     },
+     {
+      "op": "update",
+      "id": "TD3",
+      "changes": {
+       "material": "Acrylic trắng bóng",
+       "handle": {
+        "variant": "concealed",
+        "material": "Nhôm"
+       },
+       "doorStyle": "flat"
+      }
+     },
+     {
+      "op": "update",
+      "id": "TD4",
+      "changes": {
+       "material": "Acrylic trắng bóng",
+       "handle": {
+        "variant": "concealed",
+        "material": "Nhôm"
+       },
+       "doorStyle": "flat"
+      }
+     },
+     {
+      "op": "update",
+      "id": "TD5",
+      "changes": {
+       "material": "Acrylic trắng bóng",
+       "handle": {
+        "variant": "concealed",
+        "material": "Nhôm"
+       },
+       "doorStyle": "flat"
+      }
+     },
+     {
+      "op": "update",
+      "id": "TT3",
+      "changes": {
+       "material": "Acrylic trắng bóng",
+       "handle": {
+        "variant": "concealed",
+        "material": "Nhôm"
+       }
+      }
+     },
+     {
+      "op": "update",
+      "id": "TT4",
+      "changes": {
+       "material": "Acrylic trắng bóng",
+       "handle": {
+        "variant": "concealed",
+        "material": "Nhôm"
+       },
+       "doorStyle": "flat"
+      }
+     },
+     {
+      "op": "update",
+      "id": "TT5",
+      "changes": {
+       "material": "Acrylic trắng bóng",
+       "handle": {
+        "variant": "concealed",
+        "material": "Nhôm"
+       },
+       "doorStyle": "flat"
+      }
+     },
+     {
+      "op": "update",
+      "id": "TT6",
+      "changes": {
+       "material": "Acrylic trắng bóng",
+       "handle": {
+        "variant": "concealed",
+        "material": "Nhôm"
+       },
+       "doorStyle": "flat"
+      }
+     },
+     {
+      "op": "update",
+      "id": "TT7",
+      "changes": {
+       "material": "Acrylic trắng bóng",
+       "handle": {
+        "variant": "concealed",
+        "material": "Nhôm"
+       },
+       "doorStyle": "flat"
+      }
+     },
+     {
+      "op": "update",
+      "id": "TT8",
+      "changes": {
+       "material": "Acrylic trắng bóng",
+       "handle": {
+        "variant": "concealed",
+        "material": "Nhôm"
+       },
+       "doorStyle": "flat"
+      }
+     },
+     {
+      "op": "update",
+      "id": "TT9",
+      "changes": {
+       "material": "Acrylic trắng bóng",
+       "handle": {
+        "variant": "concealed",
+        "material": "Nhôm"
+       },
+       "doorStyle": "flat"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "name": "unknown name",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "convertRows": true,
+    "system": "auto-R1",
+    "wanted": "hien-dai"
+   },
+   "error": {
+    "kind": "validation",
+    "code": "bad-style"
+   }
+  }
+ ]
+}

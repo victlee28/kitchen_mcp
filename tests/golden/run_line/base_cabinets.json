@@ -1,0 +1,130 @@
+{
+ "function": "run_line.base_cabinets",
+ "cases": [
+  {
+   "name": "2400 mm",
+   "input": {
+    "length": 2400,
+    "common": {
+     "baseTop": 840,
+     "baseDepth": 560
+    }
+   },
+   "expected": {
+    "modules": [
+     {
+      "type": "base",
+      "s": 0.0,
+      "width": 600.0,
+      "y": 0.0,
+      "height": 840.0,
+      "depth": 560.0
+     },
+     {
+      "type": "base",
+      "s": 600.0,
+      "width": 600.0,
+      "y": 0.0,
+      "height": 840.0,
+      "depth": 560.0
+     },
+     {
+      "type": "base",
+      "s": 1200.0,
+      "width": 600.0,
+      "y": 0.0,
+      "height": 840.0,
+      "depth": 560.0
+     },
+     {
+      "type": "base",
+      "s": 1800.0,
+      "width": 600.0,
+      "y": 0.0,
+      "height": 840.0,
+      "depth": 560.0
+     }
+    ]
+   }
+  },
+  {
+   "name": "2450 mm",
+   "input": {
+    "length": 2450,
+    "common": {
+     "baseTop": 840,
+     "baseDepth": 560
+    }
+   },
+   "expected": {
+    "modules": [
+     {
+      "type": "base",
+      "s": 0.0,
+      "width": 600.0,
+      "y": 0.0,
+      "height": 840.0,
+      "depth": 560.0
+     },
+     {
+      "type": "base",
+      "s": 600.0,
+      "width": 600.0,
+      "y": 0.0,
+      "height": 840.0,
+      "depth": 560.0
+     },
+     {
+      "type": "base",
+      "s": 1200.0,
+      "width": 600.0,
+      "y": 0.0,
+      "height": 840.0,
+      "depth": 560.0
+     },
+     {
+      "type": "base",
+      "s": 1800.0,
+      "width": 650.0,
+      "y": 0.0,
+      "height": 840.0,
+      "depth": 560.0
+     }
+    ]
+   }
+  },
+  {
+   "name": "450 mm",
+   "input": {
+    "length": 450,
+    "common": {
+     "baseTop": 840,
+     "baseDepth": 560
+    }
+   },
+   "expected": {
+    "modules": [
+     {
+      "type": "base",
+      "s": 0.0,
+      "width": 450.0,
+      "y": 0.0,
+      "height": 840.0,
+      "depth": 560.0
+     }
+    ]
+   }
+  },
+  {
+   "name": "too short",
+   "input": {
+    "length": 200,
+    "common": {}
+   },
+   "error": {
+    "kind": "validation",
+    "code": "run-too-short"
+   }
+  }
+ ]
+}

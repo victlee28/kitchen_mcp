@@ -1,0 +1,103 @@
+{
+ "function": "system_replace.plain_cabinets",
+ "cases": [
+  {
+   "name": "sink and hood become plain, the fridge goes",
+   "input": {
+    "modules": [
+     {
+      "type": "base",
+      "s": 0,
+      "width": 600,
+      "y": 0,
+      "height": 840,
+      "depth": 580
+     },
+     {
+      "type": "base-sink",
+      "s": 600,
+      "width": 800,
+      "y": 0,
+      "height": 840,
+      "depth": 580,
+      "appliance": {
+       "type": "sink"
+      }
+     },
+     {
+      "type": "tall-fridge",
+      "s": 1400,
+      "width": 700,
+      "y": 0,
+      "height": 2200,
+      "depth": 620
+     },
+     {
+      "type": "upper-hood",
+      "s": 0,
+      "width": 600,
+      "y": 1450,
+      "height": 700,
+      "depth": 350,
+      "name": "Tủ hút mùi"
+     }
+    ]
+   },
+   "expected": {
+    "modules": [
+     {
+      "type": "base",
+      "s": 0,
+      "width": 600,
+      "y": 0,
+      "height": 840,
+      "depth": 580
+     },
+     {
+      "type": "base",
+      "s": 600,
+      "width": 800,
+      "y": 0,
+      "height": 840,
+      "depth": 580
+     },
+     {
+      "type": "upper",
+      "s": 0,
+      "width": 600,
+      "y": 1450,
+      "height": 700,
+      "depth": 350
+     }
+    ]
+   }
+  },
+  {
+   "name": "nothing to change",
+   "input": {
+    "modules": [
+     {
+      "type": "base",
+      "s": 0,
+      "width": 600,
+      "y": 0,
+      "height": 840,
+      "depth": 580
+     }
+    ]
+   },
+   "expected": {
+    "modules": [
+     {
+      "type": "base",
+      "s": 0,
+      "width": 600,
+      "y": 0,
+      "height": 840,
+      "depth": 580
+     }
+    ]
+   }
+  }
+ ]
+}

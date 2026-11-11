@@ -1,0 +1,39 @@
+{
+ "function": "structure_mesh.is_structure",
+ "cases": [
+  {
+   "name": "types",
+   "input": {
+    "types": [
+     "structure-wall",
+     "structure-swing",
+     "door",
+     "wall",
+     "carcass"
+    ]
+   },
+   "expected": {
+    "types": {
+     "structure-wall": true,
+     "structure-swing": true,
+     "door": false,
+     "wall": false,
+     "carcass": false
+    }
+   }
+  },
+  {
+   "name": "empty",
+   "input": {
+    "types": [
+     ""
+    ]
+   },
+   "expected": {
+    "types": {
+     "": false
+    }
+   }
+  }
+ ]
+}

@@ -1,0 +1,47 @@
+{
+ "function": "system_replace.storey_of",
+ "cases": [
+  {
+   "name": "every type",
+   "input": {
+    "types": [
+     "base",
+     "base-sink",
+     "upper",
+     "upper-hood",
+     "upper-loft",
+     "tall-fridge",
+     "corner-shelf",
+     "upper-open",
+     "x"
+    ]
+   },
+   "expected": {
+    "storeys": {
+     "base": "base",
+     "base-sink": "base",
+     "upper": "upper",
+     "upper-hood": "upper",
+     "upper-loft": "loft",
+     "tall-fridge": "tall",
+     "corner-shelf": "corner",
+     "upper-open": "upper",
+     "x": "base"
+    }
+   }
+  },
+  {
+   "name": "unknown type",
+   "input": {
+    "types": [
+     "something-else"
+    ]
+   },
+   "expected": {
+    "storeys": {
+     "something-else": "base"
+    }
+   }
+  }
+ ]
+}

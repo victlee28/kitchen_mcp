@@ -738,7 +738,285 @@ def appliance_models_check(i):
     return {"issues": [[x["rule"], x["severity"], list(x.get("module") or []), x["content"]] for x in appliance_models.check(_ctx(i))]}
 
 
+# ---- remaining helpers (R19): wall_line, camera_plan, system_replace, run_line, cabinet_run, structure_mesh, layers, proposal, numeric...
+def _plain(v):
+    """Dataclasses, pydantic models, tuples, sets -> JSON data."""
+    import dataclasses
+    from pydantic import BaseModel
+    if dataclasses.is_dataclass(v) and not isinstance(v, type):
+        return {f.name: _plain(getattr(v, f.name)) for f in dataclasses.fields(v)}
+    if isinstance(v, BaseModel):
+        return to_data(v, exclude_none=True)
+    if isinstance(v, dict):
+        return {str(k): _plain(x) for k, x in v.items()}
+    if isinstance(v, (set, frozenset)):
+        return sorted(_plain(x) for x in v)
+    if isinstance(v, (list, tuple)):
+        return [_plain(x) for x in v]
+    return v
+
+
+def _walls(i):
+    return [seg for poly in i.get("walls", []) for seg in wall_line.segments(_pts(poly))]
+
+
+def _edge_of(i):
+    e = i["edge"]
+    return wall_line.Edge(e["index"], tuple(e["a"]), tuple(e["b"]), tuple(e["inward"]), e.get("gap"))
+
+
+def wall_line_segments(i):
+    return {"segments": _plain(wall_line.segments(_pts(i["poly"])))}
+
+
+def wall_line_inward_normal(i):
+    return {"normal": _plain(wall_line.inward_normal(_pts(i["poly"]), tuple(i["a"]), tuple(i["b"])))}
+
+
+def wall_line_wall_gap(i):
+    return {"gap": wall_line.wall_gap(tuple(i["a"]), tuple(i["b"]), tuple(i["inward"]), _walls(i))}
+
+
+def wall_line_edges(i):
+    """edges and wall_edges of one object: every edge as [index, a, b, inward, gap, length], and the indexes of the edges against a wall."""
+    poly, walls = _pts(i["object"]), _walls(i)
+    return {"edges": [[e.index, list(e.a), list(e.b), list(e.inward), e.gap, e.length] for e in wall_line.edges(poly, walls)],
+            "wallEdges": [e.index for e in wall_line.wall_edges(poly, walls)]}
+
+
+def wall_line_depth_from(i):
+    return {"depth": wall_line.depth_from(_pts(i["object"]), _edge_of(i))}
+
+
+def wall_line_back_to_wall(i):
+    doors, against = wall_line.back_to_wall(tuple(i["a"]), tuple(i["b"]), tuple(i["normal"]), _walls(i))
+    return {"doors": list(doors), "against": against}
+
+
+def _face(f):
+    return camera_plan.Face(f["key"], f["name"], tuple(f["center"]), tuple(f["normal"]), f["length"], f["height"], f.get("run", ""))
+
+
+def _obstacle(o):
+    return camera_plan.Obstacle(o["id"], o["kind"], tuple(_pts(o["outline"])), o["y0"], o["y1"])
+
+
+def camera_plan_stands_in_room(i):
+    return {"inside": camera_plan.stands_in_room(tuple(i["p"]), _pts(i["room"]) if i.get("room") else None, i.get("clear", camera_plan.WALL_CLEAR))}
+
+
+def camera_plan_blocks(i):
+    return {"blocks": camera_plan.blocks(tuple(i["eye"]), tuple(i["target"]), _obstacle(i["obstacle"]))}
+
+
+def camera_plan_face_targets(i):
+    return {"targets": _plain(camera_plan.face_targets(_face(i["face"])))}
+
+
+def camera_plan_blockers(i):
+    return {"blockers": camera_plan.blockers(tuple(i["eye"]), [tuple(t) for t in i["targets"]], [_obstacle(o) for o in i["obstacles"]])}
+
+
+def camera_plan_in_body(i):
+    return {"inBody": camera_plan.in_body(tuple(i["p"]), [_obstacle(o) for o in i["bodies"]], i.get("clear", camera_plan.WALL_CLEAR))}
+
+
+def camera_plan_faces_room(i):
+    return {"facesRoom": camera_plan.faces_room(_face(i["face"]), _pts(i["room"]) if i.get("room") else None)}
+
+
+def camera_plan_hidden_for(i):
+    return {"hidden": camera_plan.hidden_for(tuple(i["position"]), [_face(f) for f in i["faces"]], [_obstacle(o) for o in i["obstacles"]])}
+
+
+def system_replace_members(i):
+    spec = _ctx(i)
+    mods = system_replace.members(spec, i["system"])
+    return {"members": [m.id for m in mods], "front": system_replace.current_front(spec, mods), "slots": _plain(system_replace.run_slots(spec, mods))}
+
+
+def system_replace_pick_style(i):
+    spec = _ctx(i)
+    mods = system_replace.members(spec, i["system"])
+    style = system_replace.pick_style(spec, mods, i.get("wanted"))
+    return {"style": _plain(style), "ops": system_replace.style_ops(spec, mods, style)}
+
+
+def system_replace_plain_cabinets(i):
+    return {"modules": _plain(system_replace.plain_cabinets(i["modules"]))}
+
+
+def system_replace_storey_of(i):
+    return {"storeys": {t: system_replace.storey_of(t) for t in i["types"]}}
+
+
+def system_replace_kept_models(i):
+    spec = _ctx(i)
+    kept = system_replace.kept_models(spec, system_replace.members(spec, i["system"]), i.get("sentence", ""))
+    return {"kept": {k: v["id"] for k, v in sorted(kept.items())}}
+
+
+def _line(d):
+    return run_line.Line(tuple(d["a"]), tuple(d["b"]), tuple(d["normal"]))
+
+
+def run_line_nearest_edge(i):
+    a, b = run_line.nearest_edge(_pts(i["poly"]), tuple(i["p"]))
+    return {"a": list(a), "b": list(b), "outward": _plain(run_line.outward(_pts(i["poly"]), a, b))}
+
+
+def run_line_drawn_line(i):
+    line = run_line.drawn_line(tuple(i["a"]), tuple(i["b"]), tuple(i["front"]))
+    return {"a": list(line.a), "b": list(line.b), "normal": _plain(line.normal)}
+
+
+def run_line_base_cabinets(i):
+    return {"modules": _plain(run_line.base_cabinets(i["length"], i.get("common", {})))}
+
+
+def run_line_plan_on_line(i):
+    plan = run_line.plan_on_line(_ctx(i), _line(i["line"]), i["modules"], i.get("clear"), i.get("after"), i.get("system"), i.get("runFields"))
+    return _plain(plan)
+
+
+def run_line_back_wall_line(i):
+    line = run_line.back_wall_line(_ctx(i), i["runs"])
+    return {"a": list(line.a), "b": list(line.b), "normal": _plain(line.normal)}
+
+
+def run_line_element_against(i):
+    structs = [{**st, "outline": _pts(st["outline"])} for st in i["structures"]]
+    found, cands = run_line.element_against(i["frame"], i["s0"], i["s1"], structs)
+    return {"element": found, "candidates": cands}
+
+
+def cabinet_run_fit_depth(i):
+    return {"modules": _plain(cabinet_run.fit_depth(i["modules"], i["depth"]))}
+
+
+def cabinet_run_plan_replace(i):
+    spec = _ctx(i)
+    placed = [wall_line.Placed(tuple(p["a"]), tuple(p["b"]), tuple(p["doors"]), p["depth"], p["edge"]) for p in i["placed"]]
+    return _plain(cabinet_run.plan_replace(spec, i["element"], placed, i["laid"], i.get("after"), i.get("runFields")))
+
+
+def structure_mesh_is_structure(i):
+    return {"types": {t: structure_mesh.is_structure(t) for t in i["types"]}}
+
+
+def structure_mesh_prism(i):
+    v, f = structure_mesh.prism(_pts(i["poly"]), i["y0"], i["y1"])
+    return {"vertices": _plain(v), "faces": _plain(f)}
+
+
+def structure_mesh_meshes(i):
+    pl = _placement(i["placement"])
+    return {"meshes": [[m.id, m.module, m.type, len(m.vertices), len(m.faces)] for m in structure_mesh.meshes(i["structures"], pl.to_kitchen)]}
+
+
+def layers_material_slot(i):
+    spec = _ctx(i)
+    return {"slots": {f"{m}/{t}": list(layers.material_slot(spec, m, t)) for m, t in i["parts"]}}
+
+
+def layers_catalogue(i):
+    """Projection: how many layers of each variant, and the groups as [id, type, material, materialLocked, component count]."""
+    spec = _ctx(i)
+    cat = layers.catalogue(spec, geometry.compile_spec(spec))
+    counts = {}
+    for x in cat:
+        counts[x["variant"]] = counts.get(x["variant"], 0) + 1
+    return {"counts": counts, "groups": [[x["id"], x["type"], x["material"], x["materialLocked"], len(x["component"])] for x in cat if x["variant"] == "group"]}
+
+
+def layers_resolve(i):
+    spec = _ctx(i)
+    layer, parts = layers.resolve(layers.catalogue(spec, geometry.compile_spec(spec)), i["layerId"])
+    return {"layer": [layer["id"], layer["variant"], layer["type"]], "parts": parts}
+
+
+def layers_changed_parts(i):
+    old = _ctx(i)
+    new = old
+    for op in i["change"]:
+        new = edit.apply_op(new, op)
+    return {"changed": layers.changed_parts(old, new, geometry.compile_spec(new))}
+
+
+def proposal_validation_delta(i):
+    before = _ctx(i)
+    after = before
+    for op in i["change"]:
+        after = edit.apply_op(after, op)
+    d = proposal.validation_delta(rules.validate(before), rules.validate(after))
+    short = lambda xs: [[x["rule"], x["severity"], list(x.get("module") or [])] for x in xs]   # noqa: E731
+    return {"valid": d["valid"], "introduced": short(d["introduced"]), "resolved": short(d["resolved"]), "remaining": len(d["remaining"]),
+            "introducesErrors": d["introducesErrors"]}
+
+
+def numeric_round_int(i):
+    return {"values": [numeric.round_int(x) for x in i["xs"]]}
+
+
+def numeric_near(i):
+    return {"near": numeric.near(i["a"], i["b"], *([i["eps"]] if "eps" in i else []))}
+
+
+def palette_module_color(i):
+    from kitchen import palette
+    return {"colors": {m: list(palette.module_color(m)) for m in i["ids"]}}
+
+
+def errors_kind_of(i):
+    """kind_of and http_status of each error class named in the case, plus require on a value and on None."""
+    from kitchen import errors as err
+    out = {}
+    for name in i["classes"]:
+        e = getattr(err, name)("x")
+        out[name] = [err.kind_of(e), err.http_status(e)]
+    out["ValueError"] = [err.kind_of(ValueError("x")), err.http_status(ValueError("x"))]
+    return {"classes": out, "requireValue": err.require(i.get("value", 1), "v")}
+
+
 FUNCTIONS = {
+    "wall_line.segments": wall_line_segments,
+    "wall_line.inward_normal": wall_line_inward_normal,
+    "wall_line.wall_gap": wall_line_wall_gap,
+    "wall_line.edges": wall_line_edges,
+    "wall_line.depth_from": wall_line_depth_from,
+    "wall_line.back_to_wall": wall_line_back_to_wall,
+    "camera_plan.stands_in_room": camera_plan_stands_in_room,
+    "camera_plan.blocks": camera_plan_blocks,
+    "camera_plan.face_targets": camera_plan_face_targets,
+    "camera_plan.blockers": camera_plan_blockers,
+    "camera_plan.in_body": camera_plan_in_body,
+    "camera_plan.faces_room": camera_plan_faces_room,
+    "camera_plan.hidden_for": camera_plan_hidden_for,
+    "system_replace.members": system_replace_members,
+    "system_replace.pick_style": system_replace_pick_style,
+    "system_replace.plain_cabinets": system_replace_plain_cabinets,
+    "system_replace.storey_of": system_replace_storey_of,
+    "system_replace.kept_models": system_replace_kept_models,
+    "run_line.nearest_edge": run_line_nearest_edge,
+    "run_line.drawn_line": run_line_drawn_line,
+    "run_line.base_cabinets": run_line_base_cabinets,
+    "run_line.plan_on_line": run_line_plan_on_line,
+    "run_line.back_wall_line": run_line_back_wall_line,
+    "run_line.element_against": run_line_element_against,
+    "cabinet_run.fit_depth": cabinet_run_fit_depth,
+    "cabinet_run.plan_replace": cabinet_run_plan_replace,
+    "structure_mesh.is_structure": structure_mesh_is_structure,
+    "structure_mesh.prism": structure_mesh_prism,
+    "structure_mesh.meshes": structure_mesh_meshes,
+    "layers.material_slot": layers_material_slot,
+    "layers.catalogue": layers_catalogue,
+    "layers.resolve": layers_resolve,
+    "layers.changed_parts": layers_changed_parts,
+    "proposal.validation_delta": proposal_validation_delta,
+    "numeric.round_int": numeric_round_int,
+    "numeric.near": numeric_near,
+    "palette.module_color": palette_module_color,
+    "errors.kind_of": errors_kind_of,
     "runs.trig": runs_trig,
     "runs.wall_seat": runs_wall_seat,
     "runs.free_seat": runs_free_seat,

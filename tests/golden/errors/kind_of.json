@@ -1,0 +1,69 @@
+{
+ "function": "errors.kind_of",
+ "cases": [
+  {
+   "name": "every error class",
+   "input": {
+    "classes": [
+     "InvalidInput",
+     "Conflict",
+     "NotFound",
+     "Unsupported",
+     "Infrastructure"
+    ],
+    "value": 42
+   },
+   "expected": {
+    "classes": {
+     "InvalidInput": [
+      "validation",
+      400
+     ],
+     "Conflict": [
+      "conflict",
+      409
+     ],
+     "NotFound": [
+      "not-found",
+      404
+     ],
+     "Unsupported": [
+      "unsupported",
+      400
+     ],
+     "Infrastructure": [
+      "infrastructure",
+      502
+     ],
+     "ValueError": [
+      "validation",
+      400
+     ]
+    },
+    "requireValue": 42
+   }
+  },
+  {
+   "name": "require on a falsy value",
+   "input": {
+    "classes": [
+     "KitchenError"
+    ],
+    "value": 0
+   },
+   "expected": {
+    "classes": {
+     "KitchenError": [
+      "validation",
+      400
+     ],
+     "ValueError": [
+      "validation",
+      400
+     ]
+    },
+    "requireValue": 0
+   }
+  }
+ ]
+}

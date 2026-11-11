@@ -1,0 +1,61 @@
+{
+ "function": "layers.resolve",
+ "cases": [
+  {
+   "name": "a part",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "layerId": "TD1-door-1"
+   },
+   "expected": {
+    "layer": [
+     "TD1-door-1",
+     "part",
+     "door"
+    ],
+    "parts": [
+     "TD1-door-1"
+    ]
+   }
+  },
+  {
+   "name": "a tier group",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "layerId": "tier:base:door"
+   },
+   "expected": {
+    "layer": [
+     "tier:base:door",
+     "group",
+     "door"
+    ],
+    "parts": [
+     "TD1-door-1",
+     "TD1-door-2",
+     "TD2-door-1",
+     "TD2-door-2",
+     "TD3-door-1",
+     "TD5-door-1"
+    ]
+   }
+  },
+  {
+   "name": "unknown",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "layerId": "nope"
+   },
+   "error": {
+    "kind": "not-found",
+    "code": "not-found"
+   }
+  }
+ ]
+}

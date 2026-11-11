@@ -1,0 +1,269 @@
+{
+ "function": "structure_mesh.meshes",
+ "cases": [
+  {
+   "name": "column, stair and door",
+   "input": {
+    "placement": {
+     "yaw": 0,
+     "ox": 0,
+     "oz": 0
+    },
+    "structures": [
+     {
+      "id": "S1",
+      "kind": "column",
+      "outline": [
+       {
+        "x": 0,
+        "z": 0
+       },
+       {
+        "x": 400,
+        "z": 0
+       },
+       {
+        "x": 400,
+        "z": 400
+       },
+       {
+        "x": 0,
+        "z": 400
+       }
+      ],
+      "base": 0,
+      "height": 2700
+     },
+     {
+      "id": "S2",
+      "kind": "stair",
+      "outline": [
+       {
+        "x": 1000,
+        "z": 0
+       },
+       {
+        "x": 2000,
+        "z": 0
+       },
+       {
+        "x": 2000,
+        "z": 3000
+       },
+       {
+        "x": 1000,
+        "z": 3000
+       }
+      ],
+      "base": 0,
+      "height": 1800,
+      "steps": 10,
+      "arrow": [
+       {
+        "x": 1500,
+        "z": 0
+       },
+       {
+        "x": 1500,
+        "z": 3000
+       }
+      ]
+     },
+     {
+      "id": "S3",
+      "kind": "opening",
+      "outline": [
+       {
+        "x": 3000,
+        "z": 0
+       },
+       {
+        "x": 3900,
+        "z": 0
+       },
+       {
+        "x": 3900,
+        "z": 100
+       },
+       {
+        "x": 3000,
+        "z": 100
+       }
+      ],
+      "base": 0,
+      "height": 2200,
+      "hinge": {
+       "x": 3000,
+       "z": 100
+      },
+      "swing": [
+       {
+        "x": 3900,
+        "z": 100
+       },
+       {
+        "x": 3000,
+        "z": 1000
+       }
+      ]
+     },
+     {
+      "id": "S4",
+      "kind": "area",
+      "outline": [
+       {
+        "x": 0,
+        "z": 0
+       },
+       {
+        "x": 10,
+        "z": 0
+       }
+      ]
+     }
+    ]
+   },
+   "expected": {
+    "meshes": [
+     [
+      "S1",
+      "S1",
+      "structure-column",
+      8,
+      12
+     ],
+     [
+      "S2-1",
+      "S2",
+      "structure-stair",
+      8,
+      12
+     ],
+     [
+      "S2-2",
+      "S2",
+      "structure-stair",
+      8,
+      12
+     ],
+     [
+      "S2-3",
+      "S2",
+      "structure-stair",
+      8,
+      12
+     ],
+     [
+      "S2-4",
+      "S2",
+      "structure-stair",
+      8,
+      12
+     ],
+     [
+      "S2-5",
+      "S2",
+      "structure-stair",
+      8,
+      12
+     ],
+     [
+      "S2-6",
+      "S2",
+      "structure-stair",
+      8,
+      12
+     ],
+     [
+      "S2-7",
+      "S2",
+      "structure-stair",
+      8,
+      12
+     ],
+     [
+      "S2-8",
+      "S2",
+      "structure-stair",
+      8,
+      12
+     ],
+     [
+      "S2-9",
+      "S2",
+      "structure-stair",
+      8,
+      12
+     ],
+     [
+      "S2-10",
+      "S2",
+      "structure-stair",
+      8,
+      12
+     ],
+     [
+      "S3",
+      "S3",
+      "structure-opening",
+      8,
+      12
+     ],
+     [
+      "S3-swing",
+      "S3",
+      "structure-swing",
+      3,
+      1
+     ]
+    ]
+   }
+  },
+  {
+   "name": "rotated room",
+   "input": {
+    "placement": {
+     "yaw": 90,
+     "ox": 1000,
+     "oz": 0
+    },
+    "structures": [
+     {
+      "id": "S1",
+      "kind": "wall",
+      "outline": [
+       {
+        "x": 0,
+        "z": 0
+       },
+       {
+        "x": 400,
+        "z": 0
+       },
+       {
+        "x": 400,
+        "z": 200
+       },
+       {
+        "x": 0,
+        "z": 200
+       }
+      ],
+      "height": 0
+     }
+    ]
+   },
+   "expected": {
+    "meshes": [
+     [
+      "S1",
+      "S1",
+      "structure-wall",
+      4,
+      2
+     ]
+    ]
+   }
+  }
+ ]
+}

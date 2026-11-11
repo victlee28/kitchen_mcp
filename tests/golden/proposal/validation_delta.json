@@ -1,0 +1,158 @@
+{
+ "function": "proposal.validation_delta",
+ "cases": [
+  {
+   "name": "narrowing the hob cabinet",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "change": [
+     {
+      "op": "update",
+      "id": "TD4",
+      "changes": {
+       "width": 400
+      }
+     }
+    ]
+   },
+   "expected": {
+    "valid": {
+     "before": true,
+     "after": false
+    },
+    "introduced": [
+     [
+      "APPLIANCE-NICHE",
+      "error",
+      [
+       "TD4",
+       "TB6"
+      ]
+     ],
+     [
+      "NKBA-15",
+      "info",
+      [
+       "TB4"
+      ]
+     ]
+    ],
+    "resolved": [
+     [
+      "NKBA-15",
+      "info",
+      [
+       "TB4"
+      ]
+     ]
+    ],
+    "remaining": 6,
+    "introducesErrors": true
+   }
+  },
+  {
+   "name": "removing a cabinet",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "change": [
+     {
+      "op": "remove",
+      "id": "TD3"
+     }
+    ]
+   },
+   "expected": {
+    "valid": {
+     "before": true,
+     "after": true
+    },
+    "introduced": [
+     [
+      "KITCHEN-DEFAULT-001",
+      "warning",
+      [
+       "TD1",
+       "TD2",
+       "TD4",
+       "TD5"
+      ]
+     ],
+     [
+      "SAFETY-001",
+      "warning",
+      [
+       "TB2",
+       "TB4"
+      ]
+     ],
+     [
+      "NKBA-10",
+      "info",
+      [
+       "TB2"
+      ]
+     ],
+     [
+      "NKBA-15",
+      "info",
+      [
+       "TB4"
+      ]
+     ]
+    ],
+    "resolved": [
+     [
+      "KITCHEN-DEFAULT-001",
+      "warning",
+      [
+       "TD1",
+       "TD2",
+       "TD3",
+       "TD4",
+       "TD5"
+      ]
+     ],
+     [
+      "NKBA-10",
+      "info",
+      [
+       "TB2"
+      ]
+     ],
+     [
+      "NKBA-15",
+      "info",
+      [
+       "TB4"
+      ]
+     ]
+    ],
+    "remaining": 4,
+    "introducesErrors": false
+   }
+  },
+  {
+   "name": "no change",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "change": []
+   },
+   "expected": {
+    "valid": {
+     "before": true,
+     "after": true
+    },
+    "introduced": [],
+    "resolved": [],
+    "remaining": 7,
+    "introducesErrors": false
+   }
+  }
+ ]
+}
