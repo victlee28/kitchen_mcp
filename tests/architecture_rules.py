@@ -10,9 +10,9 @@ KITCHEN = ROOT / "kitchen"
 # R1: modules that must stay free of I/O, clocks, randomness and Pydantic behaviour.
 CORE_MODULES = (
     "placement", "roomctx", "rules", "rules_kb", "rules_nkba", "edit", "proposal", "geometry", "moldings", "handles", "hardware",
-    "structure_mesh", "camera_plan", "layers", "threejs_export", "lexicon", "vocab", "edit_intent", "cabinet_run", "run_line", "runs", "rows_to_runs", "system_replace", "tv_system", "wall_line", "appliance_models", "appliance_kind", "regions", "errors", "palette", "numeric", "jsonview",
+    "structure_mesh", "camera_plan", "layers", "threejs_export", "lexicon", "vocab", "edit_intent", "cabinet_run", "run_line", "runs", "rows_to_runs", "system_replace", "tv_system", "wall_line", "appliance_models", "appliance_kind", "regions", "errors", "palette", "numeric", "jsonview", "i18n",
 )
-CORE_PACKAGES = ("prompts", "floorplan", "recognition")                      # packages whose every file is core (the files are found on disk)
+CORE_PACKAGES = ("prompts", "floorplan", "recognition", "catalog")                      # packages whose every file is core (the files are found on disk)
 
 def _package_modules(pkg: str) -> tuple[str, ...]:
     """The package itself plus ``pkg.<file>`` for every module in it."""
@@ -24,7 +24,7 @@ CORE_ALL = CORE_MODULES + tuple(m for pkg in CORE_PACKAGES for m in _package_mod
 # Data-model modules a core module may import (the boundary types); everything else it imports from kitchen must be core.
 DATA_MODULES = ("spec", "knowledge_seed", "appliance_catalog", "labels")   # boundary types; constant data tables (their SQL helpers take a connection argument)
 
-SHELL_MODULES = ("store", "migrations", "service", "backends", "ai_export", "legacy", "config", "intent", "run_template", "llm", "recognizers")      # touch disk, network, env, clock
+SHELL_MODULES = ("store", "migrations", "service", "backends", "ai_export", "legacy", "config", "intent", "run_template", "llm", "recognizers", "catalog_files")      # touch disk, network, env, clock
 PIXEL_MODULES = ("render", "imaging", "geometry_edit", "request_check", "view_sync")        # the image-job package kitchen/images/ is pixel zone as a whole (see test_architecture)
 PIXEL_PACKAGES = ("images",)                                                                   # numpy / PIL / job orchestration (every file in the package)
 ENV_READERS = ("config", "service")                                                # may read os.environ / getenv

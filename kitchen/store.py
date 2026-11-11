@@ -9,6 +9,7 @@ import time
 import unicodedata
 import uuid
 from contextlib import contextmanager
+from typing import Callable
 from pathlib import Path
 from . import errors, knowledge_seed, migrations, regions
 from .spec import KitchenSpec, dump_spec
@@ -35,6 +36,7 @@ class Store:
         self.owner = f"{os.getpid()}:{uuid.uuid4().hex[:8]}"      # one id per Store instance, never reused by another process
         self._beat: threading.Thread | None = None
         self._beat_lock = threading.Lock()
+        self.snapshot: Callable[[KitchenSpec], str | None] | None = None   # set by the service: the catalog items a revision uses (JSON)
         with self._conn() as connection:
             self.migration = migrations.run(connection, self.path)
             self.seed_result = knowledge_seed.apply(connection)
@@ -124,14 +126,15 @@ class Store:
     def rule_rows(self) -> list[dict]:
         return self.knowledge('', ['rule', 'standard'])
 
-    def create_design(self, spec: KitchenSpec, source: str='', **legacy) -> dict:
+    def create_design(self, spec: KitchenSpec, source: str='', catalog_json: str | None=None, **legacy) -> dict:
         source = legacy.pop('source', source)
         if legacy:
             raise TypeError(f"Unexpected options: {', '.join(legacy)}")
         design_id = f'{_slug(spec.name)}-{uuid.uuid4().hex[:6]}'
+        catalog_json = catalog_json or self._snap(spec)          # before taking the lock: the snapshot reads the catalog rows
         with self._conn() as connection:
             connection.execute('INSERT INTO designs(id, name) VALUES(?,?)', (design_id, spec.name))
-            connection.execute('INSERT INTO revisions(design_id, rev, spec_json, operation, source) VALUES(?,?,?,?,?)', (design_id, 1, json.dumps(dump_spec(spec), ensure_ascii=False), json.dumps({'op': 'create'}), source))
+            connection.execute('INSERT INTO revisions(design_id, rev, spec_json, operation, source, catalog_json) VALUES(?,?,?,?,?,?)', (design_id, 1, json.dumps(dump_spec(spec), ensure_ascii=False), json.dumps({'op': 'create'}), source, catalog_json))
         return {'id': design_id, 'rev': 1}
 
     def put_floorplan(self, ref: str, data: dict) -> None:
@@ -156,10 +159,11 @@ class Store:
             raise NotFound(f"Design '{design_id}' was not found" + (f' at revision {rev}' if rev else ''), code="design-not-found")
         return (KitchenSpec.model_validate_json(row['spec_json']), row['rev'])
 
-    def add_revision(self, design_id: str, base_rev: int | None, spec: KitchenSpec, op: dict, source: str='', **legacy) -> int:
+    def add_revision(self, design_id: str, base_rev: int | None, spec: KitchenSpec, op: dict, source: str='', catalog_json: str | None=None, **legacy) -> int:
         source = legacy.pop('source', source)
         if legacy:
             raise TypeError(f"Unexpected options: {', '.join(legacy)}")
+        catalog_json = catalog_json or self._snap(spec)          # before taking the lock: the snapshot reads the catalog rows
         with self._conn() as connection:
             row = connection.execute('SELECT MAX(rev) FROM revisions WHERE design_id=?', (design_id,)).fetchone()
             latest = row[0]
@@ -167,9 +171,60 @@ class Store:
                 raise NotFound(f"Design '{design_id}' was not found", code="design-not-found")
             if base_rev is not None and base_rev != latest:
                 raise ConflictError(f'base_rev={base_rev}, but the latest revision is {latest}; reload before editing')
-            connection.execute('INSERT INTO revisions(design_id, rev, spec_json, operation, source) VALUES(?,?,?,?,?)', (design_id, latest + 1, json.dumps(dump_spec(spec), ensure_ascii=False), json.dumps(op, ensure_ascii=False), source))
+            connection.execute('INSERT INTO revisions(design_id, rev, spec_json, operation, source, catalog_json) VALUES(?,?,?,?,?,?)', (design_id, latest + 1, json.dumps(dump_spec(spec), ensure_ascii=False), json.dumps(op, ensure_ascii=False), source, catalog_json))
             connection.execute('UPDATE designs SET name=? WHERE id=?', (spec.name, design_id))
             return latest + 1
+
+    def _snap(self, spec: KitchenSpec) -> str | None:
+        return self.snapshot(spec) if self.snapshot else None
+
+    def revision_catalog(self, design_id: str, rev: int) -> list[dict] | None:
+        """The catalog items saved with a revision (``None``: saved before the catalog existed, or without any item)."""
+        with self._conn() as connection:
+            row = connection.execute('SELECT catalog_json FROM revisions WHERE design_id=? AND rev=?', (design_id, rev)).fetchone()
+        return json.loads(row['catalog_json']) if row and row['catalog_json'] else None
+
+    # ---------- catalog layers (kitchen.catalog): workshop and user rows, with every edit kept
+    def catalog_rows(self, scopes: list[str]) -> list[dict]:
+        if not scopes:
+            return []
+        with self._conn() as connection:
+            rows = connection.execute(f"SELECT kind, id, scope, version, data_json, disabled FROM catalog_items WHERE scope IN ({','.join('?' * len(scopes))}) ORDER BY rowid", scopes).fetchall()
+        return [{'kind': r['kind'], 'id': r['id'], 'scope': r['scope'], 'version': r['version'], 'data': json.loads(r['data_json']), 'disabled': bool(r['disabled'])} for r in rows]
+
+    def catalog_stamp(self) -> int:
+        """Changes whenever a catalog row changes (the last history entry): the service rebuilds its merged catalog when it moves."""
+        with self._conn() as connection:
+            return connection.execute('SELECT COALESCE(MAX(seq), 0) FROM catalog_history').fetchone()[0]
+
+    def _catalog_row(self, connection, kind: str, id: str, scope: str) -> dict | None:
+        r = connection.execute('SELECT version, data_json, disabled FROM catalog_items WHERE kind=? AND id=? AND scope=?', (kind, id, scope)).fetchone()
+        return None if r is None else {'version': r['version'], 'data': json.loads(r['data_json']), 'disabled': bool(r['disabled'])}
+
+    def catalog_put(self, kind: str, id: str, scope: str, data: dict | None, disabled: bool = False, by: str = '') -> int:
+        """Write (or, with ``data`` None and not disabled, delete) the row of one item in one layer; returns its new version (0: deleted)."""
+        with self._conn() as connection:
+            before = self._catalog_row(connection, kind, id, scope)
+            if data is None and not disabled:
+                connection.execute('DELETE FROM catalog_items WHERE kind=? AND id=? AND scope=?', (kind, id, scope))
+                after, version = None, 0
+            else:
+                version = (before['version'] if before else 0) + 1
+                after = {'version': version, 'data': data or {}, 'disabled': disabled}
+                connection.execute('INSERT INTO catalog_items(kind, id, scope, version, data_json, disabled, updated_at, updated_by) VALUES(?,?,?,?,?,?,CURRENT_TIMESTAMP,?) '
+                                   'ON CONFLICT(kind, id, scope) DO UPDATE SET version=excluded.version, data_json=excluded.data_json, disabled=excluded.disabled, '
+                                   'updated_at=CURRENT_TIMESTAMP, updated_by=excluded.updated_by', (kind, id, scope, version, json.dumps(data or {}, ensure_ascii=False), int(disabled), by))
+            connection.execute('INSERT INTO catalog_history(kind, id, scope, before_json, after_json, by) VALUES(?,?,?,?,?,?)',
+                               (kind, id, scope, json.dumps(before, ensure_ascii=False) if before else None, json.dumps(after, ensure_ascii=False) if after else None, by))
+            return version
+
+    def catalog_history(self, kind: str, id: str, scope: str | None = None, limit: int = 50) -> list[dict]:
+        sql = 'SELECT seq, scope, before_json, after_json, by, at FROM catalog_history WHERE kind=? AND id=?' + (' AND scope=?' if scope else '') + ' ORDER BY seq DESC LIMIT ?'
+        args = (kind, id, scope, limit) if scope else (kind, id, limit)
+        with self._conn() as connection:
+            rows = connection.execute(sql, args).fetchall()
+        return [{'seq': r['seq'], 'scope': r['scope'], 'before': json.loads(r['before_json']) if r['before_json'] else None,
+                 'after': json.loads(r['after_json']) if r['after_json'] else None, 'by': r['by'], 'at': r['at']} for r in rows]
 
     def list_designs(self) -> list[dict]:
         with self._conn() as connection:

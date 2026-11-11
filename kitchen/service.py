@@ -13,6 +13,7 @@ from .intent import KitchenTemplate as KitchenTemplate
 from .spec import Common, KitchenSpec, LaidModule, Room, Wall, dump_spec, load_spec, to_data
 from .store import ConflictError, Store
 from . import legacy as legacy_schema
+from . import catalog as cat, catalog_files, i18n
 from .config import Config
 from .errors import InvalidInput, NotFound
 ROOT = Path(__file__).resolve().parent.parent
@@ -35,17 +36,141 @@ def utc_now() -> str:
 class KitchenService:
     """Coordinate design, persistence, validation, geometry, and image jobs."""
 
-    def __init__(self, db_path: str | Path | None=None, render_dir: str | Path | None=None, clock: Callable[[], str] | None=None):
+    def __init__(self, db_path: str | Path | None=None, render_dir: str | Path | None=None, clock: Callable[[], str] | None=None, data_dir: str | Path | None=None):
         load_dotenv()
         self.clock = clock or utc_now
         self.config = Config.from_env()      # the environment is read here, once; below this line the service uses the value
         self.store = Store(db_path or self.config.db_path)
+        self.builtin = catalog_files.load_builtin(Path(data_dir or self.config.data_dir or Path(__file__).resolve().parent.parent / "data"))
+        self._catalog_cache: tuple[int, cat.Catalog] | None = None
+        self.store.snapshot = self._snapshot_json
         self.recognizers: dict[str, recognition.Recognizer] = {}     # plug-ins; the Gemini reader is wired when a key is available
         self._wire_recognizers()
         self.render_dir = Path(render_dir or self.config.render_dir)
         legacy_schema.migrate_renders(self.render_dir)
         from .images import ImageJobs
         self.images = ImageJobs(self.store, self.render_dir, self.apply, self.config)
+
+    # ---------- catalog (data-driven business data: kitchen.catalog) and wording (kitchen.i18n)
+    USER = "default"          # one user until accounts exist (decision of 11/11/2026)
+    ID_PATTERN = re.compile(r"^[A-Za-z0-9_.:-]{1,64}$")
+
+    def _entries(self) -> list[cat.Entry]:
+        rows = self.store.catalog_rows([cat.WORKSHOP, cat.user_scope(self.USER)])
+        return [*self.builtin.entries, *(cat.Entry(r['kind'], r['id'], r['scope'], r['data'], r['version'], r['disabled']) for r in rows)]
+
+    def catalog(self) -> cat.Catalog:
+        """The merged catalog (builtin + workshop + the user), rebuilt only when a catalog row changed."""
+        stamp = self.store.catalog_stamp()
+        if self._catalog_cache is None or self._catalog_cache[0] != stamp:
+            self._catalog_cache = (stamp, cat.merge(self._entries()))
+        return self._catalog_cache[1]
+
+    def catalog_for_revision(self, design_id: str, rev: int) -> cat.Catalog:
+        """The catalog a stored revision is built with: the items saved with it over the current catalog."""
+        saved = self.store.revision_catalog(design_id, rev) or []
+        return cat.with_snapshot(self.catalog(), [cat.Item(x['kind'], x['id'], x['data'], x.get('source', 'snapshot'), x.get('version', 1)) for x in saved])
+
+    def _snapshot_json(self, spec: KitchenSpec) -> str | None:
+        used = cat.used_items(to_data(spec), self.catalog(), self.builtin.kinds)
+        return json.dumps([i.to_data() for i in used], ensure_ascii=False) if used else None
+
+    def _kind(self, kind: str) -> cat.KindInfo:
+        info = self.builtin.kinds.get(kind)
+        if info is None:
+            raise NotFound(f"No catalog kind {kind!r}", code="catalog-kind-not-found")
+        return info
+
+    def messages(self, lang: str | None) -> dict:
+        lg = i18n.lang_of(lang)
+        return {'lang': lg, 'langs': list(i18n.LANGS), 'messages': self.builtin.messages.table(lg)}
+
+    def catalog_kinds(self, role: str, lang: str | None = None) -> list[dict]:
+        lg = i18n.lang_of(lang)
+        merged = self.catalog()
+        return [{'kind': k, 'label': i18n.pick(info.label, lg), 'writable': not info.locked and role in info.writers, 'locked': info.locked,
+                 'count': len(merged.all(k))} for k, info in self.builtin.kinds.items()]
+
+    def catalog_list(self, kind: str, role: str, lang: str | None = None) -> dict:
+        info = self._kind(kind)
+        scope = cat.scope_for(role, self.USER)
+        mine = {(r['id']) for r in self.store.catalog_rows([scope]) if r['kind'] == kind}
+        builtin_ids = {e.id for e in self.builtin.entries if e.kind == kind}
+        hidden = [r['id'] for r in self.store.catalog_rows([cat.WORKSHOP, cat.user_scope(self.USER)]) if r['kind'] == kind and r['disabled']]
+        return {'kind': kind, 'label': i18n.pick(info.label, i18n.lang_of(lang)), 'writable': not info.locked and role in info.writers,
+                'scope': scope, 'schema': self.builtin.schemas[kind], 'hidden': hidden,
+                'items': [{**i.to_data(), 'mine': i.id in mine, 'builtin': i.id in builtin_ids} for i in self.catalog().all(kind)]}
+
+    def _check_trial(self, kind: str, id: str, scope: str, data: dict | None, disabled: bool) -> None:
+        """Refuse a write that would leave a reference pointing at nothing (anywhere in the catalog)."""
+        entries = [e for e in self._entries() if not (e.kind == kind and e.id == id and e.scope == scope)]
+        if data is not None or disabled:
+            entries.append(cat.Entry(kind, id, scope, data or {}, 1, disabled))
+        problems = cat.check_refs(cat.merge(entries), self.builtin.kinds)
+        if problems:
+            raise catalog_files.CatalogInvalid('; '.join(f"{p.kind} {p.id}: {p.path}: {p.message}" for p in problems[:10]))
+
+    def catalog_put(self, kind: str, id: str, data: dict, role: str, disabled: bool = False) -> dict:
+        """Create or replace item ``id`` in the role's layer (``disabled``: hide the item of a lower layer instead)."""
+        info = self._kind(kind)
+        cat.check_write(info, role)
+        if not isinstance(id, str) or not self.ID_PATTERN.match(id):
+            raise InvalidInput(f"Item id {id!r}: letters, digits and _ . : - only, 1-64 characters", code="catalog-bad-id")
+        if not disabled:
+            errors_found = catalog_files.schema_errors(self.builtin.schemas[kind], data)
+            if errors_found:
+                raise catalog_files.CatalogInvalid('; '.join(errors_found[:10]))
+        scope = cat.scope_for(role, self.USER)
+        self._check_trial(kind, id, scope, None if disabled else data, disabled)
+        version = self.store.catalog_put(kind, id, scope, None if disabled else data, disabled, role)
+        return {'kind': kind, 'id': id, 'scope': scope, 'version': version}
+
+    def catalog_delete(self, kind: str, id: str, role: str) -> dict:
+        """Remove the role's own row of an item: back to what the lower layers say (or gone, for an item the role added)."""
+        info = self._kind(kind)
+        cat.check_write(info, role)
+        scope = cat.scope_for(role, self.USER)
+        self._check_trial(kind, id, scope, None, False)
+        self.store.catalog_put(kind, id, scope, None, False, role)
+        return {'kind': kind, 'id': id, 'scope': scope, 'version': 0}
+
+    def catalog_history(self, kind: str, id: str) -> list[dict]:
+        self._kind(kind)
+        return self.store.catalog_history(kind, id)
+
+    def catalog_undo(self, kind: str, id: str, role: str) -> dict:
+        """Put back the role's row of an item as it was before its last edit."""
+        info = self._kind(kind)
+        cat.check_write(info, role)
+        scope = cat.scope_for(role, self.USER)
+        last = self.store.catalog_history(kind, id, scope, 1)
+        if not last:
+            raise InvalidInput("Nothing to undo", code="catalog-nothing-to-undo")
+        before = last[0]['before']
+        data = before['data'] if before else None
+        disabled = bool(before and before['disabled'])
+        self._check_trial(kind, id, scope, data, disabled)
+        version = self.store.catalog_put(kind, id, scope, data, disabled, role)
+        return {'kind': kind, 'id': id, 'scope': scope, 'version': version}
+
+    def catalog_export(self, role: str) -> dict:
+        """The role's own layer, every kind: what ``catalog_import`` reads back."""
+        scope = cat.scope_for(role, self.USER)
+        out: dict[str, list[dict]] = {}
+        for r in self.store.catalog_rows([scope]):
+            out.setdefault(r['kind'], []).append({'id': r['id'], 'data': r['data'], 'disabled': r['disabled']})
+        return {'format': 'kitchen-catalog/1', 'scope': scope, 'kinds': out}
+
+    def catalog_import(self, payload: dict, role: str) -> dict:
+        """Write every item of an export into the role's layer (each checked as one write; the first bad item stops the import)."""
+        if not isinstance(payload, dict) or payload.get('format') != 'kitchen-catalog/1' or not isinstance(payload.get('kinds'), dict):
+            raise InvalidInput("Not a kitchen-catalog/1 export", code="catalog-bad-import")
+        done = 0
+        for kind, items in payload['kinds'].items():
+            for item in items if isinstance(items, list) else []:
+                self.catalog_put(kind, item.get('id'), item.get('data') or {}, role, bool(item.get('disabled')))
+                done += 1
+        return {'imported': done}
 
     def _summary(self, design_id: str, revision: int, spec: KitchenSpec, **extra) -> dict:
         """Build the established API summary for a design revision."""

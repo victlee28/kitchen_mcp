@@ -30,6 +30,7 @@ class Config:
     cabinet_recognizer_url: str | None = None      # base URL of the stand-alone cabinet-recognizer service (its API keys stay in that process)
     cabinet_recognizer_timeout: float = 240.0      # the service asks the model up to three times, each with retries
     default_recognizer: str | None = None          # name used when a request names none (see recognition.choose_recognizer)
+    data_dir: Path | None = None                   # the builtin catalog layer and wording (data/); None: <root>/data
 
     @classmethod
     def from_env(cls, environ: Mapping[str, str] | None = None, root: Path = ROOT) -> "Config":
@@ -44,4 +45,5 @@ class Config:
                    gemini_timeout=float(env.get("GEMINI_TIMEOUT") or 300), gemini_image_size=env.get("GEMINI_IMAGE_SIZE") or "",
                    cabinet_recognizer_url=(env.get("CABINET_RECOGNIZER_URL") or "").strip().rstrip("/") or None,
                    cabinet_recognizer_timeout=float(env.get("CABINET_RECOGNIZER_TIMEOUT") or 240),
-                   default_recognizer=(env.get("KITCHEN_RECOGNIZER") or "").strip() or None)
+                   default_recognizer=(env.get("KITCHEN_RECOGNIZER") or "").strip() or None,
+                   data_dir=Path(env.get("KITCHEN_DATA") or root / "data"))

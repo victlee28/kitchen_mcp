@@ -5,8 +5,8 @@ export class ApiError extends Error {
 }
 
 /** Never throws on HTTP errors: {status, ok, data} (data is {} when the body is not JSON). Use for flows that branch on the status (409 = stale). */
-export async function request(path, method = 'GET', body) {
-  const opt = { method, headers: {} };
+export async function request(path, method = 'GET', body, headers = {}) {
+  const opt = { method, headers: { ...headers } };
   if (body !== undefined) { opt.headers['Content-Type'] = 'application/json'; opt.body = JSON.stringify(body); }
   const r = await fetch(path, opt);
   const data = await r.json().catch(() => ({}));
@@ -20,8 +20,8 @@ export function errorMessage(status, data) {
 }
 
 /** The data of a successful response; throws ApiError (with .status and .data) otherwise. */
-export async function api(path, method = 'GET', body) {
-  const { status, ok, data } = await request(path, method, body);
+export async function api(path, method = 'GET', body, headers = {}) {
+  const { status, ok, data } = await request(path, method, body, headers);
   if (!ok) throw new ApiError(errorMessage(status, data), status, data);
   return data;
 }

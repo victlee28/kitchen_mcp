@@ -51,11 +51,28 @@ def _job_ownership(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE image_jobs ADD COLUMN heartbeat_at REAL")
 
 
+def _catalog(conn: sqlite3.Connection) -> None:
+    """The workshop and user layers of the catalog (``kitchen.catalog``), every edit of them, and the catalog items each revision used."""
+    conn.execute("""CREATE TABLE IF NOT EXISTS catalog_items (
+        kind TEXT NOT NULL, id TEXT NOT NULL, scope TEXT NOT NULL, version INTEGER NOT NULL DEFAULT 1,
+        data_json TEXT NOT NULL DEFAULT '{}', disabled INTEGER NOT NULL DEFAULT 0,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_by TEXT NOT NULL DEFAULT '',
+        PRIMARY KEY (kind, id, scope))""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS catalog_history (
+        seq INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT NOT NULL, id TEXT NOT NULL, scope TEXT NOT NULL,
+        before_json TEXT, after_json TEXT, by TEXT NOT NULL DEFAULT '', at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)""")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_catalog_history ON catalog_history(kind, id, scope, seq)")
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(revisions)")}
+    if "catalog_json" not in cols:
+        conn.execute("ALTER TABLE revisions ADD COLUMN catalog_json TEXT")
+
+
 STEPS: list[Step] = [
     Step(1, "english-schema", legacy_schema.migrate_database),
     Step(2, "baseline-tables", _create_baseline, atomic=False),
     Step(3, "knowledge-jurisdiction", _knowledge_jurisdiction),
     Step(4, "job-ownership", _job_ownership),
+    Step(5, "catalog", _catalog),
 ]
 LATEST = STEPS[-1].version
 

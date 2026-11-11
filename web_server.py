@@ -11,6 +11,13 @@ API:
   GET  /api/designs/<id>/threejs[?rev=N&quocGia=VN]  JSON theo Complete Kitchen Three.js Scene Schema v1.1
   GET  /api/designs/<id>/validate[?quocGia=VN]  kiểm tra theo quốc gia/khu vực
   GET  /api/knowledge?q=&kinds=&quocGia=&khuVuc=&chiVung=1   tra cứu tri thức có ưu tiên vùng
+  GET  /api/i18n?lang=vi|en                bảng chữ giao diện
+  GET  /api/catalog                        các loại dữ liệu danh mục (X-Role: workshop|user)
+  GET  /api/catalog/<kind>                 các mục đã ghép 3 lớp + schema
+  PUT  /api/catalog/<kind>/<id>            {data, disabled?} ghi vào lớp của vai trò
+  DELETE /api/catalog/<kind>/<id>          xóa dòng của vai trò (trả về mặc định)
+  GET  /api/catalog/<kind>/<id>/history    POST .../undo
+  GET  /api/catalog-export                 POST /api/catalog-import
   GET  /api/regions                       khu vực, quốc gia, số mục
   GET  /api/designs/<id>/history         lịch sử
   POST /api/designs/<id>/ops             {"baseRev": N, "op": {...}, "expect"?: opHash của /propose: chỉ lưu đúng thao tác đã xem trước}
@@ -134,6 +141,28 @@ class Handler(BaseHTTPRequestHandler):
         if method == "GET" and not p.startswith("/api/"):
             return self._static(p)
         s = errors.require(SVC, "kitchen service (make_server sets it)")
+        if p == "/api/i18n" and method == "GET":
+            return self._json(200, s.messages(q.get("lang")))
+        if p == "/api/catalog-export" and method == "GET":
+            return self._json(200, s.catalog_export(self._role()))
+        if p == "/api/catalog-import" and method == "POST":
+            return self._json(200, s.catalog_import(self._body(), self._role()))
+        if p == "/api/catalog" and method == "GET":
+            return self._json(200, {"kinds": s.catalog_kinds(self._role(), q.get("lang"))})
+        m = re.fullmatch(r"/api/catalog/([a-z0-9-]+)(?:/([A-Za-z0-9_.:%-]+)(?:/(history|undo))?)?", p)
+        if m:
+            kind, item, action = m.group(1), unquote(m.group(2) or ""), m.group(3)
+            if not item and method == "GET":
+                return self._json(200, s.catalog_list(kind, self._role(), q.get("lang")))
+            if item and action == "history" and method == "GET":
+                return self._json(200, {"history": s.catalog_history(kind, item)})
+            if item and action == "undo" and method == "POST":
+                return self._json(200, s.catalog_undo(kind, item, self._role()))
+            if item and not action and method == "PUT":
+                body = self._body()
+                return self._json(200, s.catalog_put(kind, item, body.get("data") or {}, self._role(), bool(body.get("disabled"))))
+            if item and not action and method == "DELETE":
+                return self._json(200, s.catalog_delete(kind, item, self._role()))
         if p == "/api/knowledge" and method == "GET":
             kinds = [k for k in (q.get("kinds") or "").split(",") if k] or None
             return self._json(200, s.search_knowledge(q.get("q", ""), kinds, q.get("country"), q.get("region"), q.get("regionOnly") == "1"))
@@ -399,6 +428,16 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         self._handle("POST")
+
+    def do_PUT(self):
+        self._handle("PUT")
+
+    def do_DELETE(self):
+        self._handle("DELETE")
+
+    def _role(self) -> str:
+        """The role the request acts as (``X-Role: workshop | user``). Not authentication: accounts do not exist yet (11/11/2026)."""
+        return (self.headers.get("X-Role") or "user").strip().lower()
 
     def log_message(self, format, *args):
         pass
