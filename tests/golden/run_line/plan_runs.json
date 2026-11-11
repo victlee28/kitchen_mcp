@@ -1,0 +1,664 @@
+{
+ "function": "run_line.plan_runs",
+ "cases": [
+  {
+   "name": "straight kitchen along the back wall, replacing everything",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "layout": {
+     "$fixture": "tests/data/recognized_runs/straight.json"
+    },
+    "clear": [
+     "TC1",
+     "TD1",
+     "TT1",
+     "TT2"
+    ]
+   },
+   "expected": {
+    "runs": [
+     {
+      "source": "back",
+      "run": {
+       "id": "R1",
+       "x": -4900.0,
+       "z": 0.0,
+       "yaw": 0.0
+      }
+     }
+    ],
+    "summary": [
+     "19 cabinets, 4900 mm, along an edge at 0° (run R1)"
+    ],
+    "addRuns": [
+     {
+      "id": "R1",
+      "x": -4900.0,
+      "z": 0.0,
+      "yaw": 0.0
+     }
+    ],
+    "modules": [
+     [
+      "R1",
+      "tall",
+      0.0,
+      460.0
+     ],
+     [
+      "R1",
+      "tall-fridge",
+      460.0,
+      1010.0
+     ],
+     [
+      "R1",
+      "base",
+      1470.0,
+      470.0
+     ],
+     [
+      "R1",
+      "upper",
+      1470.0,
+      500.0
+     ],
+     [
+      "R1",
+      "upper-loft",
+      1470.0,
+      500.0
+     ],
+     [
+      "R1",
+      "base-oven",
+      1940.0,
+      630.0
+     ],
+     [
+      "R1",
+      "upper",
+      1970.0,
+      640.0
+     ],
+     [
+      "R1",
+      "upper-loft",
+      1970.0,
+      640.0
+     ],
+     [
+      "R1",
+      "base-drawers",
+      2570.0,
+      840.0
+     ],
+     [
+      "R1",
+      "upper",
+      2610.0,
+      430.0
+     ],
+     [
+      "R1",
+      "upper-loft",
+      2610.0,
+      430.0
+     ],
+     [
+      "R1",
+      "upper",
+      3040.0,
+      490.0
+     ],
+     [
+      "R1",
+      "upper-loft",
+      3040.0,
+      490.0
+     ],
+     [
+      "R1",
+      "base-sink",
+      3410.0,
+      940.0
+     ],
+     [
+      "R1",
+      "upper",
+      3530.0,
+      890.0
+     ],
+     [
+      "R1",
+      "upper-loft",
+      3530.0,
+      890.0
+     ],
+     [
+      "R1",
+      "base",
+      4350.0,
+      450.0
+     ],
+     [
+      "R1",
+      "upper",
+      4420.0,
+      480.0
+     ],
+     [
+      "R1",
+      "upper-loft",
+      4420.0,
+      480.0
+     ]
+    ],
+    "removed": [
+     "TC1",
+     "TD1",
+     "TT1",
+     "TT2"
+    ]
+   }
+  },
+  {
+   "name": "L kitchen along the back wall",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "layout": {
+     "$fixture": "tests/data/recognized_runs/l-shape.json"
+    }
+   },
+   "expected": {
+    "runs": [
+     {
+      "source": "back",
+      "run": {
+       "id": "R1",
+       "x": -1970.0,
+       "z": 0.0,
+       "yaw": 0.0
+      }
+     },
+     {
+      "source": "left",
+      "run": {
+       "id": "R2",
+       "x": -1970.0,
+       "z": 2130.0,
+       "yaw": 90.0
+      }
+     }
+    ],
+    "summary": [
+     "7 cabinets, 1970 mm, along an edge at 0° (run R1)",
+     "left: 9 cabinets, 1730 mm, along an edge at 90° (run R2)"
+    ],
+    "addRuns": [
+     {
+      "id": "R1",
+      "x": -1970.0,
+      "z": 0.0,
+      "yaw": 0.0
+     },
+     {
+      "id": "R2",
+      "x": -1970.0,
+      "z": 2130.0,
+      "yaw": 90.0
+     }
+    ],
+    "modules": [
+     [
+      "R1",
+      "base",
+      0.0,
+      1340.0
+     ],
+     [
+      "R1",
+      "upper",
+      0.0,
+      630.0
+     ],
+     [
+      "R1",
+      "upper-loft",
+      250.0,
+      860.0
+     ],
+     [
+      "R1",
+      "upper",
+      630.0,
+      710.0
+     ],
+     [
+      "R1",
+      "upper-loft",
+      1110.0,
+      860.0
+     ],
+     [
+      "R1",
+      "base-drawers",
+      1340.0,
+      630.0
+     ],
+     [
+      "R1",
+      "upper",
+      1340.0,
+      630.0
+     ],
+     [
+      "R2",
+      "upper-loft",
+      0.0,
+      540.0
+     ],
+     [
+      "R2",
+      "upper",
+      30.0,
+      520.0
+     ],
+     [
+      "R2",
+      "base-sink",
+      160.0,
+      590.0
+     ],
+     [
+      "R2",
+      "upper-loft",
+      540.0,
+      690.0
+     ],
+     [
+      "R2",
+      "upper",
+      550.0,
+      680.0
+     ],
+     [
+      "R2",
+      "base",
+      750.0,
+      480.0
+     ],
+     [
+      "R2",
+      "base",
+      1230.0,
+      280.0
+     ],
+     [
+      "R2",
+      "upper",
+      1230.0,
+      500.0
+     ],
+     [
+      "R2",
+      "upper-loft",
+      1230.0,
+      480.0
+     ]
+    ],
+    "removed": []
+   }
+  },
+  {
+   "name": "U kitchen along the back wall",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "layout": {
+     "$fixture": "tests/data/recognized_runs/u-shape.json"
+    }
+   },
+   "expected": {
+    "runs": [
+     {
+      "source": "back",
+      "run": {
+       "id": "R1",
+       "x": -3700.0,
+       "z": 0.0,
+       "yaw": 0.0
+      }
+     },
+     {
+      "source": "left",
+      "run": {
+       "id": "R2",
+       "x": -3700.0,
+       "z": 2370.0,
+       "yaw": 90.0
+      }
+     },
+     {
+      "source": "right",
+      "run": {
+       "id": "R3",
+       "x": 0.0,
+       "z": 0.0,
+       "yaw": -90.0
+      }
+     }
+    ],
+    "summary": [
+     "10 cabinets, 3700 mm, along an edge at 0° (run R1)",
+     "left: 5 cabinets, 2020 mm, along an edge at 90° (run R2)",
+     "right: 2 cabinets, 2130 mm, along an edge at -90° (run R3)"
+    ],
+    "addRuns": [
+     {
+      "id": "R1",
+      "x": -3700.0,
+      "z": 0.0,
+      "yaw": 0.0
+     },
+     {
+      "id": "R2",
+      "x": -3700.0,
+      "z": 2370.0,
+      "yaw": 90.0
+     },
+     {
+      "id": "R3",
+      "x": 0.0,
+      "z": 0.0,
+      "yaw": -90.0
+     }
+    ],
+    "modules": [
+     [
+      "R1",
+      "base",
+      0.0,
+      910.0
+     ],
+     [
+      "R1",
+      "upper",
+      0.0,
+      800.0
+     ],
+     [
+      "R1",
+      "upper",
+      800.0,
+      950.0
+     ],
+     [
+      "R1",
+      "base-sink",
+      910.0,
+      840.0
+     ],
+     [
+      "R1",
+      "base",
+      1750.0,
+      600.0
+     ],
+     [
+      "R1",
+      "upper-hood",
+      1750.0,
+      600.0
+     ],
+     [
+      "R1",
+      "base",
+      2350.0,
+      430.0
+     ],
+     [
+      "R1",
+      "upper",
+      2350.0,
+      740.0
+     ],
+     [
+      "R1",
+      "base",
+      2780.0,
+      180.0
+     ],
+     [
+      "R1",
+      "upper",
+      3090.0,
+      610.0
+     ],
+     [
+      "R2",
+      "base",
+      0.0,
+      630.0
+     ],
+     [
+      "R2",
+      "upper",
+      540.0,
+      690.0
+     ],
+     [
+      "R2",
+      "base-oven",
+      630.0,
+      600.0
+     ],
+     [
+      "R2",
+      "base-drawers",
+      1230.0,
+      540.0
+     ],
+     [
+      "R2",
+      "upper",
+      1230.0,
+      790.0
+     ],
+     [
+      "R3",
+      "tall-fridge",
+      600.0,
+      690.0
+     ],
+     [
+      "R3",
+      "base",
+      1290.0,
+      840.0
+     ]
+    ],
+    "removed": []
+   }
+  },
+  {
+   "name": "L kitchen on a picked line",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "layout": {
+     "$fixture": "tests/data/recognized_runs/l-shape.json"
+    },
+    "a": [
+     -3000,
+     1500
+    ],
+    "b": [
+     -500,
+     1500
+    ],
+    "normal": [
+     0,
+     1
+    ]
+   },
+   "expected": {
+    "runs": [
+     {
+      "source": "back",
+      "run": {
+       "id": "R1",
+       "x": -3000.0,
+       "z": 1500.0,
+       "yaw": 0.0
+      }
+     },
+     {
+      "source": "left",
+      "run": {
+       "id": "R2",
+       "x": -3000.0,
+       "z": 3630.0,
+       "yaw": 90.0
+      }
+     }
+    ],
+    "summary": [
+     "7 cabinets, 1970 mm, along an edge at 0° (run R1)",
+     "left: 9 cabinets, 1730 mm, along an edge at 90° (run R2)"
+    ],
+    "addRuns": [
+     {
+      "id": "R1",
+      "x": -3000.0,
+      "z": 1500.0,
+      "yaw": 0.0
+     },
+     {
+      "id": "R2",
+      "x": -3000.0,
+      "z": 3630.0,
+      "yaw": 90.0
+     }
+    ],
+    "modules": [
+     [
+      "R1",
+      "base",
+      0.0,
+      1340.0
+     ],
+     [
+      "R1",
+      "upper",
+      0.0,
+      630.0
+     ],
+     [
+      "R1",
+      "upper-loft",
+      250.0,
+      860.0
+     ],
+     [
+      "R1",
+      "upper",
+      630.0,
+      710.0
+     ],
+     [
+      "R1",
+      "upper-loft",
+      1110.0,
+      860.0
+     ],
+     [
+      "R1",
+      "base-drawers",
+      1340.0,
+      630.0
+     ],
+     [
+      "R1",
+      "upper",
+      1340.0,
+      630.0
+     ],
+     [
+      "R2",
+      "upper-loft",
+      0.0,
+      540.0
+     ],
+     [
+      "R2",
+      "upper",
+      30.0,
+      520.0
+     ],
+     [
+      "R2",
+      "base-sink",
+      160.0,
+      590.0
+     ],
+     [
+      "R2",
+      "upper-loft",
+      540.0,
+      690.0
+     ],
+     [
+      "R2",
+      "upper",
+      550.0,
+      680.0
+     ],
+     [
+      "R2",
+      "base",
+      750.0,
+      480.0
+     ],
+     [
+      "R2",
+      "base",
+      1230.0,
+      280.0
+     ],
+     [
+      "R2",
+      "upper",
+      1230.0,
+      500.0
+     ],
+     [
+      "R2",
+      "upper-loft",
+      1230.0,
+      480.0
+     ]
+    ],
+    "removed": []
+   }
+  },
+  {
+   "name": "not a recognised-runs document",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "layout": {
+     "schema": "other"
+    }
+   },
+   "expected": null
+  }
+ ]
+}

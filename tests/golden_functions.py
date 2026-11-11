@@ -404,7 +404,36 @@ def proposal_spec_diff(i):
     return {**diff, "affected": proposal.affected_modules(diff)}
 
 
+def run_line_plan_runs(i):
+    """A recognised kitchen (``recognized-runs/1``, inline or ``{"$fixture"}``) put on a line: the runs placed, the cabinets added, the summary."""
+    doc = i["layout"]
+    if isinstance(doc, dict) and "$fixture" in doc:
+        doc = json.loads((ROOT / doc["$fixture"]).read_text(encoding="utf-8"))["runs"]
+    layout = build_layout(doc)
+    if layout is None:
+        return None
+    runs_in = [{"id": r.id, "length": r.length, "modules": list(r.modules)} for r in layout.runs]
+    spec = _spec_after(i)
+    line = run_line.Line(tuple(i["a"]), tuple(i["b"]), tuple(i["normal"])) if "a" in i else run_line.back_wall_line(spec, runs_in)
+    plan = run_line.plan_runs(spec, line, runs_in, list(layout.joints), i.get("clear"))
+    ops = plan["operation"]["ops"] if plan["operation"]["op"] == "multi" else [plan["operation"]]
+    return {"runs": plan.get("runs"), "summary": plan.get("summary"),
+            "addRuns": [o["run"] for o in ops if o["op"] == "add-run"],
+            "modules": [[o["module"]["run"], o["module"]["type"], o["module"]["fromCorner"], o["module"]["width"]] for o in ops if o["op"] == "add"],
+            "removed": [o["id"] for o in ops if o["op"] == "remove"]}
+
+
+def cabinet_run_plan_corner(i):
+    """The corner cabinet between two runs; the spec's wall rows are turned into explicit runs first when ``convertRows`` is set."""
+    spec = _spec_after(i)
+    if i.get("convertRows"):
+        spec = load_spec(rows_to_runs.convert(spec)[0])
+    return cabinet_run.plan_corner(spec, i["runA"], i["runB"], i.get("width", 900.0), i.get("moduleType", "base"))
+
+
 FUNCTIONS = {
+    "run_line.plan_runs": run_line_plan_runs,
+    "cabinet_run.plan_corner": cabinet_run_plan_corner,
     "geometry.compile_spec": geometry_compile_spec,
     "threejs_export.export": threejs_export_export,
     "edit_intent.interpret_edit": edit_intent_interpret_edit,

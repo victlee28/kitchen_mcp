@@ -1,0 +1,158 @@
+{
+ "function": "cabinet_run.plan_corner",
+ "cases": [
+  {
+   "name": "inside corner of the L fixture after its rows became runs",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "convertRows": true,
+    "runA": "R1",
+    "runB": "R2"
+   },
+   "expected": {
+    "operation": {
+     "op": "multi",
+     "ops": [
+      {
+       "op": "add-run",
+       "run": {
+        "id": "R3",
+        "x": -636.4,
+        "z": 0.0,
+        "yaw": -45.0
+       }
+      },
+      {
+       "op": "add",
+       "closeGap": false,
+       "module": {
+        "type": "base",
+        "name": "Corner cabinet",
+        "wall": "island",
+        "run": "R3",
+        "fromCorner": 0.0,
+        "width": 900.0,
+        "y": 0,
+        "height": 840.0,
+        "depth": 550.0,
+        "doors": [
+         900.0
+        ]
+       }
+      }
+     ]
+    },
+    "run": {
+     "id": "R3",
+     "x": -636.4,
+     "z": 0.0,
+     "yaw": -45.0
+    },
+    "angle": 90.0,
+    "clearance": {
+     "aMaxEnd": 894.691270347399,
+     "bMinStart": 1025.3048327204938
+    },
+    "summary": [
+     "Corner cabinet 900 mm at 90.0° (run R3)",
+     "Run R1 ends at 1920 mm but must end by 894.691 mm to clear the corner cabinet",
+     "Run R2 starts at 0 mm but must start from 1025.3 mm to clear the corner cabinet"
+    ]
+   }
+  },
+  {
+   "name": "narrower corner cabinet",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "convertRows": true,
+    "runA": "R1",
+    "runB": "R2",
+    "width": 800
+   },
+   "expected": {
+    "operation": {
+     "op": "multi",
+     "ops": [
+      {
+       "op": "add-run",
+       "run": {
+        "id": "R3",
+        "x": -565.7,
+        "z": 0.0,
+        "yaw": -45.0
+       }
+      },
+      {
+       "op": "add",
+       "closeGap": false,
+       "module": {
+        "type": "base",
+        "name": "Corner cabinet",
+        "wall": "island",
+        "run": "R3",
+        "fromCorner": 0.0,
+        "width": 800.0,
+        "y": 0,
+        "height": 840.0,
+        "depth": 550.0,
+        "doors": [
+         800.0
+        ]
+       }
+      }
+     ]
+    },
+    "run": {
+     "id": "R3",
+     "x": -565.7,
+     "z": 0.0,
+     "yaw": -45.0
+    },
+    "angle": 90.0,
+    "clearance": {
+     "aMaxEnd": 965.3912703473989,
+     "bMinStart": 954.5941546018391
+    },
+    "summary": [
+     "Corner cabinet 800 mm at 90.0° (run R3)",
+     "Run R1 ends at 1920 mm but must end by 965.391 mm to clear the corner cabinet",
+     "Run R2 starts at 0 mm but must start from 954.594 mm to clear the corner cabinet"
+    ]
+   }
+  },
+  {
+   "name": "outside corner is refused",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "convertRows": true,
+    "runA": "R2",
+    "runB": "R1"
+   },
+   "error": {
+    "kind": "validation",
+    "code": "outside-corner"
+   }
+  },
+  {
+   "name": "unknown run",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "convertRows": true,
+    "runA": "R1",
+    "runB": "R9"
+   },
+   "error": {
+    "kind": "validation",
+    "code": "run-not-found"
+   }
+  }
+ ]
+}
