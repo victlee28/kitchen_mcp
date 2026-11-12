@@ -12,24 +12,26 @@ from dataclasses import dataclass
 from collections.abc import Sequence
 from typing import Any
 
+from . import builtin
 from .floorplan.geom import point_in_poly
 from .labels import OBLIQUE_VIEW
 from .numeric import round_half_away
 
 Pt = tuple[float, float]
 
-EYE = 1600.0              # camera height (mm)
-ASPECT = 4 / 3            # the renderer's default 1280 x 960
-MIN_DIST = 1000.0         # nearest the camera stands to a run's front (mm): in a narrow room it steps in and opens the lens instead
-MAX_DIST = 5500.0
-STEP = 250.0
-WALL_CLEAR = 300.0        # nearest the camera stands to a wall (mm)
-V_MIN, V_MAX = 40.0, 78.0 # vertical field of view limits (degrees): the hard clamp
-V_NATURAL_DEG = 62.0          # widest lens that still looks like a photograph (~76° across at 4:3, a 22 mm full-frame lens): wider looks fake
+_R = builtin.CATALOG.data("camera-rules", "default")   # locked catalog kind camera-rules (data/items/camera-rules.json): developers only
+EYE = float(_R["eye"])                  # camera height (mm)
+ASPECT = 4 / 3                          # the renderer's default 1280 x 960
+MIN_DIST = float(_R["minDist"])         # nearest the camera stands to a run's front (mm): in a narrow room it steps in and opens the lens instead
+MAX_DIST = float(_R["maxDist"])
+STEP = float(_R["step"])
+WALL_CLEAR = float(_R["wallClear"])     # nearest the camera stands to a wall (mm)
+V_MIN, V_MAX = float(_R["vMinDeg"]), float(_R["vMaxDeg"])    # vertical field of view limits (degrees): the hard clamp
+V_NATURAL_DEG = float(_R["vNaturalDeg"])  # widest lens that still looks like a photograph (~76° across at 4:3, a 22 mm full-frame lens): wider looks fake
                           # (user, 11/11/2026: "ống kính góc rộng vừa đủ, không quá rộng"); past it the camera stands outside the wall instead
-OBLIQUE = math.radians(35.0)
+OBLIQUE = math.radians(float(_R["obliqueDeg"]))
 NON_BLOCKING = ("area", "opening")
-FRONT_PROBE = 300.0       # how far in front of a run its room is probed (mm)   # floor areas and door/window openings are not solids that hide cabinets
+FRONT_PROBE = float(_R["frontProbe"])   # how far in front of a run its room is probed (mm)   # floor areas and door/window openings are not solids that hide cabinets
 
 
 @dataclass(frozen=True)

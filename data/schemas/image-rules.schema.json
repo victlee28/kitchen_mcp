@@ -1,0 +1,28 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "image-rules",
+ "type": "object",
+ "required": [
+  "minTargetPixels",
+  "minAppliancePixels"
+ ],
+ "additionalProperties": false,
+ "properties": {
+  "minTargetPixels": {
+   "type": "number",
+   "minimum": 0,
+   "x-label": {
+    "vi": "Vùng sửa nhỏ nhất (điểm ảnh)",
+    "en": "Smallest edit region (pixels)"
+   }
+  },
+  "minAppliancePixels": {
+   "type": "number",
+   "minimum": 0,
+   "x-label": {
+    "vi": "Thiết bị nhỏ hơn thì không mô tả (điểm ảnh)",
+    "en": "Appliance below this is not described (pixels)"
+   }
+  }
+ }
+}

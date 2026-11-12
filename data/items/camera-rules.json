@@ -1,0 +1,15 @@
+[
+ {
+  "id": "default",
+  "eye": 1600,
+  "minDist": 1000,
+  "maxDist": 5500,
+  "step": 250,
+  "wallClear": 300,
+  "vMinDeg": 40,
+  "vMaxDeg": 78,
+  "vNaturalDeg": 62,
+  "obliqueDeg": 35,
+  "frontProbe": 300
+ }
+]

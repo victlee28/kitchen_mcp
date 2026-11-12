@@ -13,7 +13,9 @@ import json
 import numpy as np
 from PIL import Image
 
-MIN_PIXELS = 400  # vùng nhỏ hơn: model dễ bỏ sót
+from . import builtin
+
+MIN_PIXELS = int(builtin.CATALOG.data("image-rules", "default")["minTargetPixels"])  # vùng nhỏ hơn: model dễ bỏ sót (catalog image-rules)
 
 
 def _decode(data_url: str) -> tuple[Image.Image | None, str | None]:

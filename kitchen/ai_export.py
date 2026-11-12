@@ -14,7 +14,7 @@ from collections import Counter
 from pathlib import Path
 
 from .catalog import Catalog
-from . import appliance_models, backends, geometry, layers, prompts, vocab
+from . import appliance_models, backends, builtin, geometry, layers, prompts, vocab
 
 SCHEMA = "kitchen-ai-image-request/1.0"
 
@@ -81,7 +81,7 @@ def _appliance_text(seen: list[dict], facts: dict) -> str:
     return (" Appliances: " + " ".join(lines)) if lines else ""
 
 
-MIN_APPLIANCE_PIXELS = 200     # fewer pixels than this: the view hardly shows the appliance, it is not described
+MIN_APPLIANCE_PIXELS = int(builtin.CATALOG.data("image-rules", "default")["minAppliancePixels"])   # fewer pixels: the appliance is not described (image-rules)
 
 
 def build(svc, did: str, rev: int | None = None, views: list[str] | None = None, country: str | None = None,

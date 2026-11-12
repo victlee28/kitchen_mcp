@@ -1,0 +1,100 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "camera-rules",
+ "type": "object",
+ "required": [
+  "eye",
+  "minDist",
+  "maxDist",
+  "step",
+  "wallClear",
+  "vMinDeg",
+  "vMaxDeg",
+  "vNaturalDeg",
+  "obliqueDeg",
+  "frontProbe"
+ ],
+ "additionalProperties": false,
+ "properties": {
+  "eye": {
+   "type": "number",
+   "minimum": 0,
+   "x-label": {
+    "vi": "Cao mắt camera (mm)",
+    "en": "Camera height (mm)"
+   }
+  },
+  "minDist": {
+   "type": "number",
+   "minimum": 0,
+   "x-label": {
+    "vi": "Gần nhất trước dãy (mm)",
+    "en": "Nearest to a run (mm)"
+   }
+  },
+  "maxDist": {
+   "type": "number",
+   "minimum": 0,
+   "x-label": {
+    "vi": "Xa nhất (mm)",
+    "en": "Farthest (mm)"
+   }
+  },
+  "step": {
+   "type": "number",
+   "minimum": 0,
+   "x-label": {
+    "vi": "Bước lùi (mm)",
+    "en": "Step back (mm)"
+   }
+  },
+  "wallClear": {
+   "type": "number",
+   "minimum": 0,
+   "x-label": {
+    "vi": "Cách tường tối thiểu (mm)",
+    "en": "Clear of walls (mm)"
+   }
+  },
+  "vMinDeg": {
+   "type": "number",
+   "minimum": 0,
+   "x-label": {
+    "vi": "Góc nhìn dọc hẹp nhất (°)",
+    "en": "Narrowest vertical view (°)"
+   }
+  },
+  "vMaxDeg": {
+   "type": "number",
+   "minimum": 0,
+   "x-label": {
+    "vi": "Góc nhìn dọc rộng nhất (°)",
+    "en": "Widest vertical view (°)"
+   }
+  },
+  "vNaturalDeg": {
+   "type": "number",
+   "minimum": 0,
+   "x-label": {
+    "vi": "Ống kính rộng nhất còn tự nhiên (°)",
+    "en": "Widest natural lens (°)"
+   }
+  },
+  "obliqueDeg": {
+   "type": "number",
+   "minimum": 0,
+   "x-label": {
+    "vi": "Góc xoay góc chéo (°)",
+    "en": "Oblique view turn (°)"
+   }
+  },
+  "frontProbe": {
+   "type": "number",
+   "minimum": 0,
+   "x-label": {
+    "vi": "Dò phòng trước dãy (mm)",
+    "en": "Room probe in front of a run (mm)"
+   }
+  }
+ }
+}

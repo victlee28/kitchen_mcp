@@ -162,5 +162,21 @@
    "workshop",
    "user"
   ]
+ },
+ "camera-rules": {
+  "label": {
+   "vi": "Quy tắc đặt camera (lập trình viên)",
+   "en": "Camera placement rules (developers)"
+  },
+  "writers": [],
+  "locked": true
+ },
+ "image-rules": {
+  "label": {
+   "vi": "Quy tắc ảnh gửi AI (lập trình viên)",
+   "en": "AI image rules (developers)"
+  },
+  "writers": [],
+  "locked": true
  }
 }
