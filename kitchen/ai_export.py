@@ -104,10 +104,10 @@ def build(svc, did: str, rev: int | None = None, views: list[str] | None = None,
     tn = spec.common.handle
     part = (f"Door style: {_DOOR_STYLES.get(style, style)}. Hardware: {_hardware_text(spec, catalog)}. "
                 + ("Classic crown and base moldings as drawn. " if spec.moldings else "No crown molding. "))
-    common = prompts.global_prompt(spec)
-    negative = ", ".join(prompts.NEGATIVE_LAYER + ["changed door style", "extra cabinets", "missing cabinets", "different layout"] + prompts.NEGATIVE_PHOTO)
-    lighting = lighting if lighting in prompts.LIGHTING else "daylight"
-    photo_image = prompts.full(spec, lighting)
+    common = prompts.global_prompt(spec, catalog)
+    negative = prompts.negative_prompt(["changed door style", "extra cabinets", "missing cabinets", "different layout"], catalog)
+    lighting = lighting if lighting in prompts.lighting(catalog) else "daylight"
+    photo_image = prompts.full(spec, lighting, catalog)
 
     from . import view_sync
     try:  # approved image per view: current or out of date (see view_sync)

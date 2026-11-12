@@ -178,5 +178,24 @@
   },
   "writers": [],
   "locked": true
+ },
+ "lighting": {
+  "label": {
+   "vi": "Ánh sáng ảnh",
+   "en": "Image lighting"
+  },
+  "writers": [
+   "workshop"
+  ]
+ },
+ "prompt-text": {
+  "label": {
+   "vi": "Câu chữ gửi AI",
+   "en": "AI prompt texts"
+  },
+  "writers": [
+   "workshop"
+  ],
+  "closed": true
  }
 }

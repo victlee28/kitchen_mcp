@@ -11,13 +11,15 @@ from __future__ import annotations
 from .instruction import gemini_text, gemini_text_edit, gemini_text_geometry, gemini_text_multi, style_note
 from .layer import NEGATIVE_LAYER, edit_task_prompt, global_prompt, layer_prompt
 from .recognition import SCHEMA as RECOGNITION_SCHEMA, recognition_text
-from .photo import LIGHTING, LIGHTING_VI, NEGATIVE_PHOTO, full, local
+from .photo import LIGHTING, LIGHTING_VI, NEGATIVE_PHOTO, full, lighting, lighting_names, local, text, words
+from .. import builtin
+from ..catalog import Catalog
 
 __all__ = ["gemini_text", "gemini_text_edit", "gemini_text_geometry", "gemini_text_multi", "style_note", "NEGATIVE_LAYER", "edit_task_prompt",
            "global_prompt", "layer_prompt", "RECOGNITION_SCHEMA", "recognition_text", "LIGHTING", "LIGHTING_VI", "NEGATIVE_PHOTO", "full", "local",
-           "negative_prompt"]
+           "negative_prompt", "lighting", "lighting_names", "text", "words"]
 
 
-def negative_prompt(extra: list[str] | None = None) -> str:
-    """The "do not" list of a job: what must not change in the layers, any extras, then the signs of a 3D render."""
-    return ", ".join([*NEGATIVE_LAYER, *(extra or []), *NEGATIVE_PHOTO])
+def negative_prompt(extra: list[str] | None = None, catalog: Catalog = builtin.CATALOG) -> str:
+    """The "do not" list of a job: what must not change in the layers, any extras, then the signs of a 3D render (catalog prompt-text)."""
+    return ", ".join([*words("negative-layer", catalog), *(extra or []), *words("negative-photo", catalog)])

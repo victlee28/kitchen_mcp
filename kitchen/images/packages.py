@@ -35,7 +35,7 @@ class Packages(Component):
             d = self.view_dir(job["design_id"], job["rev"], job["view"])
             src = d / "beauty.png" if (d / "beauty.png").exists() else d / "albedo.png"
             spec, _ = self.store.get(job["design_id"], job["rev"])
-            real = req.get("photoImage") or prompts.full(spec, req.get("lighting") or "daylight")
+            real = req.get("photoImage") or prompts.full(spec, req.get("lighting") or "daylight", self.env.catalog())
             return prompts.gemini_text("gen0", "", req.get("instruction", ""), req["globalPrompt"], realism=real), [("input-image", src)]
         if req["kind"] == "geometry_edit":
             t = req.get("tasks", [{}])[0]

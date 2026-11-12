@@ -9,24 +9,36 @@ Nội dung suy từ thiết kế: có cửa sổ thì có nắng chiếu qua c�
 """
 from __future__ import annotations
 
-from .. import vocab
+from .. import builtin, vocab
+from ..catalog import Catalog
+from ..i18n import pick
+from ..jsonview import as_list
 from ..spec import KitchenSpec
 
-LIGHTING = {
-    "daylight": ("bright natural daylight on an overcast-to-sunny morning, neutral white balance around 5000K, soft large-source "
-                 "light with gentle falloff across the room"),
-    "late-afternoon": ("warm late-afternoon sunlight raking low across the room, around 4000K, long soft-edged shadows and a warm "
-                   "glow on the cabinet fronts, balanced by cool ambient fill"),
-    "dim-evening": ("evening interior lighting: warm 2700–3000K recessed ceiling downlights and under-cabinet LED strips as the main "
-               "light, dark window, cozy pools of light on the countertop, no harsh flash"),
-}
-LIGHTING_VI = {"daylight": "Ban ngày, sáng tự nhiên", "late-afternoon": "Nắng chiều ấm", "dim-evening": "Buổi tối, đèn ấm"}
+def lighting(catalog: Catalog = builtin.CATALOG) -> dict[str, str]:
+    """Lighting id -> the English sentence (catalog kind ``lighting``; the workshop edits or adds them)."""
+    return {it.id: str(it.data.get("prompt", "")) for it in catalog.all("lighting")}
 
-NEGATIVE_PHOTO = ["CGI", "3D render look", "video game graphics", "plastic-looking surfaces", "flat uniform lighting",
-            "oversaturated colors", "HDR halos", "overexposed highlights", "crushed black shadows", "cartoon", "illustration",
-            "painting", "fisheye distortion", "converging vertical lines", "wavy or melted edges", "smeared textures",
-            "repeated tiling texture pattern", "floating objects without contact shadows", "fake bokeh", "lens flare",
-            "clutter", "visible noise artifacts"]
+
+def lighting_names(catalog: Catalog = builtin.CATALOG, lang: str = "vi") -> dict[str, str]:
+    return {it.id: pick(it.data.get("name"), lang) for it in catalog.all("lighting")}
+
+
+def text(id: str, catalog: Catalog = builtin.CATALOG) -> str:
+    """A paragraph of the catalog kind ``prompt-text`` (``photo-camera``, ``tv-full``...)."""
+    item = catalog.find("prompt-text", id) or builtin.CATALOG.find("prompt-text", id)
+    return str(item.data.get("text", "")) if item else ""
+
+
+def words(id: str, catalog: Catalog = builtin.CATALOG) -> list[str]:
+    """A list of phrases of the catalog kind ``prompt-text`` (``negative-photo``, ``negative-layer``)."""
+    item = catalog.find("prompt-text", id) or builtin.CATALOG.find("prompt-text", id)
+    return [str(w) for w in (as_list(item.data.get("words")) or [])] if item else []
+
+
+LIGHTING = lighting()                       # the builtin tables (the functions take the merged catalog)
+LIGHTING_VI = lighting_names()
+NEGATIVE_PHOTO = words("negative-photo")
 
 
 def _has_window(spec: KitchenSpec) -> bool:
@@ -74,30 +86,29 @@ def _contact(spec: KitchenSpec) -> list[str]:
     return out
 
 
-def _lights(spec: KitchenSpec, lighting: str) -> list[str]:
-    out = [LIGHTING.get(lighting, LIGHTING["daylight"])]
-    if _has_window(spec) and lighting != "dim-evening":
+def _lights(spec: KitchenSpec, light: str, catalog: Catalog = builtin.CATALOG) -> list[str]:
+    table = lighting(catalog)
+    lighting_id = light
+    out = [table.get(lighting_id) or table.get("daylight") or LIGHTING["daylight"]]
+    if _has_window(spec) and lighting_id != "dim-evening":
         out.append("daylight enters through the window as the key light, brightest near it, with a natural exposure that keeps "
                    "the window view slightly bright but not blown out")
     if any(m.storey in ("upper", "loft") for m in spec.module):
         out.append("warm LED strip light under the wall cabinets washes the backsplash and countertop"
-                   + (" (subtle in daylight)" if lighting != "dim-evening" else ""))
+                   + (" (subtle in daylight)" if lighting_id != "dim-evening" else ""))
     return out
 
 
-def full(spec: KitchenSpec, lighting: str = "daylight") -> str:
-    """Đoạn yêu cầu ảnh thật cho ảnh ĐẦY ĐỦ (gen-0 / xuất cho AI)."""
-    camera = ("Shoot it as a professional architectural interior photograph: full-frame camera, 24–35 mm rectilinear lens at "
-           "eye level about 1.5 m, f/8 with everything in focus, vertical lines kept perfectly vertical, no fisheye.")
-    light = "Lighting: " + "; ".join(_lights(spec, lighting)) + "."
+def full(spec: KitchenSpec, light: str = "daylight", catalog: Catalog = builtin.CATALOG) -> str:
+    """Đoạn yêu cầu ảnh thật cho ảnh ĐẦY ĐỦ (gen-0 / xuất cho AI). Câu chữ: catalog kinds ``lighting`` và ``prompt-text``."""
+    camera = text("photo-camera", catalog)
+    light_text = "Lighting: " + "; ".join(_lights(spec, light, catalog)) + "."
     mats = _materials(spec)
     material_text = ("Materials: " + "; ".join(mats) + ".") if mats else ""
     contact = "Physically plausible detail: " + "; ".join(_contact(spec)) + "."
-    post = ("Natural color, realistic dynamic range (no HDR look), very fine natural sensor grain, accurate white balance; "
-            "the room looks clean and newly installed, with no people, text or clutter. It must be indistinguishable from a "
-            "real photograph, not a 3D render.")
+    post = text("photo-post", catalog)
     preferences = ("Image preferences: " + "; ".join(spec.renderPreferences) + ".") if spec.renderPreferences else ""
-    return " ".join(x for x in (camera, light, material_text, contact, preferences, post) if x)
+    return " ".join(x for x in (camera, light_text, material_text, contact, preferences, post) if x)
 
 
 def local(spec: KitchenSpec | None, extra_materials: list[str] | None = None) -> str:

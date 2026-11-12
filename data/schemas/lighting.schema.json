@@ -1,0 +1,39 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "lighting",
+ "type": "object",
+ "required": [
+  "name",
+  "prompt"
+ ],
+ "additionalProperties": false,
+ "properties": {
+  "name": {
+   "type": "object",
+   "properties": {
+    "vi": {
+     "type": "string"
+    },
+    "en": {
+     "type": "string"
+    }
+   },
+   "additionalProperties": false,
+   "required": [
+    "vi"
+   ],
+   "x-label": {
+    "vi": "Tên",
+    "en": "Name"
+   }
+  },
+  "prompt": {
+   "type": "string",
+   "minLength": 1,
+   "x-label": {
+    "vi": "Câu mô tả ánh sáng cho AI (tiếng Anh)",
+    "en": "Lighting sentence for the AI (English)"
+   }
+  }
+ }
+}

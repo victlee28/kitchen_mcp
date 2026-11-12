@@ -112,8 +112,9 @@ class ImageJobs:
         tasks, preview, geometry_items, operation, lighting = new.tasks, new.preview, new.geometry_items, new.operation, new.lighting
         if kind not in KINDS:
             raise InvalidInput("kind must be edit, gen0 or geometry_edit", code="bad-job-kind")
-        if lighting not in (None, "", *prompts.LIGHTING):
-            raise InvalidInput(f"lighting must be one of {', '.join(prompts.LIGHTING)}", code="bad-lighting", params={"allowed": ', '.join(prompts.LIGHTING)})
+        offered_light = prompts.lighting(self.env.catalog())
+        if lighting not in (None, "", *offered_light):
+            raise InvalidInput(f"lighting must be one of {', '.join(offered_light)}", code="bad-lighting", params={"allowed": ', '.join(offered_light)})
         if operation is not None:
             if operation not in geometry_edit.OPERATIONS:
                 raise InvalidInput(f"operation must be one of {', '.join(geometry_edit.OPERATIONS)}", code="bad-operation", params={"allowed": ', '.join(geometry_edit.OPERATIONS)})

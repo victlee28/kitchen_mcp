@@ -1,0 +1,26 @@
+[
+ {
+  "id": "daylight",
+  "name": {
+   "vi": "Ban ngày, sáng tự nhiên",
+   "en": "Daylight, natural light"
+  },
+  "prompt": "bright natural daylight on an overcast-to-sunny morning, neutral white balance around 5000K, soft large-source light with gentle falloff across the room"
+ },
+ {
+  "id": "late-afternoon",
+  "name": {
+   "vi": "Nắng chiều ấm",
+   "en": "Warm late-afternoon sun"
+  },
+  "prompt": "warm late-afternoon sunlight raking low across the room, around 4000K, long soft-edged shadows and a warm glow on the cabinet fronts, balanced by cool ambient fill"
+ },
+ {
+  "id": "dim-evening",
+  "name": {
+   "vi": "Buổi tối, đèn ấm",
+   "en": "Evening, warm lamps"
+  },
+  "prompt": "evening interior lighting: warm 2700–3000K recessed ceiling downlights and under-cabinet LED strips as the main light, dark window, cozy pools of light on the countertop, no harsh flash"
+ }
+]

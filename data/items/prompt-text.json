@@ -1,0 +1,91 @@
+[
+ {
+  "id": "negative-photo",
+  "description": {
+   "vi": "Dấu hiệu ảnh dựng 3D / ảnh AI cần tránh",
+   "en": "Signs of a 3D render or AI image to avoid"
+  },
+  "words": [
+   "CGI",
+   "3D render look",
+   "video game graphics",
+   "plastic-looking surfaces",
+   "flat uniform lighting",
+   "oversaturated colors",
+   "HDR halos",
+   "overexposed highlights",
+   "crushed black shadows",
+   "cartoon",
+   "illustration",
+   "painting",
+   "fisheye distortion",
+   "converging vertical lines",
+   "wavy or melted edges",
+   "smeared textures",
+   "repeated tiling texture pattern",
+   "floating objects without contact shadows",
+   "fake bokeh",
+   "lens flare",
+   "clutter",
+   "visible noise artifacts"
+  ]
+ },
+ {
+  "id": "negative-layer",
+  "description": {
+   "vi": "Điều không được đổi khi sửa một vùng",
+   "en": "What must not change when a region is edited"
+  },
+  "words": [
+   "distorted geometry",
+   "warped cabinet doors",
+   "changed perspective",
+   "extra handles",
+   "text",
+   "watermark",
+   "blurry",
+   "low quality",
+   "people"
+  ]
+ },
+ {
+  "id": "photo-camera",
+  "description": {
+   "vi": "Cách chụp (ảnh đầy đủ)",
+   "en": "How the full image is shot"
+  },
+  "text": "Shoot it as a professional architectural interior photograph: full-frame camera, 24–35 mm rectilinear lens at eye level about 1.5 m, f/8 with everything in focus, vertical lines kept perfectly vertical, no fisheye."
+ },
+ {
+  "id": "photo-post",
+  "description": {
+   "vi": "Hậu kỳ và độ thật (ảnh đầy đủ)",
+   "en": "Finish and realism of the full image"
+  },
+  "text": "Natural color, realistic dynamic range (no HDR look), very fine natural sensor grain, accurate white balance; the room looks clean and newly installed, with no people, text or clutter. It must be indistinguishable from a real photograph, not a 3D render."
+ },
+ {
+  "id": "tv-columns",
+  "description": {
+   "vi": "Tủ tivi: cột hai bên",
+   "en": "TV unit: columns"
+  },
+  "text": "a built-in TV wall unit: a low wall-to-wall media console with drawers and no stone top, an open TV niche above it with a flat TV mounted on the wall, tall storage columns at both ends and a slim floating open shelf above the TV"
+ },
+ {
+  "id": "tv-shelves",
+  "description": {
+   "vi": "Tủ tivi: kệ treo",
+   "en": "TV unit: shelves"
+  },
+  "text": "a built-in TV wall unit: a low wall-to-wall media console with drawers and no stone top, a flat TV mounted on the wall above it and slim open floating shelves on the wall beside the TV"
+ },
+ {
+  "id": "tv-full",
+  "description": {
+   "vi": "Tủ tivi: kín cả vách",
+   "en": "TV unit: full wall"
+  },
+  "text": "a built-in TV wall unit closed from floor to ceiling: tall cabinets on both sides and wall cabinets above an open TV niche, a low media console with drawers in the niche and a flat TV mounted on the wall"
+ }
+]

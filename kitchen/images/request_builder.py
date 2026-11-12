@@ -51,7 +51,7 @@ class RequestBuilder(Component):
         req: JobRequest = {"designId": did, "baseRevision": rev, "view": view, "renderKey": man["renderKey"], "kind": kind, "mode": mode,
                "instruction": instruction, "backend": backend,
                "seed": int(seed if seed is not None else self.runtime.new_seed()), "params": params or {},
-               "size": [W, H], "preserve": "strict", "negativePrompt": ", ".join(prompts.NEGATIVE_LAYER + prompts.NEGATIVE_PHOTO),
+               "size": [W, H], "preserve": "strict", "negativePrompt": prompts.negative_prompt(None, self.env.catalog()),
                "lighting": lighting,  # ánh sáng cho ảnh đầy đủ (gen-0); sửa vùng thì bám ánh sáng ảnh gốc
                "prompt": "", "globalPrompt": ""}  # both filled by the branch of the kind below
         if operation:
@@ -142,7 +142,7 @@ class RequestBuilder(Component):
             req["tasks"] = recs
             req["referenceImage"] = ref_info
             req["maskPixels"] = int(union.sum())
-            req["globalPrompt"] = prompts.global_prompt(cur)
+            req["globalPrompt"] = prompts.global_prompt(cur, self.env.catalog())
             req["targetLayer"] = first["targetLayer"] + (f" +{len(recs) - 1}" if len(recs) > 1 else "")
             # Keep the single-task prompt field for request consumers.
             req["prompt"] = first.get("prompt", "") if len(recs) == 1 else "; ".join(f"[{k + 1}] {r.get('prompt', '')}" for k, r in enumerate(recs))
@@ -150,9 +150,9 @@ class RequestBuilder(Component):
             req["targetParts"] = [p for r in recs for p in r.get("targetParts", [])]
             req["scope"] = "; ".join(r.get("scope", "") for r in recs if r.get("scope")) or None
         else:
-            req["globalPrompt"] = prompts.global_prompt(spec)
-            req["photoImage"] = prompts.full(spec, lighting)
-            req["prompt"] = " ".join(x for x in (prompts.global_prompt(spec), prompts.full(spec, lighting), instruction.strip()) if x)
+            req["globalPrompt"] = prompts.global_prompt(spec, self.env.catalog())
+            req["photoImage"] = prompts.full(spec, lighting, self.env.catalog())
+            req["prompt"] = " ".join(x for x in (prompts.global_prompt(spec, self.env.catalog()), prompts.full(spec, lighting, self.env.catalog()), instruction.strip()) if x)
         self._attach_style(jdir, req, new, (W, H))
         (jdir / "job.json").write_text(json.dumps({"id": jid, **req}, ensure_ascii=False, indent=2), encoding="utf-8")
         return req
@@ -228,7 +228,7 @@ class RequestBuilder(Component):
         Image.fromarray(imaging.mark_regions(ref, [(m, ZONE_COLORS[0][1], "1")], gap=GROW_PX + 2)).save(jdir / "reference_marked.png")
         en = "; ".join(x["en"] for x in desc)
         vi = "; ".join(x["vi"] for x in desc)
-        common = prompts.global_prompt(nxt)
+        common = prompts.global_prompt(nxt, self.env.catalog())
         task: Task = {"targetLayer": "geometry_edit", "name": vi, "roleEn": en, "position": describe_position(m), "instruction": instruction, "material": None,
                       "operation": tt, "targetParts": info["part"], "maskPixels": int(m.sum()),
                       "prompt": ", ".join(x for x in (en, instruction, common) if x)}

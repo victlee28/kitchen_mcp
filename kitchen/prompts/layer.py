@@ -3,55 +3,49 @@ from __future__ import annotations
 
 from typing import Any
 
-from .. import lexicon, tv_system, vocab
+from .. import builtin, lexicon, tv_system, vocab
+from ..catalog import Catalog
+from .photo import text, words
 from ..layers import ROLES
 from ..spec import KitchenSpec
 
-NEGATIVE_LAYER = ["distorted geometry", "warped cabinet doors", "changed perspective", "extra handles", "text", "watermark",
-            "blurry", "low quality", "people"]
+NEGATIVE_LAYER = words("negative-layer")   # catalog kind prompt-text (builtin); negative_prompt takes the merged catalog
 
 _STYLES = {"Modern": "modern", "Classic": "classic", "Neoclassical": "neoclassical", "Transitional": "transitional",
                "Minimalist": "minimalist"}
 
 
-def global_prompt(spec: KitchenSpec) -> str:
+def global_prompt(spec: KitchenSpec, catalog: Catalog = builtin.CATALOG) -> str:
     style = _STYLES.get(spec.style or "", (spec.style or "modern").lower())
     v = spec.common.material
-    mats = ", ".join(x for x in (vocab.to_english(v.get("base", "")) and f"base cabinets {vocab.to_english(v.get('base', ''))}",
-                                 vocab.to_english(v.get("upper", "")) and f"wall cabinets {vocab.to_english(v.get('upper', ''))}",
-                                 vocab.to_english(v.get("countertop", "")) and f"countertop {vocab.to_english(v.get('countertop', ''))}") if x)
+    mats = ", ".join(x for x in (vocab.to_english(v.get("base", ""), catalog) and f"base cabinets {vocab.to_english(v.get('base', ''), catalog)}",
+                                 vocab.to_english(v.get("upper", ""), catalog) and f"wall cabinets {vocab.to_english(v.get('upper', ''), catalog)}",
+                                 vocab.to_english(v.get("countertop", ""), catalog) and f"countertop {vocab.to_english(v.get('countertop', ''), catalog)}") if x)
     wall_tile = v.get("wallTile", "")
-    if wall_tile and wall_tile != "Đá ốp tường đồng bộ mặt bàn" and vocab.to_english(wall_tile):
-        mats = ", ".join(x for x in (mats, f"backsplash {vocab.to_english(wall_tile)}") if x)
+    if wall_tile and wall_tile != "Đá ốp tường đồng bộ mặt bàn" and vocab.to_english(wall_tile, catalog):
+        mats = ", ".join(x for x in (mats, f"backsplash {vocab.to_english(wall_tile, catalog)}") if x)
     extra = ", ".join(dict.fromkeys([*lexicon.tag_phrases(spec.styleTags), *(spec.aiHints or [])]))
     only_tv = bool(spec.module) and all(m.id in tv_system.tv_modules(spec) for m in spec.module)
-    tv = (tv_text(spec) + ", ") if tv_system.tv_runs(spec) else ""
+    tv = (tv_text(spec, catalog) + ", ") if tv_system.tv_runs(spec) else ""
     room = f"a {style} living room with " if only_tv else f"a {style} kitchen, "
     return (f"photorealistic interior photograph of {room}{tv}{mats}, "
             + (f"{extra}, " if extra else "") + "realistic materials, sharp details, architectural photography").replace(", ,", ",")
 
 
-TV_UNIT = {
-    "columns": "a built-in TV wall unit: a low wall-to-wall media console with drawers and no stone top, an open TV niche above it with a flat TV "
-               "mounted on the wall, tall storage columns at both ends and a slim floating open shelf above the TV",
-    "shelves": "a built-in TV wall unit: a low wall-to-wall media console with drawers and no stone top, a flat TV mounted on the wall above it "
-               "and slim open floating shelves on the wall beside the TV",
-    "full": "a built-in TV wall unit closed from floor to ceiling: tall cabinets on both sides and wall cabinets above an open TV niche, a low "
-            "media console with drawers in the niche and a flat TV mounted on the wall",
-}
+TV_UNIT = {k: text(f"tv-{k}") for k in ("columns", "shelves", "full")}   # catalog kind prompt-text (builtin)
 
 
-def tv_text(spec: KitchenSpec) -> str:
+def tv_text(spec: KitchenSpec, catalog: Catalog = builtin.CATALOG) -> str:
     """What the TV units of the design look like, for the prompt (the layout of the first one; the panel behind the TV when there is one).
     ``""`` for a design without a TV unit."""
     tv_runs = sorted(tv_system.tv_runs(spec))
     if not tv_runs:
         return ""
     first = tv_runs[0]
-    text = TV_UNIT.get(tv_system.layout_of(spec, first) or "columns", TV_UNIT["columns"])
+    out = text(f"tv-{tv_system.layout_of(spec, first) or 'columns'}", catalog) or text("tv-columns", catalog)
     if any(m.backPanel is not None for m in spec.module if m.run == first):
-        text += ", a smooth panel in the cabinet finish on the wall behind the TV"
-    return text
+        out += ", a smooth panel in the cabinet finish on the wall behind the TV"
+    return out
 
 
 def layer_prompt(spec: KitchenSpec, layer: dict[str, Any], instruction: str = "", material: str | None = None) -> str:

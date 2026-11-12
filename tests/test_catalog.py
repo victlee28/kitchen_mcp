@@ -496,5 +496,33 @@ class TestErrorWording(unittest.TestCase):
         self.assertEqual(m.error("no-such-code", {}, "en", "plain"), "plain")
 
 
+class TestPromptsFromTheCatalog(unittest.TestCase):
+    """Stage 3.6: lighting and the fixed prompt texts (negatives, camera, finish, TV units) are catalog items the workshop edits."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        from kitchen.service import KitchenService
+        self.s = KitchenService(db_path=self.tmp / "k.db", render_dir=self.tmp / "r")
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_workshop_lighting_and_negatives(self):
+        from kitchen import prompts
+        from kitchen.spec import KitchenSpec
+        s = self.s
+        s.catalog_put("lighting", "golden-hour", {"name": {"vi": "Hoàng hôn", "en": "Golden hour"}, "prompt": "golden hour glow"}, "workshop")
+        neg = dict(s.catalog().data("prompt-text", "negative-photo"))
+        s.catalog_put("prompt-text", "negative-photo", {**neg, "words": [*neg["words"], "fake plants"]}, "workshop")
+        c = s.catalog()
+        self.assertEqual(s.image_backends()["lighting"]["golden-hour"], "Hoàng hôn")
+        spec = KitchenSpec.model_validate(json.loads((ROOT / "fixtures" / "l-shaped-kitchen.json").read_text(encoding="utf-8")))
+        self.assertIn("golden hour glow", prompts.full(spec, "golden-hour", c))
+        self.assertNotIn("golden hour glow", prompts.full(spec, "golden-hour"))                       # builtin: falls back to daylight
+        self.assertTrue(prompts.negative_prompt(None, c).endswith("fake plants"))
+        with self.assertRaises(InvalidInput):
+            s.catalog_put("prompt-text", "my-text", {"text": "x"}, "workshop")                         # closed: the code reads known ids only
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -1036,7 +1036,7 @@ class KitchenService:
         """Image backends, geometry-edit operations and lighting presets the UI can offer."""
         from . import backends, geometry_edit, prompts
         return {'backends': backends.table(self.catalog()), 'operation': geometry_edit.OPERATIONS,
-                'lighting': prompts.LIGHTING_VI, 'default': self.config.default_backend}
+                'lighting': prompts.lighting_names(self.catalog()), 'default': self.config.default_backend}
 
     def check_request(self, text: str) -> dict:
         """Check a pasted customer request for contradictions and gaps before designing."""

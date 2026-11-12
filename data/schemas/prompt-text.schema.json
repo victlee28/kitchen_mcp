@@ -1,0 +1,43 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "prompt-text",
+ "type": "object",
+ "additionalProperties": false,
+ "properties": {
+  "description": {
+   "type": "object",
+   "properties": {
+    "vi": {
+     "type": "string"
+    },
+    "en": {
+     "type": "string"
+    }
+   },
+   "additionalProperties": false,
+   "x-label": {
+    "vi": "Dùng cho",
+    "en": "Used for"
+   }
+  },
+  "words": {
+   "type": "array",
+   "items": {
+    "type": "string",
+    "minLength": 1
+   },
+   "x-label": {
+    "vi": "Danh sách cụm (tiếng Anh)",
+    "en": "Phrases (English)"
+   }
+  },
+  "text": {
+   "type": "string",
+   "minLength": 1,
+   "x-label": {
+    "vi": "Đoạn văn (tiếng Anh)",
+    "en": "Text (English)"
+   }
+  }
+ }
+}
