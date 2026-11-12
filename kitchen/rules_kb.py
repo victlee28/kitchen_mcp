@@ -13,7 +13,7 @@ import math
 from collections.abc import Iterable
 
 from .numeric import round_half_away, round_int
-from . import builtin, regions, runs, words
+from . import builtin, defaults, regions, runs, words
 from .catalog import Catalog
 from .jsonview import as_dict, as_list
 from .spec import KitchenSpec, Appliance
@@ -264,4 +264,23 @@ def check(spec: KitchenSpec, sel: dict[str, dict[str, Any]], catalog: Catalog = 
                             "theo": words.said("finding.by", zone=s['zone'], priority=s['priority'])})
         elif lim and spec.room.walkway < lim - 1:
             ctx.add("walkway", [], "finding.walkway", {"width": spec.room.walkway, "min": lim}, spec.room.walkway, lim)
+    _openings(ctx, spec, catalog)
     return ctx.out
+
+
+OPENING_TOPICS = ("doorway-width", "doorway-width-accessible", "doorway-height", "doorway-blocked", "door-interference", "cooktop-window", "window-upper")
+
+
+def _openings(ctx: _Ctx, spec: KitchenSpec, catalog: Catalog) -> None:
+    """The checks against the room's doors and windows (``rules_openings``). A cabinet standing in a doorway is always a warning."""
+    params = {t: ctx.p(t) or {} for t in OPENING_TOPICS if t in ctx.sel}
+    if not params:
+        return
+    from . import geometry, rules_openings
+    found, bodies = geometry.openings_and_bodies(spec, geometry.compile_spec(spec, catalog))
+    for f in rules_openings.check(found, bodies, params, defaults.of(catalog).openings):
+        ctx.add(f.topic, f.modules, f.key, dict(f.params), f.measured, f.limit)
+        if f.topic == "doorway-blocked":                 # always a warning: never an error, never only for reference
+            ctx.out[-1]["severity"] = "warning"
+            ctx.out[-1].pop("reference", None)
+

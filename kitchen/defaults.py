@@ -30,6 +30,7 @@ class Defaults:
     hood_side: float             # room each side of an integrated hood inside its cabinet
     new_design: Mapping[str, float]   # common sizes of a new design the request does not give
     menu: Mapping[str, float]         # input limits of the web menu
+    openings: Mapping[str, float]     # the checks against doors and windows (``rules_openings``): clearAllowance, doorZone, windowZone, near
     materials: Mapping[str, str]      # finish names drawn where a design names none (``base``, ``carcass``, ``sink`` ...)
 
 
@@ -59,7 +60,7 @@ def _build(catalog: Catalog) -> Defaults:
     run, stretch, hole = (_section(data, fallback, k) for k in ("run", "stretch", "applianceHole"))
     return Defaults(float(run["moduleWidth"]), float(run["minWidth"]), float(run["maxRun"]), float(run["cornerMaxWidth"]),
                     float(stretch["min"]), float(stretch["max"]), float(hole["side"]), float(hole["worktopEdge"]), float(hole["hoodSide"]), _section(data, fallback, "newDesign"), _section(data, fallback, "menu"),
-                    _names(data, fallback, "materials"))
+                    _section(data, fallback, "openings"), _names(data, fallback, "materials"))
 
 
 def of(catalog: Catalog = builtin.CATALOG) -> Defaults:

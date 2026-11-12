@@ -400,6 +400,52 @@
      }
     }
    }
+  },
+  "openings": {
+   "type": "object",
+   "additionalProperties": false,
+   "x-label": {
+    "vi": "Kiểm cửa đi, cửa sổ",
+    "en": "Door and window checks"
+   },
+   "properties": {
+    "clearAllowance": {
+     "type": "number",
+     "minimum": 0,
+     "maximum": 300,
+     "x-label": {
+      "vi": "Lỗ cửa → thông thủy: trừ khung và cánh (mm)",
+      "en": "Opening to clear width: frame and leaf (mm)"
+     }
+    },
+    "doorZone": {
+     "type": "number",
+     "minimum": 0,
+     "maximum": 1500,
+     "x-label": {
+      "vi": "Vùng trước/sau cửa đi tính là lối cửa (mm)",
+      "en": "Depth in front of a door counted as its doorway (mm)"
+     }
+    },
+    "windowZone": {
+     "type": "number",
+     "minimum": 0,
+     "maximum": 1500,
+     "x-label": {
+      "vi": "Vùng trước cửa sổ tính là dưới cửa sổ (mm)",
+      "en": "Depth in front of a window counted as under it (mm)"
+     }
+    },
+    "near": {
+     "type": "number",
+     "minimum": 0,
+     "maximum": 10000,
+     "x-label": {
+      "vi": "Cửa xa tủ hơn mức này là của phòng khác (mm)",
+      "en": "Openings further than this from every cabinet belong to another room (mm)"
+     }
+    }
+   }
   }
  }
 }

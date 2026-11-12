@@ -1,0 +1,781 @@
+{
+ "function": "rules_openings.check",
+ "cases": [
+  {
+   "name": "an 800 mm opening: 740 clear (narrow); the cabinet in front of the door is in its way and in its swing",
+   "input": {
+    "structures": [
+     {
+      "id": "STRUCT-d1",
+      "sourceElement": "d1",
+      "kind": "opening",
+      "tag": "door",
+      "outline": [
+       {
+        "x": 1000,
+        "z": -140
+       },
+       {
+        "x": 1800,
+        "z": -140
+       },
+       {
+        "x": 1800,
+        "z": 0
+       },
+       {
+        "x": 1000,
+        "z": 0
+       }
+      ],
+      "base": 0,
+      "height": 2100,
+      "heightSource": "measured",
+      "hinge": {
+       "x": 1000,
+       "z": 0
+      },
+      "swing": [
+       {
+        "x": 1800,
+        "z": 0
+       },
+       {
+        "x": 1566,
+        "z": 566
+       },
+       {
+        "x": 1000,
+        "z": 800
+       }
+      ]
+     }
+    ],
+    "bodies": [
+     {
+      "id": "TD1",
+      "kind": "module",
+      "storey": "base",
+      "footprint": [
+       [
+        1200,
+        0
+       ],
+       [
+        1800,
+        0
+       ],
+       [
+        1800,
+        600
+       ],
+       [
+        1200,
+        600
+       ]
+      ],
+      "y0": 0,
+      "y1": 900
+     }
+    ],
+    "params": {
+     "doorway-width": {
+      "doorway_clear_min": 750
+     },
+     "doorway-width-accessible": {
+      "accessible_clear_min": 850
+     },
+     "doorway-height": {
+      "doorway_height_min": 2000
+     },
+     "doorway-blocked": {},
+     "door-interference": {},
+     "cooktop-window": {
+      "cooktop_window_gap": 300
+     },
+     "window-upper": {}
+    },
+    "settings": {
+     "clearAllowance": 60,
+     "doorZone": 300,
+     "windowZone": 650,
+     "near": 2000
+    }
+   },
+   "expected": {
+    "findings": [
+     {
+      "topic": "doorway-width",
+      "modules": [],
+      "key": "finding.doorway-narrow",
+      "params": {
+       "id": "d1",
+       "clear": 740,
+       "min": 750
+      },
+      "measured": 740,
+      "limit": 750
+     },
+     {
+      "topic": "doorway-blocked",
+      "modules": [
+       "TD1"
+      ],
+      "key": "finding.doorway-blocked",
+      "params": {
+       "id": "d1",
+       "cabinets": "TD1"
+      },
+      "measured": null,
+      "limit": null
+     },
+     {
+      "topic": "door-interference",
+      "modules": [
+       "TD1"
+      ],
+      "key": "finding.door-interference",
+      "params": {
+       "id": "d1",
+       "cabinets": "TD1"
+      },
+      "measured": null,
+      "limit": null
+     }
+    ]
+   }
+  },
+  {
+   "name": "wide enough for everyday use, not for a wheelchair; nothing near the door",
+   "input": {
+    "structures": [
+     {
+      "id": "STRUCT-d1",
+      "sourceElement": "d1",
+      "kind": "opening",
+      "tag": "door",
+      "outline": [
+       {
+        "x": 1000,
+        "z": -140
+       },
+       {
+        "x": 1880,
+        "z": -140
+       },
+       {
+        "x": 1880,
+        "z": 0
+       },
+       {
+        "x": 1000,
+        "z": 0
+       }
+      ],
+      "base": 0,
+      "height": 2100,
+      "heightSource": "measured",
+      "hinge": {
+       "x": 1000,
+       "z": 0
+      },
+      "swing": []
+     }
+    ],
+    "bodies": [
+     {
+      "id": "TD1",
+      "kind": "module",
+      "storey": "base",
+      "footprint": [
+       [
+        2500,
+        0
+       ],
+       [
+        3100,
+        0
+       ],
+       [
+        3100,
+        600
+       ],
+       [
+        2500,
+        600
+       ]
+      ],
+      "y0": 0,
+      "y1": 900
+     }
+    ],
+    "params": {
+     "doorway-width": {
+      "doorway_clear_min": 750
+     },
+     "doorway-width-accessible": {
+      "accessible_clear_min": 850
+     },
+     "doorway-height": {
+      "doorway_height_min": 2000
+     },
+     "doorway-blocked": {},
+     "door-interference": {},
+     "cooktop-window": {
+      "cooktop_window_gap": 300
+     },
+     "window-upper": {}
+    },
+    "settings": {
+     "clearAllowance": 60,
+     "doorZone": 300,
+     "windowZone": 650,
+     "near": 2000
+    }
+   },
+   "expected": {
+    "findings": [
+     {
+      "topic": "doorway-width-accessible",
+      "modules": [],
+      "key": "finding.doorway-narrow-accessible",
+      "params": {
+       "id": "d1",
+       "clear": 820,
+       "min": 850
+      },
+      "measured": 820,
+      "limit": 850
+     }
+    ]
+   }
+  },
+  {
+   "name": "a cooktop under a window, a wall cabinet over it, the worktop above the sill",
+   "input": {
+    "structures": [
+     {
+      "id": "STRUCT-w1",
+      "sourceElement": "w1",
+      "kind": "opening",
+      "tag": "window",
+      "outline": [
+       {
+        "x": 3000,
+        "z": -140
+       },
+       {
+        "x": 4200,
+        "z": -140
+       },
+       {
+        "x": 4200,
+        "z": 0
+       },
+       {
+        "x": 3000,
+        "z": 0
+       }
+      ],
+      "base": 850,
+      "height": 1200,
+      "heightSource": "assumed"
+     }
+    ],
+    "bodies": [
+     {
+      "id": "TD2",
+      "kind": "module",
+      "storey": "base",
+      "footprint": [
+       [
+        3000,
+        0
+       ],
+       [
+        3600,
+        0
+       ],
+       [
+        3600,
+        600
+       ],
+       [
+        3000,
+        600
+       ]
+      ],
+      "y0": 0,
+      "y1": 900
+     },
+     {
+      "id": "TT1",
+      "kind": "module",
+      "storey": "upper",
+      "footprint": [
+       [
+        3600,
+        0
+       ],
+       [
+        4200,
+        0
+       ],
+       [
+        4200,
+        350
+       ],
+       [
+        3600,
+        350
+       ]
+      ],
+      "y0": 1450,
+      "y1": 2200
+     },
+     {
+      "id": "BEP1",
+      "kind": "cooktop",
+      "storey": "appliance",
+      "footprint": [
+       [
+        3100,
+        50
+       ],
+       [
+        3700,
+        50
+       ],
+       [
+        3700,
+        550
+       ],
+       [
+        3100,
+        550
+       ]
+      ],
+      "y0": 900,
+      "y1": 906
+     }
+    ],
+    "params": {
+     "doorway-width": {
+      "doorway_clear_min": 750
+     },
+     "doorway-width-accessible": {
+      "accessible_clear_min": 850
+     },
+     "doorway-height": {
+      "doorway_height_min": 2000
+     },
+     "doorway-blocked": {},
+     "door-interference": {},
+     "cooktop-window": {
+      "cooktop_window_gap": 300
+     },
+     "window-upper": {}
+    },
+    "settings": {
+     "clearAllowance": 60,
+     "doorZone": 300,
+     "windowZone": 650,
+     "near": 2000
+    }
+   },
+   "expected": {
+    "findings": [
+     {
+      "topic": "cooktop-window",
+      "modules": [
+       "BEP1"
+      ],
+      "key": "finding.cooktop-window",
+      "params": {
+       "id": "w1",
+       "cooktop": "BEP1",
+       "gap": 300.0
+      },
+      "measured": null,
+      "limit": null
+     },
+     {
+      "topic": "window-upper",
+      "modules": [
+       "TT1"
+      ],
+      "key": "finding.window-upper",
+      "params": {
+       "id": "w1",
+       "cabinets": "TT1"
+      },
+      "measured": null,
+      "limit": null
+     },
+     {
+      "topic": "window-upper",
+      "modules": [
+       "TD2"
+      ],
+      "key": "finding.window-sill",
+      "params": {
+       "id": "w1",
+       "top": 900,
+       "sill": 850
+      },
+      "measured": 900,
+      "limit": 850
+     }
+    ]
+   }
+  },
+  {
+   "name": "a cooktop 310 mm from the window's edge is clear; an upper cabinet above the window does not cover it",
+   "input": {
+    "structures": [
+     {
+      "id": "STRUCT-w1",
+      "sourceElement": "w1",
+      "kind": "opening",
+      "tag": "window",
+      "outline": [
+       {
+        "x": 3000,
+        "z": -140
+       },
+       {
+        "x": 4200,
+        "z": -140
+       },
+       {
+        "x": 4200,
+        "z": 0
+       },
+       {
+        "x": 3000,
+        "z": 0
+       }
+      ],
+      "base": 1050,
+      "height": 1200,
+      "heightSource": "assumed"
+     }
+    ],
+    "bodies": [
+     {
+      "id": "TD2",
+      "kind": "module",
+      "storey": "base",
+      "footprint": [
+       [
+        4510,
+        0
+       ],
+       [
+        5110,
+        0
+       ],
+       [
+        5110,
+        600
+       ],
+       [
+        4510,
+        600
+       ]
+      ],
+      "y0": 0,
+      "y1": 900
+     },
+     {
+      "id": "TT1",
+      "kind": "module",
+      "storey": "upper",
+      "footprint": [
+       [
+        3000,
+        0
+       ],
+       [
+        4200,
+        0
+       ],
+       [
+        4200,
+        350
+       ],
+       [
+        3000,
+        350
+       ]
+      ],
+      "y0": 2300,
+      "y1": 2600
+     },
+     {
+      "id": "BEP1",
+      "kind": "cooktop",
+      "storey": "appliance",
+      "footprint": [
+       [
+        4510,
+        0
+       ],
+       [
+        5110,
+        0
+       ],
+       [
+        5110,
+        600
+       ],
+       [
+        4510,
+        600
+       ]
+      ],
+      "y0": 900,
+      "y1": 906
+     }
+    ],
+    "params": {
+     "doorway-width": {
+      "doorway_clear_min": 750
+     },
+     "doorway-width-accessible": {
+      "accessible_clear_min": 850
+     },
+     "doorway-height": {
+      "doorway_height_min": 2000
+     },
+     "doorway-blocked": {},
+     "door-interference": {},
+     "cooktop-window": {
+      "cooktop_window_gap": 300
+     },
+     "window-upper": {}
+    },
+    "settings": {
+     "clearAllowance": 60,
+     "doorZone": 300,
+     "windowZone": 650,
+     "near": 2000
+    }
+   },
+   "expected": {
+    "findings": []
+   }
+  },
+  {
+   "name": "a door far from every cabinet is another room's",
+   "input": {
+    "structures": [
+     {
+      "id": "STRUCT-d1",
+      "sourceElement": "d1",
+      "kind": "opening",
+      "tag": "door",
+      "outline": [
+       {
+        "x": 1000,
+        "z": -140
+       },
+       {
+        "x": 1800,
+        "z": -140
+       },
+       {
+        "x": 1800,
+        "z": 0
+       },
+       {
+        "x": 1000,
+        "z": 0
+       }
+      ],
+      "base": 0,
+      "height": 2100,
+      "heightSource": "measured",
+      "hinge": {
+       "x": 1000,
+       "z": 0
+      },
+      "swing": [
+       {
+        "x": 1800,
+        "z": 0
+       },
+       {
+        "x": 1566,
+        "z": 566
+       },
+       {
+        "x": 1000,
+        "z": 800
+       }
+      ]
+     }
+    ],
+    "bodies": [
+     {
+      "id": "TD1",
+      "kind": "module",
+      "storey": "base",
+      "footprint": [
+       [
+        9000,
+        0
+       ],
+       [
+        9600,
+        0
+       ],
+       [
+        9600,
+        600
+       ],
+       [
+        9000,
+        600
+       ]
+      ],
+      "y0": 0,
+      "y1": 900
+     }
+    ],
+    "params": {
+     "doorway-width": {
+      "doorway_clear_min": 750
+     },
+     "doorway-width-accessible": {
+      "accessible_clear_min": 850
+     },
+     "doorway-height": {
+      "doorway_height_min": 2000
+     },
+     "doorway-blocked": {},
+     "door-interference": {},
+     "cooktop-window": {
+      "cooktop_window_gap": 300
+     },
+     "window-upper": {}
+    },
+    "settings": {
+     "clearAllowance": 60,
+     "doorZone": 300,
+     "windowZone": 650,
+     "near": 2000
+    }
+   },
+   "expected": {
+    "findings": []
+   }
+  },
+  {
+   "name": "a topic not selected is not checked",
+   "input": {
+    "structures": [
+     {
+      "id": "STRUCT-d1",
+      "sourceElement": "d1",
+      "kind": "opening",
+      "tag": "door",
+      "outline": [
+       {
+        "x": 1000,
+        "z": -140
+       },
+       {
+        "x": 1800,
+        "z": -140
+       },
+       {
+        "x": 1800,
+        "z": 0
+       },
+       {
+        "x": 1000,
+        "z": 0
+       }
+      ],
+      "base": 0,
+      "height": 2100,
+      "heightSource": "measured",
+      "hinge": {
+       "x": 1000,
+       "z": 0
+      },
+      "swing": [
+       {
+        "x": 1800,
+        "z": 0
+       },
+       {
+        "x": 1566,
+        "z": 566
+       },
+       {
+        "x": 1000,
+        "z": 800
+       }
+      ]
+     }
+    ],
+    "bodies": [
+     {
+      "id": "TD1",
+      "kind": "module",
+      "storey": "base",
+      "footprint": [
+       [
+        1200,
+        0
+       ],
+       [
+        1800,
+        0
+       ],
+       [
+        1800,
+        600
+       ],
+       [
+        1200,
+        600
+       ]
+      ],
+      "y0": 0,
+      "y1": 900
+     }
+    ],
+    "params": {
+     "doorway-height": {
+      "doorway_height_min": 2200
+     }
+    },
+    "settings": {
+     "clearAllowance": 60,
+     "doorZone": 300,
+     "windowZone": 650,
+     "near": 2000
+    }
+   },
+   "expected": {
+    "findings": [
+     {
+      "topic": "doorway-height",
+      "modules": [],
+      "key": "finding.doorway-low",
+      "params": {
+       "id": "d1",
+       "height": 2100,
+       "min": 2200
+      },
+      "measured": 2100,
+      "limit": 2200
+     }
+    ]
+   }
+  }
+ ]
+}

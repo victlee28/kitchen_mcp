@@ -54,6 +54,29 @@ def layout_solver_template_from_design(i):
     return layout_solver.template_from_design(i["spec"], i["label"], lambda t: storeys.get(t.split("-")[0], "base"))
 
 
+def _opening_json(o):
+    return {"id": o.id, "tag": o.tag, "outline": [list(p) for p in o.outline], "center": list(o.center), "along": list(o.along),
+            "normal": list(o.normal), "width": o.width, "thick": o.thick, "base": o.base, "height": o.height, "measured": o.measured,
+            "swing": [list(p) for p in o.swing]}
+
+
+def openings_from_structures(i):
+    from kitchen import openings
+    return {"openings": [_opening_json(o) for o in openings.from_structures(i["structures"], lambda x, z: (x, z))]}
+
+
+def openings_hull(i):
+    from kitchen import openings
+    return {"hull": [list(p) for p in openings.hull([tuple(p) for p in i["points"]])]}
+
+
+def rules_openings_check(i):
+    from kitchen import openings, rules_openings
+    found = openings.from_structures(i["structures"], lambda x, z: (x, z))
+    return {"findings": [{"topic": f.topic, "modules": list(f.modules), "key": f.key, "params": dict(f.params), "measured": f.measured,
+                          "limit": f.limit} for f in rules_openings.check(found, i["bodies"], i["params"], i.get("settings", {}))]}
+
+
 def catalog_expr_run(i):
     """The value of a formula, or the error code and the position it points at."""
     try:
@@ -1351,6 +1374,9 @@ FUNCTIONS = {
     "layout_solver.split": layout_solver_split,
     "layout_solver.base_plan": layout_solver_base_plan,
     "layout_solver.fit_items": layout_solver_fit_items,
+    "openings.from_structures": openings_from_structures,
+    "openings.hull": openings_hull,
+    "rules_openings.check": rules_openings_check,
     "layout_solver.system_as_walls": layout_solver_system_as_walls,
     "layout_solver.template_from_design": layout_solver_template_from_design,
     "catalog.expr.compile": catalog_expr_compile,

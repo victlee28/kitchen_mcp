@@ -1,0 +1,257 @@
+{
+ "function": "openings.from_structures",
+ "cases": [
+  {
+   "name": "a door with its swing, a window; walls are not openings",
+   "input": {
+    "structures": [
+     {
+      "id": "STRUCT-d1",
+      "sourceElement": "d1",
+      "kind": "opening",
+      "tag": "door",
+      "outline": [
+       {
+        "x": 1000,
+        "z": -140
+       },
+       {
+        "x": 1800,
+        "z": -140
+       },
+       {
+        "x": 1800,
+        "z": 0
+       },
+       {
+        "x": 1000,
+        "z": 0
+       }
+      ],
+      "base": 0,
+      "height": 2100,
+      "heightSource": "measured",
+      "hinge": {
+       "x": 1000,
+       "z": 0
+      },
+      "swing": [
+       {
+        "x": 1800,
+        "z": 0
+       },
+       {
+        "x": 1566,
+        "z": 566
+       },
+       {
+        "x": 1000,
+        "z": 800
+       }
+      ]
+     },
+     {
+      "id": "STRUCT-w1",
+      "sourceElement": "w1",
+      "kind": "opening",
+      "tag": "window",
+      "outline": [
+       {
+        "x": 3000,
+        "z": -140
+       },
+       {
+        "x": 4200,
+        "z": -140
+       },
+       {
+        "x": 4200,
+        "z": 0
+       },
+       {
+        "x": 3000,
+        "z": 0
+       }
+      ],
+      "base": 1050,
+      "height": 1200,
+      "heightSource": "assumed"
+     },
+     {
+      "id": "STRUCT-x",
+      "kind": "wall",
+      "tag": "wall",
+      "outline": [
+       {
+        "x": 0,
+        "z": -140
+       },
+       {
+        "x": 5000,
+        "z": -140
+       },
+       {
+        "x": 5000,
+        "z": 0
+       },
+       {
+        "x": 0,
+        "z": 0
+       }
+      ],
+      "base": 0,
+      "height": 2700
+     }
+    ]
+   },
+   "expected": {
+    "openings": [
+     {
+      "id": "d1",
+      "tag": "door",
+      "outline": [
+       [
+        1000.0,
+        -140.0
+       ],
+       [
+        1800.0,
+        -140.0
+       ],
+       [
+        1800.0,
+        0.0
+       ],
+       [
+        1000.0,
+        0.0
+       ]
+      ],
+      "center": [
+       1400.0,
+       -70.0
+      ],
+      "along": [
+       1.0,
+       0.0
+      ],
+      "normal": [
+       0.0,
+       1.0
+      ],
+      "width": 800.0,
+      "thick": 140.0,
+      "base": 0.0,
+      "height": 2100.0,
+      "measured": true,
+      "swing": [
+       [
+        1000.0,
+        0.0
+       ],
+       [
+        1800.0,
+        0.0
+       ],
+       [
+        1566.0,
+        566.0
+       ],
+       [
+        1000.0,
+        800.0
+       ]
+      ]
+     },
+     {
+      "id": "w1",
+      "tag": "window",
+      "outline": [
+       [
+        3000.0,
+        -140.0
+       ],
+       [
+        4200.0,
+        -140.0
+       ],
+       [
+        4200.0,
+        0.0
+       ],
+       [
+        3000.0,
+        0.0
+       ]
+      ],
+      "center": [
+       3600.0,
+       -70.0
+      ],
+      "along": [
+       1.0,
+       0.0
+      ],
+      "normal": [
+       0.0,
+       1.0
+      ],
+      "width": 1200.0,
+      "thick": 140.0,
+      "base": 1050.0,
+      "height": 1200.0,
+      "measured": false,
+      "swing": []
+     }
+    ]
+   }
+  },
+  {
+   "name": "an opening drawn as a sliver has no outline",
+   "input": {
+    "structures": [
+     {
+      "id": "STRUCT-d1",
+      "sourceElement": "d1",
+      "kind": "opening",
+      "tag": "door",
+      "outline": [
+       {
+        "x": 0,
+        "z": 0
+       },
+       {
+        "x": 10,
+        "z": 0
+       }
+      ],
+      "base": 0,
+      "height": 2100,
+      "heightSource": "measured",
+      "hinge": {
+       "x": 1000,
+       "z": 0
+      },
+      "swing": [
+       {
+        "x": 1800,
+        "z": 0
+       },
+       {
+        "x": 1566,
+        "z": 566
+       },
+       {
+        "x": 1000,
+        "z": 800
+       }
+      ]
+     }
+    ]
+   },
+   "expected": {
+    "openings": []
+   }
+  }
+ ]
+}

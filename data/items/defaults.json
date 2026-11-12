@@ -47,6 +47,12 @@
    "sink": "Chậu rửa màu tối",
    "cooktop": "Mặt kính đen bếp",
    "openings": "Kính đen, khung inox"
+  },
+  "openings": {
+   "clearAllowance": 60,
+   "doorZone": 300,
+   "windowZone": 650,
+   "near": 2000
   }
  }
 ]

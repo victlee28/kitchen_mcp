@@ -1117,5 +1117,13 @@ export default {
  "ui.save-template.doing": "lưu hệ tủ thành mẫu",
  "ui.save-template.done": "Đã lưu mẫu “{0}” ({1}). Dùng ở Tạo thiết kế → Hình, hoặc gõ “… theo mẫu {0}” khi thay hệ tủ.",
  "ui.save-template.skipped": " Không đưa vào mẫu: {0}.",
- "catalog.layout.f.items": "các tủ (JSON)"
+ "catalog.layout.f.items": "các tủ (JSON)",
+ "finding.doorway-narrow": "Cửa {id} thông thủy khoảng {clear} mm, nhỏ hơn {min} mm",
+ "finding.doorway-narrow-accessible": "Cửa {id} thông thủy khoảng {clear} mm, nhỏ hơn mức cho xe lăn {min} mm",
+ "finding.doorway-low": "Cửa {id} cao {height} mm, thấp hơn {min} mm",
+ "finding.doorway-blocked": "{cabinets} đứng trong lối cửa {id}",
+ "finding.door-interference": "Cánh cửa {id} khi mở quét vào {cabinets}",
+ "finding.cooktop-window": "Bếp nấu {cooktop} nằm dưới hoặc sát cửa sổ {id} (cần cách mép ≥ {gap} mm)",
+ "finding.window-upper": "{cabinets} che cửa sổ {id}",
+ "finding.window-sill": "Mặt bàn cao {top} mm, cao hơn bậu cửa sổ {id} ({sill} mm)"
 };

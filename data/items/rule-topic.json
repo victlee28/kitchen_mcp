@@ -110,5 +110,54 @@
    "vi": "Chiều cao thông thủy bếp",
    "en": "Kitchen clear height"
   }
+ },
+ {
+  "id": "doorway-width",
+  "name": {
+   "vi": "Bề rộng cửa vào bếp",
+   "en": "Kitchen doorway width"
+  }
+ },
+ {
+  "id": "doorway-width-accessible",
+  "name": {
+   "vi": "Bề rộng cửa – mức xe lăn",
+   "en": "Doorway width for wheelchairs"
+  }
+ },
+ {
+  "id": "doorway-height",
+  "name": {
+   "vi": "Chiều cao cửa",
+   "en": "Doorway height"
+  }
+ },
+ {
+  "id": "doorway-blocked",
+  "name": {
+   "vi": "Tủ chắn cửa",
+   "en": "Cabinets in a doorway"
+  }
+ },
+ {
+  "id": "door-interference",
+  "name": {
+   "vi": "Cánh cửa quét vào tủ",
+   "en": "Door swinging into cabinets"
+  }
+ },
+ {
+  "id": "cooktop-window",
+  "name": {
+   "vi": "Bếp nấu dưới cửa sổ",
+   "en": "Cooktop under a window"
+  }
+ },
+ {
+  "id": "window-upper",
+  "name": {
+   "vi": "Tủ che cửa sổ",
+   "en": "Cabinets over a window"
+  }
  }
 ]

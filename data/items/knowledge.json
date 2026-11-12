@@ -447,12 +447,14 @@
    "source": "GB 55038-2025 (trích, Bắc Kinh)",
    "sourceType": "mandatory",
    "validation": [
-    "clear-height"
+    "clear-height",
+    "doorway-width"
    ],
    "params": {
     "ceiling_min": 2200,
     "area_min_m2": 3.5,
-    "window_min": 700
+    "doorway_clear_min": 700,
+    "entry_clear_min": 900
    }
   }
  },
@@ -737,6 +739,365 @@
     "wall"
    ],
    "color": "#e8eef0"
+  }
+ },
+ {
+  "id": "DOOR-DEFAULT-001",
+  "kind": "rule",
+  "title": "Cửa phòng quanh bếp (mặc định)",
+  "content": "Cửa vào bếp thông thủy ≥ 750 mm, cao ≥ 2000 mm; mức tiếp cận xe lăn ≥ 850 mm. Tủ và thiết bị không đứng trong lỗ cửa; cánh cửa phòng mở không quét vào tủ, thiết bị.",
+  "sourceUrl": "",
+  "region": "GLOBAL",
+  "country": "",
+  "metadata": {
+   "source": "Tổng hợp từ các tiêu chuẩn cửa (NKBA, ADM, NCC, DIN 18040-2, QCVN 10:2024)",
+   "sourceType": "practice",
+   "validation": [
+    "doorway-width",
+    "doorway-width-accessible",
+    "doorway-height",
+    "doorway-blocked",
+    "door-interference"
+   ],
+   "params": {
+    "doorway_clear_min": 750,
+    "accessible_clear_min": 850,
+    "doorway_height_min": 2000
+   }
+  }
+ },
+ {
+  "id": "WINDOW-DEFAULT-001",
+  "kind": "rule",
+  "title": "Cửa sổ trong bếp (mặc định)",
+  "content": "Không đặt mặt bếp ngay dưới cửa sổ mở được (cách mép cửa sổ ≥ 300 mm); tủ trên, tủ nóc không che cửa sổ; mặt bàn không cao hơn bậu cửa sổ.",
+  "sourceUrl": "https://kb.nkba.org/uploads/2022/05/Kitchen-Planning-Guidelines.pdf",
+  "region": "GLOBAL",
+  "country": "",
+  "metadata": {
+   "source": "Tổng hợp (NKBA, 24 CFR 3280.203)",
+   "sourceType": "practice",
+   "validation": [
+    "cooktop-window",
+    "window-upper"
+   ],
+   "params": {
+    "cooktop_window_gap": 300
+   }
+  }
+ },
+ {
+  "id": "NKBA-01",
+  "kind": "rule",
+  "title": "Cửa vào bếp (NKBA 1)",
+  "content": "Thông thủy cửa vào bếp ≥ 32″ (813 mm), cần cánh ≥ 2′10″ (864 mm). Mức tiếp cận: ≥ 34″ (864 mm), cánh 3′0″ (914 mm).",
+  "sourceUrl": "https://kb.nkba.org/uploads/2022/05/Kitchen-Planning-Guidelines.pdf",
+  "region": "NA",
+  "country": "US,CA",
+  "metadata": {
+   "source": "NKBA Kitchen Planning Guidelines",
+   "sourceType": "recommended",
+   "validation": [
+    "doorway-width"
+   ],
+   "params": {
+    "doorway_clear_min": 813
+   }
+  }
+ },
+ {
+  "id": "NKBA-02",
+  "kind": "rule",
+  "title": "Cửa không cản thiết bị (NKBA 2)",
+  "content": "Không cửa đi nào được cản việc dùng thiết bị an toàn; cánh các thiết bị không va nhau.",
+  "sourceUrl": "https://kb.nkba.org/uploads/2022/05/Kitchen-Planning-Guidelines.pdf",
+  "region": "NA",
+  "country": "US,CA",
+  "metadata": {
+   "source": "NKBA Kitchen Planning Guidelines",
+   "sourceType": "recommended",
+   "validation": [
+    "door-interference",
+    "doorway-blocked"
+   ]
+  }
+ },
+ {
+  "id": "NKBA-20",
+  "kind": "rule",
+  "title": "Bếp nấu và cửa sổ (NKBA 20)",
+  "content": "Không đặt mặt bếp dưới cửa sổ mở được; rèm cửa trên bếp không dùng vật liệu dễ cháy.",
+  "sourceUrl": "https://kb.nkba.org/uploads/2022/05/Kitchen-Planning-Guidelines.pdf",
+  "region": "NA",
+  "country": "US,CA",
+  "metadata": {
+   "source": "NKBA Kitchen Planning Guidelines",
+   "sourceType": "recommended",
+   "validation": [
+    "cooktop-window"
+   ],
+   "params": {
+    "cooktop_window_gap": 0
+   }
+  }
+ },
+ {
+  "id": "NKBA-DC-1.1",
+  "kind": "standard",
+  "title": "Cửa – thiết kế tiếp cận (NKBA DC 1.1)",
+  "content": "Cửa một cánh thông thủy ≥ 34″ (865 mm, cánh 36″); cửa nhiều cánh ≥ 48″ (1220 mm); mọi cửa cao ≥ 78″ (1980 mm).",
+  "sourceUrl": "https://kb.nkba.org/uploads/2023/05/2023-DC-Guidelines-1.pdf",
+  "region": "NA",
+  "country": "US,CA",
+  "metadata": {
+   "source": "NKBA 2023 DC Guidelines",
+   "sourceType": "recommended",
+   "validation": [
+    "doorway-width-accessible",
+    "doorway-height"
+   ],
+   "params": {
+    "accessible_clear_min": 865,
+    "doorway_height_min": 1980
+   }
+  }
+ },
+ {
+  "id": "IRC-R311.2",
+  "kind": "standard",
+  "title": "Cửa thoát ra ngoài của nhà ở (IRC R311.2)",
+  "content": "Mỗi căn nhà có ít nhất một cửa thoát ra ngoài: bản lề, thông thủy ≥ 32″ (813 mm) đo từ mặt cánh mở 90° tới chặn cửa, cao ≥ 78″ (1981 mm). Các cửa khác không bắt buộc kích thước này.",
+  "sourceUrl": "https://www.jaspector.com/codes/irc-2021/ch03-building-planning/required-exterior-egress-door/",
+  "region": "NA",
+  "country": "US",
+  "metadata": {
+   "source": "IRC 2021 R311.2 (trích)",
+   "sourceType": "mandatory",
+   "params": {
+    "egress_clear_min": 813,
+    "egress_height_min": 1981
+   }
+  }
+ },
+ {
+  "id": "NBC-9.5.5",
+  "kind": "standard",
+  "title": "Kích thước cửa trong nhà ở (NBC Canada 9.5.5)",
+  "content": "Lỗ cửa trong căn hộ phải lắp được cánh tối thiểu theo Bảng 9.5.5.1: cửa vào căn hộ 810 × 1980 mm; các phòng khác (trong đó có bếp) 760 × 1980 mm. Lối đi không rào cản: thông thủy ≥ 850 mm (NBC 2020).",
+  "sourceUrl": "https://www.bcpublications.ca/civix/document/id/bcbc2012/bcbc2012/ep001029.5",
+  "region": "NA",
+  "country": "CA",
+  "metadata": {
+   "source": "NBC Part 9 (bản BC Building Code)",
+   "sourceType": "mandatory",
+   "validation": [
+    "doorway-width",
+    "doorway-height",
+    "doorway-width-accessible"
+   ],
+   "params": {
+    "doorway_clear_min": 760,
+    "doorway_height_min": 1980,
+    "accessible_clear_min": 850
+   }
+  }
+ },
+ {
+  "id": "UK-ADM-V1",
+  "kind": "standard",
+  "title": "Cửa trong nhà ở (Approved Document M, quyển 1)",
+  "content": "Mức M4(1): cửa vào chính thông thủy hiệu dụng ≥ 775 mm; cửa trong ≥ 750 mm (tùy hướng tiếp cận). Mức xe lăn M4(3): cửa trong 850–1000 mm.",
+  "sourceUrl": "https://www.designingbuildings.co.uk/wiki/Door_clear_opening_width",
+  "region": "EU",
+  "country": "GB",
+  "metadata": {
+   "source": "Approved Document M vol. 1 (tóm tắt thứ cấp)",
+   "sourceType": "mandatory",
+   "validation": [
+    "doorway-width",
+    "doorway-width-accessible"
+   ],
+   "params": {
+    "doorway_clear_min": 750,
+    "accessible_clear_min": 850
+   }
+  }
+ },
+ {
+  "id": "IE-TGD-M",
+  "kind": "standard",
+  "title": "Cửa trong nhà ở (TGD M, Ireland)",
+  "content": "Cửa vào chính thông thủy hiệu dụng ≥ 800 mm; cửa trong tầng vào ≥ 775 mm. Hướng dẫn Universal Design Homes: cửa 800 mm, mức cao hơn 850 mm.",
+  "sourceUrl": "https://universaldesign.ie/uploads/publications/UDH-Checklist-Screen-Reader-Word-Version.docx",
+  "region": "EU",
+  "country": "IE",
+  "metadata": {
+   "source": "TGD M (nguồn thứ cấp) + Universal Design Guidelines for Homes in Ireland",
+   "sourceType": "mandatory",
+   "validation": [
+    "doorway-width",
+    "doorway-width-accessible"
+   ],
+   "params": {
+    "doorway_clear_min": 775,
+    "accessible_clear_min": 850
+   }
+  }
+ },
+ {
+  "id": "NCC-2022-LHD",
+  "kind": "standard",
+  "title": "Cửa – Livable Housing Design (NCC 2022)",
+  "content": "Cửa vào chính (lối không bậc) và cửa trong ở tầng vào: thông thủy ≥ 820 mm. Một số bang chưa áp dụng (ví dụ WA).",
+  "sourceUrl": "https://codemark.abcb.gov.au/sites/default/files/resources/2022/Livable-housing-design-preview-2022.pdf",
+  "region": "OC",
+  "country": "AU",
+  "metadata": {
+   "source": "ABCB Livable Housing Design 2022",
+   "sourceType": "mandatory",
+   "validation": [
+    "doorway-width"
+   ],
+   "params": {
+    "doorway_clear_min": 820
+   }
+  }
+ },
+ {
+  "id": "AS-1428.1",
+  "kind": "standard",
+  "title": "Cửa – thiết kế tiếp cận (AS 1428.1)",
+  "content": "Cửa trên lối tiếp cận thông thủy ≥ 850 mm (90% xe lăn).",
+  "sourceUrl": "https://sydneyaccessconsultants.com.au/articles/282-is-your-door-wide-enough-for-a-wheelchair.html",
+  "region": "OC",
+  "country": "AU",
+  "metadata": {
+   "source": "AS 1428.1 (tóm tắt)",
+   "sourceType": "standard",
+   "validation": [
+    "doorway-width-accessible"
+   ],
+   "params": {
+    "accessible_clear_min": 850
+   }
+  }
+ },
+ {
+  "id": "NZBC-D1",
+  "kind": "standard",
+  "title": "Cửa (NZBC D1/AS1, NZS 4121)",
+  "content": "Cửa trên lối tiếp cận thông thủy ≥ 760 mm, cao ≥ 1955 mm; BRANZ khuyên cánh 810 mm cho xe lăn dễ qua.",
+  "sourceUrl": "https://www.branz.co.nz/design-build/articles/getting-in-and-getting-out-safely",
+  "region": "OC",
+  "country": "NZ",
+  "metadata": {
+   "source": "NZBC D1/AS1, NZS 4121 (BRANZ)",
+   "sourceType": "mandatory",
+   "validation": [
+    "doorway-width",
+    "doorway-height",
+    "doorway-width-accessible"
+   ],
+   "params": {
+    "doorway_clear_min": 760,
+    "doorway_height_min": 1955,
+    "accessible_clear_min": 810
+   }
+  }
+ },
+ {
+  "id": "SG-ACCESS-2019",
+  "kind": "standard",
+  "title": "Cửa – Code on Accessibility (Singapore)",
+  "content": "Cửa trên lối tiếp cận thông thủy ≥ 850 mm (Code on Accessibility in the Built Environment; bản 2025 hiệu lực 01/11/2025).",
+  "sourceUrl": "https://www1.bca.gov.sg/safety-and-standards/accessibility/code-on-accessibility-in-the-built-environment/",
+  "region": "SEA",
+  "country": "SG",
+  "metadata": {
+   "source": "BCA Code on Accessibility (nguồn thứ cấp cho con số)",
+   "sourceType": "standard",
+   "validation": [
+    "doorway-width-accessible"
+   ],
+   "params": {
+    "accessible_clear_min": 850
+   }
+  }
+ },
+ {
+  "id": "DIN-18040-2-DOOR",
+  "kind": "standard",
+  "title": "Cửa nhà ở không rào cản (DIN 18040-2)",
+  "content": "Cửa thông thủy ≥ 90 cm, cao ≥ 205 cm, tay nắm ở 85 cm.",
+  "sourceUrl": "https://sifa.dguv.de/medien/barrierefrei/anforderungen/bau_gestaltung/tueren/kapitel5.pdf",
+  "region": "EU",
+  "country": "DE",
+  "metadata": {
+   "source": "DIN 18040-2 (DGUV)",
+   "sourceType": "standard",
+   "apply": "nhà ở tiếp cận được (người cao tuổi, xe lăn)",
+   "validation": [
+    "doorway-width-accessible",
+    "doorway-height"
+   ],
+   "params": {
+    "accessible_clear_min": 900,
+    "doorway_height_min": 2050
+   }
+  }
+ },
+ {
+  "id": "QCVN-10-2024",
+  "kind": "standard",
+  "title": "Cửa – QCVN 10:2024/BXD (tiếp cận sử dụng)",
+  "content": "Cửa ra vào công trình thông thủy ≥ 900 mm; trước và sau cửa có khoảng trống ≥ 1400 × 1400 mm.",
+  "sourceUrl": "https://dns1.moc.gov.vn/Images/FileVanBan/BXD_06-2024-TT-BXD_01082024.pdf",
+  "region": "SEA",
+  "country": "VN",
+  "metadata": {
+   "source": "QCVN 10:2024/BXD (Thông tư 06/2024/TT-BXD)",
+   "sourceType": "standard",
+   "apply": "công trình và phần dùng chung; căn hộ cần tiếp cận",
+   "validation": [
+    "doorway-width-accessible"
+   ],
+   "params": {
+    "accessible_clear_min": 900
+   }
+  }
+ },
+ {
+  "id": "QCVN-06-2022-EXIT",
+  "kind": "rule",
+  "title": "Cửa trên đường thoát nạn (QCVN 06:2022/BXD)",
+  "content": "Cửa của lối ra thoát nạn và cửa trên đường thoát nạn phải mở theo chiều thoát từ trong ra ngoài, không cần chìa khóa. (Kích thước lối ra thoát nạn: cần đối chiếu Điều 3.2.9 bản gốc.)",
+  "sourceUrl": "https://thuvienphapluat.vn/tcvn/Xay-dung/QCVN-06-2022-BXD-An-toan-chay-cho-nha-va-cong-trinh-919647.aspx",
+  "region": "SEA",
+  "country": "VN",
+  "metadata": {
+   "source": "QCVN 06:2022/BXD, Điều 3.2.10",
+   "sourceType": "mandatory"
+  }
+ },
+ {
+  "id": "VN-DOOR-PRACTICE",
+  "kind": "standard",
+  "title": "Cửa phòng thường gặp tại Việt Nam",
+  "content": "Cửa phòng thường rộng 700–900 mm, cao 2100–2200 mm (cửa đi mặc định 2200 mm khi mặt bằng không ghi).",
+  "sourceUrl": "",
+  "region": "SEA",
+  "country": "VN",
+  "metadata": {
+   "source": "Thực tế thi công",
+   "sourceType": "practice",
+   "validation": [
+    "doorway-width",
+    "doorway-height"
+   ],
+   "params": {
+    "doorway_clear_min": 700,
+    "doorway_height_min": 2000
+   }
   }
  }
 ]

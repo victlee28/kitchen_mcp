@@ -213,5 +213,19 @@
   "keywords": [
    "new zealand"
   ]
+ },
+ {
+  "id": "IE",
+  "name": {
+   "vi": "Ireland",
+   "en": "Ireland"
+  },
+  "region": "EU",
+  "keywords": [
+   "ireland",
+   "ai len",
+   "ai-len",
+   "ái nhĩ lan"
+  ]
  }
 ]

@@ -1116,5 +1116,13 @@
  "ui.save-template.doing": "save the system as a template",
  "ui.save-template.done": "Saved the template “{0}” ({1}). Use it in New design → Shape, or type “… theo mẫu {0}” when replacing a system.",
  "ui.save-template.skipped": " Left out of the template: {0}.",
- "catalog.layout.f.items": "cabinets (JSON)"
+ "catalog.layout.f.items": "cabinets (JSON)",
+ "finding.doorway-narrow": "Doorway {id} is about {clear} mm clear, under {min} mm",
+ "finding.doorway-narrow-accessible": "Doorway {id} is about {clear} mm clear, under the {min} mm a wheelchair needs",
+ "finding.doorway-low": "Doorway {id} is {height} mm high, under {min} mm",
+ "finding.doorway-blocked": "{cabinets} stand in doorway {id}",
+ "finding.door-interference": "Door {id} swings into {cabinets}",
+ "finding.cooktop-window": "Cooktop {cooktop} is under or next to window {id} (keep ≥ {gap} mm from its edge)",
+ "finding.window-upper": "{cabinets} cover window {id}",
+ "finding.window-sill": "The worktop is {top} mm high, above the sill of window {id} ({sill} mm)"
 }

@@ -31,6 +31,11 @@
       "info",
       true
      ],
+     "cooktop-window": [
+      "WINDOW-DEFAULT-001",
+      "info",
+      false
+     ],
      "countertop-depth": [
       "EN-1116",
       "info",
@@ -39,6 +44,31 @@
      "countertop-height": [
       "KITCHEN-DEFAULT-001",
       "warning",
+      false
+     ],
+     "door-interference": [
+      "DOOR-DEFAULT-001",
+      "info",
+      false
+     ],
+     "doorway-blocked": [
+      "DOOR-DEFAULT-001",
+      "info",
+      false
+     ],
+     "doorway-height": [
+      "DOOR-DEFAULT-001",
+      "info",
+      false
+     ],
+     "doorway-width": [
+      "DOOR-DEFAULT-001",
+      "info",
+      false
+     ],
+     "doorway-width-accessible": [
+      "DOOR-DEFAULT-001",
+      "info",
       false
      ],
      "fridge-table": [
@@ -84,6 +114,11 @@
      "walkway": [
       "CLEARANCE-001",
       "warning",
+      false
+     ],
+     "window-upper": [
+      "WINDOW-DEFAULT-001",
+      "info",
       false
      ]
     }
@@ -121,6 +156,11 @@
       "info",
       true
      ],
+     "cooktop-window": [
+      "WINDOW-DEFAULT-001",
+      "info",
+      false
+     ],
      "countertop-depth": [
       "EN-1116",
       "info",
@@ -129,6 +169,31 @@
      "countertop-height": [
       "VN-KITCHEN-COMMON-PRACTICE",
       "info",
+      false
+     ],
+     "door-interference": [
+      "DOOR-DEFAULT-001",
+      "info",
+      false
+     ],
+     "doorway-blocked": [
+      "DOOR-DEFAULT-001",
+      "info",
+      false
+     ],
+     "doorway-height": [
+      "VN-DOOR-PRACTICE",
+      "info",
+      false
+     ],
+     "doorway-width": [
+      "VN-DOOR-PRACTICE",
+      "info",
+      false
+     ],
+     "doorway-width-accessible": [
+      "QCVN-10-2024",
+      "warning",
       false
      ],
      "fridge-table": [
@@ -174,6 +239,11 @@
      "walkway": [
       "CLEARANCE-001",
       "warning",
+      false
+     ],
+     "window-upper": [
+      "WINDOW-DEFAULT-001",
+      "info",
       false
      ]
     }
@@ -212,6 +282,11 @@
       "warning",
       false
      ],
+     "cooktop-window": [
+      "NKBA-20",
+      "warning",
+      false
+     ],
      "countertop-depth": [
       "EN-1116",
       "info",
@@ -219,6 +294,31 @@
      ],
      "countertop-height": [
       "KITCHEN-DEFAULT-001",
+      "warning",
+      false
+     ],
+     "door-interference": [
+      "NKBA-02",
+      "warning",
+      false
+     ],
+     "doorway-blocked": [
+      "NKBA-02",
+      "warning",
+      false
+     ],
+     "doorway-height": [
+      "NKBA-DC-1.1",
+      "warning",
+      false
+     ],
+     "doorway-width": [
+      "NKBA-01",
+      "warning",
+      false
+     ],
+     "doorway-width-accessible": [
+      "NKBA-DC-1.1",
       "warning",
       false
      ],
@@ -266,6 +366,11 @@
       "NKBA-06",
       "warning",
       false
+     ],
+     "window-upper": [
+      "WINDOW-DEFAULT-001",
+      "info",
+      false
      ]
     }
    }
@@ -302,6 +407,11 @@
       "info",
       true
      ],
+     "cooktop-window": [
+      "WINDOW-DEFAULT-001",
+      "info",
+      false
+     ],
      "countertop-depth": [
       "EN-1116",
       "warning",
@@ -310,6 +420,31 @@
      "countertop-height": [
       "EN-1116",
       "warning",
+      false
+     ],
+     "door-interference": [
+      "DOOR-DEFAULT-001",
+      "info",
+      false
+     ],
+     "doorway-blocked": [
+      "DOOR-DEFAULT-001",
+      "info",
+      false
+     ],
+     "doorway-height": [
+      "DIN-18040-2-DOOR",
+      "warning",
+      false
+     ],
+     "doorway-width": [
+      "IE-TGD-M",
+      "error",
+      false
+     ],
+     "doorway-width-accessible": [
+      "IE-TGD-M",
+      "error",
       false
      ],
      "fridge-table": [
@@ -355,6 +490,11 @@
      "walkway": [
       "CLEARANCE-001",
       "warning",
+      false
+     ],
+     "window-upper": [
+      "WINDOW-DEFAULT-001",
+      "info",
       false
      ]
     }

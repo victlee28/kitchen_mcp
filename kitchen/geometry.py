@@ -11,7 +11,7 @@ from typing import Any
 from dataclasses import dataclass, field
 
 from .numeric import round_half_away
-from . import builtin, cabinet_types, camera_plan, roomctx, runs as runmod, structure_mesh, tv_system
+from . import builtin, cabinet_types, camera_plan, openings as room_openings, roomctx, runs as runmod, structure_mesh, tv_system
 from .catalog import Catalog
 from .spec import ViewAngle, KitchenSpec, Module, effective_handle, to_data
 from .errors import InvalidInput, require
@@ -554,6 +554,40 @@ def cabinet_bodies(spec: KitchenSpec) -> list[camera_plan.Obstacle]:
         if fr is not None and m.storey in ("base", "tall"):
             out.append(camera_plan.Obstacle(m.id, f"cabinet:{m.run}", tuple(runmod.module_footprint(fr, m)), float(m.y), float(m.y + m.height)))
     return out
+
+
+def openings_and_bodies(spec: KitchenSpec, scene: Scene) -> tuple[list[room_openings.Opening], list[dict[str, Any]]]:
+    """The doors and windows of the room (``openings``: the imported floorplan's and the design's walls'), and the bodies the checks of
+    ``rules_openings`` hold against them: each cabinet's floor footprint (hull of its parts) with its heights (a base cabinet up to the
+    worktop), each cooktop's. Kitchen frame, mm."""
+    found: list[room_openings.Opening] = []
+    try:
+        ctx = roomctx.for_spec(spec, scene.lsau, scene.lphai)
+    except ValueError:
+        ctx = None
+    if ctx is not None:
+        found += room_openings.from_structures(ctx.structures, ctx.placement.to_kitchen)
+    if spec.room is not None:
+        found += room_openings.from_room(to_data(spec.room), lambda wall: runmod.wall_seat(wall, scene.lsau))
+    storey = {m.id: m.storey for m in spec.module}
+    cooktops = {t.id for t in spec.appliances if t.type == "cooktop"}
+    pts: dict[str, list[tuple[float, float]]] = {}
+    ys: dict[str, list[float]] = {}
+    for p in scene.parts:
+        key = p.module or ""
+        if key not in storey and key not in cooktops:
+            continue
+        corners = p.corners()
+        pts.setdefault(key, []).extend((x, z) for x, _, z in corners)
+        ys.setdefault(key, []).extend(y for _, y, _ in corners)
+    bodies: list[dict[str, Any]] = []
+    for key in sorted(pts):
+        y0, y1 = min(ys[key]), max(ys[key])
+        if storey.get(key) == "base":
+            y1 = max(y1, spec.common.countertop)
+        bodies.append({"id": key, "kind": "cooktop" if key in cooktops else "module", "storey": storey.get(key, "appliance"),
+                       "footprint": room_openings.hull(pts[key]), "y0": y0, "y1": y1})
+    return found, bodies
 
 
 def room_solids(spec: KitchenSpec, scene: Scene) -> tuple[list[tuple[float, float]] | None, list[camera_plan.Obstacle]]:
