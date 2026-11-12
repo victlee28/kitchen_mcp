@@ -125,3 +125,22 @@ def env_reads(name: str) -> bool:
         if isinstance(n, ast.Attribute) and isinstance(n.value, ast.Name) and n.value.id == "os" and n.attr in ("getenv", "environ"):
             return True
     return False
+
+
+VIETNAMESE = set("àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ")
+
+
+def vietnamese_texts(path: Path) -> int:
+    """How many string literals in a kitchen file hold Vietnamese words (docstrings and comments do not count): words people read live in
+    ``data/`` (``data/i18n``, the catalog), the code names keys."""
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    docs = {id(n.body[0].value) for n in ast.walk(tree) if isinstance(n, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef))
+            and n.body and isinstance(n.body[0], ast.Expr) and isinstance(n.body[0].value, ast.Constant)}
+    return sum(1 for n in ast.walk(tree) if isinstance(n, ast.Constant) and isinstance(n.value, str) and id(n) not in docs
+               and VIETNAMESE & set(n.value.lower()))
+
+
+def vietnamese_by_file() -> dict[str, int]:
+    """``kitchen/<file>`` -> how many Vietnamese literals it holds (files with none left out)."""
+    out = {str(p.relative_to(ROOT).as_posix()): vietnamese_texts(p) for p in sorted(KITCHEN.rglob("*.py"))}
+    return {k: v for k, v in out.items() if v}

@@ -11,3 +11,48 @@ ALLOWED: dict[tuple[str, str, str], str] = {
 ROUND_BASELINE: dict[str, int] = {}
 
 # R2: modules allowed to read os.environ / os.getenv. Core modules never do.
+
+
+# Words people read live in data/ (data/i18n, the catalog); the code names keys. String literals holding Vietnamese still in each file
+# (docstrings and comments do not count). THESE NUMBERS MAY ONLY GO DOWN: the test fails when a count goes up, when a file not listed here
+# gains one, and when a count went down without being lowered here.
+VIETNAMESE_BASELINE: dict[str, int] = {
+    # Data-driven stage 4 (command dictionary: words and patterns that read what people type)
+    "kitchen/lexicon.py": 159,
+    "kitchen/intent.py": 62,
+    "kitchen/edit_intent.py": 34,
+    "kitchen/regions.py": 4,
+    "kitchen/system_replace.py": 6,
+    "kitchen/appliance_models.py": 9,
+    "kitchen/service.py": 9,
+    "kitchen/floorplan/structures.py": 2,
+    "kitchen/floorplan/document.py": 1,
+    "kitchen/prompts/photo.py": 19,
+    "kitchen/vocab.py": 4,
+    "kitchen/catalog_csv.py": 3,
+    "kitchen/store.py": 1,
+    "kitchen/tv_system.py": 1,
+    # Data-driven stage 5 (default material names, written into designs)
+    "kitchen/layers.py": 26,
+    "kitchen/labels.py": 1,
+    "kitchen/threejs_export.py": 20,
+    "kitchen/handles.py": 3,
+    "kitchen/prompts/layer.py": 1,
+    "kitchen/geometry_edit.py": 8,
+    # Messages still to move to data/i18n (field descriptions of the design schema, request checks, image jobs, backends, notes)
+    "kitchen/ai_export.py": 1,
+    "kitchen/backends.py": 9,
+    "kitchen/floorplan/binding.py": 2,
+    "kitchen/images/base_images.py": 1,
+    "kitchen/images/common.py": 18,
+    "kitchen/images/packages.py": 1,
+    "kitchen/images/request_builder.py": 2,
+    "kitchen/images/results.py": 8,
+    "kitchen/images/runners.py": 2,
+    "kitchen/imaging.py": 4,
+    "kitchen/knowledge_seed.py": 1,
+    "kitchen/llm.py": 6,
+    "kitchen/render.py": 3,
+    "kitchen/request_check.py": 33,
+    "kitchen/spec.py": 38,
+}

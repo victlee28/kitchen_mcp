@@ -7,7 +7,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import architecture_rules as rules  # noqa: E402
-from architecture_allowlist import ALLOWED, ROUND_BASELINE  # noqa: E402
+from architecture_allowlist import ALLOWED, ROUND_BASELINE, VIETNAMESE_BASELINE  # noqa: E402
 
 
 class TestPortableCore(unittest.TestCase):
@@ -67,6 +67,14 @@ class TestPortableCore(unittest.TestCase):
         self.assertFalse(grew, "\n".join(grew))
         shrank = [f"{m}: now {rules.round_calls(m)}, baseline {c}" for m, c in ROUND_BASELINE.items() if rules.round_calls(m) < c]
         self.assertFalse(shrank, "Lower ROUND_BASELINE in tests/architecture_allowlist.py (it may only go down): " + "; ".join(shrank))
+
+    def test_vietnamese_words_live_in_data(self):
+        now = rules.vietnamese_by_file()
+        grew = [f"{f}: {n} Vietnamese string literals, baseline {VIETNAMESE_BASELINE.get(f, 0)}; put the words in data/i18n and name a key"
+                for f, n in now.items() if n > VIETNAMESE_BASELINE.get(f, 0)]
+        self.assertFalse(grew, "\n".join(grew))
+        shrank = [f"{f}: now {now.get(f, 0)}, baseline {c}" for f, c in VIETNAMESE_BASELINE.items() if now.get(f, 0) < c]
+        self.assertFalse(shrank, "Lower VIETNAMESE_BASELINE in tests/architecture_allowlist.py (it may only go down): " + "; ".join(shrank))
 
     def test_the_checker_catches_what_it_claims_to(self):
         import tempfile
