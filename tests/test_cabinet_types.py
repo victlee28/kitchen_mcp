@@ -110,6 +110,22 @@ class TestWorkshopTypes(unittest.TestCase):
             self.s.catalog_put("cabinet-type", "upper-x", THREE_DRAWERS, "workshop")      # a base type whose id says upper
         self.assertEqual(e.exception.code, "cabinet-type-id")
 
+    def test_preview_builds_samples_and_says_what_looks_wrong(self):
+        r = self.s.cabinet_type_preview("base-3-drawers", THREE_DRAWERS, "workshop")
+        self.assertEqual([x["width"] for x in r["samples"]], [400.0, 600.0, 900.0])
+        self.assertTrue(all(not x["problems"] for x in r["samples"]))
+        self.assertEqual(sum(p["type"] == "drawer" for p in r["samples"][1]["parts"]), 3)
+        bad = {**THREE_DRAWERS, "parts": [{"part": "carcass", "s": ["fs0", "fs1 + 50"], "d": ["0", "depth"], "y": ["body", "top"]},
+                                          {"part": "shelf", "s": ["fs0", "fs0"], "d": ["0", "depth"], "y": ["body", "top"]}]}
+        codes = [p["rule"] for p in self.s.cabinet_type_preview("base-bad", bad, "workshop")["samples"][0]["problems"]]
+        self.assertEqual(codes, ["cabinet-box-outside", "cabinet-box-empty", "cabinet-fronts-short"])
+        nothing = {**THREE_DRAWERS, "parts": [{"fronts": "door", "s": ["fs0", "fs1"], "y": ["body", "top"]}]}
+        self.assertIn("cabinet-no-carcass", [p["rule"] for p in self.s.cabinet_type_preview("base-x", nothing, "workshop")["samples"][0]["problems"]])
+        corner = self.s.cabinet_type_preview("corner-shelf", {"storey": "corner", "label": {"vi": "x"}, "builder": "corner-shelf", "frontless": True}, "workshop")
+        self.assertTrue(corner["samples"][0]["parts"])
+        with self.assertRaises(InvalidInput):
+            self.s.cabinet_type_preview("base-x", {**THREE_DRAWERS, "let": {"h": "top -"}}, "workshop")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -216,17 +216,52 @@ class KitchenService:
                 'scope': scope, 'schema': self.builtin.schemas[kind], 'hidden': hidden,
                 'items': [{**i.to_data(), 'mine': i.id in mine, 'builtin': i.id in builtin_ids} for i in self.catalog().all(kind)]}
 
-    def _check_trial(self, kind: str, id: str, scope: str, data: dict | None, disabled: bool) -> None:
-        """Refuse a write that would leave a reference pointing at nothing (anywhere in the catalog)."""
+    def _trial(self, kind: str, id: str, scope: str, data: dict | None, disabled: bool) -> cat.Catalog:
+        """The catalog as it would be with this write."""
         entries = [e for e in self._entries() if not (e.kind == kind and e.id == id and e.scope == scope)]
         if data is not None or disabled:
             entries.append(cat.Entry(kind, id, scope, data or {}, 1, disabled))
-        trial = cat.merge(entries)
+        return cat.merge(entries)
+
+    def _check_trial(self, kind: str, id: str, scope: str, data: dict | None, disabled: bool) -> None:
+        """Refuse a write that would leave a reference pointing at nothing (anywhere in the catalog)."""
+        trial = self._trial(kind, id, scope, data, disabled)
         problems = cat.check_refs(trial, self.builtin.kinds)
         if problems:
             raise catalog_files.CatalogInvalid('; '.join(f"{p.kind} {p.id}: {p.path}: {p.message}" for p in problems[:10]))
         if kind == 'cabinet-type':
             cabinet_types.table(trial)            # every formula compiles, every "like" resolves (the error names the type and the place)
+
+    PREVIEW_SIZES = {      # storey -> (y, height, depth) of the sample cabinets the type editor shows, at PREVIEW_WIDTHS
+        'base': (0.0, 840.0, 560.0), 'upper': (1450.0, 700.0, 350.0), 'loft': (2150.0, 400.0, 350.0), 'tall': (0.0, 2150.0, 580.0),
+        'corner': (1450.0, 700.0, 300.0)}
+    PREVIEW_WIDTHS = (400.0, 600.0, 900.0)
+
+    def cabinet_type_preview(self, id: str, data: dict, role: str) -> dict:
+        """What a cabinet type (not saved yet: ``data``) builds: sample cabinets of a few widths, each with its panels (in mm, the cabinet's
+        own frame: x along the run, y up, z out from the wall) and what looks wrong (``cabinet_types.check``). A formula that does not
+        compile is an error, as on save."""
+        info = self._kind('cabinet-type')
+        cat.check_write(info, role)
+        errors_found = catalog_files.schema_errors(self.builtin.schemas['cabinet-type'], data)
+        if errors_found:
+            raise catalog_files.CatalogInvalid('; '.join(errors_found[:10]))
+        trial = self._trial('cabinet-type', id, cat.scope_for(role, self.USER), data, False)
+        t = cabinet_types.of(id, trial)
+        y, height, depth = self.PREVIEW_SIZES.get(t.storey, self.PREVIEW_SIZES['base'])
+        samples = []
+        for width in self.PREVIEW_WIDTHS:
+            m = {'id': 'P1', 'type': id, 'wall': 'back', 'fromCorner': 0, 'width': width, 'y': y, 'height': height, 'depth': depth}
+            if t.builder == 'corner-shelf':
+                m.update(wall='corner', backLength=width, rightLength=width)
+            spec = KitchenSpec.model_validate({'module': [m], 'appliances': []})
+            scene = geometry.compile_spec(spec, trial)
+            parts = [{'id': p.id, 'type': p.type, 'min': list(p.min), 'max': list(p.max)} for p in scene.parts if p.module == 'P1']
+            problems = cabinet_types.check(t, geometry.module_values(spec.module[0], spec.common))
+            samples.append({'width': width, 'height': height, 'depth': depth, 'y': y, 'parts': parts,
+                            'problems': [words.finding(f"cabinet-{p['code']}", 'warning', [], f"finding.cabinet-{p['code']}",
+                                                       **{k: v for k, v in p.items() if k != 'code'}, width=width) for p in problems]})
+        return {'id': id, 'storey': t.storey, 'samples': samples}
 
     def catalog_put(self, kind: str, id: str, data: dict, role: str, disabled: bool = False) -> dict:
         """Create or replace item ``id`` in the role's layer (``disabled``: hide the item of a lower layer instead)."""

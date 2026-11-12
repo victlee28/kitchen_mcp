@@ -150,6 +150,15 @@ def wall_reach(spec: KitchenSpec, lsau: float) -> dict[str, float]:
     return out
 
 
+def module_values(m: Module, c: Any) -> dict[str, float]:
+    """The numbers a cabinet type's formulas read (``cabinet_types.VARIABLES``) for cabinet ``m`` of a design whose common sizes are ``c``."""
+    (fs0, fs1), (p0, p1), (b0, b1) = m.fronts, m.panel_span, m.blind_span
+    return {"fromCorner": m.fromCorner, "endAt": m.endAt, "width": m.width, "height": m.height, "depth": m.depth, "y": m.y,
+            "top": m.y + m.height, "fs0": fs0, "fs1": fs1, "b0": b0, "b1": b1, "p0": p0, "p1": p1, "endPanel": m.endPanel,
+            "blindCorner": m.blindCorner, "niche": m.niche or 0.0, "shelfCount": float(m.shelfCount), "sections": float(len(m.frontSections)),
+            "doors": float(len(m.doors)), "doorThickness": c.doorThickness, "doorGap": c.doorGap, "plinthHeight": c.plinthHeight}
+
+
 class _Emit:
     """Boxes of a cabinet type's steps, in the cabinet's row (``_Builder.box``)."""
 
@@ -232,13 +241,7 @@ class _Builder:
     # ---- cabinets
     def by_type(self, m: Module, t: "cabinet_types.CabinetType") -> None:
         """The panels of ``m`` from the formulas of its cabinet type (catalog kind ``cabinet-type``)."""
-        c = self.c
-        (fs0, fs1), (p0, p1), (b0, b1) = m.fronts, m.panel_span, m.blind_span
-        values = {"fromCorner": m.fromCorner, "endAt": m.endAt, "width": m.width, "height": m.height, "depth": m.depth, "y": m.y,
-                  "top": m.y + m.height, "fs0": fs0, "fs1": fs1, "b0": b0, "b1": b1, "p0": p0, "p1": p1, "endPanel": m.endPanel,
-                  "blindCorner": m.blindCorner, "niche": m.niche or 0.0, "shelfCount": float(m.shelfCount), "sections": float(len(m.frontSections)),
-                  "doors": float(len(m.doors)), "doorThickness": c.doorThickness, "doorGap": c.doorGap, "plinthHeight": c.plinthHeight}
-        cabinet_types.build(t, values, _Emit(self, m))
+        cabinet_types.build(t, module_values(m, self.c), _Emit(self, m))
 
     def front_sections(self, m: Module, fs0: float, fs1: float, body: float, top: float) -> None:
         """The stacked fronts of ``m.frontSections`` from the top down (a niche: back, top and bottom boards, two sides; a drawer; doors),

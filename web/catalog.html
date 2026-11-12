@@ -15,6 +15,8 @@
     form.item{background:#fff;padding:10px;border:1px solid #ccc;border-radius:6px;margin-top:10px}
     form.item label{display:block;margin:6px 0 2px;font-weight:600} form.item textarea{width:100%;min-height:80px;font-family:monospace}
     .row{display:flex;gap:6px;align-items:center;flex-wrap:wrap} .warn{color:#a40000} .ok{color:#1b6d1b}
+    .ct-steps input{font-family:monospace;font-size:12px} .ct-steps td{padding:2px} .ct-view canvas{border:1px solid #ccc;border-radius:4px}
+    figure{margin:4px} figcaption{font-size:12px;text-align:center}
   </style>
 </head>
 <body>
@@ -30,6 +32,10 @@
         <label class="row"><span data-i18n="catalog.import"></span><input type="file" id="import" accept="application/json"></label></p></nav>
     <section><div id="status" class="status"></div><div id="list"></div><div id="editor"></div></section>
   </main>
+  <script type="importmap">
+  {"imports":{"three":"./vendor/three/build/three.module.min.js",
+              "three/addons/":"./vendor/three/examples/jsm/"}}
+  </script>
   <script type="module" src="catalog-page.js"></script>
 </body>
 </html>
