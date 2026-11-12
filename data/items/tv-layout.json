@@ -1,0 +1,253 @@
+[
+ {
+  "id": "columns",
+  "label": {
+   "vi": "Kệ thấp + 2 cột + kệ treo",
+   "en": "Low console, two columns, floating shelf"
+  },
+  "vars": {
+   "consoleHeight": "450",
+   "consoleMax": "1200",
+   "columnMin": "400",
+   "columnMax": "600",
+   "columnsFrom": "2400",
+   "shelfY": "1850",
+   "shelfHeight": "250",
+   "shelfDepth": "300",
+   "fullUpperY": "1750",
+   "sideShelfY": "1300",
+   "sideGap": "300",
+   "col": "min(columnMax, max(columnMin, round(length * 0.15 / 50) * 50)) if length >= columnsFrom else 0",
+   "niche": "length - 2 * col"
+  },
+  "steps": [
+   {
+    "do": "cabinets",
+    "when": "col > 0",
+    "type": "tall",
+    "start": "0",
+    "length": "col",
+    "height": "top",
+    "depth": "400",
+    "name": "tv-column"
+   },
+   {
+    "do": "cabinets",
+    "when": "col > 0",
+    "type": "tall",
+    "start": "length - col",
+    "length": "col",
+    "height": "top",
+    "depth": "400",
+    "name": "tv-column"
+   },
+   {
+    "do": "cabinets",
+    "group": "console",
+    "type": "base",
+    "start": "col",
+    "length": "niche",
+    "split": "consoleMax",
+    "height": "consoleHeight",
+    "depth": "400",
+    "name": "tv-console",
+    "drawer": true
+   },
+   {
+    "do": "tv",
+    "on": "console",
+    "center": "col + niche / 2",
+    "fit": "niche",
+    "panel": {
+     "width": "niche",
+     "y0": "consoleHeight",
+     "y1": "shelfY"
+    }
+   },
+   {
+    "do": "cabinets",
+    "when": "niche >= 600",
+    "type": "upper-open",
+    "start": "col",
+    "length": "niche",
+    "y": "shelfY",
+    "height": "shelfHeight",
+    "depth": "shelfDepth",
+    "name": "tv-shelf-over",
+    "shelfCount": 1
+   }
+  ]
+ },
+ {
+  "id": "shelves",
+  "label": {
+   "vi": "Kệ thấp + kệ treo hai bên",
+   "en": "Low console, shelves beside the TV"
+  },
+  "vars": {
+   "consoleHeight": "450",
+   "consoleMax": "1200",
+   "columnMin": "400",
+   "columnMax": "600",
+   "columnsFrom": "2400",
+   "shelfY": "1850",
+   "shelfHeight": "250",
+   "shelfDepth": "300",
+   "fullUpperY": "1750",
+   "sideShelfY": "1300",
+   "sideGap": "300",
+   "center": "length / 2"
+  },
+  "steps": [
+   {
+    "do": "cabinets",
+    "group": "console",
+    "type": "base",
+    "start": "0",
+    "length": "length",
+    "split": "consoleMax",
+    "height": "consoleHeight",
+    "depth": "400",
+    "name": "tv-console",
+    "drawer": true
+   },
+   {
+    "do": "tv",
+    "on": "console",
+    "center": "center",
+    "fit": "length - 900",
+    "panel": {
+     "width": "tvWidth + 400",
+     "y0": "consoleHeight",
+     "y1": "fullUpperY"
+    }
+   },
+   {
+    "do": "let",
+    "vars": {
+     "side": "(length - tvWidth) / 2 - sideGap",
+     "sw": "min(900, floor(side / 10) * 10)"
+    }
+   },
+   {
+    "do": "cabinets",
+    "when": "side >= 450",
+    "type": "upper-open",
+    "start": "center - tvWidth / 2 - sideGap - sw",
+    "length": "sw",
+    "y": "sideShelfY",
+    "height": "shelfHeight",
+    "depth": "250",
+    "name": "tv-shelf-side",
+    "shelfCount": 1
+   },
+   {
+    "do": "cabinets",
+    "when": "side >= 450",
+    "type": "upper-open",
+    "start": "center + tvWidth / 2 + sideGap",
+    "length": "sw",
+    "y": "sideShelfY",
+    "height": "shelfHeight",
+    "depth": "250",
+    "name": "tv-shelf-side",
+    "shelfCount": 1
+   },
+   {
+    "do": "cabinets",
+    "when": "side < 450 and length >= 600",
+    "type": "upper-open",
+    "start": "0",
+    "length": "length",
+    "y": "shelfY",
+    "height": "shelfHeight",
+    "depth": "shelfDepth",
+    "name": "tv-shelf-over",
+    "shelfCount": 1
+   }
+  ]
+ },
+ {
+  "id": "full",
+  "label": {
+   "vi": "Kín cả vách",
+   "en": "Floor to top, wall to wall"
+  },
+  "vars": {
+   "consoleHeight": "450",
+   "consoleMax": "1200",
+   "columnMin": "400",
+   "columnMax": "600",
+   "columnsFrom": "2400",
+   "shelfY": "1850",
+   "shelfHeight": "250",
+   "shelfDepth": "300",
+   "fullUpperY": "1750",
+   "sideShelfY": "1300",
+   "sideGap": "300",
+   "niche0": "length if length < 2000 else min(length - 800, max(1200, round(length * 0.45 / 10) * 10))",
+   "side": "floor((length - niche0) / 2 / 10) * 10",
+   "niche": "length - 2 * side"
+  },
+  "steps": [
+   {
+    "do": "cabinets",
+    "when": "side > 0",
+    "type": "tall",
+    "start": "0",
+    "length": "side",
+    "split": "columnMax",
+    "height": "top",
+    "depth": "400",
+    "name": "tv-side-tall"
+   },
+   {
+    "do": "cabinets",
+    "group": "console",
+    "type": "base",
+    "start": "side",
+    "length": "niche",
+    "split": "consoleMax",
+    "height": "consoleHeight",
+    "depth": "400",
+    "name": "tv-console",
+    "drawer": true
+   },
+   {
+    "do": "cabinets",
+    "when": "side > 0",
+    "type": "tall",
+    "start": "side + niche",
+    "length": "side",
+    "split": "columnMax",
+    "height": "top",
+    "depth": "400",
+    "name": "tv-side-tall"
+   },
+   {
+    "do": "cabinets",
+    "when": "top - fullUpperY >= 250",
+    "type": "upper",
+    "start": "side",
+    "length": "niche",
+    "split": "900",
+    "y": "fullUpperY",
+    "height": "top - fullUpperY",
+    "depth": "shelfDepth",
+    "name": "tv-upper",
+    "front": true
+   },
+   {
+    "do": "tv",
+    "on": "console",
+    "center": "side + niche / 2",
+    "fit": "niche",
+    "panel": {
+     "width": "niche",
+     "y0": "consoleHeight",
+     "y1": "fullUpperY"
+    }
+   }
+  ]
+ }
+]

@@ -233,6 +233,8 @@ class KitchenService:
             cabinet_types.table(trial)            # every formula compiles, every "like" resolves (the error names the type and the place)
         if kind in ('layout-template', 'layout-rules'):
             layout_solver.templates(trial)
+        if kind == 'tv-layout':
+            tv_system.layouts(trial)
 
     PREVIEW_SIZES = {      # storey -> (y, height, depth) of the sample cabinets the type editor shows, at PREVIEW_WIDTHS
         'base': (0.0, 840.0, 560.0), 'upper': (1450.0, 700.0, 350.0), 'loft': (2150.0, 400.0, 350.0), 'tall': (0.0, 2150.0, 580.0),

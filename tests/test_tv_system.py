@@ -57,7 +57,7 @@ class TestLayout(unittest.TestCase):
     def test_panel_behind_the_tv_unless_refused(self):
         host = next(m for m in tv.layout(3980, COMMON) if m.get("appliance"))
         bp = host["backPanel"]
-        self.assertEqual((host["s"] + bp["s0"], host["s"] + bp["s1"], bp["y0"], bp["y1"]), (600.0, 3380.0, 450.0, tv.SHELF_Y_MM))
+        self.assertEqual((host["s"] + bp["s0"], host["s"] + bp["s1"], bp["y0"], bp["y1"]), (600.0, 3380.0, 450.0, 1850.0))
         self.assertFalse(tv.wants_panel("tạo hệ tủ tivi không ốp"))
         self.assertFalse(any(m.get("backPanel") for m in tv.layout(3980, COMMON, panel=False)))
 

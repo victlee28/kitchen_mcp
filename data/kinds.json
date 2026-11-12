@@ -255,5 +255,16 @@
    "workshop"
   ],
   "closed": true
+ },
+ "tv-layout": {
+  "label": {
+   "vi": "Kiểu tủ tivi",
+   "en": "TV unit layouts"
+  },
+  "writers": [
+   "workshop",
+   "user"
+  ],
+  "closed": true
  }
 }
