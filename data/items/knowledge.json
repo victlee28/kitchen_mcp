@@ -905,22 +905,24 @@
  {
   "id": "UK-ADM-V1",
   "kind": "standard",
-  "title": "Cửa trong nhà ở (Approved Document M, quyển 1)",
-  "content": "Mức M4(1): cửa vào chính thông thủy hiệu dụng ≥ 775 mm; cửa trong ≥ 750 mm (tùy hướng tiếp cận). Mức xe lăn M4(3): cửa trong 850–1000 mm.",
-  "sourceUrl": "https://www.designingbuildings.co.uk/wiki/Door_clear_opening_width",
+  "title": "Cửa trong nhà ở (Approved Document M, quyển 1 – Anh)",
+  "content": "Chỉ áp dụng ở Anh (England), không phải quy định chung châu Âu. M4(1) (mặc định cho nhà mới): cửa vào chung và cửa vào căn hộ thông thủy ≥ 775 mm (§1.9, §1.14, đo theo Diagram 1.1); cánh tiêu chuẩn 826 mm dày ≤ 44 mm được coi là đạt 775 mm (chỉ ngoại lệ này, không quy đổi khổ cánh sang thông thủy trong trường hợp khác). Cửa trong (phòng ở, WC): ≥ 750 mm khi tiếp cận thẳng, 775–800 mm khi rẽ từ hành lang hẹp (Bảng 1.1). M4(2) (chỉ khi điều kiện quy hoạch yêu cầu): cửa vào ≥ 850 mm (§2.14, §2.20); cửa trong vẫn ≥ 750 mm (Bảng 2.1). Hiệu lực 01/03/2016.",
+  "sourceUrl": "https://assets.publishing.service.gov.uk/media/5a7f8a82ed915d74e622b17b/BR_PDF_AD_M1_2015_with_2016_amendments_V3.pdf",
   "region": "EU",
   "country": "GB",
   "metadata": {
-   "source": "Approved Document M vol. 1 (tóm tắt thứ cấp)",
+   "source": "Approved Document M vol. 1, 2015 + sửa đổi 2016 (§§1.9, 1.14, 1.15, 2.14, 2.20, Bảng 1.1, 2.1)",
    "sourceType": "mandatory",
    "validation": [
-    "doorway-width",
-    "doorway-width-accessible"
+    "doorway-width"
    ],
    "params": {
     "doorway_clear_min": 750,
-    "accessible_clear_min": 850
-   }
+    "entrance_clear_min": 775,
+    "entrance_clear_accessible_min": 850,
+    "leaf_deemed_775": 826
+   },
+   "apply": "Anh (England); nhà ở mới"
   }
  },
  {
@@ -1006,25 +1008,6 @@
   }
  },
  {
-  "id": "SG-ACCESS-2019",
-  "kind": "standard",
-  "title": "Cửa – Code on Accessibility (Singapore)",
-  "content": "Cửa trên lối tiếp cận thông thủy ≥ 850 mm (Code on Accessibility in the Built Environment; bản 2025 hiệu lực 01/11/2025).",
-  "sourceUrl": "https://www1.bca.gov.sg/safety-and-standards/accessibility/code-on-accessibility-in-the-built-environment/",
-  "region": "SEA",
-  "country": "SG",
-  "metadata": {
-   "source": "BCA Code on Accessibility (nguồn thứ cấp cho con số)",
-   "sourceType": "standard",
-   "validation": [
-    "doorway-width-accessible"
-   ],
-   "params": {
-    "accessible_clear_min": 850
-   }
-  }
- },
- {
   "id": "DIN-18040-2-DOOR",
   "kind": "standard",
   "title": "Cửa nhà ở không rào cản (DIN 18040-2)",
@@ -1097,6 +1080,70 @@
    "params": {
     "doorway_clear_min": 700,
     "doorway_height_min": 2000
+   }
+  }
+ },
+ {
+  "id": "UK-ADM-V2-T2",
+  "kind": "standard",
+  "title": "Bề rộng hiệu dụng cửa – công trình không phải nhà ở (ADM quyển 2, Bảng 2 – Anh)",
+  "content": "Chỉ áp dụng ở Anh, cho cửa vào được tiếp cận của công trình không phải nhà ở (§2.13, Bảng 2; đo theo Diagram 9: từ chặn cửa phía đóng tới vật cản phía bản lề, kể cả tay nắm, nẹp chắn nước). Công trình mới / hiện hữu: tiếp cận thẳng 800 / 750 mm; vuông góc với lối đi rộng ≥ 1500 mm 800 / 750 mm; vuông góc với lối đi rộng ≥ 1200 mm 825 / 775 mm; cửa ngoài của công trình công cộng 1000 / 775 mm. Bản sửa đổi 2024 hiệu lực 01/10/2024.",
+  "sourceUrl": "https://assets.publishing.service.gov.uk/media/66f6c5eec71e42688b65ee11/ADM__V2_with_2024_amendments.pdf",
+  "region": "EU",
+  "country": "GB",
+  "metadata": {
+   "source": "Approved Document M vol. 2, sửa đổi 2024 (§2.13, Bảng 2)",
+   "sourceType": "mandatory",
+   "apply": "Anh (England); công trình không phải nhà ở — không dùng để kiểm bếp nhà ở",
+   "params": {
+    "new_straight_min": 800,
+    "new_route1500_min": 800,
+    "new_route1200_min": 825,
+    "new_public_external_min": 1000,
+    "existing_straight_min": 750,
+    "existing_route1500_min": 750,
+    "existing_route1200_min": 775,
+    "existing_public_external_min": 775
+   }
+  }
+ },
+ {
+  "id": "SG-ACCESS-2025",
+  "kind": "standard",
+  "title": "Cửa – Code on Accessibility 2025 (Singapore)",
+  "content": "Cửa trên lối đi tiếp cận: thông thủy ≥ 850 mm, đo giữa mặt cánh và mặt chặn cửa khi cánh mở 90° (§4.4.2.1); cửa hai cánh hoạt động độc lập: ít nhất một cánh đạt (§4.4.3.1). Mỗi căn hộ có ít nhất một lối vào theo §7.2 (§7.1.5): cửa một cánh ≥ 850 mm (§7.2.1). Phần §2.1 không áp dụng cho nhà ở thấp tầng riêng (landed dwelling-house). Áp dụng cho công trình mới và cải tạo; ban hành 07/04/2025, sửa biên tập 1.1 ngày 01/03/2026.",
+  "sourceUrl": "https://file.go.gov.sg/bca-coa2025.pdf",
+  "region": "SEA",
+  "country": "SG",
+  "metadata": {
+   "source": "BCA Code on Accessibility in the Built Environment 2025 (§§2.1, 4.4.2.1, 4.4.3.1, 7.1.5, 7.2.1)",
+   "sourceType": "mandatory",
+   "apply": "lối đi tiếp cận và lối vào căn hộ; không áp cho nhà landed",
+   "validation": [
+    "doorway-width-accessible"
+   ],
+   "params": {
+    "accessible_clear_min": 850,
+    "entrance_clear_min": 850
+   }
+  }
+ },
+ {
+  "id": "ADA-404.2.3",
+  "kind": "standard",
+  "title": "Bề rộng thông thủy cửa (ADA 2010 §404.2.3 – Mỹ)",
+  "content": "Cửa trên lối đi tiếp cận: thông thủy ≥ 32″ (815 mm); ô cửa sâu hơn 24″ (610 mm) cần ≥ 36″ (915 mm). Cửa bản lề đo giữa mặt cánh và chặn cửa khi mở 90°. Áp dụng cho cơ sở thuộc phạm vi ADA (cơ quan nhà nước, nơi phục vụ công chúng, công trình thương mại) khi xây mới và cải tạo — không phải quy định chung cho nhà ở tư nhân. Bắt buộc từ 15/03/2012.",
+  "sourceUrl": "https://www.access-board.gov/ada/chapter/ch04/",
+  "region": "NA",
+  "country": "US",
+  "metadata": {
+   "source": "2010 ADA Standards for Accessible Design §404.2.3",
+   "sourceType": "mandatory",
+   "apply": "cơ sở thuộc phạm vi ADA; không dùng để kiểm bếp nhà ở tư nhân",
+   "params": {
+    "clear_min": 815,
+    "deep_opening_depth": 610,
+    "deep_opening_clear_min": 915
    }
   }
  }
