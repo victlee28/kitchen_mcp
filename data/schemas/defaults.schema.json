@@ -270,6 +270,136 @@
     "vi": "Giới hạn nhập trên menu",
     "en": "Menu input limits"
    }
+  },
+  "materials": {
+   "type": "object",
+   "additionalProperties": false,
+   "x-label": {
+    "vi": "Vật liệu mặc định (khi thiết kế không ghi)",
+    "en": "Default finishes (where a design names none)"
+   },
+   "properties": {
+    "base": {
+     "type": "string",
+     "minLength": 1,
+     "x-label": {
+      "vi": "Mặt cánh tủ dưới",
+      "en": "Base cabinet fronts"
+     }
+    },
+    "upper": {
+     "type": "string",
+     "minLength": 1,
+     "x-label": {
+      "vi": "Mặt cánh tủ trên",
+      "en": "Wall cabinet fronts"
+     }
+    },
+    "cornerShelf": {
+     "type": "string",
+     "minLength": 1,
+     "x-label": {
+      "vi": "Kệ góc mở",
+      "en": "Open corner shelf"
+     }
+    },
+    "carcass": {
+     "type": "string",
+     "minLength": 1,
+     "x-label": {
+      "vi": "Thùng tủ",
+      "en": "Carcass"
+     }
+    },
+    "countertop": {
+     "type": "string",
+     "minLength": 1,
+     "x-label": {
+      "vi": "Mặt đá",
+      "en": "Countertop"
+     }
+    },
+    "wallTile": {
+     "type": "string",
+     "minLength": 1,
+     "x-label": {
+      "vi": "Gạch ốp tường bếp",
+      "en": "Backsplash"
+     }
+    },
+    "wall": {
+     "type": "string",
+     "minLength": 1,
+     "x-label": {
+      "vi": "Tường",
+      "en": "Wall"
+     }
+    },
+    "floor": {
+     "type": "string",
+     "minLength": 1,
+     "x-label": {
+      "vi": "Sàn",
+      "en": "Floor"
+     }
+    },
+    "plinth": {
+     "type": "string",
+     "minLength": 1,
+     "x-label": {
+      "vi": "Chân tủ",
+      "en": "Toe kick"
+     }
+    },
+    "molding": {
+     "type": "string",
+     "minLength": 1,
+     "x-label": {
+      "vi": "Phào chỉ",
+      "en": "Molding"
+     }
+    },
+    "glass": {
+     "type": "string",
+     "minLength": 1,
+     "x-label": {
+      "vi": "Kính cánh tủ",
+      "en": "Cabinet door glass"
+     }
+    },
+    "steel": {
+     "type": "string",
+     "minLength": 1,
+     "x-label": {
+      "vi": "Thiết bị inox",
+      "en": "Stainless appliances"
+     }
+    },
+    "sink": {
+     "type": "string",
+     "minLength": 1,
+     "x-label": {
+      "vi": "Chậu rửa",
+      "en": "Sink"
+     }
+    },
+    "cooktop": {
+     "type": "string",
+     "minLength": 1,
+     "x-label": {
+      "vi": "Mặt bếp",
+      "en": "Cooktop"
+     }
+    },
+    "openings": {
+     "type": "string",
+     "minLength": 1,
+     "x-label": {
+      "vi": "Thiết bị âm tủ",
+      "en": "Built-in appliances"
+     }
+    }
+   }
   }
  }
 }

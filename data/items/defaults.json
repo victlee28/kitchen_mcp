@@ -30,6 +30,23 @@
    "overhangMax": 100,
    "runShiftMax": 10000,
    "stretchMax": 1500
+  },
+  "materials": {
+   "base": "Laminate vân gỗ sồi sáng",
+   "upper": "Trắng mờ",
+   "cornerShelf": "Vân gỗ sồi",
+   "carcass": "Melamine trắng",
+   "countertop": "Đá nhân tạo trắng",
+   "wallTile": "Gạch thẻ trắng",
+   "wall": "Sơn tường trắng ngà",
+   "floor": "Gạch lát nền 800×800",
+   "plinth": "Chân tủ nhựa xám đậm",
+   "molding": "Gỗ sơn",
+   "glass": "Kính cánh tủ",
+   "steel": "Inox",
+   "sink": "Chậu rửa màu tối",
+   "cooktop": "Mặt kính đen bếp",
+   "openings": "Kính đen, khung inox"
   }
  }
 ]

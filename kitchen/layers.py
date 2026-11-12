@@ -14,7 +14,7 @@ from typing import Any
 
 from .geometry import Scene
 from .spec import KitchenSpec
-from . import handles
+from . import defaults, handles
 from .errors import InvalidInput, NotFound, require
 from .words import say
 
@@ -33,9 +33,10 @@ _PROMPT_ROLES = {  # part kind -> the words of the image prompt (English); the n
 }
 ROLES = {k: (say(f"part.{k}"), en) for k, en in _PROMPT_ROLES.items()}   # part kind -> (name shown to people, prompt words)
 
-_DEFAULTS = {"base": "Laminate vân gỗ sồi sáng", "upper": "Trắng mờ", "carcass": "Melamine trắng", "countertop": "Đá nhân tạo trắng",
-             "wall": "Sơn tường trắng ngà", "floor": "Gạch lát nền 800×800", "plinth": "Chân tủ nhựa xám đậm"}
-_APPLIANCES = {"fridge": "Inox", "sink": "Chậu rửa màu tối", "faucet": "Inox", "cooktop": "Mặt kính đen bếp", "hood": "Inox", "openings": "Kính đen, khung inox"}
+_MATERIALS = defaults.BUILTIN.materials   # finish names drawn where the design names none (data: the ``defaults`` item)
+_DEFAULTS = {k: _MATERIALS[k] for k in ("base", "upper", "carcass", "countertop", "wall", "floor", "plinth")}
+_APPLIANCES = {"fridge": _MATERIALS["steel"], "sink": _MATERIALS["sink"], "faucet": _MATERIALS["steel"], "cooktop": _MATERIALS["cooktop"],
+               "hood": _MATERIALS["steel"], "openings": _MATERIALS["openings"]}
 
 
 def _vl(spec: KitchenSpec, key: str) -> str:
@@ -43,7 +44,7 @@ def _vl(spec: KitchenSpec, key: str) -> str:
     if key == "tall":
         return v.get("tall") or v.get("base") or _DEFAULTS["base"]
     if key == "cornerShelf":
-        return v.get("cornerShelf") or v.get("base") or "Vân gỗ sồi"
+        return v.get("cornerShelf") or v.get("base") or _MATERIALS["cornerShelf"]
     return v.get(key) or _DEFAULTS.get(key, "")
 
 
@@ -52,7 +53,7 @@ def material_slot(spec: KitchenSpec, module: str | None, type: str) -> tuple[str
     mods = {m.id: m for m in spec.module}
     mols = {m.id: m for m in spec.moldings}
     if type == "molding" and module in mols:
-        return f"molding:{module}", mols[module].material or "Gỗ sơn"
+        return f"molding:{module}", mols[module].material or _MATERIALS["molding"]
     if type == "handle":
         return handles.material_slot(spec, module)
     if type.startswith("structure-"):  # drawn from the imported floorplan: not a material of the kitchen
@@ -67,7 +68,7 @@ def material_slot(spec: KitchenSpec, module: str | None, type: str) -> tuple[str
         return "common:carcass", _vl(spec, "carcass")
     storey_key = {"base": "base", "upper": "upper", "loft": "upper", "tall": "tall", "corner": "cornerShelf"}[m.storey]
     if type == "glass-door":
-        return "appliances:glass", "Kính cánh tủ"
+        return "appliances:glass", _MATERIALS["glass"]
     if type in FRONT_SECTIONS or (type == "side-panel" and (m.endPanel or m.storey in ("tall", "corner"))):
         return (f"module:{m.id}", m.material) if m.material else (f"common:{storey_key}", _vl(spec, storey_key))
     if m.storey == "corner":

@@ -17,7 +17,8 @@ from .catalog import Catalog
 from .catalog import expr
 from .jsonview import as_dict, as_list
 from .errors import InvalidInput
-from .labels import DEFAULT_FRONT, NAMES
+from . import defaults
+from .words import cabinet_name
 from .numeric import round_int
 from .spec import KitchenSpec, LaidModule, Run, from_data, to_data
 from . import lexicon
@@ -95,13 +96,13 @@ def run_fields(style: str) -> dict[str, Any]:
 def front_of(common: dict[str, Any]) -> str:
     """The front finish a TV unit's closed cabinets share: the design's tall (else base) front."""
     mats: dict[str, Any] = common.get("material") or {}
-    return str(mats.get("tall") or mats.get("base") or DEFAULT_FRONT)
+    return str(mats.get("tall") or mats.get("base") or defaults.BUILTIN.materials["base"])
 
 
 def _console(at: float, length: float) -> list[LaidModule]:
     out: list[LaidModule] = []
     for w in _split(length):
-        out.append({"type": "base", "s": at, "width": w, "y": 0.0, "height": CONSOLE_HEIGHT_MM, "depth": 400.0, "name": NAMES["tv-console"],
+        out.append({"type": "base", "s": at, "width": w, "y": 0.0, "height": CONSOLE_HEIGHT_MM, "depth": 400.0, "name": cabinet_name("tv-console"),
                     "frontSections": [{"type": "drawer", "height": CONSOLE_HEIGHT_MM}]})
         at += w
     return out
@@ -225,7 +226,7 @@ def layout(length: float, common: dict[str, Any], style: str = "columns", panel:
             made: list[LaidModule] = []
             for w in pieces:
                 entry: dict[str, Any] = {"type": str(st.data.get("type") or "base"), "s": at, "width": w, "y": v.get("y", 0.0), "height": v.get("height", 0.0),
-                                         "depth": v.get("depth", 0.0), "name": NAMES.get(str(st.data.get("name") or ""), str(st.data.get("name") or ""))}
+                                         "depth": v.get("depth", 0.0), "name": cabinet_name(str(st.data.get("name") or ""))}
                 if st.data.get("drawer"):
                     entry["frontSections"] = [{"type": "drawer", "height": v.get("height", 0.0)}]
                 if "shelfCount" in st.data:

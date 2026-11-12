@@ -82,8 +82,8 @@
  },
  "defaults": {
   "label": {
-   "vi": "Kích thước mặc định",
-   "en": "Default sizes"
+   "vi": "Kích thước và vật liệu mặc định",
+   "en": "Default sizes and finishes"
   },
   "writers": [
    "workshop"

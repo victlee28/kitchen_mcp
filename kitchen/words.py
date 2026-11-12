@@ -14,6 +14,11 @@ def say(key: str, **params: Any) -> str:
     return builtin.MESSAGES.text(key, DEFAULT_LANG, **params)
 
 
+def cabinet_name(key: str) -> str:
+    """The default name of a cabinet worded from ``name.cabinet.<key>``; a key with no such wording is a name already and stays."""
+    return say(f"name.cabinet.{key}") if builtin.MESSAGES.has(f"name.cabinet.{key}") else key
+
+
 class Said(str):
     """A line of text the core worded from ``key`` + ``params`` (a summary line, a reason): a plain ``str`` everywhere (JSON, joins,
     comparisons), that still knows its key, so the shell can word it again in another language (``service.reword``) and the core can

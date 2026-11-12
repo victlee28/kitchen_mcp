@@ -13,11 +13,10 @@ from __future__ import annotations
 from typing import Any
 
 from . import appliance_models, builtin
-from .words import Said
+from .words import Said, cabinet_name
 from .catalog import Catalog
 from .edit import new_id
 from .errors import InvalidInput
-from .labels import NAMES
 from .spec import Appliance, KitchenSpec, Module
 
 HOOD_GAP_MM = 650.0          # worktop to the bottom of a hood (KITCHEN-DEFAULT hood gap; intent uses the same default)
@@ -65,7 +64,7 @@ def _build_hood_cabinet(spec: KitchenSpec, app: Appliance, model: dict[str, Any]
     y = max(c.upperBottom + 150.0, c.countertop + HOOD_GAP_MM + INSERT_HEIGHT_MM)
     cid = new_id(spec, "TT")
     w = hob.width
-    cabinet: dict[str, Any] = {"id": cid, "type": "upper-hood", "name": NAMES["upper-hood"], "wall": hob.wall, "fromCorner": hob.fromCorner,
+    cabinet: dict[str, Any] = {"id": cid, "type": "upper-hood", "name": cabinet_name("upper-hood"), "wall": hob.wall, "fromCorner": hob.fromCorner,
                                "width": w, "y": y, "height": max(300.0, c.upperTierSplit - y), "depth": c.upperDepth,
                                "doors": [w / 2, w / 2] if w >= 600 else [w]}
     for key in ("run", "offset", "facing"):

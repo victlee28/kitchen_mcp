@@ -30,9 +30,8 @@ VIETNAMESE_BASELINE: dict[str, int] = {
     "kitchen/store.py": 1,
     "kitchen/tv_system.py": 1,
     # Data-driven stage 5 (default material names, written into designs)
-    "kitchen/layers.py": 26,
-    "kitchen/labels.py": 1,
-    "kitchen/threejs_export.py": 20,
+    "kitchen/layers.py": 13,
+    "kitchen/threejs_export.py": 7,
     "kitchen/handles.py": 3,
     "kitchen/prompts/layer.py": 1,
     "kitchen/geometry_edit.py": 8,

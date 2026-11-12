@@ -26,7 +26,7 @@ from .jsonview import as_dict, as_list
 from .palette import SEGMENT_COLORS, module_color as _module_color
 from .spec import Handle, KitchenSpec, Module, effective_handle
 from .words import say
-from . import cabinet_types
+from . import cabinet_types, defaults
 
 ROT = {"back": 0.0, "right": -90.0, "left": 90.0, "corner": 0.0, "island": 180.0}
 TIER = {"base": "base", "upper": "wall", "loft": "top", "tall": "tall", "corner": "corner"}
@@ -160,22 +160,23 @@ def _guess_base(text: str, catalog: Catalog) -> dict[str, Any]:
 
 def _materials(spec: KitchenSpec, catalog: Catalog) -> tuple[list[dict[str, Any]], dict[str, str]]:
     vl = spec.common.material
+    d = defaults.BUILTIN.materials   # finish names drawn where the design names none (data: the ``defaults`` item)
     defs = {  # vai trò -> (id, tên, mô tả nguồn)
-        "base": ("MAT-FRONT-BASE", vl.get("base", "Laminate vân gỗ sồi sáng"), "front"),
-        "upper": ("MAT-FRONT-WALL", vl.get("upper", "Trắng mờ"), "front"),
-        "tall": ("MAT-FRONT-TALL", vl.get("tall", vl.get("base", "Laminate vân gỗ sồi sáng")), "front"),
-        "cornerShelf": ("MAT-SHELF-CORNER", vl.get("cornerShelf", vl.get("base", "Vân gỗ sồi")), "shelf"),
-        "carcass": ("MAT-CARCASS", vl.get("carcass", "Melamine trắng"), "carcass"),
-        "countertop": ("MAT-COUNTERTOP", vl.get("countertop", "Đá nhân tạo trắng"), "countertop"),
-        "wallTile": ("MAT-BACKSPLASH", vl.get("wallTile", "Gạch thẻ trắng"), "backsplash"),
-        "glass": ("MAT-GLASS", "Kính cánh tủ", "glass_door"),
+        "base": ("MAT-FRONT-BASE", vl.get("base", d["base"]), "front"),
+        "upper": ("MAT-FRONT-WALL", vl.get("upper", d["upper"]), "front"),
+        "tall": ("MAT-FRONT-TALL", vl.get("tall", vl.get("base", d["base"])), "front"),
+        "cornerShelf": ("MAT-SHELF-CORNER", vl.get("cornerShelf", vl.get("base", d["cornerShelf"])), "shelf"),
+        "carcass": ("MAT-CARCASS", vl.get("carcass", d["carcass"]), "carcass"),
+        "countertop": ("MAT-COUNTERTOP", vl.get("countertop", d["countertop"]), "countertop"),
+        "wallTile": ("MAT-BACKSPLASH", vl.get("wallTile", d["wallTile"]), "backsplash"),
+        "glass": ("MAT-GLASS", d["glass"], "glass_door"),
         "handle": ("MAT-HANDLE", spec.common.handle.material, "handle"),
-        "sink": ("MAT-SINK", "Chậu rửa màu tối", "sink"),
-        "inox": ("MAT-STEEL", "Inox", "appliance"),
-        "cooktop": ("MAT-COOKTOP-GLASS", "Mặt kính đen bếp", "cooktop"),
-        "wall": ("MAT-WALL", vl.get("wall", "Sơn tường trắng ngà"), "wall"),
-        "floor": ("MAT-FLOOR", vl.get("floor", "Gạch lát nền 800×800"), "floor"),
-        "plinth": ("MAT-PLINTH", "Chân tủ nhựa xám đậm", "plinth"),
+        "sink": ("MAT-SINK", d["sink"], "sink"),
+        "inox": ("MAT-STEEL", d["steel"], "appliance"),
+        "cooktop": ("MAT-COOKTOP-GLASS", d["cooktop"], "cooktop"),
+        "wall": ("MAT-WALL", vl.get("wall", d["wall"]), "wall"),
+        "floor": ("MAT-FLOOR", vl.get("floor", d["floor"]), "floor"),
+        "plinth": ("MAT-PLINTH", d["plinth"], "plinth"),
     }
     out: list[dict[str, Any]] = []
     ids: dict[str, str] = {}
