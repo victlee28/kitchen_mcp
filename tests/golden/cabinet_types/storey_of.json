@@ -1,5 +1,5 @@
 {
- "function": "system_replace.storey_of",
+ "function": "cabinet_types.storey_of",
  "cases": [
   {
    "name": "every type",

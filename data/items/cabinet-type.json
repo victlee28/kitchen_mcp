@@ -111,7 +111,8 @@
    "vi": "Tủ chậu",
    "en": "Sink base cabinet"
   },
-  "like": "base"
+  "like": "base",
+  "plainType": "base"
  },
  {
   "id": "base-corner-sink",
@@ -120,7 +121,8 @@
    "vi": "Tủ chậu góc",
    "en": "Corner sink base cabinet"
   },
-  "like": "base"
+  "like": "base",
+  "plainType": "base"
  },
  {
   "id": "base-cooktop",
@@ -129,7 +131,8 @@
    "vi": "Tủ dưới bếp",
    "en": "Cooktop base cabinet"
   },
-  "like": "base"
+  "like": "base",
+  "plainType": "base"
  },
  {
   "id": "base-oven",
@@ -138,7 +141,8 @@
    "vi": "Tủ lò nướng",
    "en": "Oven base cabinet"
   },
-  "like": "base"
+  "like": "base",
+  "plainType": "base"
  },
  {
   "id": "base-end",
@@ -260,7 +264,9 @@
      "top"
     ]
    }
-  ]
+  ],
+  "ownDoor": true,
+  "frontStyle": "glass"
  },
  {
   "id": "upper-open",
@@ -339,7 +345,8 @@
      }
     ]
    }
-  ]
+  ],
+  "frontless": true
  },
  {
   "id": "upper-hood",
@@ -348,7 +355,8 @@
    "vi": "Tủ trên hút mùi",
    "en": "Hood upper cabinet"
   },
-  "like": "upper"
+  "like": "upper",
+  "plainType": "upper"
  },
  {
   "id": "upper-loft",
@@ -366,7 +374,9 @@
    "vi": "Tủ cao tủ lạnh",
    "en": "Tall fridge cabinet"
   },
-  "like": "tall"
+  "like": "tall",
+  "mainRunOnly": true,
+  "exportType": "appliance_cabinet"
  },
  {
   "id": "tall",
@@ -487,6 +497,7 @@
    "vi": "Kệ góc mở",
    "en": "Open corner shelf"
   },
-  "builder": "corner-shelf"
+  "builder": "corner-shelf",
+  "frontless": true
  }
 ]

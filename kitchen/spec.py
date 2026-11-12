@@ -17,6 +17,7 @@ from typing import Any, Literal, TypedDict, TypeVar, cast
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from .errors import NotFound
+from .cabinet_types import storey_of
 from .words import say
 
 WALLS = ("back", "right", "left")
@@ -249,16 +250,8 @@ class Module(_Base):
 
     @property
     def storey(self) -> str:
-        """Tầng của module: duoi / tren / noc / cao / goc."""
-        if self.type == "corner-shelf":
-            return "corner"
-        if self.type.startswith("tall"):
-            return "tall"
-        if self.type == "upper-loft":
-            return "loft"
-        if self.type.startswith("upper"):
-            return "upper"
-        return "base"
+        """The storey of the cabinet (base, upper, loft, tall, corner): its type's (catalog kind ``cabinet-type``)."""
+        return storey_of(self.type)
 
     @property
     def endAt(self) -> float:

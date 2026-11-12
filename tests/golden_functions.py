@@ -24,6 +24,7 @@ from kitchen.spec import Handle, Module  # noqa: E402
 from kitchen.placement import Placement  # noqa: E402
 from kitchen.spec import load_spec, to_data  # noqa: E402
 from kitchen.catalog import expr  # noqa: E402
+from kitchen import cabinet_types  # noqa: E402
 from kitchen.errors import InvalidInput  # noqa: E402
 
 
@@ -871,8 +872,8 @@ def system_replace_plain_cabinets(i):
     return {"modules": _plain(system_replace.plain_cabinets(i["modules"]))}
 
 
-def system_replace_storey_of(i):
-    return {"storeys": {t: system_replace.storey_of(t) for t in i["types"]}}
+def cabinet_types_storey_of(i):
+    return {"storeys": {t: cabinet_types.storey_of(t) for t in i["types"]}}
 
 
 def system_replace_kept_models(i):
@@ -1304,7 +1305,7 @@ FUNCTIONS = {
     "system_replace.members": system_replace_members,
     "system_replace.pick_style": system_replace_pick_style,
     "system_replace.plain_cabinets": system_replace_plain_cabinets,
-    "system_replace.storey_of": system_replace_storey_of,
+    "cabinet_types.storey_of": cabinet_types_storey_of,
     "system_replace.kept_models": system_replace_kept_models,
     "run_line.nearest_edge": run_line_nearest_edge,
     "run_line.drawn_line": run_line_drawn_line,

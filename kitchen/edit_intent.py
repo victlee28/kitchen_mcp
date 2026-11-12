@@ -26,6 +26,7 @@ from .words import Said, said, say
 from .numeric import round_half_away
 from .spec import KitchenSpec, Module, to_data
 from . import vocab
+from . import cabinet_types
 
 ALLOWED_OPS = ("add", "remove", "update", "common", "lower-top", "multi")
 MAX_CHOICES = 12
@@ -119,7 +120,7 @@ def _add(spec: KitchenSpec, f: str, ids: list[str], catalog: Catalog) -> dict[st
     if not ids:
         return _clarify(said("edit.ask.after"), [m.id for m in spec.module])
     ref = spec.find(ids[0])
-    new_storey = "tall" if mtype.startswith("tall") else "upper" if mtype.startswith("upper") else "base"
+    new_storey = cabinet_types.storey_of(mtype, catalog)
     if ref.storey not in (new_storey, "loft" if new_storey == "upper" else new_storey):
         return _clarify(said("edit.ask.same-storey", id=ref.id), [m.id for m in spec.module if m.storey == new_storey])
     op: dict[str, Any] = {"op": "add", "module": {"type": mtype, "width": width}, "afterModule": ref.id}

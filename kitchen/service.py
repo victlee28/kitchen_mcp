@@ -13,7 +13,7 @@ from .intent import KitchenTemplate as KitchenTemplate
 from .spec import Common, KitchenSpec, LaidModule, Room, Wall, dump_spec, load_spec, to_data
 from .store import ConflictError, Store
 from . import legacy as legacy_schema
-from . import builtin, catalog as cat, catalog_csv, catalog_files, i18n, lexicon, words
+from . import builtin, cabinet_types, catalog as cat, catalog_csv, catalog_files, i18n, lexicon, words
 from .config import Config
 from .errors import InvalidInput, KitchenError, NotFound
 ROOT = Path(__file__).resolve().parent.parent
@@ -654,7 +654,7 @@ class KitchenService:
                     if not color.country and country:
                         color = color.model_copy(update={'country': country})
                     built = run_template.run_from_template(color if i == 0 else color.model_copy(update={'fridge': False}), length)
-                    modules = built['modules'] if i == 0 else system_replace.plain_cabinets(built['modules'])
+                    modules = built['modules'] if i == 0 else system_replace.plain_cabinets(built['modules'], self.catalog())
                     if i == 0 and built['common']:
                         changes = dict(built['common'])
                         if 'material' in changes:
@@ -676,7 +676,7 @@ class KitchenService:
         mods = system_replace.members(spec, system)
         if not (isinstance(prompt, str) and prompt.strip()):
             chosen = system_replace.pick_style(spec, mods, style if isinstance(style, str) else None, catalog)
-            ops = system_replace.style_ops(spec, mods, chosen)
+            ops = system_replace.style_ops(spec, mods, chosen, catalog)
             return {'operation': edit.combine_ops(ops), 'system': system, 'mode': 'restyle', 'style': chosen.id,
                     'summary': [words.said('summary.restyle', system=system, n=len(ops), style=chosen.name, front=chosen.front,
                                            door=words.said(f'door.{chosen.door}'), handle=words.said(f'handle.{chosen.handle}'))]}
@@ -698,7 +698,7 @@ class KitchenService:
                 continue
             c = color if i == 0 else color.model_copy(update={'fridge': False})
             built = run_template.run_from_template(c, slot.length // 10 * 10)
-            laid[slot.run] = built['modules'] if i == 0 else system_replace.plain_cabinets(built['modules'])   # sink, hob, fridge: the main run only
+            laid[slot.run] = built['modules'] if i == 0 else system_replace.plain_cabinets(built['modules'], catalog)   # sink, hob, fridge: the main run only
             if i == 0:
                 fronts = {k: built['common'][k] for k in ('material', 'handle') if k in built['common']}
         said = prompt.lower()
@@ -729,7 +729,7 @@ class KitchenService:
         for i, slot in enumerate(slots):
             modules = tv_system.layout(slot.length, common, style, tv_system.wants_panel(prompt), catalog) if i == 0 else tv_system.console(slot.length)
             laid[slot.run] = modules
-        old = [m for m in mods if m.type not in system_replace.FRONTLESS and m.storey in ('tall', 'base') and m.material]
+        old = [m for m in mods if not cabinet_types.frontless(m.type, catalog) and m.storey in ('tall', 'base') and m.material]
         front = old[0].material if old else tv_system.front_of(common)
         fronts = {'material': {storey: front for storey in ('base', 'upper', 'tall')}}       # one finish for the whole TV wall
         ops, summary = system_replace.relayout_ops(spec, mods, laid, fronts, frozenset({'upper', 'loft'}), frozenset(),

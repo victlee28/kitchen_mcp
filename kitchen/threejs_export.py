@@ -26,6 +26,7 @@ from .jsonview import as_dict, as_list
 from .palette import SEGMENT_COLORS, module_color as _module_color
 from .spec import Handle, KitchenSpec, Module, effective_handle
 from .words import say
+from . import cabinet_types
 
 ROT = {"back": 0.0, "right": -90.0, "left": 90.0, "corner": 0.0, "island": 180.0}
 TIER = {"base": "base", "upper": "wall", "loft": "top", "tall": "tall", "corner": "corner"}
@@ -263,16 +264,17 @@ def _handle(hn: Handle, material_id: str, w: float, h: float, d: float, tier: st
 def _module_entry(spec: KitchenSpec, m: Module, parts: list[Part], frame: Frame, size: Vec3, mats: dict[str, Any], led: bool) -> dict[str, Any]:
     c = spec.common
     storey = m.storey
+    ctype = cabinet_types.get(m.type)
     tier = TIER[storey]
     hn, hmat = effective_handle(c, m), mats.get(f"handle:{m.id}", mats["handle"])
     front = {"base": "base", "upper": "upper", "loft": "upper", "tall": "tall", "corner": "cornerShelf"}[storey]
     if m.material:  # vật liệu mặt trước riêng của module (vd đổi màu một tủ từ ảnh AI)
         front = f"module:{m.id}"
     entry: dict[str, Any] = {
-        "id": f"MOD-{m.id}", "moduleType": "corner_cabinet" if m.blindCorner else ("appliance_cabinet" if m.type == "tall-fridge" else MODULE_TYPE[storey]),
+        "id": f"MOD-{m.id}", "moduleType": "corner_cabinet" if m.blindCorner else (ctype.export_type if ctype and ctype.export_type else MODULE_TYPE[storey]),
         "name": m.name or m.id, "dimensions": _dims(size[0], size[1], size[2]), "transform": _tf(frame.pos, frame.rot),
         "carcaseMaterialId": mats["cornerShelf"] if storey == "corner" else mats["carcass"], "frontMaterialId": mats[front],
-        "frontStyle": {"glass": "glass", "frame": "shaker", "flat": "slab"}.get(m.doorStyle or "", "glass" if m.type == "upper-glass" else "slab"),
+        "frontStyle": {"glass": "glass", "frame": "shaker", "flat": "slab"}.get(m.doorStyle or "", ctype.front_style if ctype else "slab"),
         "sourceRef": m.id, "storey": storey,
         "placement": {**({} if m.wall == "island" else {"wallId": "WALL-BACK" if m.wall == "corner" else f"WALL-{m.wall.upper()}"}),
                       "alignment": "floor" if m.y == 0 else "wall", "offset": m.fromCorner, "elevation": m.y},

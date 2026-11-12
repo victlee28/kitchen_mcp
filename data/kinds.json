@@ -221,6 +221,10 @@
    [
     "like",
     "cabinet-type"
+   ],
+   [
+    "plainType",
+    "cabinet-type"
    ]
   ]
  }

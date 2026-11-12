@@ -157,6 +157,53 @@
     "vi": "Bộ dựng đặc biệt",
     "en": "Special builder"
    }
+  },
+  "frontless": {
+   "type": "boolean",
+   "x-label": {
+    "vi": "Không có cánh / mặt ngăn kéo",
+    "en": "No doors or drawer fronts"
+   }
+  },
+  "ownDoor": {
+   "type": "boolean",
+   "x-label": {
+    "vi": "Kiểu cánh riêng (đổi phong cách không đổi cánh)",
+    "en": "Its own door style (a restyle keeps it)"
+   }
+  },
+  "frontStyle": {
+   "type": "string",
+   "enum": [
+    "slab",
+    "shaker",
+    "glass"
+   ],
+   "x-label": {
+    "vi": "Kiểu cánh khi thiết kế không nêu",
+    "en": "Door style when the design names none"
+   }
+  },
+  "plainType": {
+   "type": "string",
+   "x-label": {
+    "vi": "Thành loại này ở các dãy phụ khi xếp lại hệ",
+    "en": "Becomes this type in the other runs of a relayout"
+   }
+  },
+  "mainRunOnly": {
+   "type": "boolean",
+   "x-label": {
+    "vi": "Chỉ ở dãy chính khi xếp lại hệ",
+    "en": "Only in the main run of a relayout"
+   }
+  },
+  "exportType": {
+   "type": "string",
+   "x-label": {
+    "vi": "Loại trong file 3D (moduleType)",
+    "en": "Type in the 3D file (moduleType)"
+   }
   }
  }
 }

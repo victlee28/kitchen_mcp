@@ -24,9 +24,8 @@ from .numeric import EPS_MM
 from .i18n import pick
 from .spec import KitchenSpec, LaidModule, Module, to_data
 from . import lexicon
+from . import cabinet_types
 
-FRONTLESS = ("corner-shelf", "upper-open")            # no doors or drawer fronts: no front material, door style or handle
-OWN_DOOR = ("upper-glass",)                           # the door style is the cabinet's own (glass): left as it is
 
 
 @dataclass(frozen=True)
@@ -66,9 +65,9 @@ def _front_of(spec: KitchenSpec, m: Module) -> str | None:
     return m.material or spec.common.material.get(m.storey) or spec.common.material.get("base")
 
 
-def current_front(spec: KitchenSpec, mods: list[Module]) -> str | None:
+def current_front(spec: KitchenSpec, mods: list[Module], catalog: Catalog = builtin.CATALOG) -> str | None:
     """The front material most of the system's cabinets show (their own, else the design's for their storey)."""
-    fronts = Counter(f for m in mods if m.type not in FRONTLESS and (f := _front_of(spec, m)))
+    fronts = Counter(f for m in mods if not cabinet_types.frontless(m.type, catalog) and (f := _front_of(spec, m)))
     return fronts.most_common(1)[0][0] if fronts else None
 
 
@@ -82,19 +81,19 @@ def pick_style(spec: KitchenSpec, mods: list[Module], wanted: str | None, catalo
         return by_id[wanted]
     if not all_styles:
         raise InvalidInput("The catalog has no style preset", code="bad-style")
-    now = current_front(spec, mods)
+    now = current_front(spec, mods, catalog)
     return next((s for s in all_styles if s.front != now), all_styles[0])
 
 
-def style_ops(spec: KitchenSpec, mods: list[Module], style: Style) -> list[dict[str, Any]]:
+def style_ops(spec: KitchenSpec, mods: list[Module], style: Style, catalog: Catalog = builtin.CATALOG) -> list[dict[str, Any]]:
     """One ``update`` per cabinet with a front: the preset's front material, door style (not on glass-door cabinets) and handle."""
     ops: list[dict[str, Any]] = []
     for m in mods:
-        if m.type in FRONTLESS:
+        if cabinet_types.frontless(m.type, catalog):     # no doors or drawer fronts: no front material, door style or handle
             continue
         handle = {**dict(_handle_of(m)), "variant": style.handle, "material": style.handle_material}     # its own handle length stays
         changes: dict[str, Any] = {"material": style.front, "handle": handle}
-        if m.type not in OWN_DOOR:
+        if not cabinet_types.own_door(m.type, catalog):   # a glass-door cabinet keeps its doors
             changes["doorStyle"] = style.door
         ops.append({"op": "update", "id": m.id, "changes": changes})
     if not ops:
@@ -131,32 +130,20 @@ def run_slots(spec: KitchenSpec, mods: list[Module]) -> list[Slot]:
     return sorted(slots, key=lambda s: (-s.length, order.index(s.run) if s.run in order else len(order)))
 
 
-PLAIN_TYPE = {"base-sink": "base", "base-cooktop": "base", "base-oven": "base", "base-corner-sink": "base", "upper-hood": "upper"}
-
-
-def plain_cabinets(modules: list[LaidModule]) -> list[LaidModule]:
+def plain_cabinets(modules: list[LaidModule], catalog: Catalog = builtin.CATALOG) -> list[LaidModule]:
     """The same cabinets without what belongs to the main run only: sink, hob, oven and hood cabinets become plain ones (their devices
     go), a fridge cabinet is left out. For the other runs of a system laid out from one sentence."""
     out: list[LaidModule] = []
     for m in modules:
-        if m["type"] == "tall-fridge":
+        t = cabinet_types.get(str(m["type"]), catalog)
+        if t is not None and t.main_run_only:
             continue
         entry = cast(LaidModule, {k: v for k, v in m.items() if k not in ("appliances", "appliance", "niche")})
-        if m["type"] in PLAIN_TYPE:
-            entry["type"] = PLAIN_TYPE[m["type"]]
+        if t is not None and t.plain_type:
+            entry["type"] = t.plain_type
             entry.pop("name", None)
         out.append(entry)
     return out
-
-
-STOREY_OF_TYPE = {"upper-loft": "loft", "corner-shelf": "corner"}
-
-
-def storey_of(module_type: str) -> str:
-    """The storey of a module type (as ``Module.storey``)."""
-    if module_type in STOREY_OF_TYPE:
-        return STOREY_OF_TYPE[module_type]
-    return "tall" if module_type.startswith("tall") else "upper" if module_type.startswith("upper") else "base"
 
 
 EXTRA_FIELDS = ("name", "niche", "appliance", "appliances", "doors", "frontSections", "hingeSides", "doorStyle", "blindCorner", "blindSide", "shelfCount", "backPanel", "material")
@@ -168,11 +155,11 @@ def _handle_of(m: Module) -> tuple[tuple[str, Any], ...]:
     return tuple((k, v) for k, v in (("length", h.length), ("material", h.material), ("variant", h.variant)) if v is not None) if h else ()
 
 
-def _inherited(spec: KitchenSpec, mods: list[Module]) -> dict[str, dict[str, Any]]:
+def _inherited(spec: KitchenSpec, mods: list[Module], catalog: Catalog = builtin.CATALOG) -> dict[str, dict[str, Any]]:
     """Per storey, what the old cabinets showed most: their own front material, door style and handle (only what they set themselves)."""
     out: dict[str, dict[str, Any]] = {}
     for storey in ("base", "upper", "loft", "tall"):
-        ms = [m for m in mods if m.storey == storey and m.type not in FRONTLESS]
+        ms = [m for m in mods if m.storey == storey and not cabinet_types.frontless(m.type, catalog)]
         keep: dict[str, Any] = {}
         for key in ("material", "doorStyle"):
             seen = Counter(v for m in ms if (v := getattr(m, key)))
@@ -260,7 +247,7 @@ def relayout_ops(spec: KitchenSpec, mods: list[Module], laid: dict[str, list[Lai
     ``{"material"?: {storey: name}, "handle"?: {...}}``; what it did not say is taken from the old cabinets of the same storey. ``models``:
     models to keep per kind of appliance (``kept_models``)."""
     slots = {s.run: s for s in run_slots(spec, mods)}
-    old = _inherited(spec, mods)
+    old = _inherited(spec, mods, catalog)
     corner: list[tuple[str, float, float, float, float]] = []     # (run, s0, s1, y0, y1) the corner shelves keep: nothing new goes there
     for m in mods:
         if m.type == "corner-shelf" and m.run:
@@ -280,7 +267,7 @@ def relayout_ops(spec: KitchenSpec, mods: list[Module], laid: dict[str, list[Lai
         if models:
             modules = _make_room(modules, models, catalog)
         for m in sorted(modules, key=lambda item: item["s"]):
-            storey = storey_of(str(m["type"]))
+            storey = cabinet_types.storey_of(str(m["type"]), catalog)
             hood = m["type"] == "upper-hood"             # the hood always stands over the hob (rule of 10/11/2026), wall cabinets or not
             if not hood and (storey in refused or (storey not in slot.storeys and storey not in ("base", "tall") and storey not in asked)):
                 dropped[storey] += 1
@@ -309,10 +296,10 @@ def relayout_ops(spec: KitchenSpec, mods: list[Module], laid: dict[str, list[Lai
             mats: dict[str, Any] = fronts.get("material") or {}
             front = mats.get(storey) or mats.get("base" if storey == "tall" else storey)
             keep = old.get(storey, {})
-            if m["type"] not in FRONTLESS:
+            if not cabinet_types.frontless(str(m["type"]), catalog):
                 if front or keep.get("material"):
                     entry["material"] = front or keep["material"]
-                if "doorStyle" not in entry and keep.get("doorStyle") and m["type"] not in OWN_DOOR:
+                if "doorStyle" not in entry and keep.get("doorStyle") and not cabinet_types.own_door(str(m["type"]), catalog):
                     entry["doorStyle"] = keep["doorStyle"]
                 handle = fronts.get("handle") or keep.get("handle")
                 if handle:

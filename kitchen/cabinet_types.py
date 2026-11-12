@@ -16,7 +16,7 @@ a formula that does not compile stops the catalog with the type, the step and th
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any, Protocol
 
 from . import builtin
@@ -57,6 +57,12 @@ class CabinetType:
     builder: str                                       # "" = the steps below
     lets: tuple[tuple[str, expr.Formula], ...]
     steps: tuple[Step, ...]
+    frontless: bool = False        # no doors or drawer fronts: no front material, door style or handle
+    own_door: bool = False         # its door style is its own (glass): a restyle leaves it
+    front_style: str = "slab"      # the door style the 3D file says when the design names none
+    plain_type: str = ""           # what it becomes in the other runs of a relayout (sink cabinet -> plain base); "" = itself
+    main_run_only: bool = False    # left out of the other runs of a relayout (the fridge cabinet)
+    export_type: str = ""          # moduleType in the 3D file; "" = by storey
 
 
 class Emit(Protocol):
@@ -138,13 +144,20 @@ def _compile(type_id: str, data: Mapping[str, Any], raw: Mapping[str, Mapping[st
         if like in seen or like not in raw:
             raise InvalidInput(f"cabinet type {type_id}: like {like!r} is missing or loops", code="cabinet-type-like", params={"type": type_id, "like": like})
         base = _compile(str(like), raw[str(like)], raw, (*seen, type_id))
-        return CabinetType(type_id, str(data.get("storey") or base.storey), base.builder, base.lets, base.steps)
+        return _with_props(CabinetType(type_id, str(data.get("storey") or base.storey), base.builder, base.lets, base.steps), data)
     builder = str(data.get("builder") or "")
     if builder and builder not in BUILDERS:
         raise InvalidInput(f"cabinet type {type_id}: unknown builder {builder!r}", code="cabinet-type-step", params={"type": type_id, "where": "builder"})
     names = {v: expr.NUM for v in VARIABLES}
     lets = _lets(type_id, "", data.get("let"), names)
-    return CabinetType(type_id, str(data.get("storey") or "base"), builder, lets, _steps(type_id, "", data.get("parts"), names))
+    return _with_props(CabinetType(type_id, str(data.get("storey") or "base"), builder, lets, _steps(type_id, "", data.get("parts"), names)), data)
+
+
+def _with_props(t: CabinetType, data: Mapping[str, Any]) -> CabinetType:
+    """The properties other code reads (not the steps): each type says its own, ``like`` does not pass them on."""
+    return replace(t, frontless=bool(data.get("frontless", False)), own_door=bool(data.get("ownDoor", False)),
+                   front_style=str(data.get("frontStyle") or "slab"), plain_type=str(data.get("plainType") or ""),
+                   main_run_only=bool(data.get("mainRunOnly", False)), export_type=str(data.get("exportType") or ""))
 
 
 def _table(catalog: Catalog) -> dict[str, CabinetType]:
@@ -162,6 +175,29 @@ def of(type_id: str, catalog: Catalog = builtin.CATALOG) -> CabinetType:
     if t is None:
         raise InvalidInput(f"Unknown cabinet type {type_id!r}", code="unknown-cabinet-type", params={"type": type_id})
     return t
+
+
+def get(type_id: str, catalog: Catalog = builtin.CATALOG) -> CabinetType | None:
+    """The type ``type_id``, None when the catalog has none."""
+    return table(catalog).get(type_id)
+
+
+def storey_of(type_id: str, catalog: Catalog = builtin.CATALOG) -> str:
+    """The storey of a cabinet type (base, upper, loft, tall, corner); an unknown type by its name (``tall...``, ``upper...``, else base)."""
+    t = get(type_id, catalog)
+    if t is not None:
+        return t.storey
+    return "tall" if type_id.startswith("tall") else "upper" if type_id.startswith("upper") else "base"
+
+
+def frontless(type_id: str, catalog: Catalog = builtin.CATALOG) -> bool:
+    t = get(type_id, catalog)
+    return t is not None and t.frontless
+
+
+def own_door(type_id: str, catalog: Catalog = builtin.CATALOG) -> bool:
+    t = get(type_id, catalog)
+    return t is not None and t.own_door
 
 
 def _num(f: expr.Formula, env: Mapping[str, expr.Value]) -> float:
