@@ -1054,5 +1054,6 @@ export default {
  "catalog.type.col.d0": "Sâu từ",
  "catalog.type.col.d1": "đến",
  "catalog.type.col.y0": "Cao từ",
- "catalog.type.col.y1": "đến"
+ "catalog.type.col.y1": "đến",
+ "catalog.type.prompt": "Tên tiếng Anh cho ảnh AI"
 };

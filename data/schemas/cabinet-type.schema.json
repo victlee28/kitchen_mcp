@@ -204,6 +204,14 @@
     "vi": "Loại trong file 3D (moduleType)",
     "en": "Type in the 3D file (moduleType)"
    }
+  },
+  "prompt": {
+   "type": "string",
+   "minLength": 1,
+   "x-label": {
+    "vi": "Tên tiếng Anh cho ảnh AI",
+    "en": "English name for the AI image"
+   }
   }
  }
 }

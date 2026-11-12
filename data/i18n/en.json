@@ -1053,5 +1053,6 @@
  "catalog.type.col.d0": "Depth from",
  "catalog.type.col.d1": "to",
  "catalog.type.col.y0": "Height from",
- "catalog.type.col.y1": "to"
+ "catalog.type.col.y1": "to",
+ "catalog.type.prompt": "English name for the AI image"
 }

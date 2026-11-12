@@ -65,6 +65,8 @@ class CabinetType:
     plain_type: str = ""           # what it becomes in the other runs of a relayout (sink cabinet -> plain base); "" = itself
     main_run_only: bool = False    # left out of the other runs of a relayout (the fridge cabinet)
     export_type: str = ""          # moduleType in the 3D file; "" = by storey
+    prompt: str = ""               # what the AI image instructions call it ("sink base cabinet"); "" = "cabinet module"
+    label: str = ""                # its name for people (Vietnamese; the catalog has the other languages)
 
 
 class Emit(Protocol):
@@ -160,7 +162,8 @@ def _with_props(t: CabinetType, data: Mapping[str, Any]) -> CabinetType:
     """The properties other code reads (not the steps): each type says its own, ``like`` does not pass them on."""
     return replace(t, frontless=bool(data.get("frontless", False)), own_door=bool(data.get("ownDoor", False)),
                    front_style=str(data.get("frontStyle") or "slab"), plain_type=str(data.get("plainType") or ""),
-                   main_run_only=bool(data.get("mainRunOnly", False)), export_type=str(data.get("exportType") or ""))
+                   main_run_only=bool(data.get("mainRunOnly", False)), export_type=str(data.get("exportType") or ""),
+                   prompt=str(data.get("prompt") or ""), label=str((as_dict(data.get("label")) or {}).get("vi") or ""))
 
 
 def _table(catalog: Catalog) -> dict[str, CabinetType]:

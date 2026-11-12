@@ -101,7 +101,7 @@ export function openTypeEditor(container, { item, copy = '', onSaved, onError })
   const labelVi = input(data.label?.vi, 24, 'vi'), labelEn = input(data.label?.en, 24, 'en');
   const checks = ['frontless', 'ownDoor', 'mainRunOnly'].map((k) => [k, el('input', { type: 'checkbox', checked: !!data[k] })]);
   const frontStyle = select(FRONT_STYLES, data.frontStyle || 'slab');
-  const plainType = input(data.plainType, 14), exportType = input(data.exportType, 16);
+  const plainType = input(data.plainType, 14), exportType = input(data.exportType, 16), prompt = input(data.prompt, 32, 'sink base cabinet');
   const lets = el('textarea', { value: letsText(data.let), rows: 3, cols: 70 });
   const table = data.like || data.builder ? null : stepTable(data.parts);
   const views = el('div', { className: 'row' });
@@ -111,7 +111,7 @@ export function openTypeEditor(container, { item, copy = '', onSaved, onError })
     const out = { ...data, storey: storey.value, label: { vi: labelVi.value.trim(), ...(labelEn.value.trim() ? { en: labelEn.value.trim() } : {}) } };
     for (const [k, c] of checks) { if (c.checked) out[k] = true; else delete out[k]; }
     if (frontStyle.value !== 'slab') out.frontStyle = frontStyle.value; else delete out.frontStyle;
-    for (const [k, x] of [['plainType', plainType], ['exportType', exportType]]) { if (x.value.trim()) out[k] = x.value.trim(); else delete out[k]; }
+    for (const [k, x] of [['plainType', plainType], ['exportType', exportType], ['prompt', prompt]]) { if (x.value.trim()) out[k] = x.value.trim(); else delete out[k]; }
     const l = letsOf(lets.value);
     if (Object.keys(l).length) out.let = l; else delete out.let;
     if (table) out.parts = table.read();
@@ -135,7 +135,7 @@ export function openTypeEditor(container, { item, copy = '', onSaved, onError })
     field('id', id, el('small', { className: 'muted', textContent: t('catalog.type.idRule') })),
     field('storey', storey), field('label', labelVi, labelEn),
     el('p', { className: 'row' }, ...checks.map(([k, c]) => el('label', { className: 'row' }, c, t('catalog.type.' + k)))),
-    field('frontStyle', frontStyle), field('plainType', plainType), field('exportType', exportType),
+    field('frontStyle', frontStyle), field('plainType', plainType), field('exportType', exportType), field('prompt', prompt),
     ...(data.like ? [el('p', { textContent: t('catalog.type.likeNote', { 0: data.like }) })] : []),
     ...(data.builder ? [el('p', { textContent: t('catalog.type.builderNote', { 0: data.builder }) })] : []),
     ...(table ? [field('let', lets), el('p', { className: 'muted', textContent: t('catalog.type.variables') + ': ' + VARIABLES }), table.node] : []),

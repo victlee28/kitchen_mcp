@@ -16,6 +16,8 @@ from . import edit, geometry, handles, imaging, layers, vocab
 from .spec import KitchenSpec
 from .errors import InvalidInput
 from .words import say
+from . import builtin, cabinet_types
+from .catalog import Catalog
 
 # ------------------------------------------------------------------ bảng thao tác
 # Default prompt intent by operation. Provider-specific options are not stored here.
@@ -23,19 +25,22 @@ OPERATIONS = {op: {"name": say(f"name.operation.{op}"), "kind": kind, "descripti
               for op, kind in (("change-material", "edit"), ("replace-item", "geometry_edit"), ("remove-item", "geometry_edit"),
                                ("add-item", "geometry_edit"), ("change-style", "gen0"))}
 
-_TYPE_EN = {"base": "base cabinet", "base-sink": "sink base cabinet", "base-corner-sink": "corner sink base cabinet",
-            "base-cooktop": "cooktop base cabinet", "base-oven": "oven base cabinet", "base-end": "end base cabinet",
-            "base-drawers": "drawer base cabinet", "upper": "wall cabinet", "upper-glass": "glass wall cabinet", "upper-open": "open shelving unit",
-            "upper-hood": "range hood wall cabinet", "upper-loft": "top-row wall cabinet", "tall-fridge": "tall fridge cabinet",
-            "tall": "tall cabinet", "corner-shelf": "corner open shelf"}
 _HANDLE_EN = {"bar": "slim bar pull handles", "knob": "round knob handles", "concealed": "recessed finger-pull handles",
            "none": "handleless push-to-open fronts (no handles)"}
 _DOOR_EN = {"flat": "flat slab doors", "frame": "shaker-style framed doors (recessed center panel)", "glass": "glass-front doors"}
 _DOOR_VI = {"flat": "cánh phẳng", "frame": "cánh khung (shaker)", "glass": "cánh kính"}
 
 
-def module_en(m) -> str:
-    return _TYPE_EN.get(m.type, "cabinet module")
+def module_en(m, catalog: Catalog = builtin.CATALOG) -> str:
+    """What the AI image instructions call cabinet ``m``: its type's ``prompt`` (catalog kind ``cabinet-type``)."""
+    t = cabinet_types.get(m.type, catalog)
+    return t.prompt if t is not None and t.prompt else "cabinet module"
+
+
+def type_label(type_id: str, catalog: Catalog = builtin.CATALOG) -> str:
+    """A cabinet type's name for people (its catalog label), else its id."""
+    t = cabinet_types.get(type_id, catalog)
+    return t.label if t is not None and t.label else type_id
 
 
 def build_ops(spec: KitchenSpec, items: list[dict]) -> tuple[list[dict], list[dict], str]:
@@ -60,7 +65,7 @@ def build_ops(spec: KitchenSpec, items: list[dict]) -> tuple[list[dict], list[di
         if k == "remove-module":
             m = cur.find(str(it.get("id")))
             op = {"op": "remove", "id": m.id, "closeGap": bool(it.get("closeGap", False))}
-            d = {"vi": f"xóa {m.id} ({m.name or m.type})", "en": f"remove the {module_en(m)}", "operation": "remove-item"}
+            d = {"vi": f"xóa {m.id} ({m.name or type_label(m.type)})", "en": f"remove the {module_en(m)}", "operation": "remove-item"}
         elif k == "add-module":
             mod = it.get("module") or {}
             op = {"op": "add", "module": mod, "afterModule": it.get("afterModule"), "closeGap": bool(it.get("closeGap", True))}
@@ -69,7 +74,7 @@ def build_ops(spec: KitchenSpec, items: list[dict]) -> tuple[list[dict], list[di
             m = next(x for x in nxt.module if x.id not in before)          # the new cabinet (its id is made by add when none is given)
             material_text = layers.material_slot(nxt, m.id, "door")[1]
             face_en = vocab.to_english(material_text or "")
-            d = {"vi": f"thêm {m.id} ({m.type})", "en": f"add a new {module_en(m)}" + (f" with {face_en} fronts" if face_en else ""),
+            d = {"vi": f"thêm {m.id} ({type_label(m.type)})", "en": f"add a new {module_en(m)}" + (f" with {face_en} fronts" if face_en else ""),
                  "operation": "add-item"}
         elif k == "door-style":
             variant = it.get("variant")
