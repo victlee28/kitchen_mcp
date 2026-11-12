@@ -133,5 +133,24 @@
    "workshop"
   ],
   "closed": true
+ },
+ "knowledge": {
+  "label": {
+   "vi": "Tri thức & tiêu chuẩn",
+   "en": "Knowledge & standards"
+  },
+  "writers": [
+   "workshop"
+  ],
+  "refs": [
+   [
+    "region",
+    "region"
+   ],
+   [
+    "metadata.sourceType",
+    "source-type"
+   ]
+  ]
  }
 }

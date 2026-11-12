@@ -1,0 +1,742 @@
+[
+ {
+  "id": "KITCHEN-DEFAULT-001",
+  "kind": "standard",
+  "title": "Kích thước công thái học",
+  "content": "Chiều cao mặt bàn tham chiếu 850-950 mm; chiều sâu tủ dưới 580-650 mm.",
+  "sourceUrl": "",
+  "region": "GLOBAL",
+  "country": "",
+  "metadata": {
+   "source": "Mục mẫu ban đầu, nguồn example.com là placeholder",
+   "sourceType": "unknown",
+   "validation": [
+    "countertop-height",
+    "base-depth"
+   ],
+   "params": {
+    "countertop_min": 850,
+    "countertop_max": 950,
+    "baseDepth_min": 580,
+    "baseDepth_max": 650
+   }
+  }
+ },
+ {
+  "id": "SAFETY-001",
+  "kind": "rule",
+  "title": "Khoảng cách bếp và chậu",
+  "content": "Không đặt bếp sát chậu rửa; nên có vùng thao tác tối thiểu 300 mm giữa chúng.",
+  "sourceUrl": "",
+  "region": "GLOBAL",
+  "country": "",
+  "metadata": {
+   "source": "Mục mẫu ban đầu, nguồn example.com là placeholder",
+   "sourceType": "unknown",
+   "validation": [
+    "sink-cooktop"
+   ],
+   "params": {
+    "sink_cooktop_min": 300
+   }
+  }
+ },
+ {
+  "id": "CLEARANCE-001",
+  "kind": "rule",
+  "title": "Lối đi",
+  "content": "Lối đi thao tác tối thiểu 900 mm; hai dãy tủ đối diện nên có tối thiểu 1100 mm.",
+  "sourceUrl": "",
+  "region": "GLOBAL",
+  "country": "",
+  "metadata": {
+   "source": "Mục mẫu ban đầu, nguồn example.com là placeholder",
+   "sourceType": "unknown",
+   "validation": [
+    "walkway"
+   ],
+   "params": {
+    "walkway_min": 900,
+    "twoRows_min": 1100
+   }
+  }
+ },
+ {
+  "id": "NKBA-03",
+  "kind": "rule",
+  "title": "Tam giác làm việc (NKBA)",
+  "content": "Tổng 3 cạnh chậu – bếp – tủ lạnh ≤ 7925 mm (26 ft); mỗi cạnh 1219–2743 mm (4–9 ft); cạnh không cắt qua đảo quá 305 mm.",
+  "sourceUrl": "https://kb.nkba.org/uploads/2022/05/Kitchen-Planning-Guidelines.pdf",
+  "region": "NA",
+  "country": "US,CA",
+  "metadata": {
+   "source": "NKBA Kitchen Planning Guidelines",
+   "sourceType": "recommended",
+   "validation": [
+    "triangle"
+   ],
+   "params": {
+    "door_min": 1219,
+    "door_max": 2743,
+    "total_max": 7925
+   }
+  }
+ },
+ {
+  "id": "NKBA-06",
+  "kind": "rule",
+  "title": "Lối đi làm việc (NKBA)",
+  "content": "Lối đi làm việc ≥ 1067 mm (42 in) cho 1 người nấu, ≥ 1219 mm (48 in) cho nhiều người.",
+  "sourceUrl": "https://kb.nkba.org/uploads/2022/05/Kitchen-Planning-Guidelines.pdf",
+  "region": "NA",
+  "country": "US,CA",
+  "metadata": {
+   "source": "NKBA Kitchen Planning Guidelines",
+   "sourceType": "recommended",
+   "validation": [
+    "walkway"
+   ],
+   "params": {
+    "walkway_min": 1067,
+    "walkway_multiPerson": 1219
+   }
+  }
+ },
+ {
+  "id": "NKBA-07",
+  "kind": "rule",
+  "title": "Lối đi qua lại (NKBA)",
+  "content": "Lối đi qua lại ≥ 914 mm (36 in).",
+  "sourceUrl": "https://kb.nkba.org/uploads/2022/05/Kitchen-Planning-Guidelines.pdf",
+  "region": "NA",
+  "country": "US,CA",
+  "metadata": {
+   "source": "NKBA Kitchen Planning Guidelines",
+   "sourceType": "recommended",
+   "params": {
+    "passage_min": 914
+   }
+  }
+ },
+ {
+  "id": "NKBA-10",
+  "kind": "rule",
+  "title": "Mặt bàn hai bên chậu (NKBA)",
+  "content": "Mặt bàn trống ≥ 610 mm (24 in) một bên và ≥ 457 mm (18 in) bên kia chậu chính.",
+  "sourceUrl": "https://kb.nkba.org/uploads/2022/05/Kitchen-Planning-Guidelines.pdf",
+  "region": "NA",
+  "country": "US,CA",
+  "metadata": {
+   "source": "NKBA Kitchen Planning Guidelines",
+   "sourceType": "recommended",
+   "validation": [
+    "sink-table"
+   ],
+   "params": {
+    "larger_side": 610,
+    "smaller_side": 457
+   }
+  }
+ },
+ {
+  "id": "NKBA-11",
+  "kind": "rule",
+  "title": "Vị trí máy rửa bát (NKBA)",
+  "content": "Máy rửa bát cách chậu ≤ 914 mm (36 in); chừa ≥ 533 mm (21 in) chỗ đứng.",
+  "sourceUrl": "https://kb.nkba.org/uploads/2022/05/Kitchen-Planning-Guidelines.pdf",
+  "region": "NA",
+  "country": "US,CA",
+  "metadata": {
+   "source": "NKBA Kitchen Planning Guidelines",
+   "sourceType": "recommended",
+   "params": {
+    "sink_distance_max": 914,
+    "standing_space_min": 533
+   }
+  }
+ },
+ {
+  "id": "NKBA-14",
+  "kind": "rule",
+  "title": "Mặt bàn cạnh tủ lạnh (NKBA)",
+  "content": "Có mặt bàn ≥ 381 mm (15 in) phía tay nắm tủ lạnh.",
+  "sourceUrl": "https://kb.nkba.org/uploads/2022/05/Kitchen-Planning-Guidelines.pdf",
+  "region": "NA",
+  "country": "US,CA",
+  "metadata": {
+   "source": "NKBA Kitchen Planning Guidelines",
+   "sourceType": "recommended",
+   "validation": [
+    "fridge-table"
+   ],
+   "params": {
+    "floor_min": 381
+   }
+  }
+ },
+ {
+  "id": "NKBA-15",
+  "kind": "rule",
+  "title": "Mặt bàn hai bên bếp (NKBA)",
+  "content": "Mặt bàn trống ≥ 381 mm (15 in) một bên và ≥ 305 mm (12 in) bên kia bếp.",
+  "sourceUrl": "https://kb.nkba.org/uploads/2022/05/Kitchen-Planning-Guidelines.pdf",
+  "region": "NA",
+  "country": "US,CA",
+  "metadata": {
+   "source": "NKBA Kitchen Planning Guidelines",
+   "sourceType": "recommended",
+   "validation": [
+    "cooktop-table"
+   ],
+   "params": {
+    "larger_side": 381,
+    "smaller_side": 305
+   }
+  }
+ },
+ {
+  "id": "NKBA-16",
+  "kind": "rule",
+  "title": "Khoảng trống trên bếp (NKBA)",
+  "content": "≥ 610 mm (24 in) tới bề mặt không cháy được bảo vệ; ≥ 762 mm (30 in) tới vật liệu cháy được khi không có hút mùi.",
+  "sourceUrl": "https://kb.nkba.org/uploads/2022/05/Kitchen-Planning-Guidelines.pdf",
+  "region": "NA",
+  "country": "US,CA",
+  "metadata": {
+   "source": "NKBA Kitchen Planning Guidelines",
+   "sourceType": "recommended",
+   "validation": [
+    "above-cooktop"
+   ],
+   "params": {
+    "no_hood_min": 762
+   }
+  }
+ },
+ {
+  "id": "NKBA-17",
+  "kind": "rule",
+  "title": "Thông gió bếp (NKBA)",
+  "content": "Hút mùi có ống thải ra ngoài, khuyến nghị ≥ 150 cfm (~255 m³/h); > 400 cfm cần bù gió.",
+  "sourceUrl": "https://kb.nkba.org/uploads/2022/05/Kitchen-Planning-Guidelines.pdf",
+  "region": "NA",
+  "country": "US,CA",
+  "metadata": {
+   "source": "NKBA Kitchen Planning Guidelines",
+   "sourceType": "recommended",
+   "params": {
+    "flow_min_cfm": 150
+   }
+  }
+ },
+ {
+  "id": "NKBA-18",
+  "kind": "rule",
+  "title": "An toàn bếp (NKBA)",
+  "content": "Không đặt bếp dưới cửa sổ mở được; bình chữa cháy cao 381–1219 mm.",
+  "sourceUrl": "https://kb.nkba.org/uploads/2022/05/Kitchen-Planning-Guidelines.pdf",
+  "region": "NA",
+  "country": "US,CA",
+  "metadata": {
+   "source": "NKBA Kitchen Planning Guidelines",
+   "sourceType": "recommended"
+  }
+ },
+ {
+  "id": "NKBA-19",
+  "kind": "rule",
+  "title": "Vị trí lò vi sóng (NKBA)",
+  "content": "Đáy lò ≤ 1372 mm (54 in); đặt dưới mặt bàn thì đáy ≥ 381 mm (15 in).",
+  "sourceUrl": "https://kb.nkba.org/uploads/2022/05/Kitchen-Planning-Guidelines.pdf",
+  "region": "NA",
+  "country": "US,CA",
+  "metadata": {
+   "source": "NKBA Kitchen Planning Guidelines",
+   "sourceType": "recommended",
+   "validation": [
+    "microwave"
+   ],
+   "params": {
+    "gap_under_countertop_min": 381,
+    "bottom_max": 1372
+   }
+  }
+ },
+ {
+  "id": "NKBA-21",
+  "kind": "rule",
+  "title": "Gộp mặt bàn thao tác (NKBA)",
+  "content": "Hai vùng mặt bàn liền nhau: lấy yêu cầu lớn hơn rồi cộng 305 mm.",
+  "sourceUrl": "https://kb.nkba.org/uploads/2022/05/Kitchen-Planning-Guidelines.pdf",
+  "region": "NA",
+  "country": "US,CA",
+  "metadata": {
+   "source": "NKBA Kitchen Planning Guidelines",
+   "sourceType": "recommended",
+   "params": {
+    "extra": 305
+   }
+  }
+ },
+ {
+  "id": "NKBA-22",
+  "kind": "standard",
+  "title": "Mặt bàn (NKBA)",
+  "content": "Tổng mặt bàn ≥ 4013 mm, sâu ≥ 610 mm, khoảng trống phía trên ≥ 381 mm tới tủ trên.",
+  "sourceUrl": "https://kb.nkba.org/uploads/2022/05/Kitchen-Planning-Guidelines.pdf",
+  "region": "NA",
+  "country": "US,CA",
+  "metadata": {
+   "source": "NKBA Kitchen Planning Guidelines",
+   "sourceType": "recommended",
+   "validation": [
+    "upper-gap"
+   ],
+   "params": {
+    "upper_gap_min": 381,
+    "total_length_min": 4013
+   }
+  }
+ },
+ {
+  "id": "EN-1116",
+  "kind": "standard",
+  "title": "Kích thước phối hợp tủ bếp (EN 1116:2018)",
+  "content": "Chiều cao mặt bàn 850, 900 hoặc 950 mm; mặt bàn sâu ≥ 600 mm; tủ treo sâu 310–400 mm; mặt bàn tới đáy tủ treo ≥ 450 mm; chân tủ ≥ 80 mm; bề rộng module danh nghĩa 400, 500, 600, 900 mm. Khoảng cách bếp – máy hút mùi theo nhà sản xuất.",
+  "sourceUrl": "https://catas.com/uploads/media/unien1116-eng.pdf",
+  "region": "EU",
+  "country": "",
+  "metadata": {
+   "source": "Tóm tắt UNI EN 1116:2018 (CATAS)",
+   "sourceType": "standard",
+   "validation": [
+    "countertop-height",
+    "countertop-depth",
+    "upper-depth",
+    "upper-gap",
+    "cabinet-plinth"
+   ],
+   "params": {
+    "countertop_min": 850,
+    "countertop_max": 950,
+    "countertop_allowed": [
+     850,
+     900,
+     950
+    ],
+    "countertopDepth_min": 600,
+    "upperDepth_min": 310,
+    "upperDepth_max": 400,
+    "upper_gap_min": 450,
+    "plinthHeight_min": 80,
+    "module_width": [
+     400,
+     500,
+     600,
+     900
+    ]
+   }
+  }
+ },
+ {
+  "id": "APPLIANCE-OVEN-60",
+  "kind": "standard",
+  "title": "Lò âm tủ 60 cm – kích thước hốc (bảng thông số BSH/Neff)",
+  "content": "Lò âm tủ một khoang 60 cm: máy 595 × 594 × 548 mm (cao × rộng × sâu); hốc lắp cao 585–595, rộng 560–568, sâu 550 mm. Dùng làm kích thước mặc định khi thiết bị không ghi kích thước; khi thi công theo bảng thông số của đúng máy.",
+  "sourceUrl": "https://media3.bsh-group.com/Documents/specsheet/en-IE/B3ACE4AG3B.pdf",
+  "region": "GLOBAL",
+  "country": "",
+  "metadata": {
+   "source": "BSH (Neff B3ACE4AG3B, bảng thông số nhà sản xuất)",
+   "sourceType": "practice",
+   "params": {
+    "niche_width": 560,
+    "niche_height": 590,
+    "niche_depth": 550,
+    "face_width": 594,
+    "face_height": 595
+   }
+  }
+ },
+ {
+  "id": "APPLIANCE-OVEN-45",
+  "kind": "standard",
+  "title": "Lò âm tủ compact 45 cm – kích thước hốc (danh mục bán lẻ)",
+  "content": "Lò compact âm tủ: hốc lắp tối thiểu rộng 560, cao 450, sâu 550 mm. Dùng làm kích thước mặc định khi hốc không đủ cao cho lò 60 cm.",
+  "sourceUrl": "https://www.mediamarkt.nl/en/category/built-in-ovens-82.html",
+  "region": "GLOBAL",
+  "country": "",
+  "metadata": {
+   "source": "MediaMarkt (thông số hốc tối thiểu ghi theo từng máy)",
+   "sourceType": "practice",
+   "params": {
+    "niche_width": 560,
+    "niche_height": 450,
+    "niche_depth": 550
+   }
+  }
+ },
+ {
+  "id": "HOOD-001",
+  "kind": "rule",
+  "title": "Máy hút mùi – mặt bếp (Rangemaster)",
+  "content": "Đáy máy hút mùi cách mặt bếp tối thiểu khoảng 650 mm (điện và gas; 670 mm nếu có tấm chắn sau). Ưu tiên hướng dẫn lắp của máy.",
+  "sourceUrl": "https://www.rangemaster.co.uk/what-clearances-are-required-between-cooker-top-and-cooker-hood",
+  "region": "EU",
+  "country": "GB",
+  "metadata": {
+   "source": "Rangemaster (nhà sản xuất)",
+   "sourceType": "recommended",
+   "validation": [
+    "hood"
+   ],
+   "params": {
+    "gap_min": 650
+   }
+  }
+ },
+ {
+  "id": "DIN-18040-2",
+  "kind": "rule",
+  "title": "Bếp tiếp cận được (DIN 18040-2)",
+  "content": "Nhà ở không rào cản: trước dãy bếp có vùng di chuyển sâu ≥ 1200 mm; trong phòng có ít nhất một vùng 1200 × 1200 mm. Chiều cao mặt bàn, tủ trên và thiết bị theo nhu cầu người dùng.",
+  "sourceUrl": "https://www.agsv.bayern.de/wp-content/uploads/2018/07/obb_faltblatt_barrierefr_wohnen.pdf",
+  "region": "EU",
+  "country": "DE",
+  "metadata": {
+   "source": "Tóm tắt DIN 18040-2 (AGSV Bayern)",
+   "sourceType": "standard",
+   "apply": "nhà ở tiếp cận được (người cao tuổi, xe lăn)",
+   "params": {
+    "walkway_accessible_min": 1200
+   }
+  }
+ },
+ {
+  "id": "AS-NZS-5601-1",
+  "kind": "rule",
+  "title": "Khoảng trống trên bếp gas (AS/NZS 5601.1:2022)",
+  "content": "Lắp mới: máy hút mùi cách đỉnh kiềng ≥ 650 mm (nếu nhà sản xuất yêu cầu lớn hơn thì theo nhà sản xuất); quạt hút ≥ 750 mm; bề mặt cháy được hướng xuống thấp hơn 650 mm phải bảo vệ theo Phụ lục C; mọi bề mặt ≥ 450 mm. Lắp đặt cũ theo bản 2013: 600 mm.",
+  "sourceUrl": "https://energysafe.vic.gov.au/industry-guidance/gas/gas-information-sheets/gis-25-domestic-gas-cooking-appliance-overhead",
+  "region": "OC",
+  "country": "AU,NZ",
+  "metadata": {
+   "source": "Energy Safe Victoria GIS 25",
+   "sourceType": "mandatory",
+   "apply": "bếp gas",
+   "validation": [
+    "hood",
+    "above-cooktop"
+   ],
+   "params": {
+    "gap_min": 650,
+    "no_hood_min": 650,
+    "absolute_min": 450
+   }
+  }
+ },
+ {
+  "id": "GB-55038-2025",
+  "kind": "rule",
+  "title": "Quy phạm dự án nhà ở – bếp (GB 55038-2025)",
+  "content": "Bếp: diện tích sử dụng ≥ 3,5 m²; chiều cao thông thủy ≥ 2,20 m; cửa bếp thông thủy ≥ 0,70 m; lối vào thông thủy ≥ 0,90 m; thông gió tự nhiên ≥ 10% diện tích sàn và ≥ 0,60 m²; có chiếu sáng tự nhiên trực tiếp; không đặt bếp ở tầng hầm. Hiệu lực 01/05/2025.",
+  "sourceUrl": "https://ghzrzyw.beijing.gov.cn/biaozhunguanli/bzzl/202506/P020250609570099619169.pdf",
+  "region": "EA",
+  "country": "CN",
+  "metadata": {
+   "source": "GB 55038-2025 (trích, Bắc Kinh)",
+   "sourceType": "mandatory",
+   "validation": [
+    "clear-height"
+   ],
+   "params": {
+    "ceiling_min": 2200,
+    "area_min_m2": 3.5,
+    "window_min": 700
+   }
+  }
+ },
+ {
+  "id": "T-CHEAA-TAM-GIAC",
+  "kind": "rule",
+  "title": "Tam giác làm việc (T/CHEAA, dự thảo)",
+  "content": "Chậu, bếp, tủ lạnh tạo tam giác có tổng ba cạnh không quá 6 m. Tủ treo chứa thiết bị sâu lọt lòng ≥ 310 mm.",
+  "sourceUrl": "https://www.cheaa.org/upload/files/2018/7/30152038804.pdf",
+  "region": "EA",
+  "country": "CN",
+  "metadata": {
+   "source": "Dự thảo tiêu chuẩn hội CHEAA về kích thước thiết bị bếp âm tủ",
+   "sourceType": "recommended",
+   "validation": [
+    "triangle"
+   ],
+   "params": {
+    "door_min": 0,
+    "door_max": 6000,
+    "total_max": 6000
+   }
+  }
+ },
+ {
+  "id": "QCVN-04-2021-BEP",
+  "kind": "rule",
+  "title": "QCVN 04:2021/BXD – bếp trong nhà chung cư",
+  "content": "Không bố trí bếp trong văn phòng kết hợp lưu trú (officetel). Chưa tìm thấy TCVN/QCVN quy định kích thước tủ bếp.",
+  "sourceUrl": "https://vksndtc.gov.vn/tin-tong-hop/quy-chuan-ky-thuat-quoc-gia-ve-nha-chung-cu-d8-t9233.html?Page=1",
+  "region": "SEA",
+  "country": "VN",
+  "metadata": {
+   "source": "QCVN 04:2021/BXD (tin VKSNDTC)",
+   "sourceType": "mandatory"
+  }
+ },
+ {
+  "id": "VN-KITCHEN-COMMON-PRACTICE",
+  "kind": "standard",
+  "title": "Kích thước tủ bếp phổ biến tại Việt Nam",
+  "content": "Kinh nghiệm thị trường, không phải TCVN: mặt bàn cao 800–850 mm; tủ dưới sâu 560–600 mm; tủ trên sâu 300–350 mm; mặt bàn tới đáy tủ trên 600–650 mm (khoảng 500–700); chân tủ 90–100 mm; vùng bếp – hút mùi 650–700 mm.",
+  "sourceUrl": "https://meta.vn/hotro/kich-thuoc-tu-bep-tieu-chuan-21437",
+  "region": "SEA",
+  "country": "VN",
+  "metadata": {
+   "source": "META.vn (bài hướng dẫn)",
+   "sourceType": "practice",
+   "validation": [
+    "countertop-height",
+    "base-depth",
+    "upper-depth",
+    "upper-gap",
+    "cabinet-plinth",
+    "hood"
+   ],
+   "params": {
+    "countertop_min": 800,
+    "countertop_max": 850,
+    "baseDepth_min": 560,
+    "baseDepth_max": 600,
+    "upperDepth_min": 300,
+    "upperDepth_max": 350,
+    "upper_gap_min": 500,
+    "upper_gap_max": 700,
+    "plinthHeight_min": 90,
+    "plinthHeight_max": 100,
+    "gap_min": 650
+   }
+  }
+ },
+ {
+  "id": "MAT-WOOD-OAK",
+  "kind": "material",
+  "title": "Oak sáng",
+  "content": "Ván oak sáng, matte",
+  "sourceUrl": "https://images.unsplash.com/photo-1556912173-46c336c7fd55",
+  "region": "GLOBAL",
+  "country": "",
+  "metadata": {
+   "source": "Mục mẫu ban đầu (ảnh minh họa)",
+   "sourceType": "unknown"
+  }
+ },
+ {
+  "id": "MAT-WHITE-MATTE",
+  "kind": "material",
+  "title": "Trắng mờ",
+  "content": "Sơn/laminate trắng mờ",
+  "sourceUrl": "https://images.unsplash.com/photo-1556912167-f556f1f39fdf",
+  "region": "GLOBAL",
+  "country": "",
+  "metadata": {
+   "source": "Mục mẫu ban đầu (ảnh minh họa)",
+   "sourceType": "unknown"
+  }
+ },
+ {
+  "id": "MAT-GRANITE-DARK",
+  "kind": "material",
+  "title": "Đá granite tối",
+  "content": "Mặt bàn đá granite xám đậm",
+  "sourceUrl": "https://images.unsplash.com/photo-1556911220-e15b29be8c8f",
+  "region": "GLOBAL",
+  "country": "",
+  "metadata": {
+   "source": "Mục mẫu ban đầu (ảnh minh họa)",
+   "sourceType": "unknown"
+  }
+ },
+ {
+  "id": "MAT-MDF-HMR",
+  "kind": "material",
+  "title": "MDF lõi xanh chống ẩm (HMR)",
+  "content": "Ván sợi có phụ gia chống ẩm cho thùng và cánh; chịu ẩm hơn MDF thường, không chịu ngâm nước; cần dán cạnh kín.",
+  "sourceUrl": "",
+  "region": "GLOBAL",
+  "country": "",
+  "metadata": {
+   "source": "Mô tả chung, cần đối chiếu catalogue nhà cung cấp",
+   "sourceType": "practice",
+   "usedFor": [
+    "carcass",
+    "door"
+   ],
+   "color": "#d9c3a0"
+  }
+ },
+ {
+  "id": "MAT-PLYWOOD",
+  "kind": "material",
+  "title": "Ván dán (plywood)",
+  "content": "Gỗ lạng ép chéo nhiều lớp; bắt vít chắc, chịu ẩm khá; hay dùng cho thùng tủ chậu.",
+  "sourceUrl": "",
+  "region": "GLOBAL",
+  "country": "",
+  "metadata": {
+   "source": "Mô tả chung, cần đối chiếu catalogue nhà cung cấp",
+   "sourceType": "practice",
+   "usedFor": [
+    "carcass"
+   ],
+   "color": "#cfae7e"
+  }
+ },
+ {
+  "id": "MAT-MFC",
+  "kind": "material",
+  "title": "Ván dăm phủ melamine (MFC)",
+  "content": "Giá thấp, nhiều màu; chịu nước kém, tránh khu chậu rửa.",
+  "sourceUrl": "",
+  "region": "GLOBAL",
+  "country": "",
+  "metadata": {
+   "source": "Mô tả chung, cần đối chiếu catalogue nhà cung cấp",
+   "sourceType": "practice",
+   "usedFor": [
+    "carcass",
+    "door"
+   ],
+   "color": "#e4d7c3"
+  }
+ },
+ {
+  "id": "MAT-PVC-FOAM",
+  "kind": "material",
+  "title": "Nhựa PVC foam",
+  "content": "Không sợ nước; cứng và giữ vít kém hơn gỗ công nghiệp; hợp tủ chậu.",
+  "sourceUrl": "",
+  "region": "GLOBAL",
+  "country": "",
+  "metadata": {
+   "source": "Mô tả chung, cần đối chiếu catalogue nhà cung cấp",
+   "sourceType": "practice",
+   "usedFor": [
+    "carcass",
+    "door"
+   ],
+   "color": "#f2f2f0"
+  }
+ },
+ {
+  "id": "MAT-ACRYLIC",
+  "kind": "material",
+  "title": "Cánh phủ Acrylic bóng",
+  "content": "Acrylic bóng gương trên cốt MDF; dễ lau; dễ lộ xước và vân tay.",
+  "sourceUrl": "",
+  "region": "GLOBAL",
+  "country": "",
+  "metadata": {
+   "source": "Mô tả chung, cần đối chiếu catalogue nhà cung cấp",
+   "sourceType": "practice",
+   "usedFor": [
+    "doors"
+   ],
+   "color": "#ffffff"
+  }
+ },
+ {
+  "id": "MAT-LAMINATE",
+  "kind": "material",
+  "title": "Phủ Laminate (HPL)",
+  "content": "Phủ áp lực cao, chịu xước và nhiệt tốt hơn melamine; nhiều vân gỗ/đá.",
+  "sourceUrl": "",
+  "region": "GLOBAL",
+  "country": "",
+  "metadata": {
+   "source": "Mô tả chung, cần đối chiếu catalogue nhà cung cấp",
+   "sourceType": "practice",
+   "usedFor": [
+    "door",
+    "carcass"
+   ],
+   "color": "#c8a273"
+  }
+ },
+ {
+  "id": "MAT-OAK-LOCAL",
+  "kind": "material",
+  "title": "Gỗ sồi tự nhiên",
+  "content": "Vân rõ, cứng; cần sơn phủ chống ẩm, có thể co ngót theo độ ẩm.",
+  "sourceUrl": "",
+  "region": "GLOBAL",
+  "country": "",
+  "metadata": {
+   "source": "Mô tả chung, cần đối chiếu catalogue nhà cung cấp",
+   "sourceType": "practice",
+   "usedFor": [
+    "door",
+    "shelf"
+   ],
+   "color": "#c49a6c"
+  }
+ },
+ {
+  "id": "MAT-STONE-QUARTZ",
+  "kind": "material",
+  "title": "Đá thạch anh nhân tạo (quartz)",
+  "content": "Ít thấm, màu đồng đều; không nên đặt nồi nóng trực tiếp.",
+  "sourceUrl": "",
+  "region": "GLOBAL",
+  "country": "",
+  "metadata": {
+   "source": "Mô tả chung, cần đối chiếu catalogue nhà cung cấp",
+   "sourceType": "practice",
+   "usedFor": [
+    "countertop"
+   ],
+   "color": "#f1f0ec"
+  }
+ },
+ {
+  "id": "MAT-INOX-304",
+  "kind": "material",
+  "title": "Inox 304",
+  "content": "Cho chậu rửa, mặt bàn khu nấu; chịu nước và nhiệt, dễ trầy bề mặt.",
+  "sourceUrl": "",
+  "region": "GLOBAL",
+  "country": "",
+  "metadata": {
+   "source": "Mô tả chung, cần đối chiếu catalogue nhà cung cấp",
+   "sourceType": "practice",
+   "usedFor": [
+    "sink",
+    "countertop"
+   ],
+   "color": "#c9ccd1"
+  }
+ },
+ {
+  "id": "MAT-TEMPERED-GLASS",
+  "kind": "material",
+  "title": "Kính cường lực ốp tường bếp",
+  "content": "Ốp giữa mặt bàn và tủ trên; dễ lau; khoét ổ điện trước khi tôi kính.",
+  "sourceUrl": "",
+  "region": "GLOBAL",
+  "country": "",
+  "metadata": {
+   "source": "Mô tả chung, cần đối chiếu catalogue nhà cung cấp",
+   "sourceType": "practice",
+   "usedFor": [
+    "wall"
+   ],
+   "color": "#e8eef0"
+  }
+ }
+]

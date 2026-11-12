@@ -402,5 +402,46 @@ class TestRegionsFromTheCatalog(unittest.TestCase):
         self.assertNotIn(some, {i.get("topic") for i in self.s.validate_spec(spec)["issues"]})
 
 
+class TestKnowledgeInTheCatalog(unittest.TestCase):
+    """Stage 2.3: the knowledge table is the catalog kind "knowledge" (builtin = knowledge_seed, workshop layer, history, undo)."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        from kitchen.service import KitchenService
+        self.s = KitchenService(db_path=self.tmp / "k.db", render_dir=self.tmp / "r")
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def _codes(self):
+        return {r["code"] for r in self.s.search_knowledge("", ["rule", "standard"])}
+
+    def test_edit_hide_reset(self):
+        s = self.s
+        hood = dict(s.catalog().data("knowledge", "HOOD-001"))
+        s.catalog_put("knowledge", "HOOD-001", {**hood, "title": "Hút mùi của xưởng"}, "workshop")
+        self.assertEqual(s.store.knowledge_rows_all()["HOOD-001"]["title"], "Hút mùi của xưởng")          # the table follows
+        s.catalog_put("knowledge", "HOOD-001", {}, "workshop", disabled=True)
+        self.assertNotIn("HOOD-001", self._codes())
+        s.catalog_delete("knowledge", "HOOD-001", "workshop")
+        self.assertIn("HOOD-001", self._codes())
+        self.assertEqual(s.store.knowledge_rows_all()["HOOD-001"]["title"], hood["title"])                  # back to the builtin text
+        with self.assertRaises(InvalidInput):
+            s.catalog_put("knowledge", "HOOD-001", hood, "user")
+
+    def test_old_api_writes_the_catalog(self):
+        self.s.add_knowledge(kind="rule", code="XUONG-01", title="Luật xưởng", content="x", region="SEA", country="VN")
+        self.assertEqual(self.s.catalog().data("knowledge", "XUONG-01")["country"], "VN")
+        self.assertIn("XUONG-01", self._codes())
+        self.assertEqual(len(self.s.catalog_history("knowledge", "XUONG-01")), 1)
+
+    def test_a_restart_adopts_table_rows(self):
+        from kitchen.service import KitchenService
+        self.s.store.knowledge_sync("HAND-01", {"kind": "rule", "title": "Thêm tay", "content": "", "source_url": "", "region": "GLOBAL",
+                                               "country": "", "metadata": {}})
+        again = KitchenService(db_path=self.tmp / "k.db", render_dir=self.tmp / "r")
+        self.assertEqual(again.catalog().get("knowledge", "HAND-01").source, "workshop")
+
+
 if __name__ == "__main__":
     unittest.main()

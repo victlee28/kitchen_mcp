@@ -1,0 +1,81 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "knowledge",
+ "type": "object",
+ "required": [
+  "kind",
+  "title",
+  "content"
+ ],
+ "additionalProperties": false,
+ "properties": {
+  "kind": {
+   "enum": [
+    "rule",
+    "standard",
+    "material"
+   ],
+   "x-label": {
+    "vi": "Loại",
+    "en": "Kind"
+   }
+  },
+  "title": {
+   "type": "string",
+   "minLength": 1,
+   "x-label": {
+    "vi": "Tiêu đề",
+    "en": "Title"
+   }
+  },
+  "content": {
+   "type": "string",
+   "x-label": {
+    "vi": "Nội dung",
+    "en": "Content"
+   }
+  },
+  "sourceUrl": {
+   "type": "string",
+   "x-label": {
+    "vi": "Link nguồn",
+    "en": "Source link"
+   }
+  },
+  "region": {
+   "type": "string",
+   "x-label": {
+    "vi": "Khu vực (mã)",
+    "en": "Region (code)"
+   }
+  },
+  "country": {
+   "type": "string",
+   "x-label": {
+    "vi": "Quốc gia (mã, cách nhau dấu phẩy)",
+    "en": "Countries (codes, comma separated)"
+   }
+  },
+  "metadata": {
+   "type": "object",
+   "x-label": {
+    "vi": "Siêu dữ liệu (nguồn, loại nguồn, chủ đề kiểm, tham số)",
+    "en": "Metadata (source, source type, checked topics, parameters)"
+   },
+   "properties": {
+    "sourceType": {
+     "type": "string"
+    },
+    "validation": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    },
+    "params": {
+     "type": "object"
+    }
+   }
+  }
+ }
+}

@@ -114,6 +114,33 @@ class Store:
             connection.execute('INSERT INTO knowledge(kind,code,title,content,source_url,metadata_json,region,country) VALUES(?,?,?,?,?,?,?,?)', (kind, code, title, content, source_url, metadata_json, region_code, country_code))
             return {'ok': True, 'code': code, 'operation': 'add-new', 'region': region_code, 'country': country_code}
 
+    def knowledge_rows_all(self) -> dict[str, dict]:
+        """Every row of the knowledge table by code (the newest row of a code), active or not, metadata parsed."""
+        with self._conn() as connection:
+            rows = [dict(r) for r in connection.execute('SELECT * FROM knowledge ORDER BY id')]
+        out: dict[str, dict] = {}
+        for row in rows:
+            row['metadata'] = json.loads(row.pop('metadata_json') or '{}')
+            out[row['code']] = row
+        return out
+
+    def knowledge_sync(self, code: str, row: dict | None) -> None:
+        """Make the table say what the catalog says for ``code``: ``row`` (kind, title, content, source_url, region, country, metadata) in force,
+        or None = not in force (the row is kept, inactive)."""
+        with self._conn() as connection:
+            if row is None:
+                connection.execute('UPDATE knowledge SET active=0 WHERE code=?', (code,))
+                return
+            values = (row['kind'], row['title'], row['content'], row['source_url'], json.dumps(row['metadata'], ensure_ascii=False),
+                      row['region'], row['country'])
+            hit = connection.execute('SELECT id FROM knowledge WHERE code=? ORDER BY active DESC, id DESC LIMIT 1', (code,)).fetchone()
+            if hit:
+                connection.execute('UPDATE knowledge SET kind=?, title=?, content=?, source_url=?, metadata_json=?, region=?, country=?, active=1 '
+                                   'WHERE id=?', (*values, hit['id']))
+            else:
+                connection.execute('INSERT INTO knowledge(kind,title,content,source_url,metadata_json,region,country,code) VALUES(?,?,?,?,?,?,?,?)',
+                                   (*values, code))
+
     def regions_summary(self) -> list[dict]:
         with self._conn() as connection:
             rows = connection.execute('SELECT region, country, kind, COUNT(*) n FROM knowledge WHERE active=1 GROUP BY 1,2,3 ORDER BY 1,2,3').fetchall()
@@ -217,6 +244,13 @@ class Store:
             connection.execute('INSERT INTO catalog_history(kind, id, scope, before_json, after_json, by) VALUES(?,?,?,?,?,?)',
                                (kind, id, scope, json.dumps(before, ensure_ascii=False) if before else None, json.dumps(after, ensure_ascii=False) if after else None, by))
             return version
+
+    def catalog_log(self, kind: str, id: str, scope: str, before: dict | None, after: dict | None, by: str) -> None:
+        """A history line with no change of the catalog itself (e.g. the old text of a table row the catalog replaced)."""
+        with self._conn() as connection:
+            connection.execute('INSERT INTO catalog_history(kind, id, scope, before_json, after_json, by) VALUES(?,?,?,?,?,?)',
+                               (kind, id, scope, json.dumps(before, ensure_ascii=False) if before else None,
+                                json.dumps(after, ensure_ascii=False) if after else None, by))
 
     def catalog_history(self, kind: str, id: str, scope: str | None = None, limit: int = 50) -> list[dict]:
         sql = 'SELECT seq, scope, before_json, after_json, by, at FROM catalog_history WHERE kind=? AND id=?' + (' AND scope=?' if scope else '') + ' ORDER BY seq DESC LIMIT ?'

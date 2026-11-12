@@ -44,6 +44,7 @@ class KitchenService:
         self.builtin = catalog_files.load_builtin(Path(data_dir or self.config.data_dir or Path(__file__).resolve().parent.parent / "data"))
         self._catalog_cache: tuple[int, cat.Catalog] | None = None
         self.store.snapshot = self._snapshot_json
+        self._adopt_knowledge()
         self.recognizers: dict[str, recognition.Recognizer] = {}     # plug-ins; the Gemini reader is wired when a key is available
         self._wire_recognizers()
         self.render_dir = Path(render_dir or self.config.render_dir)
@@ -75,6 +76,54 @@ class KitchenService:
     def _snapshot_json(self, spec: KitchenSpec) -> str | None:
         used = cat.used_items(to_data(spec), self.catalog(), self.builtin.kinds)
         return json.dumps([i.to_data() for i in used], ensure_ascii=False) if used else None
+
+    # ---- the knowledge table is the catalog kind "knowledge": the catalog (builtin knowledge + workshop layer, with history and undo)
+    # decides, and every write is copied into the table the rules and the search read.
+    @staticmethod
+    def _knowledge_data(row: dict) -> dict:
+        return {'kind': row['kind'], 'title': row['title'], 'content': row['content'], 'sourceUrl': row.get('source_url') or '',
+                'region': row.get('region') or 'GLOBAL', 'country': row.get('country') or '', 'metadata': row.get('metadata') or {}}
+
+    def _adopt_knowledge(self) -> None:
+        """Make the knowledge table and the catalog agree, once per start (idempotent: nothing is written when they already do).
+
+        * A code the catalog does not know (added in the table by hand or by the old API) becomes the workshop's item; a builtin code made
+          inactive in the table becomes hidden in the workshop's layer.
+        * Every other code takes what the catalog says (the builtin knowledge, or the workshop's edit). A table row that said something
+          else (an older version of the builtin knowledge: ``knowledge_seed.apply`` never rewrote a row) is rewritten, and its old text is
+          kept in the catalog history (``by: "replaced-table-row"``).
+        """
+        if 'knowledge' not in self.builtin.kinds:
+            return
+        merged = {i.id: i for i in self.catalog().all('knowledge')}
+        layered = {r['id'] for r in self.store.catalog_rows([cat.WORKSHOP]) if r['kind'] == 'knowledge'}
+        for code, row in self.store.knowledge_rows_all().items():
+            if not self.ID_PATTERN.match(code or ''):
+                continue
+            want, data = merged.get(code), self._knowledge_data(row)
+            if want is None:
+                if row['active'] and code not in layered:
+                    self.store.catalog_put('knowledge', code, cat.WORKSHOP, data, False, 'adopt')
+                continue
+            if not row['active']:
+                if code not in layered:
+                    self.store.catalog_put('knowledge', code, cat.WORKSHOP, None, True, 'adopt')
+                continue
+            if json.dumps(data, sort_keys=True) != json.dumps(dict(want.data), sort_keys=True):
+                self.store.catalog_log('knowledge', code, cat.WORKSHOP, {'version': 0, 'data': data, 'disabled': False}, None, 'replaced-table-row')
+                self._sync_table('knowledge', code)
+
+    def _sync_table(self, kind: str, id: str) -> None:
+        """After a catalog write: copy what is now in force into the table a kind is mirrored to (only ``knowledge``)."""
+        if kind != 'knowledge':
+            return
+        item = self.catalog().find('knowledge', id)
+        if item is None:
+            self.store.knowledge_sync(id, None)
+            return
+        d = item.data
+        self.store.knowledge_sync(id, {'kind': d.get('kind'), 'title': d.get('title'), 'content': d.get('content', ''), 'source_url': d.get('sourceUrl', ''),
+                                       'region': d.get('region') or 'GLOBAL', 'country': d.get('country') or '', 'metadata': d.get('metadata') or {}})
 
     def _kind(self, kind: str) -> cat.KindInfo:
         info = self.builtin.kinds.get(kind)
@@ -127,6 +176,7 @@ class KitchenService:
         scope = cat.scope_for(role, self.USER)
         self._check_trial(kind, id, scope, None if disabled else data, disabled)
         version = self.store.catalog_put(kind, id, scope, None if disabled else data, disabled, role)
+        self._sync_table(kind, id)
         return {'kind': kind, 'id': id, 'scope': scope, 'version': version}
 
     def catalog_delete(self, kind: str, id: str, role: str) -> dict:
@@ -136,6 +186,7 @@ class KitchenService:
         scope = cat.scope_for(role, self.USER)
         self._check_trial(kind, id, scope, None, False)
         self.store.catalog_put(kind, id, scope, None, False, role)
+        self._sync_table(kind, id)
         return {'kind': kind, 'id': id, 'scope': scope, 'version': 0}
 
     def catalog_history(self, kind: str, id: str) -> list[dict]:
@@ -155,6 +206,7 @@ class KitchenService:
         disabled = bool(before and before['disabled'])
         self._check_trial(kind, id, scope, data, disabled)
         version = self.store.catalog_put(kind, id, scope, data, disabled, role)
+        self._sync_table(kind, id)
         return {'kind': kind, 'id': id, 'scope': scope, 'version': version}
 
     def catalog_export(self, role: str) -> dict:
@@ -1011,6 +1063,16 @@ class KitchenService:
         t = regions.tables(self.catalog())
         return {'region': t.regions, 'country': {code: {'name': data[0], 'region': data[1]} for code, data in t.countries.items()}, 'entryCounts': self.store.regions_summary()}
 
-    def add_knowledge(self, **kwargs) -> dict:
-        """Insert or update a knowledge entry."""
-        return self.store.upsert_knowledge(**kwargs)
+    def add_knowledge(self, kind: str, code: str, title: str, content: str, source_url: str = '', metadata: dict | None = None,
+                      region: str = 'GLOBAL', country: str = '') -> dict:
+        """Insert or update a knowledge entry: a write of the workshop's layer of the catalog kind ``knowledge`` (history, undo)."""
+        region_code = (region or 'GLOBAL').upper()
+        if region_code not in regions.tables(self.catalog()).regions:
+            raise InvalidInput(f"region must be one of: {', '.join(regions.tables(self.catalog()).regions)}")
+        codes = [c.strip().upper() for c in (country or '').split(',') if c.strip()]
+        for c in codes:
+            regions.normalize(c, None, self.catalog())
+        existed = self.catalog().find('knowledge', code) is not None
+        self.catalog_put('knowledge', code, {'kind': kind, 'title': title, 'content': content, 'sourceUrl': source_url or '', 'region': region_code,
+                                             'country': ','.join(codes), 'metadata': metadata or {}}, 'workshop')
+        return {'ok': True, 'code': code, 'operation': 'update' if existed else 'add-new', 'region': region_code, 'country': ','.join(codes)}
