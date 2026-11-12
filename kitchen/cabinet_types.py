@@ -217,6 +217,12 @@ def storey_by_name(type_id: str) -> str:
     return "base"
 
 
+def label_of(type_id: str, catalog: Catalog = builtin.CATALOG) -> str:
+    """A cabinet type's name for people (Vietnamese label), else its id."""
+    t = get(type_id, catalog)
+    return t.label if t is not None and t.label else type_id
+
+
 def storey_of(type_id: str, catalog: Catalog = builtin.CATALOG) -> str:
     """The storey of a cabinet type (base, upper, loft, tall, corner)."""
     t = get(type_id, catalog)

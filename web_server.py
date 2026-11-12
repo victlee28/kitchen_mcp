@@ -20,6 +20,7 @@ API:
   GET  /api/catalog-export                 POST /api/catalog-import
   GET  /api/material-preview?text=         cách hiểu một tên vật liệu (tiếng Anh, màu, thông số 3D)
   POST /api/cabinet-type-preview           {"id", "data"}: một loại tủ chưa lưu dựng ra sao (tủ mẫu vài cỡ + cảnh báo)
+  POST /api/layout-template-preview        {"id", "data", "options"?}: một mẫu bố trí chưa lưu xếp ra sao (bếp mẫu 3 chiều dài, nhìn từ trên)
   GET  /api/catalog-csv/<kind>             {csv}; POST {csv}: ghi từng dòng vào lớp của vai trò
   GET  /api/regions                       khu vực, quốc gia, số mục
   GET  /api/designs/<id>/history         lịch sử
@@ -159,6 +160,9 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(200, s.catalog_import(self._body(), self._role()))
         if p == "/api/material-preview" and method == "GET":
             return self._json(200, s.material_preview(q.get("text")))
+        if p == "/api/layout-template-preview" and method == "POST":
+            body = self._body()
+            return self._json(200, s.layout_template_preview(str(body.get("id") or ""), body.get("data") or {}, self._role(), body.get("options")))
         if p == "/api/cabinet-type-preview" and method == "POST":
             body = self._body()
             return self._json(200, s.cabinet_type_preview(str(body.get("id") or ""), body.get("data") or {}, self._role()))

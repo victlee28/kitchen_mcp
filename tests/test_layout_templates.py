@@ -42,6 +42,33 @@ class TestLayoutTemplates(unittest.TestCase):
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
 
+    def test_a_straight_kitchen_with_a_wine_cabinet_at_the_end_needs_no_code(self):
+        tmp = Path(tempfile.mkdtemp())
+        try:
+            from kitchen.service import KitchenService
+            s = KitchenService(db_path=tmp / "k.db", render_dir=tmp / "r")
+            s.catalog_put("cabinet-type", "base-wine", {"storey": "base", "label": {"vi": "Tủ rượu", "en": "Wine cabinet"}, "like": "base",
+                                                        "prompt": "wine rack base cabinet"}, "workshop")
+            row = next(i for i in s.catalog_list("layout-template", "user")["items"] if i["id"] == "I")
+            data = {**row["data"], "label": {"vi": "Bếp I có tủ rượu cuối dãy"}}
+            data["steps"] = [{**st, "extras": [{"type": "base-wine", "width": "450", "at": "end"}]} if st["do"] == "base-run" else st for st in data["steps"]]
+            preview = s.layout_template_preview("I-wine", data, "user", {"fridge": True})
+            self.assertTrue(all(any(m["type"] == "base-wine" for m in x["modules"]) for x in preview["samples"]))
+            s.catalog_put("layout-template", "I-wine", data, "user")
+            spec = s.get(s.create_from_template({"geometry_edit": "I-wine", "backWallLength": 3600, "fridge": True}, "")["id"])["spec"]
+            mods = {m["type"]: m for m in spec["module"]}
+            wine, fridge = mods["base-wine"], mods["tall-fridge"]
+            self.assertEqual(wine["name"], "Tủ rượu")
+            touching = {wine["fromCorner"] + wine["width"], wine["fromCorner"] - fridge["width"]}
+            self.assertIn(fridge["fromCorner"], touching)        # the wine cabinet ends the run next to the fridge, which stays outermost
+            lo, hi = fridge["fromCorner"], fridge["fromCorner"] + fridge["width"]
+            uppers = [m for m in spec["module"] if m["type"].startswith("upper")]
+            self.assertTrue(all(m["fromCorner"] + m["width"] <= lo + 0.5 or m["fromCorner"] >= hi - 0.5 for m in uppers))   # none in front of the fridge
+            with self.assertRaises(InvalidInput):
+                s.create_from_template({"geometry_edit": "nope"}, "")
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
 
 if __name__ == "__main__":
     unittest.main()

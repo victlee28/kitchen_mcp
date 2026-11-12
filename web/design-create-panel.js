@@ -1,6 +1,6 @@
 // Create / import / export panel: free-text prompt, kitchen template, spec import, spec and three.js export.
 import { $, el } from './dom.js';
-import { tx } from './i18n.js';
+import { tx, pick, lang } from './i18n.js';
 
 export function createDesignCreatePanel({ state, api, run, setStatus, loadDesigns, clearSelection }) {
   // Bảng "đã hiểu gì từ mô tả": mỗi thuật ngữ kèm vùng áp, trường đích và trạng thái hỗ trợ (chữ qua textContent)
@@ -30,10 +30,18 @@ export function createDesignCreatePanel({ state, api, run, setStatus, loadDesign
       showInterpretation(r.analysis?.interpretation || []);
     });
   });
+  // The layout templates of the catalog (I, L, U and those the workshop / user added): the walls each one uses decide which lengths are asked.
+  let walls = { I: ['back'], L: ['back', 'right'], U: ['back', 'right', 'left'] };
+  api(`/api/catalog/layout-template?lang=${lang()}`).then((d) => {
+    walls = Object.fromEntries(d.items.map((it) => [it.id, it.data.walls || ['back']]));
+    const keep = $('mShape').value;
+    $('mShape').replaceChildren(...d.items.map((it) => el('option', { value: it.id, textContent: `${it.id} — ${pick(it.data.label)}`, selected: it.id === keep })));
+  }).catch(() => { /* no server yet: the three builtin layouts of the page */ });
   $('fromTemplate').addEventListener('click', () => {
     const color = { country: state.qg || null, geometry_edit: $('mShape').value, backWallLength: Number($('mBack').value), cabinetTop: Number($('mTop').value), backsplashHeight: $('mBacksplash').value, fridge: $('mFridge').checked, loft: $('mLoft').checked, island: $('mIsland').checked, peninsula: $('mPeninsula').checked, openShelf: $('mOpenShelf').checked, style: $('mStyle').value };
-    if (color.geometry_edit !== 'I') color.rightWallLength = Number($('mRight').value);
-    if (color.geometry_edit === 'U') color.leftWallLength = Number($('mLeft').value);
+    const used = walls[color.geometry_edit] || ['back'];
+    if (used.includes('right')) color.rightWallLength = Number($('mRight').value);
+    if (used.includes('left')) color.leftWallLength = Number($('mLeft').value);
     run(tx('ui.tao-tu-mau'), async () => { const r = await api('/api/designs', 'POST', { color, name: tx('ui.bep-chu', { 0: color.geometry_edit }) }); clearSelection(); await loadDesigns(r.id); });
   });
   $('importFile').addEventListener('change', (e) => {

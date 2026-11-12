@@ -10,7 +10,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from . import geometry, hardware, runs
+from . import builtin, geometry, hardware, runs
+from .catalog import Catalog
 from .numeric import round_half_away, round_int
 from .spec import KitchenSpec, Module, to_data
 
@@ -50,9 +51,9 @@ def _hinge_sides(m: Module, scene: Any) -> list[str]:
     return [_SIDE[now[i]] for i in order if now[i] in _SIDE]
 
 
-def convert(spec: KitchenSpec) -> tuple[dict[str, Any], list[str]]:
+def convert(spec: KitchenSpec, catalog: Catalog = builtin.CATALOG) -> tuple[dict[str, Any], list[str]]:
     """``(spec data with every convertible row as an explicit run, notes)``. Rows that cannot be converted stay as they are."""
-    scene = geometry.compile_spec(spec)
+    scene = geometry.compile_spec(spec, catalog)
     data = to_data(spec)
     notes: list[str] = []
     rows: dict[tuple[Any, ...], list[Module]] = {}
@@ -124,8 +125,8 @@ def convert(spec: KitchenSpec) -> tuple[dict[str, Any], list[str]]:
     return data, notes
 
 
-def _boxes(spec: KitchenSpec) -> tuple[list[tuple[Any, ...]], list[tuple[Any, ...]]]:
-    scene = geometry.compile_spec(spec)
+def _boxes(spec: KitchenSpec, catalog: Catalog = builtin.CATALOG) -> tuple[list[tuple[Any, ...]], list[tuple[Any, ...]]]:
+    scene = geometry.compile_spec(spec, catalog)
 
     def r(v: Any) -> tuple[float, ...]:
         return tuple(float(round_half_away(float(c), 1)) + 0.0 for c in v)
@@ -135,9 +136,9 @@ def _boxes(spec: KitchenSpec) -> tuple[list[tuple[Any, ...]], list[tuple[Any, ..
     return parts, meshes
 
 
-def equivalent(before: KitchenSpec, after: KitchenSpec) -> list[str]:
+def equivalent(before: KitchenSpec, after: KitchenSpec, catalog: Catalog = builtin.CATALOG) -> list[str]:
     """What differs between the compiled kitchens ([] when every box stands where it stood): counts per kind of difference."""
-    (pa, ma), (pb, mb) = _boxes(before), _boxes(after)
+    (pa, ma), (pb, mb) = _boxes(before, catalog), _boxes(after, catalog)
     out: list[str] = []
     lost, new = [p for p in pa if p not in pb], [p for p in pb if p not in pa]
     if lost or new:

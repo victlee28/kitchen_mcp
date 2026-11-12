@@ -14,7 +14,7 @@ from typing import Any, Literal, cast
 
 from pydantic import BaseModel, Field, ValidationError
 
-from . import builtin, defaults, layout_solver, lexicon, regions
+from . import builtin, cabinet_types, defaults, layout_solver, lexicon, regions
 from .catalog import Catalog
 from .spec import Appliance, Common, FrontSection, Handle, KitchenSpec, Module, Room, Wall
 from .words import say
@@ -34,7 +34,7 @@ _KW = r"(?<![a-zà-ỹ])"
 
 class KitchenTemplate(BaseModel):
     """Tham số mẫu để sinh thiết kế."""
-    geometry_edit: Literal["I", "L", "U"] = "I"
+    geometry_edit: str = Field("I", pattern=r"^[A-Za-z0-9_.:-]{1,64}$", description="Layout template (catalog kind layout-template): I, L, U or one the workshop / user added")
     backsplashHeight: Literal["standard", "to-upper", "to-ceiling"] = "standard"
     backsplashHeightMm: float | None = Field(None, ge=50, le=3000, description="Chiều cao ốp (mm); có giá trị thì thay backsplashHeight")
     wallTilePattern: str | None = Field(None, description="Kiểu xếp gạch ốp: herringbone, running-bond")
@@ -248,7 +248,15 @@ def from_template(color: KitchenTemplate, name: str = "", rows: list[dict] | Non
         n[p] += 1
         return f"{p}{n[p]}"
 
-    def thickness(wall: WallSide, start: float, length: float, appliance: list[str], front: float = 450, fridge_at_end: bool = False):
+    def extra(wall: WallSide, at: float, e: dict[str, Any]) -> float:
+        """A cabinet the template asks for at the start / end of a run (``extras``): its width."""
+        w = float(e["width"])
+        mods.append(Module(id=id("TD"), type=str(e["type"]), name=cabinet_types.label_of(str(e["type"]), catalog), wall=wall, fromCorner=at, width=w, y=0,
+                           height=c.baseTop, depth=c.baseDepth, doors=[w / 2, w / 2] if w >= rules.double_door_from else [w]))
+        return w
+
+    def thickness(wall: WallSide, start: float, length: float, appliance: list[str], front: float = 450, fridge_at_end: bool = False,
+                  extras: list[dict[str, Any]] | None = None):
         """Bố trí một dãy tủ dưới: [khoảng trước] + thiết bị xen khoảng 600 + [khoảng sau 450] (``layout_solver.base_plan``).
         Khoảng trống là mặt bàn thao tác (NKBA-10/14/15); thiếu chỗ thì co về 300 rồi bỏ."""
         s = start
@@ -261,6 +269,15 @@ def from_template(color: KitchenTemplate, name: str = "", rows: list[dict] | Non
             tb.append(Appliance(id=f"TB{len(tb)+1}", type="fridge", name=say("name.appliance.fridge"), dimensions=str(fr.get("dimensions", "")),
                                 module=mods[-1].id))
             length -= width
+        for e in (x for x in extras or [] if x["at"] == "start"):
+            w = extra(wall, s, e)
+            s += w
+            length -= w
+        ends = [x for x in extras or [] if x["at"] == "end"]
+        tail = start + (s - start) + length          # where the end cabinets stop (before the fridge)
+        for e in reversed(ends):
+            tail -= float(e["width"])
+        length -= sum(float(e["width"]) for e in ends)
         plan = layout_solver.base_plan(length, appliance, rules, front, toward_end=fridge_at_end)   # với tủ lạnh: chậu (cuối danh sách) sát tủ lạnh
         for w, type in plan:
             doors = [w / 2, w / 2] if w >= rules.double_door_from else [w]
@@ -274,13 +291,16 @@ def from_template(color: KitchenTemplate, name: str = "", rows: list[dict] | Non
             if type == "base-cooktop":
                 tb.append(Appliance(id=f"TB{len(tb)+1}", type="cooktop", name=say("name.appliance.cooktop"), dimensions=f"{min(730, w - 10):g} × 430", wall=wall, center=s + w / 2))
             s += w
+        for e in ends:
+            tail += extra(wall, tail, e)
 
     def upper(wall: WallSide, start: float, end: float):
         """Tủ trên chia theo đúng ranh giới tủ dưới bên dưới; ô ngay trên bếp thành tủ hút mùi."""
         cooktop_centers = [t.center for t in tb if t.type == "cooktop" and t.wall == wall and t.center is not None]
-        cuts = sorted({start, end, *[m.fromCorner for m in mods if m.wall == wall and m.storey == "base" and start < m.fromCorner < end],
-                       *[m.endAt for m in mods if m.wall == wall and m.storey == "base" and start < m.endAt < end]})
-        segs = [(a, b) for a, b in zip(cuts, cuts[1:]) if b - a >= 1]
+        talls = [(m.fromCorner, m.endAt) for m in mods if m.wall == wall and m.storey == "tall"]    # no wall cabinet in front of a tall one
+        cuts = sorted({start, end, *[m.fromCorner for m in mods if m.wall == wall and m.storey in ("base", "tall") and start < m.fromCorner < end],
+                       *[m.endAt for m in mods if m.wall == wall and m.storey in ("base", "tall") and start < m.endAt < end]})
+        segs = [(a, b) for a, b in zip(cuts, cuts[1:]) if b - a >= 1 and not any(t0 <= (a + b) / 2 < t1 for t0, t1 in talls)]
         merged: list[list[float]] = []
         for a, b in segs:  # gộp ô quá hẹp vào ô bên cạnh
             if merged and (b - a < rules.min_width or merged[-1][1] - merged[-1][0] < rules.min_width):
@@ -317,7 +337,7 @@ def from_template(color: KitchenTemplate, name: str = "", rows: list[dict] | Non
     def step(do: str, v: dict[str, Any]) -> None:
         wall = cast(WallSide, v.get("wall", "back"))
         if do == "base-run":
-            thickness(wall, v["start"], v["length"], v["appliances"], v["front"], v["fridgeAtEnd"])
+            thickness(wall, v["start"], v["length"], v["appliances"], v["front"], v["fridgeAtEnd"], v.get("extras"))
         elif do == "corner-base":
             corner_base(wall, v["type"], v["width"], v["blind"], v["doors"])
         elif do == "upper-run":

@@ -95,6 +95,38 @@
        }
       }
      }
+    },
+    "extras": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+       "type",
+       "width"
+      ],
+      "properties": {
+       "when": {
+        "type": "string",
+        "minLength": 1
+       },
+       "type": {
+        "type": "string",
+        "minLength": 1
+       },
+       "width": {
+        "type": "string",
+        "minLength": 1
+       },
+       "at": {
+        "type": "string",
+        "enum": [
+         "start",
+         "end"
+        ]
+       }
+      }
+     }
     }
    }
   }
@@ -200,6 +232,21 @@
    "x-label": {
     "vi": "Có bán đảo thì dùng mẫu",
     "en": "With a peninsula use the template"
+   }
+  },
+  "walls": {
+   "type": "array",
+   "items": {
+    "type": "string",
+    "enum": [
+     "back",
+     "right",
+     "left"
+    ]
+   },
+   "x-label": {
+    "vi": "Các tường có tủ (để hỏi chiều dài)",
+    "en": "Walls with cabinets (lengths to ask for)"
    }
   }
  }

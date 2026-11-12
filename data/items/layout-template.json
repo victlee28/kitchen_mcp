@@ -42,7 +42,10 @@
   "island": {
    "start": "max(0, (W - n) / 2)",
    "length": "islandLength if islandLength > 0 else min(2400, max(900, W - 600))"
-  }
+  },
+  "walls": [
+   "back"
+  ]
  },
  {
   "id": "L",
@@ -128,7 +131,11 @@
   "peninsula": {
    "at": "R",
    "room": "W - g - 600"
-  }
+  },
+  "walls": [
+   "back",
+   "right"
+  ]
  },
  {
   "id": "U",
@@ -244,6 +251,11 @@
   "peninsula": {
    "at": "R",
    "room": "W - 2 * g - 600"
-  }
+  },
+  "walls": [
+   "back",
+   "right",
+   "left"
+  ]
  }
 ]

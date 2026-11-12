@@ -267,6 +267,39 @@ class KitchenService:
                                                        **{k: v for k, v in p.items() if k != 'code'}, width=width) for p in problems]})
         return {'id': id, 'storey': t.storey, 'samples': samples}
 
+    LAYOUT_PREVIEW_BACKS = (2400.0, 3200.0, 4200.0)
+    LAYOUT_PREVIEW_SIDE = 2400.0
+
+    def layout_template_preview(self, id: str, data: dict, role: str, options: dict | None = None) -> dict:
+        """What a layout template (not saved yet: ``data``) lays out: sample kitchens with the back wall 2400 / 3200 / 4200 mm (the other
+        walls it uses 2400 mm), each as its cabinets (id, type, wall, place, width) and their top view (every cabinet panel's footprint,
+        mm, kitchen frame), with the notes the layout made. ``options``: fridge / loft / island / peninsula to try (true / false)."""
+        info = self._kind('layout-template')
+        cat.check_write(info, role)
+        errors_found = catalog_files.schema_errors(self.builtin.schemas['layout-template'], data)
+        if errors_found:
+            raise catalog_files.CatalogInvalid('; '.join(errors_found[:10]))
+        trial = self._trial('layout-template', id, cat.scope_for(role, self.USER), data, False)
+        walls = set(data.get('walls') or ['back'])
+        opts = {k: bool((options or {}).get(k)) for k in ('fridge', 'loft', 'island', 'peninsula')}
+        samples = []
+        for back in self.LAYOUT_PREVIEW_BACKS:
+            request: dict[str, Any] = {'geometry_edit': id, 'backWallLength': back, **opts}
+            if 'right' in walls:
+                request['rightWallLength'] = self.LAYOUT_PREVIEW_SIDE
+            if 'left' in walls:
+                request['leftWallLength'] = self.LAYOUT_PREVIEW_SIDE
+            spec = intent.from_template(KitchenTemplate.model_validate(request), '', None, trial)
+            scene = geometry.compile_spec(spec, trial)
+            storey = {m.id: m.storey for m in spec.module}
+            parts = [{'module': p.module, 'type': p.type, 'storey': storey.get(p.module or ''), 'x': [p.min[0], p.max[0]], 'z': [p.min[2], p.max[2]]}
+                     for p in scene.parts if p.module in storey and p.type in ('carcass', 'side-panel', 'shelf')]
+            samples.append({'back': back, 'request': request, 'parts': parts,
+                            'modules': [{'id': m.id, 'type': m.type, 'wall': m.wall, 'fromCorner': m.fromCorner, 'width': m.width, 'storey': m.storey}
+                                        for m in spec.module],
+                            'notes': [n for n in (spec.promptInterpretation or []) if n.get('message')]})
+        return {'id': id, 'samples': samples}
+
     def catalog_put(self, kind: str, id: str, data: dict, role: str, disabled: bool = False) -> dict:
         """Create or replace item ``id`` in the role's layer (``disabled``: hide the item of a lower layer instead)."""
         info = self._kind(kind)
@@ -415,13 +448,13 @@ class KitchenService:
         return {'id': design_id, 'rev': revision, 'binding': binding}
 
     @staticmethod
-    def _by_runs(spec: KitchenSpec) -> KitchenSpec:
+    def _by_runs(spec: KitchenSpec, catalog: cat.Catalog = builtin.CATALOG) -> KitchenSpec:
         """A newly generated kitchen written by explicit runs (``rows_to_runs``): the generator still thinks in walls, a design is stored by runs.
         Kept as generated if the rewritten kitchen would not compile to the very same boxes."""
         from . import rows_to_runs
-        data, _ = rows_to_runs.convert(spec)
+        data, _ = rows_to_runs.convert(spec, catalog)
         after = KitchenSpec.model_validate(data)
-        return spec if rows_to_runs.equivalent(spec, after) else after
+        return spec if rows_to_runs.equivalent(spec, after, catalog) else after
 
     def create_from_template(self, template: dict | KitchenTemplate, name: str='', **legacy: Any) -> dict:
         """Generate and persist a design from a structured template."""
@@ -429,7 +462,7 @@ class KitchenService:
         if legacy:
             raise TypeError(f"Unexpected options: {', '.join(legacy)}")
         parsed_template = template if isinstance(template, KitchenTemplate) else KitchenTemplate.model_validate(template)
-        spec = self._by_runs(intent.from_template(parsed_template, name, self.store.rule_rows(), self.catalog()))
+        spec = self._by_runs(intent.from_template(parsed_template, name, self.store.rule_rows(), self.catalog()), self.catalog())
         record = self.store.create_design(spec, 'template')
         return self._summary(record['id'], 1, spec, color=parsed_template.model_dump())
 
@@ -446,7 +479,7 @@ class KitchenService:
             parser_source = 'regex'
         else:  # DeepSeek không biết các trường mới (phong cách, kiểu cánh, tay nắm, ốp): bổ sung từ bảng thuật ngữ
             template, notes = intent.merge_lexicon(template, prompt, self.catalog())
-        spec = self._by_runs(intent.from_template(template, name or prompt[:60], self.store.rule_rows(), self.catalog()))
+        spec = self._by_runs(intent.from_template(template, name or prompt[:60], self.store.rule_rows(), self.catalog()), self.catalog())
         record = self.store.create_design(spec, f'prompt:{parser_source}')
         return self._summary(record['id'], 1, spec, color=template.model_dump(), analysis={'source': parser_source, 'note': notes, 'interpretation': template.promptInterpretation, 'deepseek': llm_result})
 

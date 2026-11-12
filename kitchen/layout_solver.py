@@ -5,7 +5,8 @@ A template names the steps that lay a kitchen out, each with formulas (``catalog
 
 * ``corner-base``: the blind corner cabinet at the start of a wall (its blind part is the depth of the run it meets);
 * ``base-run``: base cabinets over a stretch of a wall: the appliances it holds (``appliances``: the first entry whose ``when`` holds),
-  the worktop left in front (``front``), the fridge cabinet at its end (``fridgeAtEnd``);
+  the worktop left in front (``front``), the fridge cabinet at its end (``fridgeAtEnd``), cabinets of a given type and width at its start
+  or end (``extras``: a wine cabinet at the end of the run...; the fridge stays outermost);
 * ``corner-shelf``: open shelves round the inside corner, at the wall cabinets' height;
 * ``upper-run``: wall cabinets over a stretch, cut where the base cabinets below are cut (pieces under ``minWidth`` joined), the one over
   the cooktop a hood cabinet, a top cabinet over each when the request asks for a loft row.
@@ -147,6 +148,7 @@ class Step:
     blind: expr.Formula | None = None
     doors: tuple[expr.Formula, ...] = ()
     appliances: tuple[tuple[expr.Formula | None, tuple[str, ...]], ...] = ()
+    extras: tuple[tuple[expr.Formula | None, str, expr.Formula, str], ...] = ()     # (when, cabinet type, width, "start" | "end")
 
 
 @dataclass(frozen=True)
@@ -188,9 +190,15 @@ def _compile(tid: str, d: Mapping[str, Any]) -> Template:
             a_ = as_dict(a) or {}
             when = _f(tid, f"{at}.appliances[{j}].when", a_["when"], names, expr.BOOL) if "when" in a_ else None
             apps.append((when, tuple(str(x) for x in as_list(a_.get("items")) or [])))
+        extras: list[tuple[expr.Formula | None, str, expr.Formula, str]] = []
+        for j, x in enumerate(as_list(s.get("extras")) or []):
+            x_ = as_dict(x) or {}
+            when = _f(tid, f"{at}.extras[{j}].when", x_["when"], names, expr.BOOL) if "when" in x_ else None
+            extras.append((when, str(x_.get("type") or "base"), _f(tid, f"{at}.extras[{j}].width", x_.get("width", "600"), names),
+                           "start" if x_.get("at") == "start" else "end"))
         steps.append(Step(do, str(s.get("wall") or ""), opt("start"), opt("length"), opt("end"), opt("front"), opt("fridgeAtEnd", expr.BOOL),
                           str(s.get("type") or "base"), opt("width"), opt("blind"),
-                          tuple(_f(tid, f"{at}.doors[{j}]", x, names) for j, x in enumerate(as_list(s.get("doors")) or [])), tuple(apps)))
+                          tuple(_f(tid, f"{at}.doors[{j}]", x, names) for j, x in enumerate(as_list(s.get("doors")) or [])), tuple(apps), tuple(extras)))
     island = as_dict(d.get("island"))
     isl = None
     if island is not None:
@@ -230,8 +238,9 @@ def plan(t: Template, inputs: Mapping[str, expr.Value], rules_: Rules, on: Calla
         if s.do == "base-run":
             items: list[str] = next((list(items) for when, items in s.appliances if when is None or expr.evaluate(when, env)), list[str]())
             at_end = bool(expr.evaluate(s.fridge_at_end, env)) if s.fridge_at_end is not None else False
+            extras = [{"type": kind, "width": val(w), "at": where} for when, kind, w, where in s.extras if when is None or expr.evaluate(when, env)]
             on("base-run", {"wall": s.wall, "start": val(s.start), "length": val(s.length), "appliances": items, "front": val(s.front, 450.0),
-                            "fridgeAtEnd": at_end})
+                            "fridgeAtEnd": at_end, "extras": extras})
         elif s.do == "corner-base":
             on("corner-base", {"wall": s.wall, "type": s.type, "width": val(s.width), "blind": val(s.blind), "doors": [val(f) for f in s.doors]})
         elif s.do == "upper-run":

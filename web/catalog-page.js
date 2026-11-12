@@ -5,6 +5,7 @@ import { loadLang, t, pick, translate, languagePicker, lang } from './i18n.js';
 import * as catalog from './catalog-client.js';
 import { $, el } from './dom.js';
 import { openTypeEditor } from './cabinet-type-editor.js';
+import { openLayoutEditor } from './layout-template-editor.js';
 import { copyId } from './cabinet-type-logic.js';
 let current = null;      // kind shown
 let listing = null;      // its listing from the server
@@ -66,7 +67,7 @@ async function showKind(kind) {
     const actions = el('span', { className: 'row' });
     if (listing.writable) {
       actions.append(el('button', { textContent: t('catalog.edit'), onclick: () => edit(it) }));
-      if (kind === 'cabinet-type') actions.append(el('button', { textContent: t('catalog.type.copy'), onclick: () => typeEditor(it, copyId(it.id, listing.items.map((x) => x.id))) }));
+      if (kind === 'cabinet-type' || kind === 'layout-template') actions.append(el('button', { textContent: t('catalog.type.copy'), onclick: () => typeEditor(it, copyId(it.id, listing.items.map((x) => x.id))) }));
       if (it.mine) actions.append(el('button', { textContent: it.builtin || it.source !== listing.scope ? t('catalog.reset') : '✕', onclick: () => guard(() => reset(it.id)) }));
       if (!it.mine || it.builtin) actions.append(el('button', { textContent: t('catalog.hide'), onclick: () => guard(() => hide(it.id)) }));
       actions.append(el('button', { textContent: '↶', title: t('catalog.undo'), onclick: () => guard(() => undo(it.id)) }));
@@ -121,12 +122,13 @@ function field(schema, key, prop, value) {
 
 /** A cabinet type opens its own editor (steps table, 3D preview, checks); the other kinds the form built from their schema. */
 function typeEditor(item, copy = '') {
-  openTypeEditor($('editor'), { item, copy, onError: (e) => say(errorText(e), 'warn'),
+  const open = current === 'layout-template' ? openLayoutEditor : openTypeEditor;
+  open($('editor'), { item, copy, onError: (e) => say(errorText(e), 'warn'),
     onSaved: (id) => guard(async () => { say(t('catalog.saved', { kind: listing.label, id }), 'ok'); await showKind(current); }) });
 }
 
 function edit(item) {
-  if (current === 'cabinet-type') return typeEditor(item);
+  if (current === 'cabinet-type' || current === 'layout-template') return typeEditor(item);
   const schema = listing.schema;
   const props = schema.properties || {};
   const idInput = el('input', { value: item?.id ?? '', disabled: !!item, pattern: '[A-Za-z0-9_.:-]{1,64}' });
