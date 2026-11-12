@@ -3,7 +3,7 @@
   "id": "countertop-height",
   "name": {
    "vi": "Chiều cao mặt bàn",
-   "en": "Worktop height"
+   "en": "Countertop height"
   }
  },
  {
@@ -17,14 +17,14 @@
   "id": "countertop-depth",
   "name": {
    "vi": "Chiều sâu mặt bàn",
-   "en": "Worktop depth"
+   "en": "Countertop depth"
   }
  },
  {
   "id": "sink-cooktop",
   "name": {
    "vi": "Khoảng cách chậu – bếp",
-   "en": "Sink to hob distance"
+   "en": "Sink to cooktop distance"
   }
  },
  {
@@ -38,42 +38,42 @@
   "id": "sink-table",
   "name": {
    "vi": "Mặt bàn hai bên chậu",
-   "en": "Worktop beside the sink"
+   "en": "Countertop beside the sink"
   }
  },
  {
   "id": "cooktop-table",
   "name": {
    "vi": "Mặt bàn hai bên bếp",
-   "en": "Worktop beside the hob"
+   "en": "Countertop beside the cooktop"
   }
  },
  {
   "id": "fridge-table",
   "name": {
    "vi": "Mặt bàn cạnh tủ lạnh",
-   "en": "Worktop beside the fridge"
+   "en": "Countertop beside the fridge"
   }
  },
  {
   "id": "hood",
   "name": {
    "vi": "Máy hút mùi – mặt bếp",
-   "en": "Hood above the hob"
+   "en": "Hood above the cooktop"
   }
  },
  {
   "id": "above-cooktop",
   "name": {
    "vi": "Khoảng trên bếp khi không có hút mùi",
-   "en": "Space above the hob without a hood"
+   "en": "Space above the cooktop without a hood"
   }
  },
  {
   "id": "upper-gap",
   "name": {
    "vi": "Mặt bàn – đáy tủ trên",
-   "en": "Worktop to wall cabinets"
+   "en": "Countertop to wall cabinets"
   }
  },
  {
@@ -87,7 +87,7 @@
   "id": "cabinet-plinth",
   "name": {
    "vi": "Chiều cao chân tủ",
-   "en": "Plinth height"
+   "en": "Toe kick height"
   }
  },
  {

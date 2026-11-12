@@ -33,7 +33,7 @@
  "error.catalog-item-not-found": "No {kind} {id} in the catalog",
  "error.catalog-kind-not-found": "No kind {kind}",
  "error.bad-role": "Invalid role: {role}",
- "appliance.type.cooktop": "Hob",
+ "appliance.type.cooktop": "Cooktop",
  "appliance.type.sink": "Sink",
  "appliance.type.faucet": "Faucet",
  "appliance.type.hood": "Hood",

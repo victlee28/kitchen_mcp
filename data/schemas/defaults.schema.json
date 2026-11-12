@@ -37,7 +37,7 @@
      "minimum": 10,
      "x-label": {
       "vi": "Dày mặt đá",
-      "en": "Worktop thickness"
+      "en": "Countertop thickness"
      },
      "maximum": 100
     },
@@ -46,7 +46,7 @@
      "minimum": 0,
      "x-label": {
       "vi": "Mặt đá nhô trước",
-      "en": "Worktop overhang"
+      "en": "Countertop overhang"
      },
      "maximum": 100
     },
@@ -190,7 +190,7 @@
      "minimum": 0,
      "x-label": {
       "vi": "Mặt đá chừa trước/sau lỗ khoét",
-      "en": "Worktop left around a cut-out"
+      "en": "Countertop left around a cut-out"
      },
      "maximum": 200
     },
@@ -243,7 +243,7 @@
      "minimum": 0,
      "x-label": {
       "vi": "Độ nhô mặt đá tối đa",
-      "en": "Max worktop overhang"
+      "en": "Max countertop overhang"
      },
      "maximum": 300
     },

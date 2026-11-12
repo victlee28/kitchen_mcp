@@ -4,7 +4,7 @@
   "type": "cooktop",
   "name": {
    "vi": "Bếp từ đôi âm 73 cm",
-   "en": "Built-in two-zone induction hob 73 cm"
+   "en": "Built-in two-zone induction cooktop 73 cm"
   },
   "energy": "induction",
   "size": {
@@ -39,7 +39,7 @@
   "type": "cooktop",
   "name": {
    "vi": "Bếp từ 4 vùng 60 cm",
-   "en": "Four-zone induction hob 60 cm"
+   "en": "Four-zone induction cooktop 60 cm"
   },
   "energy": "induction",
   "size": {
@@ -73,7 +73,7 @@
   "type": "cooktop",
   "name": {
    "vi": "Bếp đôi từ + gas 73 cm",
-   "en": "Hybrid induction + gas hob 73 cm"
+   "en": "Hybrid induction + gas cooktop 73 cm"
   },
   "energy": "mixed",
   "size": {
@@ -110,7 +110,7 @@
   "type": "cooktop",
   "name": {
    "vi": "Bếp gas âm 2 họng 75 cm",
-   "en": "Built-in two-burner gas hob 75 cm"
+   "en": "Built-in two-burner gas cooktop 75 cm"
   },
   "energy": "gas",
   "size": {
@@ -145,7 +145,7 @@
   "type": "cooktop",
   "name": {
    "vi": "Bếp gas âm 3 họng 86 cm",
-   "en": "Built-in three-burner gas hob 86 cm"
+   "en": "Built-in three-burner gas cooktop 86 cm"
   },
   "energy": "gas",
   "size": {
@@ -314,7 +314,7 @@
   "type": "faucet",
   "name": {
    "vi": "Vòi inox cổ cao",
-   "en": "High-arc stainless tap"
+   "en": "High-arc stainless faucet"
   },
   "size": {
    "w": 50,
@@ -340,7 +340,7 @@
   "type": "faucet",
   "name": {
    "vi": "Vòi rút dây",
-   "en": "Pull-down tap"
+   "en": "Pull-down faucet"
   },
   "size": {
    "w": 60,
@@ -365,7 +365,7 @@
   "type": "faucet",
   "name": {
    "vi": "Vòi đen mờ cổ cong",
-   "en": "Matte black gooseneck tap"
+   "en": "Matte black gooseneck faucet"
   },
   "size": {
    "w": 50,
