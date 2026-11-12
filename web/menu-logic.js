@@ -2,12 +2,11 @@
 export const CLICK_MAX_MOVE = 4;     // px between press and context-menu event: more is a camera drag, not a click
 export const CLICK_MAX_MS = 600;
 export const DOOR_STYLES = [['flat', 'Cánh phẳng'], ['frame', 'Cánh khung (shaker)'], ['glass', 'Cánh kính']];
-export const MIN_ADD_WIDTH = 200, MAX_ADD_WIDTH = 1200;
+// Input limits (mm) of the menu: the workshop's catalog "defaults" (menu section), set by boot.js; these are the builtin values.
+export const LIMITS = { addWidthMin: 200, addWidthMax: 1200, overhangMax: 100, runShiftMax: 10000, stretchMax: 1500 };
+export function setLimits(menu) { for (const k of Object.keys(LIMITS)) if (Number.isFinite(menu?.[k])) LIMITS[k] = menu[k]; }
 export const HANDLE_VARIANTS = [['bar', 'Tay thanh'], ['knob', 'Núm'], ['concealed', 'Tay âm'], ['none', 'Không tay (nhấn mở)']];
-export const MAX_OVERHANG = 100;
-export const MAX_RUN_SHIFT = 10000, MAX_STRETCH = 1500;   // mm a run may be moved / an end dragged in one go
 export const RUN_ACTIONS = ['runMove', 'runStretch', 'runRemove'];
-// The style presets of kitchen/system_replace.py (same ids, same order; tests/test_system_replace.py checks it): "thay cả hệ tủ" with no description takes one.
 export const RUN_TURNS = [[0, 'Không xoay'], [90, 'Xoay 90° ngược chiều kim đồng hồ'], [-90, 'Xoay 90° theo chiều kim đồng hồ'], [180, 'Quay ngược lại (180°)'], [45, 'Xoay 45° ngược chiều'], [-45, 'Xoay 45° theo chiều']];
 
 /** Was the press-and-release a click (pointer barely moved, short)? down/up: {x, y, t}. */
@@ -67,7 +66,7 @@ export function buildOp(action, id, form, spec) {
   }
   if (action === 'countertopOverhang') {
     const mm = Number(form.overhang);
-    if (!Number.isFinite(mm) || mm < 0 || mm > MAX_OVERHANG) throw new Error(`Độ nhô 0–${MAX_OVERHANG} mm`);
+    if (!Number.isFinite(mm) || mm < 0 || mm > LIMITS.overhangMax) throw new Error(`Độ nhô 0–${LIMITS.overhangMax} mm`);
     if (mm === spec?.common?.countertopOverhang) throw new Error('Mặt bàn đã nhô đúng mức này');
     return { op: 'common', changes: { countertopOverhang: mm } };
   }
@@ -100,11 +99,11 @@ export function buildOp(action, id, form, spec) {
     if (action === 'runStretch') {
       const delta = Number(form.delta);
       if (!['start', 'end'].includes(form.end)) throw new Error('Chọn đầu dãy cần kéo');
-      if (!Number.isFinite(delta) || delta === 0 || Math.abs(delta) > MAX_STRETCH) throw new Error(`Nhập số mm khác 0, tối đa ±${MAX_STRETCH} (dương: dài ra, âm: ngắn lại)`);
+      if (!Number.isFinite(delta) || delta === 0 || Math.abs(delta) > LIMITS.stretchMax) throw new Error(`Nhập số mm khác 0, tối đa ±${LIMITS.stretchMax} (dương: dài ra, âm: ngắn lại)`);
       return { op: 'stretch-run', id: run.id, end: form.end, delta };
     }
     const along = Number(form.along || 0), out = Number(form.out || 0), turn = Number(form.turn || 0);   // along the run (to the right, seen from the front) / towards the room
-    if (![along, out, turn].every(Number.isFinite) || Math.abs(along) > MAX_RUN_SHIFT || Math.abs(out) > MAX_RUN_SHIFT) throw new Error(`Khoảng dời tối đa ±${MAX_RUN_SHIFT} mm`);
+    if (![along, out, turn].every(Number.isFinite) || Math.abs(along) > LIMITS.runShiftMax || Math.abs(out) > LIMITS.runShiftMax) throw new Error(`Khoảng dời tối đa ±${LIMITS.runShiftMax} mm`);
     if (!RUN_TURNS.some(([v]) => v === turn)) throw new Error('Chọn góc xoay');
     if (!along && !out && !turn) throw new Error('Nhập khoảng dời hoặc chọn góc xoay');
     const t = (run.yaw * Math.PI) / 180; const cos = Math.cos(t), sin = Math.sin(t);
@@ -117,7 +116,7 @@ export function buildOp(action, id, form, spec) {
   if (action === 'remove') return { op: 'remove', id, closeGap: !!form.closeGap };
   if (action === 'add') {
     const width = Number(form.width);
-    if (!Number.isFinite(width) || width < MIN_ADD_WIDTH || width > MAX_ADD_WIDTH) throw new Error(`Chiều rộng ${MIN_ADD_WIDTH}–${MAX_ADD_WIDTH} mm`);
+    if (!Number.isFinite(width) || width < LIMITS.addWidthMin || width > LIMITS.addWidthMax) throw new Error(`Chiều rộng ${LIMITS.addWidthMin}–${LIMITS.addWidthMax} mm`);
     if (m.wall === 'corner') throw new Error('Không thêm cạnh module góc ở đây');
     if (form.side === 'after') return { op: 'add', module: { width }, afterModule: id, closeGap: !!form.closeGap };
     const where = m.run ? { run: m.run } : m.wall === 'island' ? { offset: m.offset, facing: m.facing } : {};      // the same run / free row as the cabinet it stands beside

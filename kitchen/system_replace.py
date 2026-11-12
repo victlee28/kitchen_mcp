@@ -205,24 +205,25 @@ def kept_models(spec: KitchenSpec, mods: list[Module], said: str = "", catalog: 
     return out
 
 
-def _keep_device(device: dict[str, Any], keep: dict[str, dict[str, Any]], width_mm: float) -> tuple[dict[str, Any], str | None]:
+def _keep_device(device: dict[str, Any], keep: dict[str, dict[str, Any]], width_mm: float,
+                 catalog: Catalog = builtin.CATALOG) -> tuple[dict[str, Any], str | None]:
     """``(device, note)``: the device with its kept model when the new cabinet (``width_mm``) is wide enough, else as laid out."""
     model = keep.get(str(device.get("type")))
     if not model:
         return device, None
-    need = appliance_models.needed_width(model)
+    need = appliance_models.needed_width(model, catalog)
     if need and need > width_mm + EPS_MM:
         return device, f"{model['name']} could not be kept: it needs a {need:g} mm cabinet, the new one is {width_mm:g} mm (the default model is used)"
     return {**device, **{k: v for k, v in appliance_models.changes_for(model).items() if v is not None}}, f"{model['name']} kept"
 
 
-def _make_room(modules: list[LaidModule], models: dict[str, dict[str, Any]]) -> list[LaidModule]:
+def _make_room(modules: list[LaidModule], models: dict[str, dict[str, Any]], catalog: Catalog = builtin.CATALOG) -> list[LaidModule]:
     """Widen the cabinet of a kept appliance that needs more room (a double sink in an 800 cabinet) by taking it from a plain base cabinet
     next to it (left at least ``MIN_PLAIN_MM`` wide); the worktop devices on it stay centred on it."""
     out: list[LaidModule] = sorted((cast(LaidModule, dict(m)) for m in modules), key=lambda m: m["s"])
     for host in out:
         devices = [d for d in [host.get("appliance"), *(host.get("appliances") or [])] if isinstance(d, dict)]
-        need = max((appliance_models.needed_width(models[d["type"]]) or 0.0 for d in devices if d.get("type") in models), default=0.0)
+        need = max((appliance_models.needed_width(models[d["type"]], catalog) or 0.0 for d in devices if d.get("type") in models), default=0.0)
         delta = need - float(host["width"])
         if delta <= 1e-6:
             continue
@@ -255,7 +256,7 @@ MIN_PLAIN_MM = 300.0
 
 def relayout_ops(spec: KitchenSpec, mods: list[Module], laid: dict[str, list[LaidModule]], fronts: dict[str, Any],
                  asked: frozenset[str] = frozenset(), refused: frozenset[str] = frozenset(),
-                 models: dict[str, dict[str, Any]] | None = None) -> tuple[list[dict[str, Any]], list[str]]:
+                 models: dict[str, dict[str, Any]] | None = None, catalog: Catalog = builtin.CATALOG) -> tuple[list[dict[str, Any]], list[str]]:
     """``(operations, summary)``: add ``laid[run]`` to each run, then remove every old cabinet of the system (modules as ``run_template`` gives
     them: ``{"type", "width", "s", "y", "height", "depth", ...}``, ``s`` from the slot's start). ``fronts``: what the sentence said about the fronts,
     ``{"material"?: {storey: name}, "handle"?: {...}}``; what it did not say is taken from the old cabinets of the same storey. ``models``:
@@ -279,7 +280,7 @@ def relayout_ops(spec: KitchenSpec, mods: list[Module], laid: dict[str, list[Lai
         if slot.depth is not None:                     # as deep as the run was (plan 10/11/2026, D3)
             modules = fit_depth(modules, slot.depth)
         if models:
-            modules = _make_room(modules, models)
+            modules = _make_room(modules, models, catalog)
         for m in sorted(modules, key=lambda item: item["s"]):
             storey = storey_of(str(m["type"]))
             hood = m["type"] == "upper-hood"             # the hood always stands over the hob (rule of 10/11/2026), wall cabinets or not
@@ -302,7 +303,7 @@ def relayout_ops(spec: KitchenSpec, mods: list[Module], laid: dict[str, list[Lai
                     value = entry.get(key)
                     one = as_dict(value)
                     devices: list[Any] = [one] if one is not None else as_list(value) or []
-                    done: list[tuple[Any, str | None]] = [_keep_device(dd, models, entry["width"]) if (dd := as_dict(d)) is not None else (d, None)
+                    done: list[tuple[Any, str | None]] = [_keep_device(dd, models, entry["width"], catalog) if (dd := as_dict(d)) is not None else (d, None)
                                                          for d in devices]
                     kept += [note for _, note in done if note]
                     if devices:

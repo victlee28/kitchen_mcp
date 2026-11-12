@@ -11,7 +11,7 @@ import unicodedata
 from collections.abc import Callable
 from typing import Any
 
-from . import builtin
+from . import builtin, defaults
 from .catalog import Catalog
 from .errors import InvalidInput
 from .i18n import pick
@@ -19,9 +19,9 @@ from .jsonview import as_dict
 from .runs import row_of, spot
 from .spec import Appliance, KitchenSpec, Module
 
-SIDE = 18.0              # mm: cabinet side panel; a hole must fit between the two
-WORKTOP_EDGE = 50.0      # mm: worktop left in front of and behind a hole
-HOOD_SIDE = 10.0         # mm: an integrated hood needs this much room each side inside its cabinet
+SIDE = defaults.BUILTIN.side                  # mm: cabinet side panel; a hole must fit between the two (catalog kind defaults)
+WORKTOP_EDGE = defaults.BUILTIN.worktop_edge  # mm: worktop left in front of and behind a hole
+HOOD_SIDE = defaults.BUILTIN.hood_side        # mm: an integrated hood needs this much room each side inside its cabinet
 TYPES = ("cooktop", "sink", "faucet", "hood", "fridge", "oven", "tv")
 
 
@@ -132,27 +132,28 @@ def fit(spec: KitchenSpec, app: Appliance, m: dict[str, Any], catalog: Catalog =
     h = host(spec, app)
     now = kind_of(models(catalog).get(model_id(app, catalog) or ""))
     if kind_of(m) != now and app.type in ("hood", "fridge"):
-        around = changes_cabinets(spec, app, m, h)
+        around = changes_cabinets(spec, app, m, h, catalog)
         if around is None:
             return "bad", ["This change needs the cabinet the appliance stands in, which was not found"]
         bad = [r for r in around if r.startswith("Cannot")]
         return ("blocked", [b.removeprefix("Cannot: ") for b in bad]) if bad else ("check", around)
     if h is None:
         return ("ok", []) if app.type == "faucet" else ("check", ["No cabinet found under / around this appliance: check the fit by hand"])
+    d = defaults.of(catalog)
     reasons: list[str] = []
     s = m["size"]
     if app.type in ("sink", "cooktop"):
         hole = m.get("cutout")
         if not hole:
             return "check", ["The model has no cut-out size"]
-        inner = h.width - 2 * SIDE
+        inner = h.width - 2 * d.side
         if hole["w"] > inner:
-            reasons.append(f"Cut-out {hole['w']:g} mm is wider than the inside of {h.id} ({inner:g} mm): needs a cabinet of at least {hole['w'] + 2 * SIDE:g} mm")
+            reasons.append(f"Cut-out {hole['w']:g} mm is wider than the inside of {h.id} ({inner:g} mm): needs a cabinet of at least {hole['w'] + 2 * d.side:g} mm")
         top = h.depth + spec.common.countertopOverhang
-        if hole["d"] + 2 * WORKTOP_EDGE > top:
-            reasons.append(f"Cut-out {hole['d']:g} mm deep leaves less than {WORKTOP_EDGE:g} mm of worktop in front and behind ({top:g} mm deep)")
+        if hole["d"] + 2 * d.worktop_edge > top:
+            reasons.append(f"Cut-out {hole['d']:g} mm deep leaves less than {d.worktop_edge:g} mm of worktop in front and behind ({top:g} mm deep)")
     elif app.type == "hood":
-        if kind_of(m) == "insert" and s["w"] + 2 * HOOD_SIDE > h.width:
+        if kind_of(m) == "insert" and s["w"] + 2 * d.hood_side > h.width:
             reasons.append(f"Hood {s['w']:g} mm does not fit inside {h.id} ({h.width:g} mm)")
         hob = next((a for a in spec.appliances if a.type == "cooktop" and (hm := host(spec, a)) is not None and hm.run == h.run
                     and hm.fromCorner < h.endAt and h.fromCorner < hm.endAt), None)
@@ -164,20 +165,21 @@ def fit(spec: KitchenSpec, app: Appliance, m: dict[str, Any], catalog: Catalog =
         niche = m.get("niche") or {"w": s["w"] + 20, "h": s["h"] + 20}
         if kind_of(m) == "integrated":
             niche = {**niche, "h": 0.0}           # behind full-height doors: no open niche to fit in
-        if niche["w"] > h.width - 2 * SIDE:
-            reasons.append(f"Needs a niche {niche['w']:g} mm wide; {h.id} gives {h.width - 2 * SIDE:g} mm")
+        if niche["w"] > h.width - 2 * d.side:
+            reasons.append(f"Needs a niche {niche['w']:g} mm wide; {h.id} gives {h.width - 2 * d.side:g} mm")
         if h.niche and niche["h"] > h.niche:
             reasons.append(f"Needs a niche {niche['h']:g} mm high; {h.id} gives {h.niche:g} mm")
     elif app.type == "oven":
         niche = m.get("niche") or {"w": s["w"] - 35, "h": s["h"]}
-        if niche["w"] > h.width - 2 * SIDE:
-            reasons.append(f"Needs a niche {niche['w']:g} mm wide; {h.id} gives {h.width - 2 * SIDE:g} mm")
+        if niche["w"] > h.width - 2 * d.side:
+            reasons.append(f"Needs a niche {niche['w']:g} mm wide; {h.id} gives {h.width - 2 * d.side:g} mm")
         if niche["h"] > h.height:
             reasons.append(f"Needs a niche {niche['h']:g} mm high; {h.id} is {h.height:g} mm")
     return ("bad", reasons) if reasons else ("ok", [])
 
 
-def changes_cabinets(spec: KitchenSpec, app: Appliance, m: dict[str, Any], h: Module | None) -> list[str] | None:
+def changes_cabinets(spec: KitchenSpec, app: Appliance, m: dict[str, Any], h: Module | None,
+                     catalog: Catalog = builtin.CATALOG) -> list[str] | None:
     """What changing ``app`` to a model of another kind does to the cabinets around it (shown in the popup, "check"), or why it cannot
     ("Cannot …", "bad"). None when the appliance's cabinet is not found."""
     if h is None:
@@ -202,7 +204,7 @@ def changes_cabinets(spec: KitchenSpec, app: Appliance, m: dict[str, Any], h: Mo
             out.append(f"Hood cabinet {h.id} is removed" + (f", with {', '.join(above)} above it" if above else ""))
         return out
     if app.type == "fridge":
-        need = needed_width(m) or 0.0
+        need = needed_width(m, catalog) or 0.0
         if h.width < need:
             return [f"Cannot: {h.id} is {h.width:g} mm wide, the fridge needs {need:g} mm"]
         if to == "integrated":
@@ -218,12 +220,12 @@ def over(a: Module, b: Module) -> bool:
     return same and a.fromCorner < b.endAt - 1 and b.fromCorner < a.endAt - 1
 
 
-def needed_width(m: dict[str, Any]) -> float | None:
+def needed_width(m: dict[str, Any], catalog: Catalog = builtin.CATALOG) -> float | None:
     """The narrowest cabinet model ``m`` fits in (10 mm steps): the hole / niche plus both side panels, at least its ``fits.hostWidth``."""
     hole = m.get("cutout") or m.get("niche")
     if not hole:
         return None
-    need = max(hole["w"] + 2 * SIDE, float(m.get("fits", {}).get("hostWidth") or 0))
+    need = max(hole["w"] + 2 * defaults.of(catalog).side, float(m.get("fits", {}).get("hostWidth") or 0))
     return float(-(-need // 10) * 10)
 
 

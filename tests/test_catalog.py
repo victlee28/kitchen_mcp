@@ -328,5 +328,46 @@ class TestCsvAndPreview(unittest.TestCase):
         self.assertEqual(r["look"]["color"], "#7d8a5f")
 
 
+class TestDefaultsFromTheCatalog(unittest.TestCase):
+    """Stage 2.1: the workshop's default sizes and limits (catalog kind defaults, one item) change what is made, not what is stored."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        from kitchen.service import KitchenService
+        self.s = KitchenService(db_path=self.tmp / "k.db", render_dir=self.tmp / "r")
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def _set(self, **sections):
+        d = json.loads(json.dumps(dict(self.s.catalog().data("defaults", "default"))))
+        for k, v in sections.items():
+            d[k].update(v)
+        self.s.catalog_put("defaults", "default", d, "workshop")
+
+    def test_split_and_new_design(self):
+        from kitchen import cabinet_run, defaults
+        self.assertEqual(cabinet_run.split_widths(1900), [600, 600, 700])
+        self._set(run={"moduleWidth": 450}, newDesign={"doorThickness": 20, "cabinetTop": 2300})
+        c = self.s.catalog()
+        self.assertEqual(defaults.of(c).module_width, 450)
+        self.assertEqual(cabinet_run.split_widths(1900, c), [450, 450, 450, 550])
+        spec = self.s.store.get(self.s.create_from_prompt("bếp chữ I dài 3m")["id"])[0]
+        self.assertEqual(spec.common.doorThickness, 20)
+        self.assertEqual(spec.common.cabinetTop, 2300)
+
+    def test_only_the_workshop_and_no_second_item(self):
+        d = dict(self.s.catalog().data("defaults", "default"))
+        with self.assertRaises(InvalidInput):
+            self.s.catalog_put("defaults", "default", d, "user")
+        with self.assertRaises(InvalidInput):
+            self.s.catalog_put("defaults", "other", d, "workshop")
+
+    def test_stretch_limit(self):
+        from kitchen import defaults
+        self._set(stretch={"max": 900})
+        self.assertEqual(defaults.of(self.s.catalog()).stretch_max, 900)
+
+
 if __name__ == "__main__":
     unittest.main()

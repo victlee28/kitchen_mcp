@@ -14,7 +14,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, ValidationError
 
-from . import lexicon, regions
+from . import builtin, defaults, lexicon, regions
+from .catalog import Catalog
 from .spec import Appliance, Common, FrontSection, Handle, KitchenSpec, Module, Room, Wall
 
 WallSide = Literal["back", "right", "left"]
@@ -251,8 +252,13 @@ def _merge_notes(items: list[dict], notes: list[dict]) -> list[dict]:
     return out
 
 
-def from_template(color: KitchenTemplate, name: str = "Thiết kế tủ bếp", rows: list[dict] | None = None) -> KitchenSpec:
-    """Sinh spec từ mẫu. Kích thước không được chỉ định lấy theo tiêu chuẩn ưu tiên của mau.quocGia/khuVuc."""
+def from_template(color: KitchenTemplate, name: str = "Thiết kế tủ bếp", rows: list[dict] | None = None,
+                  catalog: Catalog = builtin.CATALOG) -> KitchenSpec:
+    """Sinh spec từ mẫu. Kích thước không được chỉ định lấy theo tiêu chuẩn ưu tiên của mau.quocGia/khuVuc; các kích thước chung còn lại
+    (dày cánh, khe, mặt đá, đỉnh tủ trên khi câu không nói) lấy từ danh mục ``defaults`` của xưởng."""
+    new = defaults.of(catalog).new_design
+    if "cabinetTop" not in color.model_fields_set and "cabinetTop" in new:
+        color = color.model_copy(update={"cabinetTop": new["cabinetTop"]})
     from . import moldings as _mol
     kt, check_source = dimensions_by_region(rows, color.country, color.region)
     co_dien = color.style in ("Classic", "Neoclassical", "Transitional")
@@ -265,10 +271,13 @@ def from_template(color: KitchenTemplate, name: str = "Thiết kế tủ bếp",
     top = min(color.cabinetTop, ceiling - h_loft) if h_loft else color.cabinetTop  # chừa chỗ cho phào nóc dưới trần
     material = {"wallTile": "Đá ốp tường đồng bộ mặt bàn", **color.material}
     handle = Handle.model_validate({k: v for k, v in (("variant", color.handleVariant), ("material", color.handleMaterial)) if v})
-    c = Common(countertop=countertop, baseTop=countertop - 60, plinthHeight=kt["plinthHeight"], baseDepth=color.baseDepth or kt["baseDepth"],
+    c = Common(countertop=countertop, baseTop=countertop - new.get("countertopThickness", 60), plinthHeight=kt["plinthHeight"], baseDepth=color.baseDepth or kt["baseDepth"],
               upperDepth=kt["upperDepth"], cabinetTop=top, ceiling=ceiling, upperTierSplit=top if not color.loft else top - 330,
               upperBottom=upper_bottom if top - upper_bottom >= 450 else top - 600, material=material, backsplashHeight=color.backsplashHeight,
               backsplashHeightMm=color.backsplashHeightMm, wallTilePattern=color.wallTilePattern, handle=handle)
+    for key in ("countertopThickness", "countertopOverhang", "doorThickness", "doorGap", "backThickness"):   # the workshop's sizes (defaults)
+        if key in new:
+            setattr(c, key, new[key])
     y_hood = c.countertop + kt["hoodGap"] + 165  # đáy tủ hút mùi = mặt bàn + khoảng tối thiểu + chiều cao máy
     if color.loft:
         c.cabinetTop = ceiling - max(30, h_loft)

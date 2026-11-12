@@ -269,7 +269,7 @@ class KitchenService:
         if legacy:
             raise TypeError(f"Unexpected options: {', '.join(legacy)}")
         parsed_template = template if isinstance(template, KitchenTemplate) else KitchenTemplate.model_validate(template)
-        spec = self._by_runs(intent.from_template(parsed_template, name, self.store.rule_rows()))
+        spec = self._by_runs(intent.from_template(parsed_template, name, self.store.rule_rows(), self.catalog()))
         record = self.store.create_design(spec, 'template')
         return self._summary(record['id'], 1, spec, color=parsed_template.model_dump())
 
@@ -286,7 +286,7 @@ class KitchenService:
             parser_source = 'regex'
         else:  # DeepSeek không biết các trường mới (phong cách, kiểu cánh, tay nắm, ốp): bổ sung từ bảng thuật ngữ
             template, notes = intent.merge_lexicon(template, prompt)
-        spec = self._by_runs(intent.from_template(template, name or prompt[:60], self.store.rule_rows()))
+        spec = self._by_runs(intent.from_template(template, name or prompt[:60], self.store.rule_rows(), self.catalog()))
         record = self.store.create_design(spec, f'prompt:{parser_source}')
         return self._summary(record['id'], 1, spec, color=template.model_dump(), analysis={'source': parser_source, 'note': notes, 'interpretation': template.promptInterpretation, 'deepseek': llm_result})
 
@@ -354,7 +354,8 @@ class KitchenService:
         if base_revision is not None and base_revision != current:
             raise ConflictError(f'base_rev={base_revision}, but the latest revision is {current}; reload before editing')
         if template.get('kind') == 'corner':     # {"kind": "corner", "runA": "R1", "runB": "R2", "width"?: mm}: special corner cabinet between two runs
-            plan = cabinet_run.plan_corner(spec, str(template.get('runA')), str(template.get('runB')), float(template.get('width') or 900.0))
+            plan = cabinet_run.plan_corner(spec, str(template.get('runA')), str(template.get('runB')), float(template.get('width') or 900.0),
+                                           catalog=self.catalog())
             preview = self.propose(design_id, plan['operation'], current, None, country)
             return {'id': design_id, 'baseRev': current, 'status': 'ok', 'facing': None, 'angle': plan['angle'], 'clearance': plan['clearance'], 'length': template.get('width') or 900.0,
                     'summary': plan['summary'], 'operation': plan['operation'], 'proposal': preview}
@@ -397,7 +398,7 @@ class KitchenService:
                 color = color.model_copy(update={'country': country})
             planner = lambda outline, click, system: self._plan_described(spec, color, notes, outline, click, system)
         else:
-            planner = lambda outline, click, system: cabinet_run.plan_i_run(spec, outline, click, system=system)
+            planner = lambda outline, click, system: cabinet_run.plan_i_run(spec, outline, click, system=system, catalog=self.catalog())
         struct, plan = self._plan_at_object(spec, str(template.get('structureId')), point, planner)
         preview = self.propose(design_id, plan['operation'], current, None, country)
         return {'id': design_id, 'baseRev': current, 'status': 'ok', 'structureId': struct['id'], 'facing': plan['facing'], 'length': plan['length'],
@@ -457,7 +458,7 @@ class KitchenService:
         if fit == 'later':
             raise InvalidInput(reasons[0], code='model-changes-type')
         if appliance_kind.changes_kind(app, m, self.catalog()):          # another kind: the cabinets around it change too (appliance_kind)
-            ops, around = appliance_kind.plan(spec, app, m)
+            ops, around = appliance_kind.plan(spec, app, m, self.catalog())
             reasons = []
         else:
             ops, around = [{'op': 'update-appliance', 'id': app.id, 'model': m['id']}], []
@@ -469,7 +470,7 @@ class KitchenService:
         summary += [f"Does not fit: {r}" if fit == 'bad' else f"Check: {r}" for r in reasons]
         summary += appliance_models.energy_notes(app, m, self.catalog())
         if template.get('resizeHost') and fit == 'bad':
-            ops += self._widen_host(spec, app, m, summary)
+            ops += self._widen_host(spec, app, m, summary, self.catalog())
         operation = edit.combine_ops(ops)
         after = edit.apply_op(spec, operation, self.catalog())
         facts = appliance_models.ai_facts(after, next(a for a in after.appliances if a.id == app.id), catalog=self.catalog())
@@ -478,12 +479,12 @@ class KitchenService:
                 'summary': summary, 'operation': operation, 'proposal': preview, 'aiFacts': facts}
 
     @staticmethod
-    def _widen_host(spec: KitchenSpec, app: Any, m: dict, summary: list[str]) -> list[dict[str, Any]]:
+    def _widen_host(spec: KitchenSpec, app: Any, m: dict, summary: list[str], catalog: cat.Catalog = builtin.CATALOG) -> list[dict[str, Any]]:
         """Operations that widen the cabinet under / around ``app`` so model ``m`` fits (the cabinets after it in the run move along)."""
         h = appliance_models.host(spec, app)
         if h is None:
             return []
-        need = appliance_models.needed_width(m)
+        need = appliance_models.needed_width(m, catalog)
         if need is None or need <= h.width:
             return []
         summary.append(f"{h.id} widens {h.width:g} → {need:g} mm; the cabinets after it in the row move along")
@@ -530,7 +531,7 @@ class KitchenService:
                     modules = (tv_system.layout(length, to_data(spec)['common'], tv_system.style_of(prompt), tv_system.wants_panel(prompt), self.catalog())
                                if i == 0 else tv_system.console(length))
                 elif described is None:
-                    modules = run_line.base_cabinets(length, to_data(spec)['common'])
+                    modules = run_line.base_cabinets(length, to_data(spec)['common'], self.catalog())
                 else:
                     color, _ = described
                     if not color.country and country:
@@ -591,7 +592,7 @@ class KitchenService:
         if re.search(r"tủ\s*(?:trên|treo)", re.sub(no + r"tủ\s*(?:trên|treo)", "", said)):
             asked.add('upper')
         ops, summary = system_replace.relayout_ops(spec, mods, laid, fronts, frozenset(asked - refused), frozenset(refused),
-                                                   system_replace.kept_models(spec, mods, prompt, catalog))
+                                                   system_replace.kept_models(spec, mods, prompt, catalog), catalog=catalog)
         ops = [*undo_tv, *ops]
         kept = [n for n in notes if 'chiều dài' not in n]          # the run keeps its length: the "no length given" note does not apply
         return {'operation': edit.combine_ops(ops), 'system': system, 'mode': 'relayout', 'summary': [f"System {system} laid out again", *summary, *kept]}
@@ -613,7 +614,7 @@ class KitchenService:
         front = old[0].material if old else tv_system.front_of(common)
         fronts = {'material': {storey: front for storey in ('base', 'upper', 'tall')}}       # one finish for the whole TV wall
         ops, summary = system_replace.relayout_ops(spec, mods, laid, fronts, frozenset({'upper', 'loft'}), frozenset(),
-                                                   system_replace.kept_models(spec, mods, prompt, catalog))
+                                                   system_replace.kept_models(spec, mods, prompt, catalog), catalog=catalog)
         marks = [{'op': 'set-run-tv', 'id': s.run, 'layout': style} for s in slots]
         names = {'columns': 'low console, TV niche, two columns', 'shelves': 'low console and open shelves', 'full': 'closed wall with a TV niche'}
         return {'operation': edit.combine_ops([*marks, *ops]), 'system': system, 'mode': 'relayout',
@@ -718,7 +719,7 @@ class KitchenService:
                     color = color.model_copy(update={'country': country})
                 plan = self._plan_described_line(spec, color, notes, line)
             else:
-                plan = run_line.plan_on_line(spec, line, run_line.base_cabinets(run_line.run_frame(line)['length'], to_data(spec)['common']))
+                plan = run_line.plan_on_line(spec, line, run_line.base_cabinets(run_line.run_frame(line)['length'], to_data(spec)['common'], self.catalog()))
             return {**plan, 'summary': [*plan['summary'], *note]}
 
         return self._settle(spec, planner, ctx.placement if ctx is not None and ctx.placement is not None else IDENTITY)

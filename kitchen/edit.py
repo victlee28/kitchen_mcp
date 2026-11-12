@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import Any
 
 from .numeric import round_half_away
-from . import builtin, tv_system
+from . import builtin, defaults, tv_system
 from .catalog import Catalog
 from .spec import Appliance, KitchenSpec, Module, Run, from_data, to_data
 from .errors import InvalidInput, NotFound
@@ -213,10 +213,10 @@ def remove_run(spec: KitchenSpec, id: str) -> KitchenSpec:
     return from_data(KitchenSpec, to_data(s))
 
 
-STRETCH_MIN, STRETCH_MAX = 150.0, 2000.0     # a cabinet's width stays a cabinet's width
+STRETCH_MIN, STRETCH_MAX = defaults.BUILTIN.stretch_min, defaults.BUILTIN.stretch_max     # a cabinet's width stays a cabinet's width (catalog defaults)
 
 
-def stretch_run(spec: KitchenSpec, id: str, end: str, delta: float) -> KitchenSpec:
+def stretch_run(spec: KitchenSpec, id: str, end: str, delta: float, catalog: Catalog = builtin.CATALOG) -> KitchenSpec:
     """Drag one end of an explicit run by ``delta`` mm along the run (positive: longer). The other end stays where it is.
 
     The cabinets standing AT the dragged end (one per storey group: floor = base and tall, upper, loft) take the change in their width, doors
@@ -227,6 +227,7 @@ def stretch_run(spec: KitchenSpec, id: str, end: str, delta: float) -> KitchenSp
         raise InvalidInput("end phải là 'start' hoặc 'end'", code="bad-run-end")
     if isinstance(delta, bool) or not isinstance(delta, (int, float)) or not delta:   # pyright: ignore[reportUnnecessaryIsInstance] (JSON input)
         raise InvalidInput("delta phải là số khác 0 (mm)", code="bad-run-delta")
+    w_lo, w_hi = defaults.of(catalog).stretch_min, defaults.of(catalog).stretch_max
     s = _clone(spec)
     run = _run(s, id)
     mods = [m for m in s.module if m.run == id]
@@ -245,8 +246,8 @@ def stretch_run(spec: KitchenSpec, id: str, end: str, delta: float) -> KitchenSp
             targets[g] = m
     for m in targets.values():
         width = m.width + delta
-        if not STRETCH_MIN <= width - m.blindCorner - m.endPanel or width > STRETCH_MAX:
-            raise InvalidInput(f"{m.id} sẽ rộng {width:g} mm (cho phép {STRETCH_MIN:g}-{STRETCH_MAX:g}); thêm hoặc bớt một tủ thay vì kéo", code="stretch-limit")
+        if not w_lo <= width - m.blindCorner - m.endPanel or width > w_hi:
+            raise InvalidInput(f"{m.id} sẽ rộng {width:g} mm (cho phép {w_lo:g}-{w_hi:g}); thêm hoặc bớt một tủ thay vì kéo", code="stretch-limit")
     hit = {m.id for m in targets.values()}
     for m in mods:
         if m.id in hit:
@@ -353,7 +354,7 @@ def apply_op(spec: KitchenSpec, op: dict[str, Any], catalog: Catalog = builtin.C
     if kind == "remove-run":
         return remove_run(spec, op["id"])
     if kind == "stretch-run":
-        return stretch_run(spec, op["id"], op.get("end", "end"), op.get("delta", 0))
+        return stretch_run(spec, op["id"], op.get("end", "end"), op.get("delta", 0), catalog)
     if kind == "remove":
         return remove_module(spec, op["id"], dd)
     if kind == "update":

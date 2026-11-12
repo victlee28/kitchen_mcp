@@ -1,0 +1,275 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "defaults",
+ "type": "object",
+ "required": [
+  "newDesign",
+  "run",
+  "stretch",
+  "applianceHole",
+  "menu"
+ ],
+ "additionalProperties": false,
+ "properties": {
+  "newDesign": {
+   "type": "object",
+   "required": [
+    "cabinetTop",
+    "countertopThickness",
+    "countertopOverhang",
+    "doorThickness",
+    "doorGap",
+    "backThickness"
+   ],
+   "additionalProperties": false,
+   "properties": {
+    "cabinetTop": {
+     "type": "number",
+     "minimum": 1500,
+     "x-label": {
+      "vi": "Đỉnh tủ trên (mm)",
+      "en": "Top of wall cabinets (mm)"
+     },
+     "maximum": 3200
+    },
+    "countertopThickness": {
+     "type": "number",
+     "minimum": 10,
+     "x-label": {
+      "vi": "Dày mặt đá",
+      "en": "Worktop thickness"
+     },
+     "maximum": 100
+    },
+    "countertopOverhang": {
+     "type": "number",
+     "minimum": 0,
+     "x-label": {
+      "vi": "Mặt đá nhô trước",
+      "en": "Worktop overhang"
+     },
+     "maximum": 100
+    },
+    "doorThickness": {
+     "type": "number",
+     "minimum": 10,
+     "x-label": {
+      "vi": "Dày cánh",
+      "en": "Door thickness"
+     },
+     "maximum": 40
+    },
+    "doorGap": {
+     "type": "number",
+     "minimum": 0,
+     "x-label": {
+      "vi": "Khe cánh",
+      "en": "Door gap"
+     },
+     "maximum": 10
+    },
+    "backThickness": {
+     "type": "number",
+     "minimum": 3,
+     "x-label": {
+      "vi": "Dày hậu",
+      "en": "Back panel thickness"
+     },
+     "maximum": 25
+    }
+   },
+   "x-label": {
+    "vi": "Thiết kế mới (khi câu lệnh không nói)",
+    "en": "New designs (when the request does not say)"
+   }
+  },
+  "run": {
+   "type": "object",
+   "required": [
+    "moduleWidth",
+    "minWidth",
+    "maxRun",
+    "cornerMaxWidth"
+   ],
+   "additionalProperties": false,
+   "properties": {
+    "moduleWidth": {
+     "type": "number",
+     "minimum": 300,
+     "x-label": {
+      "vi": "Rộng tủ ưa dùng",
+      "en": "Preferred cabinet width"
+     },
+     "maximum": 1200
+    },
+    "minWidth": {
+     "type": "number",
+     "minimum": 100,
+     "x-label": {
+      "vi": "Tủ hẹp nhất",
+      "en": "Narrowest cabinet"
+     },
+     "maximum": 600
+    },
+    "maxRun": {
+     "type": "number",
+     "minimum": 1000,
+     "x-label": {
+      "vi": "Dãy dài nhất làm một lần",
+      "en": "Longest run made at once"
+     },
+     "maximum": 20000
+    },
+    "cornerMaxWidth": {
+     "type": "number",
+     "minimum": 600,
+     "x-label": {
+      "vi": "Tủ góc rộng nhất",
+      "en": "Widest corner cabinet"
+     },
+     "maximum": 2000
+    }
+   },
+   "x-label": {
+    "vi": "Chia dãy tủ",
+    "en": "Splitting a run"
+   }
+  },
+  "stretch": {
+   "type": "object",
+   "required": [
+    "min",
+    "max"
+   ],
+   "additionalProperties": false,
+   "properties": {
+    "min": {
+     "type": "number",
+     "minimum": 50,
+     "x-label": {
+      "vi": "Kéo dãy: tủ hẹp nhất",
+      "en": "Stretch: narrowest cabinet"
+     },
+     "maximum": 600
+    },
+    "max": {
+     "type": "number",
+     "minimum": 600,
+     "x-label": {
+      "vi": "Kéo dãy: tủ rộng nhất",
+      "en": "Stretch: widest cabinet"
+     },
+     "maximum": 3000
+    }
+   },
+   "x-label": {
+    "vi": "Kéo đầu dãy",
+    "en": "Dragging a run end"
+   }
+  },
+  "applianceHole": {
+   "type": "object",
+   "required": [
+    "side",
+    "worktopEdge",
+    "hoodSide"
+   ],
+   "additionalProperties": false,
+   "properties": {
+    "side": {
+     "type": "number",
+     "minimum": 5,
+     "x-label": {
+      "vi": "Hông tủ",
+      "en": "Side panel"
+     },
+     "maximum": 40
+    },
+    "worktopEdge": {
+     "type": "number",
+     "minimum": 0,
+     "x-label": {
+      "vi": "Mặt đá chừa trước/sau lỗ khoét",
+      "en": "Worktop left around a cut-out"
+     },
+     "maximum": 200
+    },
+    "hoodSide": {
+     "type": "number",
+     "minimum": 0,
+     "x-label": {
+      "vi": "Khe mỗi bên hút mùi âm tủ",
+      "en": "Room each side of an integrated hood"
+     },
+     "maximum": 50
+    }
+   },
+   "x-label": {
+    "vi": "Lắp thiết bị",
+    "en": "Fitting appliances"
+   }
+  },
+  "menu": {
+   "type": "object",
+   "required": [
+    "addWidthMin",
+    "addWidthMax",
+    "overhangMax",
+    "runShiftMax",
+    "stretchMax"
+   ],
+   "additionalProperties": false,
+   "properties": {
+    "addWidthMin": {
+     "type": "number",
+     "minimum": 50,
+     "x-label": {
+      "vi": "Thêm tủ: rộng tối thiểu",
+      "en": "Add cabinet: min width"
+     },
+     "maximum": 600
+    },
+    "addWidthMax": {
+     "type": "number",
+     "minimum": 300,
+     "x-label": {
+      "vi": "Thêm tủ: rộng tối đa",
+      "en": "Add cabinet: max width"
+     },
+     "maximum": 3000
+    },
+    "overhangMax": {
+     "type": "number",
+     "minimum": 0,
+     "x-label": {
+      "vi": "Độ nhô mặt đá tối đa",
+      "en": "Max worktop overhang"
+     },
+     "maximum": 300
+    },
+    "runShiftMax": {
+     "type": "number",
+     "minimum": 100,
+     "x-label": {
+      "vi": "Dời dãy tối đa",
+      "en": "Max run move"
+     },
+     "maximum": 50000
+    },
+    "stretchMax": {
+     "type": "number",
+     "minimum": 50,
+     "x-label": {
+      "vi": "Kéo đầu dãy tối đa mỗi lần",
+      "en": "Max end drag at once"
+     },
+     "maximum": 5000
+    }
+   },
+   "x-label": {
+    "vi": "Giới hạn nhập trên menu",
+    "en": "Menu input limits"
+   }
+  }
+ }
+}

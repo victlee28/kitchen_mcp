@@ -10,6 +10,8 @@ import math
 from dataclasses import dataclass
 from typing import Any, cast
 
+from . import builtin
+from .catalog import Catalog
 from .edit import apply_op, combine_ops, next_run_id
 from .errors import InvalidInput
 from .floorplan.geom import point_in_poly
@@ -80,12 +82,12 @@ def drawn_line(a: Pt, b: Pt, front: Pt) -> Line:
     return Line(a, b, (nx, nz) if side > 0 else (-nx, -nz))
 
 
-def base_cabinets(length: float, common: dict[str, Any]) -> list[LaidModule]:
+def base_cabinets(length: float, common: dict[str, Any], catalog: Catalog = builtin.CATALOG) -> list[LaidModule]:
     """Plain base cabinets filling ``length`` (``cabinet_run.split_widths``: 600s, a short remainder widening the last), ready for ``plan_on_line``."""
     from .cabinet_run import split_widths
     out: list[LaidModule] = []
     at = 0.0
-    for w in split_widths(float(int(length // 10) * 10)):
+    for w in split_widths(float(int(length // 10) * 10), catalog):
         out.append({"type": "base", "s": at, "width": w, "y": 0.0, "height": float(common["baseTop"]), "depth": float(common["baseDepth"])})
         at += w
     return out

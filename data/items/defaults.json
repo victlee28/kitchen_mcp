@@ -1,0 +1,35 @@
+[
+ {
+  "id": "default",
+  "newDesign": {
+   "cabinetTop": 2200,
+   "countertopThickness": 60,
+   "countertopOverhang": 20,
+   "doorThickness": 18,
+   "doorGap": 3,
+   "backThickness": 9
+  },
+  "run": {
+   "moduleWidth": 600,
+   "minWidth": 300,
+   "maxRun": 6000,
+   "cornerMaxWidth": 1500
+  },
+  "stretch": {
+   "min": 150,
+   "max": 2000
+  },
+  "applianceHole": {
+   "side": 18,
+   "worktopEdge": 50,
+   "hoodSide": 10
+  },
+  "menu": {
+   "addWidthMin": 200,
+   "addWidthMax": 1200,
+   "overhangMax": 100,
+   "runShiftMax": 10000,
+   "stretchMax": 1500
+  }
+ }
+]

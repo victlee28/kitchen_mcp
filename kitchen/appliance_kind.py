@@ -28,10 +28,10 @@ def changes_kind(app: Appliance, model: dict[str, Any], catalog: Catalog = built
     return app.type in ("hood", "fridge") and appliance_models.kind_of(model) != appliance_models.kind_of(now)
 
 
-def plan(spec: KitchenSpec, app: Appliance, model: dict[str, Any]) -> tuple[list[dict[str, Any]], list[str]]:
+def plan(spec: KitchenSpec, app: Appliance, model: dict[str, Any], catalog: Catalog = builtin.CATALOG) -> tuple[list[dict[str, Any]], list[str]]:
     """``(operations, summary)`` that change ``app`` to ``model`` of another kind with its cabinets. InvalidInput when it cannot."""
     h = appliance_models.host(spec, app)
-    reasons = appliance_models.changes_cabinets(spec, app, model, h)
+    reasons = appliance_models.changes_cabinets(spec, app, model, h, catalog)
     if reasons is None or h is None:
         raise InvalidInput(f"{app.id}: the cabinet it stands in was not found", code="appliance-no-host")
     bad = [r for r in reasons if r.startswith("Cannot")]

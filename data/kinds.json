@@ -79,5 +79,15 @@
    "workshop"
   ],
   "closed": true
+ },
+ "defaults": {
+  "label": {
+   "vi": "Kích thước mặc định",
+   "en": "Default sizes"
+  },
+  "writers": [
+   "workshop"
+  ],
+  "closed": true
  }
 }

@@ -9,6 +9,8 @@ from __future__ import annotations
 import math
 from typing import Any
 
+from . import builtin, defaults
+from .catalog import Catalog
 from .edit import combine_ops, next_run_id
 from .errors import InvalidInput
 from .floorplan.geom import point_in_poly
@@ -17,9 +19,9 @@ from . import runs as runmod
 from .run_line import Line, nearest_edge as _nearest_edge, outward as _outward, plan_on_line, run_frame
 from .spec import KitchenSpec, LaidModule
 
-MODULE_WIDTH = 600.0         # preferred cabinet width
-MIN_WIDTH = 300.0            # narrowest cabinet we make
-MAX_RUN = 6000.0             # longest run made in one go
+MODULE_WIDTH = defaults.BUILTIN.module_width     # preferred cabinet width (catalog kind defaults: the functions take the merged catalog)
+MIN_WIDTH = defaults.BUILTIN.min_width           # narrowest cabinet we make
+MAX_RUN = defaults.BUILTIN.max_run               # longest run made in one go
 AXIS_TOLERANCE_DEG = 1.5     # an edge this close to an axis counts as parallel to it
 Pt = tuple[float, float]
 
@@ -29,10 +31,11 @@ def _is_diagonal(a: Pt, b: Pt) -> bool:
     return AXIS_TOLERANCE_DEG < angle < 90 - AXIS_TOLERANCE_DEG
 
 
-def _plan_angled(spec: KitchenSpec, outline: list[Pt], a: Pt, b: Pt, module_type: str, system: str | None = None) -> dict[str, Any]:
+def _plan_angled(spec: KitchenSpec, outline: list[Pt], a: Pt, b: Pt, module_type: str, system: str | None = None,
+                 catalog: Catalog = builtin.CATALOG) -> dict[str, Any]:
     """A run along an edge at any angle: one explicit run (origin on the edge, doors along the outward normal) and the cabinets in it."""
     line = Line(a, b, _outward(outline, a, b))
-    widths = split_widths(run_frame(line)["length"])
+    widths = split_widths(run_frame(line)["length"], catalog)
     c = spec.common
     at = 0.0
     modules: list[LaidModule] = []
@@ -67,31 +70,33 @@ def _facing(poly: list[Pt], a: Pt, b: Pt) -> str:
     return "+x" if sign > 0 else "-x"
 
 
-def split_widths(length: float) -> list[float]:
-    """Whole-mm cabinet widths filling ``length``: 600s, and a remainder under 300 widens the last one."""
-    length = float(round_half_away(min(length, MAX_RUN), 0))
-    if length < MIN_WIDTH:
-        raise InvalidInput(f"The run would be {length:g} mm; the narrowest cabinet is {MIN_WIDTH:g} mm", code="run-too-short")
-    n = int(length // MODULE_WIDTH)
-    rest = length - n * MODULE_WIDTH
+def split_widths(length: float, catalog: Catalog = builtin.CATALOG) -> list[float]:
+    """Whole-mm cabinet widths filling ``length``: 600s, and a remainder under 300 widens the last one (sizes: catalog kind defaults)."""
+    d = defaults.of(catalog)
+    length = float(round_half_away(min(length, d.max_run), 0))
+    if length < d.min_width:
+        raise InvalidInput(f"The run would be {length:g} mm; the narrowest cabinet is {d.min_width:g} mm", code="run-too-short")
+    n = int(length // d.module_width)
+    rest = length - n * d.module_width
     if n == 0:
         return [length]
-    widths = [MODULE_WIDTH] * n
-    if rest >= MIN_WIDTH:
+    widths = [d.module_width] * n
+    if rest >= d.min_width:
         widths.append(rest)
     else:
         widths[-1] += rest
     return widths
 
 
-def plan_i_run(spec: KitchenSpec, outline: list[Pt], point: Pt, module_type: str = "base", system: str | None = None) -> dict[str, Any]:
+def plan_i_run(spec: KitchenSpec, outline: list[Pt], point: Pt, module_type: str = "base", system: str | None = None,
+               catalog: Catalog = builtin.CATALOG) -> dict[str, Any]:
     """An I-shaped run along the edge of ``outline`` nearest to ``point`` (both in the kitchen frame, mm): always one explicit run, its back on
     the edge, doors looking away from the object. ``facing`` (-z / +z / -x / +x) is reported for an edge parallel to a wall, None otherwise.
     ``system``: the cabinet system the new run belongs to (the floorplan element the edge belongs to)."""
     if len(outline) < 3:
         raise InvalidInput("The object has no outline", code="no-outline")
     a, b = _nearest_edge(outline, point)
-    plan = _plan_angled(spec, outline, a, b, module_type, system)
+    plan = _plan_angled(spec, outline, a, b, module_type, system, catalog)
     if not _is_diagonal(a, b):
         facing = _facing(outline, a, b)
         where = {"-z": "-z (towards the back wall)", "+z": "+z (into the room)", "-x": "-x", "+x": "+x"}[facing]
@@ -112,7 +117,8 @@ def _meet(fa: runmod.RunFrame, fb: runmod.RunFrame) -> Pt:
     return fa.x + t * ua[0], fa.z + t * ua[1]
 
 
-def plan_corner(spec: KitchenSpec, run_a: str, run_b: str, width: float = 900.0, module_type: str = "base") -> dict[str, Any]:
+def plan_corner(spec: KitchenSpec, run_a: str, run_b: str, width: float = 900.0, module_type: str = "base",
+                catalog: Catalog = builtin.CATALOG) -> dict[str, Any]:
     """A special corner cabinet where run ``run_a`` (its s grows towards the corner) meets run ``run_b`` (its s grows away from it), at any angle.
 
     The cabinet is one box on the bisector of the two back lines, its front square to the bisector, its back corners on the two walls. It is a
@@ -123,8 +129,9 @@ def plan_corner(spec: KitchenSpec, run_a: str, run_b: str, width: float = 900.0,
     frames = runmod.frames(spec)
     if run_a not in frames or run_b not in frames:
         raise InvalidInput("Both runs must exist", code="run-not-found")
-    if not MIN_WIDTH <= width <= 1500:
-        raise InvalidInput(f"The corner cabinet width must be {MIN_WIDTH:g}-1500 mm", code="bad-corner-width")
+    d = defaults.of(catalog)
+    if not d.min_width <= width <= d.corner_max_width:
+        raise InvalidInput(f"The corner cabinet width must be {d.min_width:g}-{d.corner_max_width:g} mm", code="bad-corner-width")
     fa, fb = frames[run_a], frames[run_b]
     px, pz = _meet(fa, fb)
     ax, az = fa.to_world(1.0, 0.0)
