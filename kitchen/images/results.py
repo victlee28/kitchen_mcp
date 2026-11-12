@@ -123,7 +123,8 @@ class Results(Component):
                 ops.append(op)
                 scope.append(pv)
             if not ops:
-                raise InvalidInput("No task could be applied to the design (" + "; ".join(skip) + ")", code="nothing-applied", params={"reasons": "; ".join(skip)})
+                why = "; ".join(skip)
+                raise InvalidInput(f"No task could be applied to the design ({why})", code="nothing-applied", params={"reasons": why})
             op = edit.combine_ops(ops)
             res = self.env.apply(job["design_id"], op, base_rev if base_rev is not None else job["rev"], f"image-job:{jid}")
             design = {"rev": res["rev"], "op": op, "scope": "; ".join(scope), **({"skip": skip} if skip else {})}

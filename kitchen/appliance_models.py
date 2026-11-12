@@ -12,6 +12,7 @@ from collections.abc import Callable
 from typing import Any
 
 from . import builtin, defaults, words
+from .words import Said, key_of, said
 from .catalog import Catalog
 from .errors import InvalidInput
 from .i18n import pick
@@ -124,93 +125,98 @@ def host(spec: KitchenSpec, app: Appliance) -> Module | None:
     return next((m for m in spec.module if m.id == app.module), None) if app.module else None
 
 
-def fit(spec: KitchenSpec, app: Appliance, m: dict[str, Any], catalog: Catalog = builtin.CATALOG) -> tuple[str, list[str]]:
+def cannot(reason: str) -> bool:
+    """Is this line of ``changes_cabinets`` a reason the change cannot be made?"""
+    return key_of(reason).startswith("reason.cannot.")
+
+
+def fit(spec: KitchenSpec, app: Appliance, m: dict[str, Any], catalog: Catalog = builtin.CATALOG) -> tuple[str, list[Said]]:
     """``(status, reasons)`` for model ``m`` in the place of ``app``: ``ok``, ``bad`` (does not fit), ``check`` (could not be checked, or
     another kind of appliance that changes the cabinets around it: say what happens), ``blocked`` (another kind that cannot go there)."""
     if m["type"] != app.type:
-        return "bad", [f"{m['name']} is a {m['type']}, not a {app.type}"]
+        return "bad", [said("reason.model-wrong-type", model=m['name'], type=said(f"appliance.type.{m['type']}"), want=said(f"appliance.type.{app.type}"))]
     h = host(spec, app)
     now = kind_of(models(catalog).get(model_id(app, catalog) or ""))
     if kind_of(m) != now and app.type in ("hood", "fridge"):
         around = changes_cabinets(spec, app, m, h, catalog)
         if around is None:
-            return "bad", ["This change needs the cabinet the appliance stands in, which was not found"]
-        bad = [r for r in around if r.startswith("Cannot")]
-        return ("blocked", [b.removeprefix("Cannot: ") for b in bad]) if bad else ("check", around)
+            return "bad", [said("reason.no-host-for-change")]
+        bad = [r for r in around if cannot(r)]
+        return ("blocked", bad) if bad else ("check", around)
     if h is None:
-        return ("ok", []) if app.type == "faucet" else ("check", ["No cabinet found under / around this appliance: check the fit by hand"])
+        return ("ok", []) if app.type == "faucet" else ("check", [said("reason.no-host")])
     d = defaults.of(catalog)
-    reasons: list[str] = []
+    reasons: list[Said] = []
     s = m["size"]
     if app.type in ("sink", "cooktop"):
         hole = m.get("cutout")
         if not hole:
-            return "check", ["The model has no cut-out size"]
+            return "check", [said("reason.no-cutout")]
         inner = h.width - 2 * d.side
         if hole["w"] > inner:
-            reasons.append(f"Cut-out {hole['w']:g} mm is wider than the inside of {h.id} ({inner:g} mm): needs a cabinet of at least {hole['w'] + 2 * d.side:g} mm")
+            reasons.append(said("reason.cutout-wide", w=hole['w'], id=h.id, inner=inner, need=hole['w'] + 2 * d.side))
         top = h.depth + spec.common.countertopOverhang
         if hole["d"] + 2 * d.worktop_edge > top:
-            reasons.append(f"Cut-out {hole['d']:g} mm deep leaves less than {d.worktop_edge:g} mm of worktop in front and behind ({top:g} mm deep)")
+            reasons.append(said("reason.cutout-deep", d=hole['d'], edge=d.worktop_edge, top=top))
     elif app.type == "hood":
         if kind_of(m) == "insert" and s["w"] + 2 * d.hood_side > h.width:
-            reasons.append(f"Hood {s['w']:g} mm does not fit inside {h.id} ({h.width:g} mm)")
+            reasons.append(said("reason.hood-not-inside", w=s['w'], id=h.id, width=h.width))
         hob = next((a for a in spec.appliances if a.type == "cooktop" and (hm := host(spec, a)) is not None and hm.run == h.run
                     and hm.fromCorner < h.endAt and h.fromCorner < hm.endAt), None)
         hob_size = size_of(hob) if hob is not None else None
         if hob_size and s["w"] < hob_size["w"]:
-            reasons.append(f"Hood {s['w']:g} mm is narrower than the hob below ({hob_size['w']:g} mm)")
-            return ("bad" if any("does not fit" in r for r in reasons) else "check"), reasons
+            reasons.append(said("reason.hood-narrow", w=s['w'], cooktop=hob_size['w']))
+            return ("bad" if any(key_of(r) == "reason.hood-not-inside" for r in reasons) else "check"), reasons
     elif app.type == "fridge":
         niche = m.get("niche") or {"w": s["w"] + 20, "h": s["h"] + 20}
         if kind_of(m) == "integrated":
             niche = {**niche, "h": 0.0}           # behind full-height doors: no open niche to fit in
         if niche["w"] > h.width - 2 * d.side:
-            reasons.append(f"Needs a niche {niche['w']:g} mm wide; {h.id} gives {h.width - 2 * d.side:g} mm")
+            reasons.append(said("reason.niche-wide", w=niche['w'], id=h.id, has=h.width - 2 * d.side))
         if h.niche and niche["h"] > h.niche:
-            reasons.append(f"Needs a niche {niche['h']:g} mm high; {h.id} gives {h.niche:g} mm")
+            reasons.append(said("reason.niche-high", h=niche['h'], id=h.id, has=h.niche))
     elif app.type == "oven":
         niche = m.get("niche") or {"w": s["w"] - 35, "h": s["h"]}
         if niche["w"] > h.width - 2 * d.side:
-            reasons.append(f"Needs a niche {niche['w']:g} mm wide; {h.id} gives {h.width - 2 * d.side:g} mm")
+            reasons.append(said("reason.niche-wide", w=niche['w'], id=h.id, has=h.width - 2 * d.side))
         if niche["h"] > h.height:
-            reasons.append(f"Needs a niche {niche['h']:g} mm high; {h.id} is {h.height:g} mm")
+            reasons.append(said("reason.niche-high", h=niche['h'], id=h.id, has=h.height))
     return ("bad", reasons) if reasons else ("ok", [])
 
 
 def changes_cabinets(spec: KitchenSpec, app: Appliance, m: dict[str, Any], h: Module | None,
-                     catalog: Catalog = builtin.CATALOG) -> list[str] | None:
+                     catalog: Catalog = builtin.CATALOG) -> list[Said] | None:
     """What changing ``app`` to a model of another kind does to the cabinets around it (shown in the popup, "check"), or why it cannot
-    ("Cannot …", "bad"). None when the appliance's cabinet is not found."""
+    (lines whose key starts ``reason.cannot.``: see ``cannot``). None when the appliance's cabinet is not found."""
     if h is None:
         return None
     to = kind_of(m)
     if app.type == "hood":
         if to == "insert":
             if h.storey != "base":
-                return [f"Cannot: {app.id} already stands in a wall cabinet"]
+                return [said("reason.cannot.in-wall-cabinet", id=app.id)]
             if not h.run and h.wall == "island":
-                return ["Cannot: an island has no wall cabinet to hide the hood in"]
+                return [said("reason.cannot.island")]
             busy = [x.id for x in spec.module if x.storey in ("upper", "loft") and over(x, h)]
             if busy:
-                return [f"Cannot: wall cabinets {', '.join(busy)} already stand over the hob"]
-            return [f"A hood cabinet is built over {h.id} and the hood goes into it"]
+                return [said("reason.cannot.cabinets-over-cooktop", ids=', '.join(busy))]
+            return [said("reason.hood-cabinet-built", id=h.id)]
         hob = h if h.storey == "base" else next((x for x in spec.module if x.storey == "base" and over(h, x)), None)
         if hob is None:
-            return ["Cannot: no hob cabinet under the hood"]
-        out = [f"The hood hangs over {hob.id} ({'from the ceiling' if to == 'island' else 'on the wall, with its chimney'})"]
+            return [said("reason.cannot.no-cooktop-cabinet")]
+        out = [said("reason.hood-hangs-island" if to == "island" else "reason.hood-hangs-wall", id=hob.id)]
         if h.storey != "base":
             above = [x.id for x in spec.module if x.type == "upper-loft" and over(x, h)]
-            out.append(f"Hood cabinet {h.id} is removed" + (f", with {', '.join(above)} above it" if above else ""))
+            out.append(said("reason.hood-cabinet-removed-with", id=h.id, above=', '.join(above)) if above else said("reason.hood-cabinet-removed", id=h.id))
         return out
     if app.type == "fridge":
         need = needed_width(m, catalog) or 0.0
         if h.width < need:
-            return [f"Cannot: {h.id} is {h.width:g} mm wide, the fridge needs {need:g} mm"]
+            return [said("reason.cannot.fridge-narrow", id=h.id, width=h.width, need=need)]
         if to == "integrated":
-            return [f"{h.id} gets full-height doors in front of the fridge (no open niche)"]
+            return [said("reason.fridge-behind-doors", id=h.id)]
         niche = (m.get("niche") or {"h": m["size"]["h"] + 20})["h"]
-        return [f"{h.id} gets an open niche {niche:g} mm high for the fridge"]
+        return [said("reason.fridge-open-niche", id=h.id, h=niche)]
     return []
 
 
@@ -261,19 +267,19 @@ def candidates(spec: KitchenSpec, app: Appliance, text: str = "", catalog: Catal
     return sorted(out, key=lambda c: order[c["status"]])
 
 
-def energy_notes(app: Appliance, m: dict[str, Any], catalog: Catalog = builtin.CATALOG) -> list[str]:
+def energy_notes(app: Appliance, m: dict[str, Any], catalog: Catalog = builtin.CATALOG) -> list[Said]:
     """Warnings when the new model needs another supply (gas line, dedicated socket)."""
     before = getattr(app, "energy", None) or (models(catalog).get(model_id(app, catalog) or "", {}).get("energy"))
     after = m.get("energy")
     if before == after or app.type != "cooktop":
         return []
-    out: list[str] = []
+    out: list[Said] = []
     if after in ("gas", "mixed") and before not in ("gas", "mixed"):
-        out.append("The new hob needs a gas supply (pipe or cylinder) and a gas valve under the worktop")
+        out.append(said("reason.needs-gas"))
     if before in ("gas", "mixed") and after not in ("gas", "mixed"):
-        out.append("The gas supply of the old hob is no longer used: cap it off safely")
+        out.append(said("reason.gas-unused"))
     if after in ("induction", "mixed") and before not in ("induction", "mixed"):
-        out.append("The new hob needs a dedicated electric circuit (about 32 A) next to the cabinet")
+        out.append(said("reason.needs-circuit"))
     return out
 
 
@@ -336,10 +342,10 @@ def check(spec: KitchenSpec, catalog: Catalog = builtin.CATALOG) -> list[dict[st
         mods = [app.id, *([h.id] if h is not None else [])]
         if status == "bad":
             issues.extend(words.finding("APPLIANCE-MODEL-FIT", "error", mods, "finding.model-fit-named", id=app.id, model=by_id[mid]['name'], reason=r)
-                          for r in reasons if "narrower than the hob" not in r)
+                          for r in reasons if key_of(r) != "reason.hood-narrow")
         if status == "check":
             issues.extend(words.finding("APPLIANCE-MODEL-FIT", "warning", mods, "finding.model-fit", id=app.id, reason=r)
-                          for r in reasons if "narrower than the hob" not in r)
+                          for r in reasons if key_of(r) != "reason.hood-narrow")
     for hood in (a for a in spec.appliances if a.type == "hood"):
         hm = host(spec, hood)
         if hm is None:

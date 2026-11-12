@@ -77,12 +77,12 @@ class TestReplace(Base):
         self.assertEqual(r["aiFacts"]["model"], "hob-ind-4z-60")
         r = self.svc.template(self.did, {"kind": "replace-appliance", "id": hob.id, "model": "hob-gas-2b-75"})     # 650 hole in a 600 cabinet
         self.assertEqual(r["fit"], "bad")
-        self.assertTrue(any(s.startswith("Does not fit") for s in r["summary"]))
-        self.assertTrue(any("gas supply" in s for s in r["summary"]))
+        self.assertTrue(any(getattr(s, "key", "") == "summary.does-not-fit" for s in r["summary"]))
+        self.assertTrue(any(getattr(s, "key", "") == "reason.needs-gas" for s in r["summary"]))
         self.assertEqual(r["aiFacts"]["energy"], "gas")
         self.assertEqual(self.svc.store.get(self.did)[1], self.rev, "a preview: nothing saved")
         r = self.svc.template(self.did, {"kind": "replace-appliance", "id": self.app["fridge"].id, "model": "fridge-int-56"})   # another kind (11/11)
-        self.assertTrue(any("full-height doors" in s for s in r["summary"]))
+        self.assertTrue(any(getattr(s, "key", "") == "reason.fridge-behind-doors" for s in r["summary"]))
         with self.assertRaises(InvalidInput):
             self.svc.template(self.did, {"kind": "replace-appliance", "id": self.app["fridge"].id, "model": "no-such-model"})
 

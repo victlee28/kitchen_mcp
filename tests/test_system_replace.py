@@ -63,7 +63,7 @@ class TestRelayout(unittest.TestCase):
         self.assertEqual({m.depth for m in island}, {600.0}, "as deep as the island was, not the template's 580")
         self.assertTrue(all(m.material == "Acrylic xám đậm" and m.doorStyle == "flat" for m in island))
         self.assertEqual({(m.handle.variant, m.handle.material) for m in island}, {("knob", "Đồng")})
-        self.assertIn("1 upper cabinets left out: the system had none on that storey", summary)
+        self.assertIn("Bỏ 1 tủ trên: hệ cũ không có tầng này", summary)
         self.assertEqual({runs.systems(after)[m.id] for m in island}, {"furniture_003"})
         for i in ("A1", "A2", "B1", "B2", "U1"):
             self.assertEqual(after.find(i), KITCHEN.find(i))
@@ -91,7 +91,7 @@ class TestRelayout(unittest.TestCase):
         ops, summary = sr.relayout_ops(KITCHEN, sr.members(KITCHEN, "auto-R1"), {"R1": NEW}, {}, refused=frozenset({"upper"}))
         after = edit.apply_op(KITCHEN, edit.combine_ops(ops))
         self.assertFalse(any(m.run == "R1" and m.storey == "upper" for m in after.module))
-        self.assertIn("1 upper cabinets left out: the sentence asks so", summary)
+        self.assertIn("Bỏ 1 tủ trên: câu lệnh yêu cầu vậy", summary)
 
     def test_other_runs_get_plain_cabinets(self):
         mods = [{"type": "tall-fridge", "width": 700.0, "s": 0.0, "appliances": [{"type": "fridge"}], "niche": 1650.0},

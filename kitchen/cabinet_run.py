@@ -10,6 +10,7 @@ import math
 from typing import Any
 
 from . import builtin, defaults
+from .words import Said, said
 from .catalog import Catalog
 from .edit import combine_ops, next_run_id
 from .errors import InvalidInput
@@ -44,7 +45,7 @@ def _plan_angled(spec: KitchenSpec, outline: list[Pt], a: Pt, b: Pt, module_type
         at += w
     plan = plan_on_line(spec, line, modules, system=system)
     return {"operation": plan["operation"], "facing": None, "run": plan["run"], "yaw": plan["run"]["yaw"], "length": sum(widths), "widths": widths,
-            "summary": [f"{len(widths)} base cabinets, {sum(widths):g} mm, along an edge at {plan['run']['yaw']:g}° (run {plan['run']['id']})"]}
+            "summary": [said("summary.base-run-angled", n=len(widths), length=sum(widths), yaw=plan['run']['yaw'], run=plan['run']['id'])]}
 
 
 def _facing(poly: list[Pt], a: Pt, b: Pt) -> str:
@@ -100,8 +101,9 @@ def plan_i_run(spec: KitchenSpec, outline: list[Pt], point: Pt, module_type: str
     plan = _plan_angled(spec, outline, a, b, module_type, system, catalog)
     if not _is_diagonal(a, b):
         facing = _facing(outline, a, b)
-        where = {"-z": "-z (towards the back wall)", "+z": "+z (into the room)", "-x": "-x", "+x": "+x"}[facing]
-        plan = {**plan, "facing": facing, "summary": [f"{len(plan['widths'])} base cabinets, {plan['length']:g} mm, doors facing {where} (run {plan['run']['id']})"]}
+        where = said("summary.facing." + {"-z": "minus-z", "+z": "plus-z", "-x": "minus-x", "+x": "plus-x"}[facing])
+        plan = {**plan, "facing": facing, "summary": [said("summary.base-run-facing", n=len(plan['widths']), length=plan['length'], facing=where,
+                                                           run=plan['run']['id'])]}
     return plan
 
 
@@ -169,15 +171,15 @@ def plan_corner(spec: KitchenSpec, run_a: str, run_b: str, width: float = 900.0,
     a_end = max((m.endAt for m in spec.module if m.run == run_a), default=0.0)
     b_start = min((m.fromCorner for m in spec.module if m.run == run_b), default=0.0)
     if a_max is not None and a_end > a_max + 1:
-        notes.append(f"Run {run_a} ends at {a_end:g} mm but must end by {a_max:g} mm to clear the corner cabinet")
+        notes.append(said("summary.run-end-clear", run=run_a, end=a_end, max=a_max))
     if b_min is not None and b_start < b_min - 1:
-        notes.append(f"Run {run_b} starts at {b_start:g} mm but must start from {b_min:g} mm to clear the corner cabinet")
+        notes.append(said("summary.run-start-clear", run=run_b, start=b_start, min=b_min))
     ops: list[dict[str, Any]] = [{"op": "add-run", "run": run},
                                  {"op": "add", "closeGap": False, "module": {"type": module_type, "name": "Corner cabinet", "wall": "island", "run": run["id"], "fromCorner": 0.0,
                                                                               "width": float(width), "y": 0, "height": float(spec.common.baseTop), "depth": depth, "doors": [float(width)]}}]
     return {"operation": combine_ops(ops), "run": run, "angle": float(round_half_away(math.degrees(phi), 1)),
             "clearance": {"aMaxEnd": a_max, "bMinStart": b_min},
-            "summary": [f"Corner cabinet {width:g} mm at {math.degrees(phi):.1f}° (run {run['id']})", *notes]}
+            "summary": [said("summary.corner-cabinet", width=width, angle=math.degrees(phi), run=run['id']), *notes]}
 
 
 # ---- replacing a floorplan object (furniture) with cabinets: the runs stand on the object's edges against a wall (wall_line.replace_lines)
@@ -209,13 +211,14 @@ def plan_replace(spec: KitchenSpec, element: str, placed: list[Any], laid: list[
         raise InvalidInput("No edge of this object is long enough for a run (600 mm)", code="edge-too-short")
     ops: list[dict[str, Any]] = []
     made: list[dict[str, Any]] = []
-    summary: list[str] = []
+    summary: list[Said] = []
     current = spec
     for p, modules in zip(placed, laid):
         plan = plan_on_line(current, Line(p.a, p.b, p.doors), modules, system=element, run_fields=run_fields)
         ops.append(plan["operation"])
         made.append(plan["run"])
-        summary.append(f"Run {plan['run']['id']}{' (TV unit)' if (run_fields or {}).get('purpose') == 'tv' else ''}: {len(modules)} cabinets, {p.length:.0f} mm long, {p.depth:.0f} mm deep, back on edge {p.edge} against the wall")
+        summary.append(said("summary.replace-run-tv" if (run_fields or {}).get('purpose') == 'tv' else "summary.replace-run", run=plan['run']['id'],
+                            n=len(modules), length=p.length, depth=p.depth, edge=p.edge))
         current = apply_op(current, {"op": "add-run", "run": plan["run"]})
     old_system = runmod.systems(spec)
     old = [m.id for m in spec.module if old_system.get(m.id) == element]
@@ -223,10 +226,10 @@ def plan_replace(spec: KitchenSpec, element: str, placed: list[Any], laid: list[
     ops.extend({"op": "remove", "id": i, "closeGap": False} for i in old)
     ops.extend(after or [])
     ops.append({"op": "replace-element", "id": element, "replaced": True})
-    summary.insert(0, f"{element} is replaced by {len(made)} run(s) of cabinets and is no longer drawn")
+    summary.insert(0, said("summary.element-replaced", id=element, n=len(made)))
     if old:
-        summary.append(f"The cabinets made against {element} before are removed: {', '.join(old)}")
+        summary.append(said("summary.old-cabinets-removed", id=element, ids=', '.join(old)))
     if gone:
-        summary.append(f"Appliances removed with them: {', '.join(gone)}")
+        summary.append(said("summary.appliances-removed", names=', '.join(gone)))
     return {"operation": combine_ops(ops), "runs": made, "removed": old, "appliancesRemoved": gone, "summary": summary,
             "length": float(round_half_away(sum(p.length for p in placed), 1))}

@@ -19,7 +19,7 @@ import json
 import shutil
 from dataclasses import replace
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, cast
 
 from .. import geometry, geometry_edit, prompts, render
 from .. import backends
@@ -182,8 +182,8 @@ class ImageJobs:
         if job["backend"] in ("gemini", "job-package"):  # model nhận chỉ dẫn: request phải đủ ảnh, đúng kích thước
             kt = json.loads(self.packages.export_request(jid).read_text(encoding="utf-8")).get("validation") or {}
             if not kt.get("ok", True):
-                raise InvalidInput("The request failed its check, not sent: " + "; ".join(kt.get("errors", [])), code="request-check-failed",
-                               params={"errors": "; ".join(kt.get("errors", []))})
+                failed = "; ".join(map(str, cast(list[Any], kt.get("errors", []))))
+                raise InvalidInput("The request failed its check, not sent: " + failed, code="request-check-failed", params={"errors": failed})
         job = self.store.update_job(jid, "running")
         return self.runners.dispatch(job)
 

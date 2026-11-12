@@ -545,5 +545,28 @@ class TestFindingWording(unittest.TestCase):
             shutil.rmtree(tmp, ignore_errors=True)
 
 
+class TestSummaryWording(unittest.TestCase):
+    """Stage 3.3 part 2: summary lines and fit reasons are words.Said (a str that knows its key), re-worded per language."""
+
+    def test_said_and_reword(self):
+        from kitchen import cabinet_run, words
+        lines = [words.said("summary.relayout", system="S1"), words.said("summary.prefixed", id="R2", text=words.said("summary.relayout", system="S2"))]
+        self.assertEqual(lines[0], "Xếp lại hệ S1")
+        self.assertEqual(json.loads(json.dumps(lines)), ["Xếp lại hệ S1", "R2: Xếp lại hệ S2"])
+        tmp = Path(tempfile.mkdtemp())
+        try:
+            from kitchen.service import KitchenService
+            s = KitchenService(db_path=tmp / "k.db", render_dir=tmp / "r")
+            self.assertEqual(s.reword({"summary": lines}, "en")["summary"], ["System S1 laid out again", "R2: System S2 laid out again"])
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+        self.assertEqual(cabinet_run.split_widths(1200), [600.0, 600.0])
+
+    def test_cannot_by_key(self):
+        from kitchen import appliance_models, words
+        self.assertTrue(appliance_models.cannot(words.said("reason.cannot.island")))
+        self.assertFalse(appliance_models.cannot("Cannot: plain text"))
+
+
 if __name__ == "__main__":
     unittest.main()

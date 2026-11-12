@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from typing import Any, cast
 
 from . import appliance_models, builtin, runs
+from .words import said
 from .catalog import Catalog
 from .cabinet_run import fit_depth
 from .errors import InvalidInput
@@ -213,8 +214,8 @@ def _keep_device(device: dict[str, Any], keep: dict[str, dict[str, Any]], width_
         return device, None
     need = appliance_models.needed_width(model, catalog)
     if need and need > width_mm + EPS_MM:
-        return device, f"{model['name']} could not be kept: it needs a {need:g} mm cabinet, the new one is {width_mm:g} mm (the default model is used)"
-    return {**device, **{k: v for k, v in appliance_models.changes_for(model).items() if v is not None}}, f"{model['name']} kept"
+        return device, said("summary.model-not-kept", model=model['name'], need=need, width=width_mm)
+    return {**device, **{k: v for k, v in appliance_models.changes_for(model).items() if v is not None}}, said("summary.model-kept", model=model['name'])
 
 
 def _make_room(modules: list[LaidModule], models: dict[str, dict[str, Any]], catalog: Catalog = builtin.CATALOG) -> list[LaidModule]:
@@ -321,16 +322,16 @@ def relayout_ops(spec: KitchenSpec, mods: list[Module], laid: dict[str, list[Lai
                     entry["handle"] = dict(handle)
             ops.append({"op": "add", "closeGap": False, "module": entry})
             added += 1
-        summary.append(f"Run {run_id}: {added} cabinets over {slot.length:g} mm")
+        summary.append(said("summary.run-filled", run=run_id, n=added, length=slot.length))
     ops.extend({"op": "remove", "id": m.id, "closeGap": False} for m in mods)
     for m in mods:                     # a corner shelf joining two runs of the system stands outside both slots: it is built again as it was
         if m.type == "corner-shelf" and m.run:
             data = {k: v for k, v in to_data(m, exclude_none=True).items() if k != "id"}
             ops.append({"op": "add", "closeGap": False, "module": data})
-            summary.append(f"Corner shelf {m.id} built again between runs {m.run} and {m.turnsInto or m.run}")
+            summary.append(said("summary.corner-shelf-again", id=m.id, a=m.run, b=m.turnsInto or m.run))
     if blocked:
-        summary.append(f"{blocked} new cabinets left out where the corner shelf stands")
+        summary.append(said("summary.left-out-corner", n=blocked))
     summary.extend(dict.fromkeys(kept))
     for storey, n in sorted(dropped.items()):
-        summary.append(f"{n} {storey} cabinets left out: " + ("the sentence asks so" if storey in refused else "the system had none on that storey"))
+        summary.append(said("summary.storey-left-out-asked" if storey in refused else "summary.storey-left-out-none", n=n, storey=said(f"storey.{storey}")))
     return ops, summary

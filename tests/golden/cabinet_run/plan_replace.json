@@ -114,8 +114,8 @@
     "removed": [],
     "appliancesRemoved": [],
     "summary": [
-     "furniture_003 is replaced by 1 run(s) of cabinets and is no longer drawn",
-     "Run R1: 2 cabinets, 2500 mm long, 600 mm deep, back on edge 0 against the wall"
+     "furniture_003 được thay bằng 1 dãy tủ và không vẽ nữa",
+     "Dãy R1: 2 tủ, dài 2500 mm, sâu 600 mm, lưng tựa cạnh 0 sát tường"
     ],
     "length": 2500.0
    }
@@ -290,9 +290,9 @@
     "removed": [],
     "appliancesRemoved": [],
     "summary": [
-     "furniture_003 is replaced by 2 run(s) of cabinets and is no longer drawn",
-     "Run R1: 2 cabinets, 2400 mm long, 600 mm deep, back on edge 0 against the wall",
-     "Run R2: 1 cabinets, 1800 mm long, 600 mm deep, back on edge 5 against the wall"
+     "furniture_003 được thay bằng 2 dãy tủ và không vẽ nữa",
+     "Dãy R1: 2 tủ, dài 2400 mm, sâu 600 mm, lưng tựa cạnh 0 sát tường",
+     "Dãy R2: 1 tủ, dài 1800 mm, sâu 600 mm, lưng tựa cạnh 5 sát tường"
     ],
     "length": 4200.0
    }

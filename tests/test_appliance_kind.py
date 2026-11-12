@@ -46,7 +46,7 @@ class TestHood(unittest.TestCase):
         hood = next(a for a in SPEC.appliances if a.id == "TB2")
         status, reasons = am.fit(SPEC, hood, am.model("hood-wall-90"))
         self.assertEqual(status, "check")
-        self.assertTrue(any("TT1 is removed" in r for r in reasons))
+        self.assertTrue(any(getattr(r, "key", "").startswith("reason.hood-cabinet-removed") and r.params["id"] == "TT1" for r in reasons))
 
     def test_insert_cannot_go_where_wall_cabinets_stand(self):
         hung, _ = change(SPEC, "TB2", "hood-wall-90")

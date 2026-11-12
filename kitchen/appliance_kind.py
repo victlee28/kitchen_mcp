@@ -13,6 +13,7 @@ from __future__ import annotations
 from typing import Any
 
 from . import appliance_models, builtin
+from .words import Said
 from .catalog import Catalog
 from .edit import new_id
 from .errors import InvalidInput
@@ -28,15 +29,15 @@ def changes_kind(app: Appliance, model: dict[str, Any], catalog: Catalog = built
     return app.type in ("hood", "fridge") and appliance_models.kind_of(model) != appliance_models.kind_of(now)
 
 
-def plan(spec: KitchenSpec, app: Appliance, model: dict[str, Any], catalog: Catalog = builtin.CATALOG) -> tuple[list[dict[str, Any]], list[str]]:
+def plan(spec: KitchenSpec, app: Appliance, model: dict[str, Any], catalog: Catalog = builtin.CATALOG) -> tuple[list[dict[str, Any]], list[Said]]:
     """``(operations, summary)`` that change ``app`` to ``model`` of another kind with its cabinets. InvalidInput when it cannot."""
     h = appliance_models.host(spec, app)
     reasons = appliance_models.changes_cabinets(spec, app, model, h, catalog)
     if reasons is None or h is None:
         raise InvalidInput(f"{app.id}: the cabinet it stands in was not found", code="appliance-no-host", params={"id": app.id})
-    bad = [r for r in reasons if r.startswith("Cannot")]
+    bad = [r for r in reasons if appliance_models.cannot(r)]
     if bad:
-        raise InvalidInput(bad[0].removeprefix("Cannot: "), code="model-kind-blocked")
+        raise InvalidInput(str(bad[0]), code="model-kind-blocked", params={"reason": bad[0]})
     to = appliance_models.kind_of(model)
     if app.type == "hood":
         if to == "insert":

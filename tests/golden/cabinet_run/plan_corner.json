@@ -56,9 +56,9 @@
      "bMinStart": 1025.3048327204938
     },
     "summary": [
-     "Corner cabinet 900 mm at 90.0° (run R3)",
-     "Run R1 ends at 1920 mm but must end by 894.691 mm to clear the corner cabinet",
-     "Run R2 starts at 0 mm but must start from 1025.3 mm to clear the corner cabinet"
+     "Tủ góc 900 mm, góc 90.0° (dãy R3)",
+     "Dãy R1 kết thúc ở 1920 mm nhưng phải dừng trước 894.691 mm để chừa tủ góc",
+     "Dãy R2 bắt đầu ở 0 mm nhưng phải bắt đầu từ 1025.3 mm để chừa tủ góc"
     ]
    }
   },
@@ -118,9 +118,9 @@
      "bMinStart": 954.5941546018391
     },
     "summary": [
-     "Corner cabinet 800 mm at 90.0° (run R3)",
-     "Run R1 ends at 1920 mm but must end by 965.391 mm to clear the corner cabinet",
-     "Run R2 starts at 0 mm but must start from 954.594 mm to clear the corner cabinet"
+     "Tủ góc 800 mm, góc 90.0° (dãy R3)",
+     "Dãy R1 kết thúc ở 1920 mm nhưng phải dừng trước 965.391 mm để chừa tủ góc",
+     "Dãy R2 bắt đầu ở 0 mm nhưng phải bắt đầu từ 954.594 mm để chừa tủ góc"
     ]
    }
   },

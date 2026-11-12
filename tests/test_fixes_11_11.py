@@ -38,7 +38,7 @@ class TestKeepModels(unittest.TestCase):
         self.assertEqual(sink.width, appliance_models.needed_width(DOUBLE))                  # 800 laid out, 830 for the double sink
         self.assertEqual(max(m.endAt for m in after.module), 1850.0)                        # taken from the plain cabinet next to it
         self.assertEqual(next(a for a in after.appliances if a.type == "sink").model, "sink-double-82")
-        self.assertIn(f"{DOUBLE['name']} kept", summary)
+        self.assertIn(f"Giữ mẫu {DOUBLE['name']}", summary)
 
     def test_the_sentence_naming_the_appliance_asks_for_a_new_one(self):
         spec = _run_spec()

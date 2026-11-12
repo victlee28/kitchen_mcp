@@ -30,7 +30,7 @@
      }
     ],
     "summary": [
-     "19 cabinets, 4900 mm, along an edge at 0° (run R1)"
+     "19 tủ, 4900 mm, dọc cạnh nghiêng 0° (dãy R1)"
     ],
     "addRuns": [
      {
@@ -196,8 +196,8 @@
      }
     ],
     "summary": [
-     "7 cabinets, 1970 mm, along an edge at 0° (run R1)",
-     "left: 9 cabinets, 1730 mm, along an edge at 90° (run R2)"
+     "7 tủ, 1970 mm, dọc cạnh nghiêng 0° (dãy R1)",
+     "left: 9 tủ, 1730 mm, dọc cạnh nghiêng 90° (dãy R2)"
     ],
     "addRuns": [
      {
@@ -355,9 +355,9 @@
      }
     ],
     "summary": [
-     "10 cabinets, 3700 mm, along an edge at 0° (run R1)",
-     "left: 5 cabinets, 2020 mm, along an edge at 90° (run R2)",
-     "right: 2 cabinets, 2130 mm, along an edge at -90° (run R3)"
+     "10 tủ, 3700 mm, dọc cạnh nghiêng 0° (dãy R1)",
+     "left: 5 tủ, 2020 mm, dọc cạnh nghiêng 90° (dãy R2)",
+     "right: 2 tủ, 2130 mm, dọc cạnh nghiêng -90° (dãy R3)"
     ],
     "addRuns": [
      {
@@ -530,8 +530,8 @@
      }
     ],
     "summary": [
-     "7 cabinets, 1970 mm, along an edge at 0° (run R1)",
-     "left: 9 cabinets, 1730 mm, along an edge at 90° (run R2)"
+     "7 tủ, 1970 mm, dọc cạnh nghiêng 0° (dãy R1)",
+     "left: 9 tủ, 1730 mm, dọc cạnh nghiêng 90° (dãy R2)"
     ],
     "addRuns": [
      {

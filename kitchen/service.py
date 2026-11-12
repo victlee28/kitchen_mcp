@@ -13,7 +13,7 @@ from .intent import KitchenTemplate as KitchenTemplate
 from .spec import Common, KitchenSpec, LaidModule, Room, Wall, dump_spec, load_spec, to_data
 from .store import ConflictError, Store
 from . import legacy as legacy_schema
-from . import builtin, catalog as cat, catalog_csv, catalog_files, i18n
+from . import builtin, catalog as cat, catalog_csv, catalog_files, i18n, words
 from .config import Config
 from .errors import InvalidInput, KitchenError, NotFound
 ROOT = Path(__file__).resolve().parent.parent
@@ -133,7 +133,9 @@ class KitchenService:
 
     def error_words(self, e: KitchenError, lang: str | None) -> str:
         """An error in the reader's language (``error.<code>`` of data/i18n filled with its params), else its English message."""
-        return self.builtin.messages.error(e.code, e.params, i18n.lang_of(lang), str(e))
+        lg = i18n.lang_of(lang)
+        params = {k: self.reword(v, lg) if isinstance(v, words.Said) else v for k, v in e.params.items()}
+        return self.builtin.messages.error(e.code, params, lg, str(e))
 
     def reword(self, data: Any, lang: str | None) -> Any:
         """``data`` with every text the core worded from a key (``{"key", "params", "content"}`` findings and summary lines,
@@ -143,7 +145,12 @@ class KitchenService:
         if lg == i18n.DEFAULT_LANG:
             return data
 
+        def again(t: words.Said) -> str:
+            return m.text(t.key, lg, **{k: again(v) if isinstance(v, words.Said) else v for k, v in t.params.items()}) if m.has(t.key) else str(t)
+
         def walk(o: Any) -> Any:
+            if isinstance(o, words.Said):
+                return again(o)
             if isinstance(o, list):
                 return [walk(x) for x in o]
             if not isinstance(o, dict):
@@ -151,6 +158,7 @@ class KitchenService:
             out = {k: walk(v) for k, v in o.items()}
             raw = o.get('params')
             params: dict[str, Any] = {str(k): v for k, v in raw.items()} if isinstance(raw, dict) else {}
+            params = {k: again(v) if isinstance(v, words.Said) else v for k, v in params.items()}
             if isinstance(o.get('key'), str) and 'content' in o and m.has(o['key']):
                 out['content'] = m.text(o['key'], lg, **params)
             if isinstance(o.get('labelKey'), str) and 'label' in o and m.has(o['labelKey']):
@@ -466,7 +474,7 @@ class KitchenService:
             struct, plan = self._replace_object(spec, str(template.get('structureId')), prompt if isinstance(prompt, str) else None, back, country)
             if plan.get('status') == 'choose-edge':
                 return {'id': design_id, 'baseRev': current, 'status': 'choose-edge', 'structureId': struct['id'], 'edges': plan['edges'],
-                        'summary': ['No edge of this object lies against a wall: pick the edge the backs of the cabinets go on']}
+                        'summary': [words.said('summary.choose-edge')]}
             preview = self.propose(design_id, plan['operation'], current, None, country)
             return {'id': design_id, 'baseRev': current, 'status': 'ok', 'structureId': struct['id'], 'facing': None, 'replaces': plan['element'],
                     'length': plan['length'], 'summary': plan['summary'], 'operation': plan['operation'], 'proposal': preview}
@@ -507,7 +515,7 @@ class KitchenService:
         old = [m.id for m in spec.module if by_system.get(m.id) == system and m.id not in (clear or [])]
         plan = run_line.plan_runs(spec, line, found, joints, [*(clear or []), *old], system)
         operation = edit.combine_ops([plan['operation'], {'op': 'replace-element', 'id': system, 'replaced': True}])
-        return {**plan, 'operation': operation, 'summary': [*plan['summary'], f'{system} is replaced by the recognised cabinets and is no longer drawn']}
+        return {**plan, 'operation': operation, 'summary': [*plan['summary'], words.said('summary.replaced-by-recognised', id=system)]}
 
     @staticmethod
     def _walls(ctx: Any, place: Any) -> list[tuple[tuple[float, float], tuple[float, float]]]:
@@ -541,11 +549,12 @@ class KitchenService:
         else:
             ops, around = [{'op': 'update-appliance', 'id': app.id, 'model': m['id']}], []
         before = appliance_models.size_of(app) or {}
-        summary = [f"{app.id}: {app.name or now} → {m['name']}",
-                   f"Size {before.get('w', 0):g} × {before.get('d', 0):g} → {m['size']['w']:g} × {m['size']['d']:g} mm"
-                   + (f"; cut-out {m['cutout']['w']:g} × {m['cutout']['d']:g} mm" if m.get('cutout') else '')]
+        size = dict(w0=before.get('w', 0), d0=before.get('d', 0), w=m['size']['w'], d=m['size']['d'])
+        summary: list[str] = [words.said('summary.model-change', id=app.id, old=app.name or now or '', new=m['name']),
+                              words.said('summary.size-cutout', **size, cw=m['cutout']['w'], cd=m['cutout']['d']) if m.get('cutout')
+                              else words.said('summary.size', **size)]
         summary += around
-        summary += [f"Does not fit: {r}" if fit == 'bad' else f"Check: {r}" for r in reasons]
+        summary += [words.said('summary.does-not-fit' if fit == 'bad' else 'summary.check', reason=r) for r in reasons]
         summary += appliance_models.energy_notes(app, m, self.catalog())
         if template.get('resizeHost') and fit == 'bad':
             ops += self._widen_host(spec, app, m, summary, self.catalog())
@@ -565,7 +574,7 @@ class KitchenService:
         need = appliance_models.needed_width(m, catalog)
         if need is None or need <= h.width:
             return []
-        summary.append(f"{h.id} widens {h.width:g} → {need:g} mm; the cabinets after it in the row move along")
+        summary.append(words.said('summary.host-widens', id=h.id, old=h.width, new=need))
         return [{'op': 'update', 'id': h.id, 'changes': {'width': need, 'doors': [need / 2, need / 2] if need >= 600 else [need]}, 'closeGap': True}]
 
     @staticmethod
@@ -639,7 +648,8 @@ class KitchenService:
             chosen = system_replace.pick_style(spec, mods, style if isinstance(style, str) else None, catalog)
             ops = system_replace.style_ops(spec, mods, chosen)
             return {'operation': edit.combine_ops(ops), 'system': system, 'mode': 'restyle', 'style': chosen.id,
-                    'summary': [f"System {system}: {len(ops)} cabinets take the style \"{chosen.name}\" ({chosen.front}, {chosen.door} doors, {chosen.handle} handles)"]}
+                    'summary': [words.said('summary.restyle', system=system, n=len(ops), style=chosen.name, front=chosen.front,
+                                           door=words.said(f'door.{chosen.door}'), handle=words.said(f'handle.{chosen.handle}'))]}
         tv_runs = tv_system.tv_runs(spec)
         own_runs = sorted({m.run for m in mods if m.run})
         was_tv = bool(own_runs) and all(r in tv_runs for r in own_runs)
@@ -673,7 +683,7 @@ class KitchenService:
                                                    system_replace.kept_models(spec, mods, prompt, catalog), catalog=catalog)
         ops = [*undo_tv, *ops]
         kept = [n for n in notes if 'chiều dài' not in n]          # the run keeps its length: the "no length given" note does not apply
-        return {'operation': edit.combine_ops(ops), 'system': system, 'mode': 'relayout', 'summary': [f"System {system} laid out again", *summary, *kept]}
+        return {'operation': edit.combine_ops(ops), 'system': system, 'mode': 'relayout', 'summary': [words.said('summary.relayout', system=system), *summary, *kept]}
 
     @staticmethod
     def _relayout_tv(spec: KitchenSpec, system: str, mods: list, prompt: str, catalog: cat.Catalog = builtin.CATALOG) -> dict:
@@ -694,9 +704,8 @@ class KitchenService:
         ops, summary = system_replace.relayout_ops(spec, mods, laid, fronts, frozenset({'upper', 'loft'}), frozenset(),
                                                    system_replace.kept_models(spec, mods, prompt, catalog), catalog=catalog)
         marks = [{'op': 'set-run-tv', 'id': s.run, 'layout': style} for s in slots]
-        names = {'columns': 'low console, TV niche, two columns', 'shelves': 'low console and open shelves', 'full': 'closed wall with a TV niche'}
         return {'operation': edit.combine_ops([*marks, *ops]), 'system': system, 'mode': 'relayout',
-                'summary': [f"System {system} laid out again as a TV unit ({names[style]})", *summary]}
+                'summary': [words.said('summary.relayout-tv', system=system, layout=words.said(f'tv-layout.{style}')), *summary]}
 
     @staticmethod
     def _plan_described(spec: KitchenSpec, color: KitchenTemplate, notes: list[str], outline: list, click: tuple, system: str | None = None) -> dict:
@@ -719,7 +728,7 @@ class KitchenService:
         made = sorted({m['type'] for m in built['modules']})
         explicit = 'backWallLength' in color.model_fields_set
         kept = [n for n in notes if explicit or 'chiều dài' not in n]          # the "no length given, 3000 mm" note does not apply: the edge sets it
-        plan['summary'] = [*plan['summary'], f"From the description: {', '.join(made)}", *kept]
+        plan['summary'] = [*plan['summary'], words.said('summary.from-description', types=', '.join(made)), *kept]
         plan['facing'] = None
         return plan
 
@@ -785,7 +794,7 @@ class KitchenService:
             if ctx is not None:                                      # a line along a wall: the backs go to the wall, whichever side was asked
                 doors, against = wall_line.back_to_wall(line.a, line.b, line.normal, self._walls(ctx, place))
                 if against:
-                    note = ['The line runs along a wall: the backs of the cabinets face the wall'] if doors != line.normal else []
+                    note = [words.said('summary.backs-to-wall')] if doors != line.normal else []
                     line = run_line.Line(line.a, line.b, doors)
             if tv:
                 style = tv_system.style_of(prompt)
@@ -933,7 +942,7 @@ class KitchenService:
         left_out = len(draft.modules) - layout.count
         summary = [*plan['summary'], *layout.notes]
         if layout.rejected or left_out > 0:
-            summary.append(f'{max(len(layout.rejected), left_out)} recognised cabinets could not be used')
+            summary.append(words.said('summary.recognised-unused', n=max(len(layout.rejected), left_out)))
         preview = self.propose(design_id, plan['operation'], current, None, country)
         return {**out, 'status': 'ok', 'recognizer': name, 'draft': draft.to_data(), 'layout': layout.to_data(), 'operation': plan['operation'],
                 'summary': summary, **place, 'mode': mode, 'runs': plan['runs'], 'proposal': preview}

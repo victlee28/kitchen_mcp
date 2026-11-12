@@ -15,13 +15,22 @@ from dataclasses import dataclass, field
 from . import builtin, words
 from .catalog import Catalog
 from .i18n import pick
+from .jsonview import as_list
 from .spec import KitchenSpec, Molding, MoldingProfile, Module, from_data, to_data
 from . import runs as runmod
 from .errors import InvalidInput
 
+def _points(raw: Any) -> list[tuple[float, float]]:
+    out: list[tuple[float, float]] = []
+    for p in as_list(raw) or []:
+        pair = as_list(p) or []
+        out.append((float(pair[0]), float(pair[1])))
+    return out
+
+
 def _profiles(catalog: Catalog) -> dict[str, MoldingProfile]:
     return {it.id: MoldingProfile(id=it.id, name=pick(it.data.get("name"), "vi"), description=pick(it.data.get("description"), "vi") or None,
-                                  points=[(float(u), float(v)) for u, v in it.data.get("points") or []]) for it in catalog.all("molding-profile")}
+                                  points=_points(it.data.get("points"))) for it in catalog.all("molding-profile")}
 
 
 def presets(catalog: Catalog = builtin.CATALOG) -> dict[str, MoldingProfile]:

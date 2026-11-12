@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from typing import Any, cast
 
 from . import builtin
+from .words import Said, said
 from .catalog import Catalog
 from .edit import apply_op, combine_ops, next_run_id
 from .errors import InvalidInput
@@ -129,9 +130,9 @@ def plan_on_line(spec: KitchenSpec, line: Line, modules: list[LaidModule], clear
         ops.append({"op": "add", "closeGap": False, "module": entry})
         reach = max(reach, entry["fromCorner"] + entry["width"])
     ops.extend(after or [])
-    summary = [f"{len(modules)} cabinets, {reach:g} mm, along an edge at {run['yaw']:g}° (run {run['id']})"]
+    summary = [said("summary.line-run", n=len(modules), length=reach, yaw=run['yaw'], run=run['id'])]
     if reach > frame["length"] + 1.0:
-        summary.append(f"The cabinets are {reach - frame['length']:g} mm longer than the edge ({frame['length']:g} mm)")
+        summary.append(said("summary.longer-than-edge", over=reach - frame['length'], edge=frame['length']))
     return {"operation": combine_ops(ops), "run": run, "length": reach, "summary": summary}
 
 
@@ -183,17 +184,17 @@ def plan_runs(spec: KitchenSpec, line: Line, runs: list[dict[str, Any]], joints:
         raise InvalidInput("No run to place", code="no-run")
     placed, skipped = run_lines(line, runs, joints)
     ops: list[dict[str, Any]] = []
-    summary: list[str] = []
+    summary: list[Said] = []
     made: list[dict[str, Any]] = []
     current = spec
     for index, (run, at) in enumerate(placed):
         plan = plan_on_line(current, at, [cast(LaidModule, dict(m)) for m in run["modules"]], clear if index == 0 else None, system=system)
         ops.append(plan["operation"])
-        summary.extend(plan["summary"] if index == 0 else [f"{run['id']}: {plan['summary'][0]}"])
+        summary.extend(plan["summary"] if index == 0 else [said("summary.prefixed", id=run['id'], text=plan['summary'][0])])
         made.append({"source": run["id"], "run": plan["run"]})
         current = apply_op(current, {"op": "add-run", "run": plan["run"]})      # so the next run gets the next id
     if skipped:
-        summary.append(f"Runs not joined to the main run were left out: {', '.join(skipped)}")
+        summary.append(said("summary.runs-left-out", ids=', '.join(skipped)))
     return {"operation": combine_ops(ops), "run": made[0]["run"], "runs": made, "length": float(placed[0][0]["length"]), "summary": summary}
 
 

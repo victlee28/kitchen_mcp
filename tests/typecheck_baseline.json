@@ -9,6 +9,7 @@
   "catalog/merge.py": 0,
   "catalog/model.py": 0,
   "catalog/snapshot.py": 0,
+  "defaults.py": 0,
   "edit.py": 0,
   "edit_intent.py": 0,
   "errors.py": 0,
@@ -70,5 +71,6 @@
   "threejs_export.py": 0,
   "tv_system.py": 0,
   "vocab.py": 0,
-  "wall_line.py": 0
+  "wall_line.py": 0,
+  "words.py": 0
 }

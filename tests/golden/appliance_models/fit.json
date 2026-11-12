@@ -147,7 +147,7 @@
    "expected": {
     "status": "bad",
     "reasons": [
-     "Needs a niche 1870 mm high; TC1 gives 1650 mm"
+     "Cần hốc cao 1870 mm; TC1 chỉ có 1650 mm"
     ]
    }
   },
@@ -223,8 +223,8 @@
    "expected": {
     "status": "check",
     "reasons": [
-     "The hood hangs over TD1 (on the wall, with its chimney)",
-     "Hood cabinet TT1 is removed, with TN1 above it"
+     "Máy hút mùi treo tường trên TD1, có ống khói",
+     "Bỏ tủ hút mùi TT1, cùng TN1 phía trên"
     ]
    }
   },
@@ -300,7 +300,7 @@
    "expected": {
     "status": "check",
     "reasons": [
-     "Hood 560 mm is narrower than the hob below (730 mm)"
+     "Máy hút mùi 560 mm hẹp hơn bếp bên dưới (730 mm)"
     ]
    }
   },
@@ -376,7 +376,7 @@
    "expected": {
     "status": "bad",
     "reasons": [
-     "Tủ lạnh 2 cánh 60 cm is a fridge, not a hood"
+     "Tủ lạnh 2 cánh 60 cm là Tủ lạnh, không phải Hút mùi"
     ]
    }
   }
