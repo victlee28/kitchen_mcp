@@ -211,11 +211,9 @@ async function start() {
   [...roleSel.options].forEach((o) => { o.textContent = t('role.' + o.value); o.selected = o.value === catalog.role(); });
   roleSel.onchange = () => guard(async () => { catalog.setRole(roleSel.value); await showKinds(); if (current) await showKind(current); });
   $('langSlot').append(languagePicker(() => guard(async () => { translate(); [...roleSel.options].forEach((o) => { o.textContent = t('role.' + o.value); }); await showKinds(); if (current) await showKind(current); })));
-  $('export').onclick = () => guard(async () => {
-    const data = await catalog.exportLayer();
-    const a = el('a', { href: URL.createObjectURL(new Blob([JSON.stringify(data, null, 1)], { type: 'application/json' })), download: `catalog-${data.scope.replace(':', '-')}.json` });
-    a.click();
-  });
+  const download = (data, name) => el('a', { href: URL.createObjectURL(new Blob([JSON.stringify(data, null, 1)], { type: 'application/json' })), download: name }).click();
+  $('export').onclick = () => guard(async () => { const data = await catalog.exportLayer(); download(data, `catalog-${data.scope.replace(':', '-')}.json`); });
+  $('exportAll').onclick = () => guard(async () => download(await catalog.exportLayer(true), 'catalog-all.json'));
   $('import').onchange = (ev) => guard(async () => {
     const file = ev.target.files[0]; if (!file) return;
     const r = await catalog.importLayer(JSON.parse(await file.text()));

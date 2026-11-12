@@ -15,6 +15,7 @@ from .store import ConflictError, Store
 from . import legacy as legacy_schema
 from . import builtin, cabinet_types, catalog as cat, layout_solver, catalog_csv, catalog_files, i18n, lexicon, words
 from .config import Config
+from .identity import IdentityProvider, provider as identity_provider
 from .errors import InvalidInput, KitchenError, NotFound
 ROOT = Path(__file__).resolve().parent.parent
 NAMED = ('name', 'description')   # fields that may hold a default name the core wrote (see ``i18n.Names``)
@@ -61,6 +62,10 @@ class KitchenService:
     def _entries(self) -> list[cat.Entry]:
         rows = self.store.catalog_rows([cat.WORKSHOP, cat.user_scope(self.USER)])
         return [*self.builtin.entries, *(cat.Entry(r['kind'], r['id'], r['scope'], r['data'], r['version'], r['disabled']) for r in rows)]
+
+    def identity(self) -> IdentityProvider:
+        """Who a request acts as, as the settings say (``kitchen.identity``: a fixed role, else the page's X-Role header)."""
+        return identity_provider(self.config.fixed_role)
 
     def catalog(self) -> cat.Catalog:
         """The merged catalog (builtin + workshop + the user), rebuilt only when a catalog row changed."""
@@ -378,24 +383,42 @@ class KitchenService:
         self._sync_table(kind, id)
         return {'kind': kind, 'id': id, 'scope': scope, 'version': version}
 
-    def catalog_export(self, role: str) -> dict:
-        """The role's own layer, every kind: what ``catalog_import`` reads back."""
-        scope = cat.scope_for(role, self.USER)
+    def _layer(self, scope: str) -> dict[str, list[dict]]:
         out: dict[str, list[dict]] = {}
         for r in self.store.catalog_rows([scope]):
             out.setdefault(r['kind'], []).append({'id': r['id'], 'data': r['data'], 'disabled': r['disabled']})
-        return {'format': 'kitchen-catalog/1', 'scope': scope, 'kinds': out}
+        return out
+
+    def catalog_export(self, role: str, everything: bool = False) -> dict:
+        """The role's own layer, every kind: what ``catalog_import`` reads back. ``everything``: the whole package (the workshop's layer
+        and the user's), to move the catalog to another machine or keep a backup."""
+        if everything:
+            scopes = [cat.WORKSHOP, cat.user_scope(self.USER)]
+            return {'format': 'kitchen-catalog-bundle/1', 'layers': {scope: self._layer(scope) for scope in scopes}}
+        scope = cat.scope_for(role, self.USER)
+        return {'format': 'kitchen-catalog/1', 'scope': scope, 'kinds': self._layer(scope)}
 
     def catalog_import(self, payload: dict, role: str) -> dict:
         """Write every item of an export into the role's layer (each checked as one write; the first bad item stops the import)."""
+        if isinstance(payload, dict) and payload.get('format') == 'kitchen-catalog-bundle/1' and isinstance(payload.get('layers'), dict):
+            done = 0
+            for scope, kinds in payload['layers'].items():       # the workshop's layer needs the workshop role; any user layer goes to the user's
+                layer_role = 'workshop' if scope == cat.WORKSHOP else 'user'
+                if layer_role == 'workshop' and role != 'workshop':
+                    raise InvalidInput("Only the workshop may import the workshop's layer", code="catalog-not-allowed")
+                done += self._import_kinds(kinds, layer_role)
+            return {'imported': done}
         if not isinstance(payload, dict) or payload.get('format') != 'kitchen-catalog/1' or not isinstance(payload.get('kinds'), dict):
             raise InvalidInput("Not a kitchen-catalog/1 export", code="catalog-bad-import")
+        return {'imported': self._import_kinds(payload['kinds'], role)}
+
+    def _import_kinds(self, kinds: Any, role: str) -> int:
         done = 0
-        for kind, items in payload['kinds'].items():
+        for kind, items in (kinds.items() if isinstance(kinds, dict) else []):
             for item in items if isinstance(items, list) else []:
                 self.catalog_put(kind, item.get('id'), item.get('data') or {}, role, bool(item.get('disabled')))
                 done += 1
-        return {'imported': done}
+        return done
 
     def material_preview(self, text: Any) -> dict:
         """How a material name is understood with the merged catalog: English for the prompts, display colour, 3D look."""

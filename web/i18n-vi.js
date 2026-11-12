@@ -1106,5 +1106,6 @@ export default {
  "catalog.after": "Sau",
  "catalog.compareTitle": "{id}: khác bản gốc ở",
  "catalog.historyTitle": "Lịch sử sửa {id}",
- "catalog.noHistory": "Chưa ai sửa mục này"
+ "catalog.noHistory": "Chưa ai sửa mục này",
+ "catalog.exportAll": "Xuất cả gói (xưởng + người dùng)"
 };

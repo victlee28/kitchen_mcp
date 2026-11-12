@@ -171,3 +171,37 @@ class TestCatalogListing(unittest.TestCase):
             self.assertEqual(again["data"]["front"], "Xám")
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
+
+
+class TestCatalogBundle(unittest.TestCase):
+    def test_the_whole_package_moves_to_another_machine(self):
+        a, b = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp())
+        try:
+            from kitchen.service import KitchenService
+            s1 = KitchenService(db_path=a / "k.db", render_dir=a / "r")
+            s1.catalog_put("cabinet-type", "base-wine", {"storey": "base", "label": {"vi": "Tủ rượu"}, "like": "base"}, "workshop")
+            style = s1.catalog_list("style", "user")["items"][0]
+            s1.catalog_put("style", style["id"], {**style["data"], "front": "Xám"}, "user")
+            bundle = s1.catalog_export("user", everything=True)
+            self.assertEqual(sorted(bundle["layers"]), ["user:default", "workshop"])
+            s2 = KitchenService(db_path=b / "k.db", render_dir=b / "r")
+            with self.assertRaises(InvalidInput):
+                s2.catalog_import(bundle, "user")              # the workshop's layer needs the workshop role
+            self.assertEqual(s2.catalog_import(bundle, "workshop")["imported"], 2)
+            self.assertIsNotNone(s2.catalog().find("cabinet-type", "base-wine"))
+            self.assertEqual(s2.catalog().data("style", style["id"])["front"], "Xám")
+        finally:
+            shutil.rmtree(a, ignore_errors=True)
+            shutil.rmtree(b, ignore_errors=True)
+
+
+class TestIdentity(unittest.TestCase):
+    def test_providers(self):
+        from kitchen import identity
+        self.assertEqual(identity.HeaderRole().identify({"X-Role": " Workshop "}).role, "workshop")
+        self.assertEqual(identity.HeaderRole().identify({}).role, "user")
+        self.assertEqual(identity.provider("user").identify({"X-Role": "workshop"}).role, "user")
+        with self.assertRaises(InvalidInput):
+            identity.FixedRole("boss")
+        from kitchen.config import Config
+        self.assertEqual(Config.from_env({"KITCHEN_FIXED_ROLE": "User"}).fixed_role, "user")

@@ -31,6 +31,7 @@ class Config:
     cabinet_recognizer_timeout: float = 240.0      # the service asks the model up to three times, each with retries
     default_recognizer: str | None = None          # name used when a request names none (see recognition.choose_recognizer)
     data_dir: Path | None = None                   # the builtin catalog layer and wording (data/); None: <root>/data
+    fixed_role: str | None = None                  # KITCHEN_FIXED_ROLE: every request acts as this catalog role (see kitchen.identity)
 
     @classmethod
     def from_env(cls, environ: Mapping[str, str] | None = None, root: Path = ROOT) -> "Config":
@@ -46,4 +47,5 @@ class Config:
                    cabinet_recognizer_url=(env.get("CABINET_RECOGNIZER_URL") or "").strip().rstrip("/") or None,
                    cabinet_recognizer_timeout=float(env.get("CABINET_RECOGNIZER_TIMEOUT") or 240),
                    default_recognizer=(env.get("KITCHEN_RECOGNIZER") or "").strip() or None,
-                   data_dir=Path(env.get("KITCHEN_DATA") or root / "data"))
+                   data_dir=Path(env.get("KITCHEN_DATA") or root / "data"),
+                   fixed_role=(env.get("KITCHEN_FIXED_ROLE") or "").strip().lower() or None)

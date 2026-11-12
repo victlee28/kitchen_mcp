@@ -1105,5 +1105,6 @@
  "catalog.after": "After",
  "catalog.compareTitle": "{id}: what differs from the builtin item",
  "catalog.historyTitle": "Edits of {id}",
- "catalog.noHistory": "Nobody has edited this item"
+ "catalog.noHistory": "Nobody has edited this item",
+ "catalog.exportAll": "Export everything (workshop + user)"
 }

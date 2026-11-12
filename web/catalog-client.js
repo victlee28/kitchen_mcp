@@ -23,7 +23,7 @@ export async function put(kind, id, data, disabled = false) { cache.clear(); ret
 export async function remove(kind, id) { cache.clear(); return call(item(kind, id), 'DELETE'); }
 export async function undo(kind, id) { cache.clear(); return call(item(kind, id) + '/undo', 'POST'); }
 export const history = (kind, id) => call(item(kind, id) + '/history').then((d) => d.history);
-export const exportLayer = () => call('/api/catalog-export');
+export const exportLayer = (everything = false) => call('/api/catalog-export' + (everything ? '?all=1' : ''));
 export async function importLayer(payload) { cache.clear(); return call('/api/catalog-import', 'POST', payload); }
 export const csvOf = (kind) => call(`/api/catalog-csv/${kind}`).then((d) => d.csv);
 export async function importCsv(kind, csv) { cache.clear(); return call(`/api/catalog-csv/${kind}`, 'POST', { csv }); }

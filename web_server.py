@@ -17,7 +17,7 @@ API:
   PUT  /api/catalog/<kind>/<id>            {data, disabled?} ghi vào lớp của vai trò
   DELETE /api/catalog/<kind>/<id>          xóa dòng của vai trò (trả về mặc định)
   GET  /api/catalog/<kind>/<id>/history    POST .../undo
-  GET  /api/catalog-export                 POST /api/catalog-import
+  GET  /api/catalog-export[?all=1]         POST /api/catalog-import   (all=1: cả gói xưởng + người dùng, "kitchen-catalog-bundle/1")
   GET  /api/material-preview?text=         cách hiểu một tên vật liệu (tiếng Anh, màu, thông số 3D)
   POST /api/cabinet-type-preview           {"id", "data"}: một loại tủ chưa lưu dựng ra sao (tủ mẫu vài cỡ + cảnh báo)
   POST /api/layout-template-preview        {"id", "data", "options"?}: một mẫu bố trí chưa lưu xếp ra sao (bếp mẫu 3 chiều dài, nhìn từ trên)
@@ -73,10 +73,12 @@ from pydantic import ValidationError
 
 from kitchen.service import KitchenService
 from kitchen import errors
+from kitchen.identity import HeaderRole, IdentityProvider
 
 ROOT = Path(__file__).resolve().parent
 log = logging.getLogger("web-server")
 SVC: KitchenService | None = None
+IDENTITY: IdentityProvider = HeaderRole()     # who a request acts as (make_server sets it from the settings)
 ALLOWED_HOSTS = {"localhost", "127.0.0.1"}
 MAX_BODY = 5 * 1024 * 1024
 MAX_IMAGE_BODY = 40 * 1024 * 1024  # nộp ảnh kết quả (base64)
@@ -156,7 +158,7 @@ class Handler(BaseHTTPRequestHandler):
         if p == "/api/i18n" and method == "GET":
             return self._json(200, s.messages(q.get("lang")))
         if p == "/api/catalog-export" and method == "GET":
-            return self._json(200, s.catalog_export(self._role()))
+            return self._json(200, s.catalog_export(self._role(), q.get("all") == "1"))
         if p == "/api/catalog-import" and method == "POST":
             return self._json(200, s.catalog_import(self._body(), self._role()))
         if p == "/api/material-preview" and method == "GET":
@@ -471,16 +473,19 @@ class Handler(BaseHTTPRequestHandler):
         self._handle("DELETE")
 
     def _role(self) -> str:
-        """The role the request acts as (``X-Role: workshop | user``). Not authentication: accounts do not exist yet (11/11/2026)."""
-        return (self.headers.get("X-Role") or "user").strip().lower()
+        """The role the request acts as, as the identity provider says (``kitchen.identity``: by default the page's X-Role header, which is
+        not authentication; accounts do not exist yet)."""
+        return IDENTITY.identify(self.headers).role
 
     def log_message(self, format, *args):
         pass
 
 
-def make_server(port: int = 8080, svc: KitchenService | None = None) -> ThreadingHTTPServer:
-    global SVC
+def make_server(port: int = 8080, svc: KitchenService | None = None, identity: IdentityProvider | None = None) -> ThreadingHTTPServer:
+    """``identity``: who a request acts as (default: the settings' fixed role, else the page's X-Role header; see kitchen.identity)."""
+    global SVC, IDENTITY
     SVC = svc or KitchenService(render_dir=ROOT / "renders")
+    IDENTITY = identity or SVC.identity()
     return ThreadingHTTPServer(("127.0.0.1", port), Handler)
 
 
