@@ -1,0 +1,51 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "source-type",
+ "type": "object",
+ "required": [
+  "name",
+  "rank",
+  "severity"
+ ],
+ "additionalProperties": false,
+ "properties": {
+  "name": {
+   "type": "object",
+   "required": [
+    "vi"
+   ],
+   "properties": {
+    "vi": {
+     "type": "string",
+     "minLength": 1
+    },
+    "en": {
+     "type": "string"
+    }
+   },
+   "additionalProperties": false,
+   "x-label": {
+    "vi": "Tên",
+    "en": "Name"
+   }
+  },
+  "rank": {
+   "type": "number",
+   "x-label": {
+    "vi": "Độ mạnh (lớn hơn thắng khi hòa điểm)",
+    "en": "Strength (higher wins a tie)"
+   }
+  },
+  "severity": {
+   "enum": [
+    "error",
+    "warning",
+    "info"
+   ],
+   "x-label": {
+    "vi": "Mức báo khi vi phạm",
+    "en": "Severity when broken"
+   }
+  }
+ }
+}

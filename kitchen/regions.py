@@ -7,46 +7,54 @@ Hòa điểm thì xét độ mạnh của nguồn: bat-buoc > tieu-chuan > khuye
 """
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any
+
+from . import builtin
+from .catalog import Catalog
 from .errors import InvalidInput
+from .i18n import pick
+from .jsonview import as_list
 
 import unicodedata
 
-REGIONS = {
-    "GLOBAL": "Toàn cầu",
-    "SEA": "Đông Nam Á",
-    "EA": "Đông Á",
-    "NA": "Bắc Mỹ",
-    "EU": "Châu Âu",
-    "OC": "Châu Đại Dương",
-}
-
-COUNTRIES = {  # mã -> (tên, khu vực)
-    "VN": ("Việt Nam", "SEA"), "TH": ("Thái Lan", "SEA"), "MY": ("Malaysia", "SEA"), "SG": ("Singapore", "SEA"),
-    "ID": ("Indonesia", "SEA"), "PH": ("Philippines", "SEA"),
-    "CN": ("Trung Quốc", "EA"), "JP": ("Nhật Bản", "EA"), "KR": ("Hàn Quốc", "EA"), "TW": ("Đài Loan", "EA"),
-    "US": ("Hoa Kỳ", "NA"), "CA": ("Canada", "NA"),
-    "GB": ("Vương quốc Anh", "EU"), "DE": ("Đức", "EU"), "FR": ("Pháp", "EU"), "IT": ("Ý", "EU"), "ES": ("Tây Ban Nha", "EU"),
-    "NL": ("Hà Lan", "EU"),
-    "AU": ("Úc", "OC"), "NZ": ("New Zealand", "OC"),
-}
-
-# từ khóa trong câu mô tả -> mã quốc gia / khu vực
-_KEYWORDS = {
-    "việt nam": "VN", "vn": "VN", "thái lan": "TH", "singapore": "SG", "malaysia": "MY",
-    "trung quốc": "CN", "nhật": "JP", "hàn quốc": "KR", "đài loan": "TW",
-    "mỹ": "US", "hoa kỳ": "US", "usa": "US", "canada": "CA",
-    "anh quốc": "GB", "vương quốc anh": "GB", "uk": "GB", "đức": "DE", "pháp": "FR", "italy": "IT", "ý": "IT",
-    "úc": "AU", "australia": "AU", "new zealand": "NZ",
-    "châu âu": "EU", "đông nam á": "SEA", "đông á": "EA", "bắc mỹ": "NA",
-}
-
-SOURCE_RANK = {"mandatory": 4, "standard": 3, "recommended": 2, "practice": 1, "unknown": 0}
-SEVERITY_BY_SOURCE = {"mandatory": "error", "standard": "warning", "recommended": "warning", "practice": "info", "unknown": "warning"}
+@dataclass(frozen=True)
+class Tables:
+    """The catalog kinds ``region``, ``country`` (name, region, words recognised in a request) and ``source-type`` (strength, severity)."""
+    regions: dict[str, str]                       # code -> Vietnamese name
+    countries: dict[str, tuple[str, str]]         # code -> (Vietnamese name, region code)
+    keywords: dict[str, str]                      # word in a request -> country or region code
+    source_rank: dict[str, int]
+    severity: dict[str, str]
 
 
-def normalize(country: str | None = None, region: str | None = None) -> tuple[str | None, str | None]:
+def _build(catalog: Catalog) -> Tables:
+    regs = {it.id: pick(it.data.get("name"), "vi") for it in catalog.all("region")}
+    countries = {it.id: (pick(it.data.get("name"), "vi"), str(it.data.get("region", "GLOBAL"))) for it in catalog.all("country")}
+    keywords: dict[str, str] = {}
+    for it in [*catalog.all("country"), *catalog.all("region")]:
+        for word in as_list(it.data.get("keywords")) or []:
+            keywords.setdefault(str(word).lower(), it.id)
+    rank = {it.id: int(it.data.get("rank", 0)) for it in catalog.all("source-type")}
+    severity = {it.id: str(it.data.get("severity", "warning")) for it in catalog.all("source-type")}
+    return Tables(regs, countries, keywords, rank, severity)
+
+
+def tables(catalog: Catalog = builtin.CATALOG) -> Tables:
+    return catalog.derived("regions.tables", _build)
+
+
+_BUILTIN = tables()
+REGIONS = _BUILTIN.regions                    # the builtin tables (the functions take the merged catalog)
+COUNTRIES = _BUILTIN.countries
+SOURCE_RANK = _BUILTIN.source_rank
+SEVERITY_BY_SOURCE = _BUILTIN.severity
+
+
+def normalize(country: str | None = None, region: str | None = None, catalog: Catalog = builtin.CATALOG) -> tuple[str | None, str | None]:
     """Trả (mã quốc gia, mã khu vực); suy khu vực từ quốc gia nếu thiếu. Báo lỗi nếu mã lạ."""
+    t = tables(catalog)
+    COUNTRIES, REGIONS = t.countries, t.regions  # noqa: N806 — the catalog's tables, under the names the code below uses
     qg = (country or "").strip().upper() or None
     kv = (region or "").strip().upper() or None
     if qg and qg not in COUNTRIES:
@@ -62,18 +70,19 @@ _PREFIX = r"(?:chuẩn|tiêu chuẩn|tại|ở|thị trường|theo|kiểu|cho|s
 _Y_WORDS = r"\s+(?:tưởng|kiến|nghĩa|muốn|định|thích|thức|chí|niệm)(?![a-zà-ỹ])"   # "ý" as the first syllable of a word, not Italy
 
 
-def from_description(text: str) -> tuple[str | None, str | None]:
+def from_description(text: str, catalog: Catalog = builtin.CATALOG) -> tuple[str | None, str | None]:
     """Nhận quốc gia/khu vực khi đi sau từ chỉ nơi chốn ("chuẩn Úc", "tại Việt Nam", "thị trường châu Âu")
     để tránh khớp nhầm ("thẩm mỹ", "ý tưởng")."""
     import re
     t = unicodedata.normalize("NFC", text).lower()
-    kws = "|".join(re.escape(k) for k in sorted(_KEYWORDS, key=len, reverse=True))
+    t_ = tables(catalog)
+    kws = "|".join(re.escape(k) for k in sorted(t_.keywords, key=len, reverse=True))
     m = next((x for x in re.finditer(_PREFIX + r"\s+(" + kws + r")(?![a-zà-ỹ])", t)
               if not (x.group(1) == "ý" and re.match(_Y_WORDS, t[x.end():]))), None)   # "kiểu ý tưởng" is an idea, not Italy
     if not m:
         return None, None
-    code = _KEYWORDS[m.group(1)]
-    return (None, code) if code in REGIONS else (code, COUNTRIES[code][1])
+    code = t_.keywords[m.group(1)]
+    return (None, code) if code in t_.regions else (code, t_.countries[code][1])
 
 
 def priority_score(row: dict[str, Any], country: str | None, region: str | None) -> int:
@@ -94,8 +103,10 @@ def priority_label(score: int) -> str:
     return {30: "quốc gia", 20: "khu vực", 15: "cùng khu vực (nước khác)", 10: "toàn cầu"}.get(score, "tham khảo nước ngoài")
 
 
-def sort_rows(rows: list[dict[str, Any]], country: str | None, region: str | None) -> list[dict[str, Any]]:
+def sort_rows(rows: list[dict[str, Any]], country: str | None, region: str | None, catalog: Catalog = builtin.CATALOG) -> list[dict[str, Any]]:
+    rank = tables(catalog).source_rank
+
     def key(r: dict[str, Any]) -> tuple[float, float, float]:
         meta: dict[str, Any] = r.get("metadata") or {}
-        return (-priority_score(r, country, region), -SOURCE_RANK.get(meta.get("sourceType", "unknown"), 0), -(r.get("id") or 0))
+        return (-priority_score(r, country, region), -rank.get(meta.get("sourceType", "unknown"), 0), -(r.get("id") or 0))
     return sorted(rows, key=key)

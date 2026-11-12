@@ -165,9 +165,9 @@ def validate(spec: KitchenSpec, kb_rules: list[dict[str, Any]] | None = None, co
              region: str | None = None, catalog: Catalog = builtin.CATALOG) -> dict[str, Any]:
     """kb_rules: các dòng tri thức kind rule/standard đang active (đã parse metadata); None -> kho nền.
     Quốc gia/khu vực: tham số > spec.quocGia/spec.khuVuc > không chỉ định (ưu tiên mục toàn cầu, rồi nguồn mạnh nhất)."""
-    qg, kv = regions.normalize(country or spec.country, region or spec.region)
+    qg, kv = regions.normalize(country or spec.country, region or spec.region, catalog)
     rows = default_rows() if kb_rules is None else kb_rules
-    sel = rules_kb.select(rows, qg, kv)
+    sel = rules_kb.select(rows, qg, kv, catalog)
     kitchen = tv_system.kitchen_only(spec)       # kitchen rules (worktop, depths, appliances...) do not look at TV units
     issues = check_geometry(spec) + rules_kb.check(kitchen, sel) + moldings.check(spec) + appliance_models.check(kitchen, catalog)
     if not (qg or kv):

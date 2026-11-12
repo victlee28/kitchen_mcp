@@ -212,11 +212,12 @@ def _middle(openings, hi, priority, step=10):
     return round(v / step) * step
 
 
-def dimensions_by_region(rows: list[dict] | None, country: str | None, region: str | None) -> tuple[dict, dict]:
+def dimensions_by_region(rows: list[dict] | None, country: str | None, region: str | None,
+                         catalog: Catalog = builtin.CATALOG) -> tuple[dict, dict]:
     """Kích thước mặc định của mẫu lấy từ tiêu chuẩn ưu tiên của quốc gia/khu vực. Trả (giá trị, nguồn từng giá trị)."""
     from .rules import default_rows
     from .rules_kb import select
-    sel = select(rows if rows is not None else default_rows(), *regions.normalize(country, region))
+    sel = select(rows if rows is not None else default_rows(), *regions.normalize(country, region, catalog), catalog)
     p = lambda t: (sel.get(t) or {}).get("params") or {}
     src = lambda t: sel[t]["code"] if t in sel else "mặc định"
     out, source = {}, {}
@@ -260,7 +261,7 @@ def from_template(color: KitchenTemplate, name: str = "Thiết kế tủ bếp",
     if "cabinetTop" not in color.model_fields_set and "cabinetTop" in new:
         color = color.model_copy(update={"cabinetTop": new["cabinetTop"]})
     from . import moldings as _mol
-    kt, check_source = dimensions_by_region(rows, color.country, color.region)
+    kt, check_source = dimensions_by_region(rows, color.country, color.region, catalog)
     co_dien = color.style in ("Classic", "Neoclassical", "Transitional")
     crown_molding = color.crownMolding if color.crownMolding is not None else co_dien
     base_molding = color.baseMolding if color.baseMolding is not None else co_dien

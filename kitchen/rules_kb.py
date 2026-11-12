@@ -13,30 +13,27 @@ import math
 from collections.abc import Iterable
 
 from .numeric import round_half_away, round_int
-from . import regions, runs
+from . import builtin, regions, runs
+from .catalog import Catalog
 from .jsonview import as_dict, as_list
 from .spec import KitchenSpec, Appliance
 
-TOPICS = {
-    "countertop-height": "Chiều cao mặt bàn", "base-depth": "Chiều sâu tủ dưới", "countertop-depth": "Chiều sâu mặt bàn",
-    "sink-cooktop": "Khoảng cách chậu – bếp", "walkway": "Lối đi làm việc", "sink-table": "Mặt bàn hai bên chậu",
-    "cooktop-table": "Mặt bàn hai bên bếp", "fridge-table": "Mặt bàn cạnh tủ lạnh", "hood": "Máy hút mùi – mặt bếp",
-    "above-cooktop": "Khoảng trên bếp khi không có hút mùi", "upper-gap": "Mặt bàn – đáy tủ trên",
-    "upper-depth": "Chiều sâu tủ trên", "cabinet-plinth": "Chiều cao chân tủ", "microwave": "Vị trí lò vi sóng",
-    "triangle": "Tam giác làm việc", "clear-height": "Chiều cao thông thủy bếp",
-}
+TOPICS = tuple(builtin.CATALOG.ids("rule-topic"))   # the topics checked here (catalog kind rule-topic: names there)
 
 
-def select(rows: list[dict[str, Any]], country: str | None, region: str | None) -> dict[str, dict[str, Any]]:
-    """rows: các mục tri thức (đã parse metadata). Trả {chủ đề: {code, params, mucDo, uuTien, thamKhao}}."""
+def select(rows: list[dict[str, Any]], country: str | None, region: str | None, catalog: Catalog = builtin.CATALOG) -> dict[str, dict[str, Any]]:
+    """rows: các mục tri thức (đã parse metadata). Trả {chủ đề: {code, params, mucDo, uuTien, thamKhao}}. Chủ đề: catalog kind ``rule-topic``
+    (xưởng ẩn một chủ đề = bỏ kiểm chủ đề đó); mức độ theo loại nguồn: kind ``source-type``."""
     out: dict[str, dict[str, Any]] = {}
-    for r in regions.sort_rows(rows, country, region):
+    topics = set(catalog.ids("rule-topic"))
+    severity = regions.tables(catalog).severity
+    for r in regions.sort_rows(rows, country, region, catalog):
         meta = as_dict(r.get("metadata")) or {}
         for topic in as_list(meta.get("validation")) or []:
-            if topic in out or topic not in TOPICS:
+            if topic in out or topic not in topics:
                 continue
             score = regions.priority_score(r, country, region)
-            level = regions.SEVERITY_BY_SOURCE.get(meta.get("sourceType", "unknown"), "warning")
+            level = severity.get(meta.get("sourceType", "unknown"), "warning")
             reference = score < 10  # tiêu chuẩn của nước khác (hoặc chưa chọn quốc gia): chỉ tham khảo -> info
             priority_text = regions.priority_label(score) if (country or region) or score >= 10 else "tham khảo (chưa chọn quốc gia)"
             out[topic] = {"code": r["code"], "params": meta.get("params") or {}, "severity": "info" if reference else level,

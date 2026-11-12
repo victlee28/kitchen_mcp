@@ -1,0 +1,42 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "region",
+ "type": "object",
+ "required": [
+  "name"
+ ],
+ "additionalProperties": false,
+ "properties": {
+  "name": {
+   "type": "object",
+   "required": [
+    "vi"
+   ],
+   "properties": {
+    "vi": {
+     "type": "string",
+     "minLength": 1
+    },
+    "en": {
+     "type": "string"
+    }
+   },
+   "additionalProperties": false,
+   "x-label": {
+    "vi": "Tên",
+    "en": "Name"
+   }
+  },
+  "keywords": {
+   "type": "array",
+   "items": {
+    "type": "string",
+    "minLength": 1
+   },
+   "x-label": {
+    "vi": "Từ nhận trong câu (sau 'chuẩn', 'tại'…)",
+    "en": "Words recognised in a request (after 'chuẩn', 'tại'…)"
+   }
+  }
+ }
+}

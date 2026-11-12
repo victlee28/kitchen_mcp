@@ -1,0 +1,217 @@
+[
+ {
+  "id": "VN",
+  "name": {
+   "vi": "Việt Nam",
+   "en": "Vietnam"
+  },
+  "region": "SEA",
+  "keywords": [
+   "việt nam",
+   "vn"
+  ]
+ },
+ {
+  "id": "TH",
+  "name": {
+   "vi": "Thái Lan",
+   "en": "Thailand"
+  },
+  "region": "SEA",
+  "keywords": [
+   "thái lan"
+  ]
+ },
+ {
+  "id": "MY",
+  "name": {
+   "vi": "Malaysia",
+   "en": "Malaysia"
+  },
+  "region": "SEA",
+  "keywords": [
+   "malaysia"
+  ]
+ },
+ {
+  "id": "SG",
+  "name": {
+   "vi": "Singapore",
+   "en": "Singapore"
+  },
+  "region": "SEA",
+  "keywords": [
+   "singapore"
+  ]
+ },
+ {
+  "id": "ID",
+  "name": {
+   "vi": "Indonesia",
+   "en": "Indonesia"
+  },
+  "region": "SEA"
+ },
+ {
+  "id": "PH",
+  "name": {
+   "vi": "Philippines",
+   "en": "Philippines"
+  },
+  "region": "SEA"
+ },
+ {
+  "id": "CN",
+  "name": {
+   "vi": "Trung Quốc",
+   "en": "China"
+  },
+  "region": "EA",
+  "keywords": [
+   "trung quốc"
+  ]
+ },
+ {
+  "id": "JP",
+  "name": {
+   "vi": "Nhật Bản",
+   "en": "Japan"
+  },
+  "region": "EA",
+  "keywords": [
+   "nhật"
+  ]
+ },
+ {
+  "id": "KR",
+  "name": {
+   "vi": "Hàn Quốc",
+   "en": "South Korea"
+  },
+  "region": "EA",
+  "keywords": [
+   "hàn quốc"
+  ]
+ },
+ {
+  "id": "TW",
+  "name": {
+   "vi": "Đài Loan",
+   "en": "Taiwan"
+  },
+  "region": "EA",
+  "keywords": [
+   "đài loan"
+  ]
+ },
+ {
+  "id": "US",
+  "name": {
+   "vi": "Hoa Kỳ",
+   "en": "United States"
+  },
+  "region": "NA",
+  "keywords": [
+   "mỹ",
+   "hoa kỳ",
+   "usa"
+  ]
+ },
+ {
+  "id": "CA",
+  "name": {
+   "vi": "Canada",
+   "en": "Canada"
+  },
+  "region": "NA",
+  "keywords": [
+   "canada"
+  ]
+ },
+ {
+  "id": "GB",
+  "name": {
+   "vi": "Vương quốc Anh",
+   "en": "United Kingdom"
+  },
+  "region": "EU",
+  "keywords": [
+   "anh quốc",
+   "vương quốc anh",
+   "uk"
+  ]
+ },
+ {
+  "id": "DE",
+  "name": {
+   "vi": "Đức",
+   "en": "Germany"
+  },
+  "region": "EU",
+  "keywords": [
+   "đức"
+  ]
+ },
+ {
+  "id": "FR",
+  "name": {
+   "vi": "Pháp",
+   "en": "France"
+  },
+  "region": "EU",
+  "keywords": [
+   "pháp"
+  ]
+ },
+ {
+  "id": "IT",
+  "name": {
+   "vi": "Ý",
+   "en": "Italy"
+  },
+  "region": "EU",
+  "keywords": [
+   "italy",
+   "ý"
+  ]
+ },
+ {
+  "id": "ES",
+  "name": {
+   "vi": "Tây Ban Nha",
+   "en": "Spain"
+  },
+  "region": "EU"
+ },
+ {
+  "id": "NL",
+  "name": {
+   "vi": "Hà Lan",
+   "en": "Netherlands"
+  },
+  "region": "EU"
+ },
+ {
+  "id": "AU",
+  "name": {
+   "vi": "Úc",
+   "en": "Australia"
+  },
+  "region": "OC",
+  "keywords": [
+   "úc",
+   "australia"
+  ]
+ },
+ {
+  "id": "NZ",
+  "name": {
+   "vi": "New Zealand",
+   "en": "New Zealand"
+  },
+  "region": "OC",
+  "keywords": [
+   "new zealand"
+  ]
+ }
+]

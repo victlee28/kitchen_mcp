@@ -1,0 +1,56 @@
+[
+ {
+  "id": "GLOBAL",
+  "name": {
+   "vi": "Toàn cầu",
+   "en": "Global"
+  }
+ },
+ {
+  "id": "SEA",
+  "name": {
+   "vi": "Đông Nam Á",
+   "en": "Southeast Asia"
+  },
+  "keywords": [
+   "đông nam á"
+  ]
+ },
+ {
+  "id": "EA",
+  "name": {
+   "vi": "Đông Á",
+   "en": "East Asia"
+  },
+  "keywords": [
+   "đông á"
+  ]
+ },
+ {
+  "id": "NA",
+  "name": {
+   "vi": "Bắc Mỹ",
+   "en": "North America"
+  },
+  "keywords": [
+   "bắc mỹ"
+  ]
+ },
+ {
+  "id": "EU",
+  "name": {
+   "vi": "Châu Âu",
+   "en": "Europe"
+  },
+  "keywords": [
+   "châu âu"
+  ]
+ },
+ {
+  "id": "OC",
+  "name": {
+   "vi": "Châu Đại Dương",
+   "en": "Oceania"
+  }
+ }
+]

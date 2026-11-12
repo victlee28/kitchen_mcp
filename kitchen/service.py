@@ -1008,7 +1008,8 @@ class KitchenService:
 
     def list_regions(self) -> dict:
         """Return supported regions, countries, and knowledge-entry counts."""
-        return {'region': regions.REGIONS, 'country': {code: {'name': data[0], 'region': data[1]} for code, data in regions.COUNTRIES.items()}, 'entryCounts': self.store.regions_summary()}
+        t = regions.tables(self.catalog())
+        return {'region': t.regions, 'country': {code: {'name': data[0], 'region': data[1]} for code, data in t.countries.items()}, 'entryCounts': self.store.regions_summary()}
 
     def add_knowledge(self, **kwargs) -> dict:
         """Insert or update a knowledge entry."""

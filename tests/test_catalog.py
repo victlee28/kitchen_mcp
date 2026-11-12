@@ -369,5 +369,38 @@ class TestDefaultsFromTheCatalog(unittest.TestCase):
         self.assertEqual(defaults.of(self.s.catalog()).stretch_max, 900)
 
 
+class TestRegionsFromTheCatalog(unittest.TestCase):
+    """Stage 2.2: regions, countries (and the words naming them), source types and check topics are catalog items."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        from kitchen.service import KitchenService
+        self.s = KitchenService(db_path=self.tmp / "k.db", render_dir=self.tmp / "r")
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_workshop_adds_a_country(self):
+        from kitchen import regions
+        with self.assertRaises(InvalidInput):
+            regions.normalize("KH")
+        self.s.catalog_put("country", "KH", {"name": {"vi": "Campuchia", "en": "Cambodia"}, "region": "SEA", "keywords": ["campuchia"]}, "workshop")
+        c = self.s.catalog()
+        self.assertEqual(regions.normalize("KH", None, c), ("KH", "SEA"))
+        self.assertEqual(regions.from_description("bếp chuẩn Campuchia", c), ("KH", "SEA"))
+        self.assertIn("KH", self.s.list_regions()["country"])
+        with self.assertRaises(InvalidInput):                                             # its region must exist
+            self.s.catalog_put("country", "XX", {"name": {"vi": "X"}, "region": "MARS"}, "workshop")
+
+    def test_hiding_a_topic_drops_its_check(self):
+        fixture = json.loads((ROOT / "fixtures" / "l-shaped-kitchen.json").read_text(encoding="utf-8"))
+        rec = self.s.create_from_spec(fixture)
+        spec = self.s.store.get(rec["id"])[0]
+        topics = {i.get("topic") for i in self.s.validate_spec(spec)["issues"]}
+        some = next(t for t in topics if t)
+        self.s.catalog_put("rule-topic", some, {}, "workshop", disabled=True)
+        self.assertNotIn(some, {i.get("topic") for i in self.s.validate_spec(spec)["issues"]})
+
+
 if __name__ == "__main__":
     unittest.main()

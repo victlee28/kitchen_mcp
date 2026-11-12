@@ -1,0 +1,47 @@
+[
+ {
+  "id": "mandatory",
+  "name": {
+   "vi": "Bắt buộc",
+   "en": "Mandatory"
+  },
+  "rank": 4,
+  "severity": "error"
+ },
+ {
+  "id": "standard",
+  "name": {
+   "vi": "Tiêu chuẩn",
+   "en": "Standard"
+  },
+  "rank": 3,
+  "severity": "warning"
+ },
+ {
+  "id": "recommended",
+  "name": {
+   "vi": "Khuyến nghị",
+   "en": "Recommended"
+  },
+  "rank": 2,
+  "severity": "warning"
+ },
+ {
+  "id": "practice",
+  "name": {
+   "vi": "Thực hành",
+   "en": "Practice"
+  },
+  "rank": 1,
+  "severity": "info"
+ },
+ {
+  "id": "unknown",
+  "name": {
+   "vi": "Chưa rõ",
+   "en": "Unknown"
+  },
+  "rank": 0,
+  "severity": "warning"
+ }
+]

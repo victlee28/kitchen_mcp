@@ -1,0 +1,114 @@
+[
+ {
+  "id": "countertop-height",
+  "name": {
+   "vi": "Chiều cao mặt bàn",
+   "en": "Worktop height"
+  }
+ },
+ {
+  "id": "base-depth",
+  "name": {
+   "vi": "Chiều sâu tủ dưới",
+   "en": "Base cabinet depth"
+  }
+ },
+ {
+  "id": "countertop-depth",
+  "name": {
+   "vi": "Chiều sâu mặt bàn",
+   "en": "Worktop depth"
+  }
+ },
+ {
+  "id": "sink-cooktop",
+  "name": {
+   "vi": "Khoảng cách chậu – bếp",
+   "en": "Sink to hob distance"
+  }
+ },
+ {
+  "id": "walkway",
+  "name": {
+   "vi": "Lối đi làm việc",
+   "en": "Work aisle"
+  }
+ },
+ {
+  "id": "sink-table",
+  "name": {
+   "vi": "Mặt bàn hai bên chậu",
+   "en": "Worktop beside the sink"
+  }
+ },
+ {
+  "id": "cooktop-table",
+  "name": {
+   "vi": "Mặt bàn hai bên bếp",
+   "en": "Worktop beside the hob"
+  }
+ },
+ {
+  "id": "fridge-table",
+  "name": {
+   "vi": "Mặt bàn cạnh tủ lạnh",
+   "en": "Worktop beside the fridge"
+  }
+ },
+ {
+  "id": "hood",
+  "name": {
+   "vi": "Máy hút mùi – mặt bếp",
+   "en": "Hood above the hob"
+  }
+ },
+ {
+  "id": "above-cooktop",
+  "name": {
+   "vi": "Khoảng trên bếp khi không có hút mùi",
+   "en": "Space above the hob without a hood"
+  }
+ },
+ {
+  "id": "upper-gap",
+  "name": {
+   "vi": "Mặt bàn – đáy tủ trên",
+   "en": "Worktop to wall cabinets"
+  }
+ },
+ {
+  "id": "upper-depth",
+  "name": {
+   "vi": "Chiều sâu tủ trên",
+   "en": "Wall cabinet depth"
+  }
+ },
+ {
+  "id": "cabinet-plinth",
+  "name": {
+   "vi": "Chiều cao chân tủ",
+   "en": "Plinth height"
+  }
+ },
+ {
+  "id": "microwave",
+  "name": {
+   "vi": "Vị trí lò vi sóng",
+   "en": "Microwave position"
+  }
+ },
+ {
+  "id": "triangle",
+  "name": {
+   "vi": "Tam giác làm việc",
+   "en": "Work triangle"
+  }
+ },
+ {
+  "id": "clear-height",
+  "name": {
+   "vi": "Chiều cao thông thủy bếp",
+   "en": "Kitchen clear height"
+  }
+ }
+]

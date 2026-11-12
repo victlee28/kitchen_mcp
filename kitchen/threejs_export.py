@@ -409,7 +409,7 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
     scene = compile_spec(spec)
     c = spec.common
     mats_list, mats = _materials(spec, catalog)
-    qg, kv = regions.normalize(country or spec.country, spec.region)
+    qg, kv = regions.normalize(country or spec.country, spec.region, catalog)
     sel = select(kb_rows if kb_rows is not None else default_rows(), qg, kv)
     by_mod: defaultdict[str | None, list[Part]] = defaultdict(list)
     for p in scene.parts:

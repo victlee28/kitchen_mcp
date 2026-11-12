@@ -89,5 +89,49 @@
    "workshop"
   ],
   "closed": true
+ },
+ "region": {
+  "label": {
+   "vi": "Khu vực",
+   "en": "Regions"
+  },
+  "writers": [
+   "workshop"
+  ]
+ },
+ "country": {
+  "label": {
+   "vi": "Quốc gia",
+   "en": "Countries"
+  },
+  "writers": [
+   "workshop"
+  ],
+  "refs": [
+   [
+    "region",
+    "region"
+   ]
+  ]
+ },
+ "source-type": {
+  "label": {
+   "vi": "Loại nguồn tiêu chuẩn",
+   "en": "Standard source types"
+  },
+  "writers": [
+   "workshop"
+  ],
+  "closed": true
+ },
+ "rule-topic": {
+  "label": {
+   "vi": "Chủ đề kiểm tra",
+   "en": "Check topics"
+  },
+  "writers": [
+   "workshop"
+  ],
+  "closed": true
  }
 }
