@@ -1,0 +1,492 @@
+[
+ {
+  "id": "base",
+  "storey": "base",
+  "label": {
+   "vi": "Tủ dưới",
+   "en": "Base cabinet"
+  },
+  "let": {
+   "body": "max(y, plinthHeight) if y == 0 else y"
+  },
+  "parts": [
+   {
+    "part": "plinth",
+    "s": [
+     "min(fs0, b0)",
+     "max(fs1, b1)"
+    ],
+    "d": [
+     "0",
+     "depth - doorThickness - 50"
+    ],
+    "y": [
+     "0",
+     "plinthHeight"
+    ],
+    "when": "y == 0"
+   },
+   {
+    "part": "side-panel",
+    "s": [
+     "p0",
+     "p1"
+    ],
+    "d": [
+     "0",
+     "depth"
+    ],
+    "y": [
+     "0",
+     "top"
+    ],
+    "when": "endPanel != 0"
+   },
+   {
+    "part": "carcass",
+    "s": [
+     "b0",
+     "b1"
+    ],
+    "d": [
+     "0",
+     "depth"
+    ],
+    "y": [
+     "body",
+     "top"
+    ],
+    "when": "blindCorner != 0"
+   },
+   {
+    "part": "carcass",
+    "s": [
+     "fs0",
+     "fs1"
+    ],
+    "d": [
+     "0",
+     "depth - doorThickness"
+    ],
+    "y": [
+     "body",
+     "top"
+    ],
+    "when": "sections == 0"
+   },
+   {
+    "when": "sections == 0",
+    "fronts": "door",
+    "s": [
+     "fs0",
+     "fs1"
+    ],
+    "y": [
+     "body",
+     "top"
+    ]
+   },
+   {
+    "when": "sections == 0",
+    "special": "back-panel"
+   },
+   {
+    "when": "sections != 0",
+    "special": "front-sections",
+    "s": [
+     "fs0",
+     "fs1"
+    ],
+    "y": [
+     "body",
+     "top"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "base-sink",
+  "storey": "base",
+  "label": {
+   "vi": "Tủ chậu",
+   "en": "Sink base cabinet"
+  },
+  "like": "base"
+ },
+ {
+  "id": "base-corner-sink",
+  "storey": "base",
+  "label": {
+   "vi": "Tủ chậu góc",
+   "en": "Corner sink base cabinet"
+  },
+  "like": "base"
+ },
+ {
+  "id": "base-cooktop",
+  "storey": "base",
+  "label": {
+   "vi": "Tủ dưới bếp",
+   "en": "Cooktop base cabinet"
+  },
+  "like": "base"
+ },
+ {
+  "id": "base-oven",
+  "storey": "base",
+  "label": {
+   "vi": "Tủ lò nướng",
+   "en": "Oven base cabinet"
+  },
+  "like": "base"
+ },
+ {
+  "id": "base-end",
+  "storey": "base",
+  "label": {
+   "vi": "Tủ đầu dãy",
+   "en": "End base cabinet"
+  },
+  "like": "base"
+ },
+ {
+  "id": "base-drawers",
+  "storey": "base",
+  "label": {
+   "vi": "Tủ ngăn kéo",
+   "en": "Drawer base cabinet"
+  },
+  "like": "base"
+ },
+ {
+  "id": "upper",
+  "storey": "upper",
+  "label": {
+   "vi": "Tủ trên",
+   "en": "Upper cabinet"
+  },
+  "parts": [
+   {
+    "part": "carcass",
+    "s": [
+     "fromCorner",
+     "endAt"
+    ],
+    "d": [
+     "0",
+     "depth - doorThickness"
+    ],
+    "y": [
+     "y",
+     "top"
+    ]
+   },
+   {
+    "part": "side-panel",
+    "s": [
+     "p0",
+     "p1"
+    ],
+    "d": [
+     "0",
+     "depth"
+    ],
+    "y": [
+     "y",
+     "top"
+    ],
+    "when": "endPanel != 0"
+   },
+   {
+    "fronts": "door",
+    "s": [
+     "fs0",
+     "fs1"
+    ],
+    "y": [
+     "y",
+     "top"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "upper-glass",
+  "storey": "upper",
+  "label": {
+   "vi": "Tủ trên cánh kính",
+   "en": "Glass-door upper cabinet"
+  },
+  "parts": [
+   {
+    "part": "carcass",
+    "s": [
+     "fromCorner",
+     "endAt"
+    ],
+    "d": [
+     "0",
+     "depth - doorThickness"
+    ],
+    "y": [
+     "y",
+     "top"
+    ]
+   },
+   {
+    "part": "side-panel",
+    "s": [
+     "p0",
+     "p1"
+    ],
+    "d": [
+     "0",
+     "depth"
+    ],
+    "y": [
+     "y",
+     "top"
+    ],
+    "when": "endPanel != 0"
+   },
+   {
+    "fronts": "glass-door",
+    "s": [
+     "fs0",
+     "fs1"
+    ],
+    "y": [
+     "y",
+     "top"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "upper-open",
+  "storey": "upper",
+  "label": {
+   "vi": "Kệ mở",
+   "en": "Open shelf"
+  },
+  "parts": [
+   {
+    "part": "side-panel",
+    "s": [
+     "fromCorner",
+     "fromCorner + doorThickness"
+    ],
+    "d": [
+     "0",
+     "depth"
+    ],
+    "y": [
+     "y",
+     "top"
+    ]
+   },
+   {
+    "part": "side-panel",
+    "s": [
+     "endAt - doorThickness",
+     "endAt"
+    ],
+    "d": [
+     "0",
+     "depth"
+    ],
+    "y": [
+     "y",
+     "top"
+    ]
+   },
+   {
+    "part": "carcass",
+    "s": [
+     "fromCorner + doorThickness",
+     "endAt - doorThickness"
+    ],
+    "d": [
+     "0",
+     "12"
+    ],
+    "y": [
+     "y",
+     "top"
+    ]
+   },
+   {
+    "repeat": "max(1, shelfCount) + 1",
+    "as": "i",
+    "let": {
+     "yb": "y + i * (height - doorThickness) / max(1, shelfCount)"
+    },
+    "parts": [
+     {
+      "part": "shelf",
+      "s": [
+       "fromCorner + doorThickness",
+       "endAt - doorThickness"
+      ],
+      "d": [
+       "0",
+       "depth"
+      ],
+      "y": [
+       "yb",
+       "yb + doorThickness"
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "upper-hood",
+  "storey": "upper",
+  "label": {
+   "vi": "Tủ trên hút mùi",
+   "en": "Hood upper cabinet"
+  },
+  "like": "upper"
+ },
+ {
+  "id": "upper-loft",
+  "storey": "loft",
+  "label": {
+   "vi": "Tủ nóc",
+   "en": "Top cabinet"
+  },
+  "like": "upper"
+ },
+ {
+  "id": "tall-fridge",
+  "storey": "tall",
+  "label": {
+   "vi": "Tủ cao tủ lạnh",
+   "en": "Tall fridge cabinet"
+  },
+  "like": "tall"
+ },
+ {
+  "id": "tall",
+  "storey": "tall",
+  "label": {
+   "vi": "Tủ cao",
+   "en": "Tall cabinet"
+  },
+  "parts": [
+   {
+    "part": "side-panel",
+    "s": [
+     "fromCorner",
+     "fromCorner + doorThickness"
+    ],
+    "d": [
+     "0",
+     "depth"
+    ],
+    "y": [
+     "y",
+     "top"
+    ]
+   },
+   {
+    "part": "side-panel",
+    "s": [
+     "endAt - doorThickness",
+     "endAt"
+    ],
+    "d": [
+     "0",
+     "depth"
+    ],
+    "y": [
+     "y",
+     "top"
+    ]
+   },
+   {
+    "part": "carcass",
+    "s": [
+     "fromCorner + doorThickness",
+     "endAt - doorThickness"
+    ],
+    "d": [
+     "0",
+     "depth - doorThickness"
+    ],
+    "y": [
+     "niche",
+     "top"
+    ],
+    "when": "niche != 0"
+   },
+   {
+    "part": "carcass",
+    "s": [
+     "fromCorner + doorThickness",
+     "endAt - doorThickness"
+    ],
+    "d": [
+     "0",
+     "20"
+    ],
+    "y": [
+     "y",
+     "niche"
+    ],
+    "when": "niche != 0"
+   },
+   {
+    "when": "niche != 0",
+    "fronts": "door",
+    "s": [
+     "fromCorner + doorThickness",
+     "endAt - doorThickness"
+    ],
+    "y": [
+     "niche",
+     "top"
+    ]
+   },
+   {
+    "part": "carcass",
+    "s": [
+     "fromCorner + doorThickness",
+     "endAt - doorThickness"
+    ],
+    "d": [
+     "0",
+     "depth - doorThickness"
+    ],
+    "y": [
+     "y",
+     "top"
+    ],
+    "when": "niche == 0"
+   },
+   {
+    "when": "niche == 0",
+    "fronts": "door",
+    "s": [
+     "fromCorner + doorThickness",
+     "endAt - doorThickness"
+    ],
+    "y": [
+     "max(y, plinthHeight)",
+     "top"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "corner-shelf",
+  "storey": "corner",
+  "label": {
+   "vi": "Kệ góc mở",
+   "en": "Open corner shelf"
+  },
+  "builder": "corner-shelf"
+ }
+]

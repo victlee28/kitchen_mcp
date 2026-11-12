@@ -1014,5 +1014,10 @@ export default {
  "error.expr-too-deep": "Công thức lồng sâu quá {limit} tầng",
  "error.expr-missing-value": "Thiếu giá trị cho {name} (vị trí {at})",
  "error.expr-clamp-range": "clamp cần cận dưới không lớn hơn cận trên ({lo} > {hi})",
- "error.expr-round-digits": "round cần số chữ số nguyên từ 0 đến 9 (đang là {digits})"
+ "error.expr-round-digits": "round cần số chữ số nguyên từ 0 đến 9 (đang là {digits})",
+ "error.cabinet-type-formula": "Loại tủ {type}, {where}: công thức sai ({detail}) ở vị trí {at}",
+ "error.cabinet-type-step": "Loại tủ {type}, {where}: bước dựng không hợp lệ",
+ "error.cabinet-type-like": "Loại tủ {type}: \"dựng như\" {like} không có hoặc vòng lặp",
+ "error.cabinet-type-repeat": "Một loại tủ lặp một bước {n} lần (tối đa {most})",
+ "error.unknown-cabinet-type": "Không có loại tủ {type}"
 };

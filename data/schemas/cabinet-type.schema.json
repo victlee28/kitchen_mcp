@@ -1,0 +1,162 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "cabinet-type",
+ "type": "object",
+ "required": [
+  "storey",
+  "label"
+ ],
+ "additionalProperties": false,
+ "$defs": {
+  "step": {
+   "type": "object",
+   "additionalProperties": false,
+   "properties": {
+    "when": {
+     "type": "string",
+     "minLength": 1
+    },
+    "part": {
+     "type": "string",
+     "minLength": 1
+    },
+    "s": {
+     "type": "array",
+     "items": {
+      "type": "string",
+      "minLength": 1
+     },
+     "minItems": 2,
+     "maxItems": 2
+    },
+    "d": {
+     "type": "array",
+     "items": {
+      "type": "string",
+      "minLength": 1
+     },
+     "minItems": 2,
+     "maxItems": 2
+    },
+    "y": {
+     "type": "array",
+     "items": {
+      "type": "string",
+      "minLength": 1
+     },
+     "minItems": 2,
+     "maxItems": 2
+    },
+    "fronts": {
+     "type": "string",
+     "enum": [
+      "door",
+      "glass-door",
+      "drawer"
+     ]
+    },
+    "special": {
+     "type": "string",
+     "enum": [
+      "back-panel",
+      "front-sections"
+     ]
+    },
+    "repeat": {
+     "type": "string",
+     "minLength": 1
+    },
+    "as": {
+     "type": "string",
+     "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+    },
+    "let": {
+     "type": "object",
+     "additionalProperties": {
+      "type": "string",
+      "minLength": 1
+     }
+    },
+    "parts": {
+     "type": "array",
+     "items": {
+      "$ref": "#/$defs/step"
+     }
+    }
+   }
+  }
+ },
+ "properties": {
+  "storey": {
+   "type": "string",
+   "enum": [
+    "base",
+    "upper",
+    "loft",
+    "tall",
+    "corner"
+   ],
+   "x-label": {
+    "vi": "Tầng",
+    "en": "Level"
+   }
+  },
+  "label": {
+   "type": "object",
+   "properties": {
+    "vi": {
+     "type": "string"
+    },
+    "en": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "vi"
+   ],
+   "additionalProperties": false,
+   "x-label": {
+    "vi": "Tên",
+    "en": "Name"
+   }
+  },
+  "let": {
+   "type": "object",
+   "additionalProperties": {
+    "type": "string",
+    "minLength": 1
+   },
+   "x-label": {
+    "vi": "Biến phụ (công thức)",
+    "en": "Helper values (formulas)"
+   }
+  },
+  "parts": {
+   "type": "array",
+   "items": {
+    "$ref": "#/$defs/step"
+   },
+   "x-label": {
+    "vi": "Các tấm (công thức)",
+    "en": "Panels (formulas)"
+   }
+  },
+  "like": {
+   "type": "string",
+   "x-label": {
+    "vi": "Dựng như loại",
+    "en": "Built like the type"
+   }
+  },
+  "builder": {
+   "type": "string",
+   "enum": [
+    "corner-shelf"
+   ],
+   "x-label": {
+    "vi": "Bộ dựng đặc biệt",
+    "en": "Special builder"
+   }
+  }
+ }
+}

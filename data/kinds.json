@@ -207,5 +207,21 @@
    "workshop"
   ],
   "closed": true
+ },
+ "cabinet-type": {
+  "label": {
+   "vi": "Loại tủ",
+   "en": "Cabinet types"
+  },
+  "writers": [
+   "workshop"
+  ],
+  "closed": true,
+  "refs": [
+   [
+    "like",
+    "cabinet-type"
+   ]
+  ]
  }
 }

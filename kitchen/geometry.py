@@ -11,7 +11,8 @@ from typing import Any
 from dataclasses import dataclass, field
 
 from .numeric import round_half_away
-from . import camera_plan, roomctx, runs as runmod, structure_mesh, tv_system
+from . import builtin, cabinet_types, camera_plan, roomctx, runs as runmod, structure_mesh, tv_system
+from .catalog import Catalog
 from .spec import ViewAngle, KitchenSpec, Module, effective_handle, to_data
 from .errors import InvalidInput, require
 from .palette import DISPLAY_COLORS
@@ -149,9 +150,33 @@ def wall_reach(spec: KitchenSpec, lsau: float) -> dict[str, float]:
     return out
 
 
+class _Emit:
+    """Boxes of a cabinet type's steps, in the cabinet's row (``_Builder.box``)."""
+
+    def __init__(self, builder: "_Builder", m: Module) -> None:
+        self.b, self.m = builder, m
+
+    def box(self, part: str, s0: float, s1: float, d0: float, d1: float, y0: float, y1: float) -> None:
+        self.b.box(self.m.id, part, self.m.wall, s0, s1, d0, d1, y0, y1)
+
+    def fronts(self, kind: str, s0: float, s1: float, y0: float, y1: float) -> None:
+        if kind == "drawer":
+            g = self.b.c.doorGap
+            self.b.box(self.m.id, "drawer", self.m.wall, s0 + g / 2, s1 - g / 2, self.m.depth - self.b.c.doorThickness, self.m.depth, y0 + g / 2, y1 - g / 2)
+        else:
+            self.b.door_widths(self.m, s0, s1, y0, y1, kind)
+
+    def special(self, name: str, span: tuple[float, ...]) -> None:
+        if name == "back-panel":
+            self.b.back_panel(self.m)
+        else:
+            self.b.front_sections(self.m, span[0], span[1], span[2], span[3])
+
+
 class _Builder:
-    def __init__(self, spec: KitchenSpec):
+    def __init__(self, spec: KitchenSpec, catalog: Catalog = builtin.CATALOG):
         self.spec = spec
+        self.types = cabinet_types.table(catalog)
         self.c = spec.common
         self.lsau, self.lphai = wall_length(spec)
         self.parts: list[Part] = []
@@ -204,27 +229,24 @@ class _Builder:
             self.box(m.id, type, m.wall, s + k / 2, s + w2 - k / 2, m.depth - dc, m.depth, y0 + k / 2, y1 - k / 2)
             s += w2
 
-    # ---- các loại module
-    def base(self, m: Module):
+    # ---- cabinets
+    def by_type(self, m: Module, t: "cabinet_types.CabinetType") -> None:
+        """The panels of ``m`` from the formulas of its cabinet type (catalog kind ``cabinet-type``)."""
+        c = self.c
+        (fs0, fs1), (p0, p1), (b0, b1) = m.fronts, m.panel_span, m.blind_span
+        values = {"fromCorner": m.fromCorner, "endAt": m.endAt, "width": m.width, "height": m.height, "depth": m.depth, "y": m.y,
+                  "top": m.y + m.height, "fs0": fs0, "fs1": fs1, "b0": b0, "b1": b1, "p0": p0, "p1": p1, "endPanel": m.endPanel,
+                  "blindCorner": m.blindCorner, "niche": m.niche or 0.0, "shelfCount": float(m.shelfCount), "sections": float(len(m.frontSections)),
+                  "doors": float(len(m.doors)), "doorThickness": c.doorThickness, "doorGap": c.doorGap, "plinthHeight": c.plinthHeight}
+        cabinet_types.build(t, values, _Emit(self, m))
+
+    def front_sections(self, m: Module, fs0: float, fs1: float, body: float, top: float) -> None:
+        """The stacked fronts of ``m.frontSections`` from the top down (a niche: back, top and bottom boards, two sides; a drawer; doors),
+        the TV back panel, then one drawer over what is left below (more than 30 mm)."""
         c, dc = self.c, self.c.doorThickness
-        top = m.y + m.height
-        y_than = max(m.y, c.plinthHeight) if m.y == 0 else m.y
-        fs0, fs1 = m.fronts
-        (p0, p1), (b0, b1) = m.panel_span, m.blind_span
-        if m.y == 0:
-            self.box(m.id, "plinth", m.wall, min(fs0, b0), max(fs1, b1), 0, m.depth - dc - 50, 0, c.plinthHeight)      # under all but the end panel
-        if m.endPanel:
-            self.box(m.id, "side-panel", m.wall, p0, p1, 0, m.depth, 0, top)
-        if m.blindCorner:  # phần góc khuất: thân kín, không cánh
-            self.box(m.id, "carcass", m.wall, b0, b1, 0, m.depth, y_than, top)
-        if not m.frontSections:
-            self.box(m.id, "carcass", m.wall, fs0, fs1, 0, m.depth - dc, y_than, top)
-            self.door_widths(m, fs0, fs1, y_than, top)
-            self._back_panel(m)
-            return
         cur = top
         for t in m.frontSections:
-            y0 = max(y_than, cur - t.height)
+            y0 = max(body, cur - t.height)
             if t.type == "niche":  # hộc trống: vách sau + ván nóc/đáy + hai hông
                 self.box(m.id, "carcass", m.wall, fs0, fs1, 0, 60, y0, cur)
                 self.box(m.id, "shelf", m.wall, fs0, fs1, 0, m.depth, cur - dc, cur)
@@ -239,48 +261,17 @@ class _Builder:
                     self.box(m.id, "drawer", m.wall, fs0 + c.doorGap / 2, fs1 - c.doorGap / 2, m.depth - dc, m.depth,
                              y0 + c.doorGap / 2, cur - c.doorGap / 2)
             cur = y0
-        self._back_panel(m)
-        if cur - y_than > 30:  # phần còn lại phía dưới: một ngăn kéo
-            self.box(m.id, "carcass", m.wall, fs0, fs1, 0, m.depth - dc, y_than, cur)
+        self.back_panel(m)
+        if cur - body > 30:  # phần còn lại phía dưới: một ngăn kéo
+            self.box(m.id, "carcass", m.wall, fs0, fs1, 0, m.depth - dc, body, cur)
             self.box(m.id, "drawer", m.wall, fs0 + c.doorGap / 2, fs1 - c.doorGap / 2, m.depth - dc, m.depth,
-                     y_than + c.doorGap / 2, cur - c.doorGap / 2)
+                     body + c.doorGap / 2, cur - c.doorGap / 2)
 
-    def _back_panel(self, m: Module) -> None:
+    def back_panel(self, m: Module) -> None:
         """A TV unit's panel on the wall behind the TV (``Module.backPanel``: s0 / s1 along the run from the cabinet's start, y0 / y1)."""
         bp = m.backPanel
         if bp is not None and bp.s1 > bp.s0 and bp.y1 > bp.y0:
             self.box(m.id, "side-panel", m.wall, m.fromCorner + bp.s0, m.fromCorner + bp.s1, 0, tv_system.PANEL_THICKNESS_MM, bp.y0, bp.y1)
-
-    def upper(self, m: Module):
-        dc = self.c.doorThickness
-        fs0, fs1 = m.fronts
-        if m.type == "upper-open":  # open shelving: two sides, a thin back and n+1 boards, no doors
-            top = m.y + m.height
-            self.box(m.id, "side-panel", m.wall, m.fromCorner, m.fromCorner + dc, 0, m.depth, m.y, top)
-            self.box(m.id, "side-panel", m.wall, m.endAt - dc, m.endAt, 0, m.depth, m.y, top)
-            self.box(m.id, "carcass", m.wall, m.fromCorner + dc, m.endAt - dc, 0, 12, m.y, top)
-            n = max(1, m.shelfCount)
-            for i in range(n + 1):
-                yb = m.y + i * (m.height - dc) / n
-                self.box(m.id, "shelf", m.wall, m.fromCorner + dc, m.endAt - dc, 0, m.depth, yb, yb + dc)
-            return
-        self.box(m.id, "carcass", m.wall, m.fromCorner, m.endAt, 0, m.depth - dc, m.y, m.y + m.height)
-        if m.endPanel:
-            self.box(m.id, "side-panel", m.wall, *m.panel_span, 0, m.depth, m.y, m.y + m.height)
-        self.door_widths(m, fs0, fs1, m.y, m.y + m.height, "glass-door" if m.type == "upper-glass" else "door")
-
-    def tall(self, m: Module):
-        dc = self.c.doorThickness
-        top = m.y + m.height
-        self.box(m.id, "side-panel", m.wall, m.fromCorner, m.fromCorner + dc, 0, m.depth, m.y, top)
-        self.box(m.id, "side-panel", m.wall, m.endAt - dc, m.endAt, 0, m.depth, m.y, top)
-        if m.niche:
-            self.box(m.id, "carcass", m.wall, m.fromCorner + dc, m.endAt - dc, 0, m.depth - dc, m.niche, top)
-            self.box(m.id, "carcass", m.wall, m.fromCorner + dc, m.endAt - dc, 0, 20, m.y, m.niche)  # vách sau hốc
-            self.door_widths(m, m.fromCorner + dc, m.endAt - dc, m.niche, top)
-        else:
-            self.box(m.id, "carcass", m.wall, m.fromCorner + dc, m.endAt - dc, 0, m.depth - dc, m.y, top)
-            self.door_widths(m, m.fromCorner + dc, m.endAt - dc, max(m.y, self.c.plinthHeight), top)
 
     def corner_shelf(self, m: Module):
         """Open shelves round an inside corner: two legs, each with its boards and a side panel at the end away from the corner. On the walls
@@ -501,16 +492,14 @@ class _Builder:
 
     def build(self) -> Scene:
         for m in self.spec.module:
-            t = m.storey
-            if t == "base":
-                self.base(m)
-            elif t in ("upper", "loft"):
-                self.upper(m)
-            elif t == "tall":
-                self.tall(m)
-            elif t == "corner":
+            t = self.types.get(m.type)
+            if t is None:
+                raise InvalidInput(f"Unknown cabinet type {m.type!r}", code="unknown-cabinet-type", params={"type": m.type})
+            if t.builder == "corner-shelf":
                 self.corner_shelf(m)
-            if t != "corner":
+            else:
+                self.by_type(m, t)
+            if m.storey != "corner":
                 self.handle(m)
         self.countertop()
         self.appliance()
@@ -520,8 +509,8 @@ class _Builder:
         return Scene(self.parts, self.lsau, self.lphai, meshes + self.corner_tops() + self.structures())
 
 
-def compile_spec(spec: KitchenSpec) -> Scene:
-    return _Builder(spec).build()
+def compile_spec(spec: KitchenSpec, catalog: Catalog = builtin.CATALOG) -> Scene:
+    return _Builder(spec, catalog).build()
 
 
 def cabinet_faces(spec: KitchenSpec, scene: Scene) -> list[camera_plan.Face]:
