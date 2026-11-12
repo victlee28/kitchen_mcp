@@ -15,6 +15,7 @@ from .catalog import Catalog
 from .errors import InvalidInput
 from .i18n import pick
 from .jsonview import as_list
+from .words import said
 
 import unicodedata
 
@@ -100,7 +101,8 @@ def priority_score(row: dict[str, Any], country: str | None, region: str | None)
 
 
 def priority_label(score: int) -> str:
-    return {30: "quốc gia", 20: "khu vực", 15: "cùng khu vực (nước khác)", 10: "toàn cầu"}.get(score, "tham khảo nước ngoài")
+    """How strongly a knowledge entry applies to the chosen country, worded (``priority.*`` in data/i18n)."""
+    return said({30: "priority.country", 20: "priority.region", 15: "priority.same-region", 10: "priority.global"}.get(score, "priority.foreign"))
 
 
 def sort_rows(rows: list[dict[str, Any]], country: str | None, region: str | None, catalog: Catalog = builtin.CATALOG) -> list[dict[str, Any]]:

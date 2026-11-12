@@ -175,7 +175,7 @@ def validate(spec: KitchenSpec, kb_rules: list[dict[str, Any]] | None = None, co
     order = {"error": 0, "warning": 1, "info": 2}
     issues.sort(key=lambda i: order[i["severity"]])
     dem = {k: sum(i["severity"] == k for i in issues) for k in order}
-    dung = {t: f"{v['code']} ({v['zone']}, {v['priority']})" for t, v in sel.items()}
+    dung = {t: words.said("finding.applied-rule", code=v['code'], zone=v['zone'], priority=v['priority']) for t, v in sel.items()}
     chua = [r["code"] for r in rows if not (as_dict(r.get("metadata")) or {}).get("validation")]
     return {"valid": dem["error"] == 0, "dem": dem, "issues": issues, "country": qg, "region": kv,
             "appliedRules": dung, "unchecked": chua}

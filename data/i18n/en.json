@@ -292,5 +292,16 @@
  "handle.none": "push to open",
  "tv-layout.columns": "low console, TV niche, two columns",
  "tv-layout.shelves": "low console and open shelves",
- "tv-layout.full": "closed wall with a TV niche"
+ "tv-layout.full": "closed wall with a TV niche",
+ "priority.country": "country",
+ "priority.region": "region",
+ "priority.same-region": "same region (another country)",
+ "priority.global": "global",
+ "priority.foreign": "foreign reference",
+ "priority.no-country": "reference (no country chosen)",
+ "finding.by": "{zone} · {priority}",
+ "finding.applied-rule": "{code} ({zone}, {priority})",
+ "leg.sink–cooktop": "sink–cooktop",
+ "leg.sink–fridge": "sink–fridge",
+ "leg.cooktop–fridge": "cooktop–fridge"
 }

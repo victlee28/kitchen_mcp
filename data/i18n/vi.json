@@ -292,5 +292,16 @@
  "handle.none": "không tay (nhấn mở)",
  "tv-layout.columns": "kệ thấp, hốc tivi, hai cột tủ",
  "tv-layout.shelves": "kệ thấp và kệ mở",
- "tv-layout.full": "kín cả vách, có hốc tivi"
+ "tv-layout.full": "kín cả vách, có hốc tivi",
+ "priority.country": "quốc gia",
+ "priority.region": "khu vực",
+ "priority.same-region": "cùng khu vực (nước khác)",
+ "priority.global": "toàn cầu",
+ "priority.foreign": "tham khảo nước ngoài",
+ "priority.no-country": "tham khảo (chưa chọn quốc gia)",
+ "finding.by": "{zone} · {priority}",
+ "finding.applied-rule": "{code} ({zone}, {priority})",
+ "leg.sink–cooktop": "chậu–bếp",
+ "leg.sink–fridge": "chậu–tủ lạnh",
+ "leg.cooktop–fridge": "bếp–tủ lạnh"
 }

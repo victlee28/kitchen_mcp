@@ -35,7 +35,7 @@ def select(rows: list[dict[str, Any]], country: str | None, region: str | None, 
             score = regions.priority_score(r, country, region)
             level = severity.get(meta.get("sourceType", "unknown"), "warning")
             reference = score < 10  # tiêu chuẩn của nước khác (hoặc chưa chọn quốc gia): chỉ tham khảo -> info
-            priority_text = regions.priority_label(score) if (country or region) or score >= 10 else "tham khảo (chưa chọn quốc gia)"
+            priority_text = regions.priority_label(score) if (country or region) or score >= 10 else words.said("priority.no-country")
             out[topic] = {"code": r["code"], "params": meta.get("params") or {}, "severity": "info" if reference else level,
                           "priority": priority_text, "reference": reference,
                           "zone": f"{r.get('region') or 'GLOBAL'}{'/' + r['country'] if r.get('country') else ''}"}
@@ -54,7 +54,7 @@ class _Ctx:
     def add(self, topic: str, mods: Iterable[str], key: str, params: dict[str, Any], measured: Any = None, limit: Any = None) -> None:
         s = self.sel[topic]
         d: dict[str, Any] = {**words.finding(s["code"], s["severity"], list(mods), key, **params), "topic": topic,
-                             "theo": f"{s['zone']} · {s['priority']}"}
+                             "theo": words.said("finding.by", zone=s['zone'], priority=s['priority'])}
         if s["reference"]:
             d["reference"] = True
         if measured is not None:
@@ -241,16 +241,16 @@ def check(spec: KitchenSpec, sel: dict[str, dict[str, Any]]) -> list[dict[str, A
         try:
             m = spec.find(fridge[0].module or "")
             dm = c.baseDepth / 2
-            pts = {"chậu": _plan_point(spec, spots[sink[0].id].row, spots[sink[0].id].center, dm),
-                   "bếp": _plan_point(spec, spots[cooktop[0].id].row, spots[cooktop[0].id].center, dm),
-                   "tủ lạnh": _plan_point(spec, runs.row_of(m), m.fromCorner + m.width / 2, m.depth)}
+            pts = {"sink": _plan_point(spec, spots[sink[0].id].row, spots[sink[0].id].center, dm),
+                   "cooktop": _plan_point(spec, spots[cooktop[0].id].row, spots[cooktop[0].id].center, dm),
+                   "fridge": _plan_point(spec, runs.row_of(m), m.fromCorner + m.width / 2, m.depth)}
             names = list(pts)
             legs = {f"{a}–{b}": math.dist(pts[a], pts[b]) for i, a in enumerate(names) for b in names[i + 1:]}
             total = sum(legs.values())
             bad = [k for k, v in legs.items() if not p.get("door_min", 0) - 1 <= v <= p.get("door_max", 1e9) + 1]
             if bad or total > p.get("total_max", 1e9) + 1:
                 ctx.add("triangle", [sink[0].id, cooktop[0].id, fridge[0].id],
-                        "finding.triangle", {"legs": ', '.join(f'{k} {v:.0f}' for k, v in legs.items()), "total": total,
+                        "finding.triangle", {"legs": ', '.join(f"{words.say('leg.' + k)} {v:.0f}" for k, v in legs.items()), "total": total,
                                             "min": p.get('door_min', 0), "max": p.get('door_max', '…'), "total_max": p.get('total_max', '…')},
                         {k: round_int(v) for k, v in legs.items()}, {k: p.get(k) for k in ("door_min", "door_max", "total_max")})
         except KeyError:
@@ -261,7 +261,7 @@ def check(spec: KitchenSpec, sel: dict[str, dict[str, Any]]) -> list[dict[str, A
         if not spec.room or spec.room.walkway is None:
             s = sel["walkway"]
             ctx.out.append({**words.finding(s["code"], "info", [], "finding.walkway-unknown", min=lim), "topic": "walkway",
-                            "theo": f"{s['zone']} · {s['priority']}"})
+                            "theo": words.said("finding.by", zone=s['zone'], priority=s['priority'])})
         elif lim and spec.room.walkway < lim - 1:
             ctx.add("walkway", [], "finding.walkway", {"width": spec.room.walkway, "min": lim}, spec.room.walkway, lim)
     return ctx.out
