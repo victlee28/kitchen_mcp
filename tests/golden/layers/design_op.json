@@ -52,7 +52,7 @@
    },
    "error": {
     "kind": "validation",
-    "code": "invalid-input"
+    "code": "partial-handles"
    }
   },
   {

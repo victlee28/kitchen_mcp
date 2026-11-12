@@ -56,7 +56,7 @@
    },
    "error": {
     "kind": "validation",
-    "code": "invalid-input"
+    "code": "floorplan-bad-points"
    }
   },
   {
@@ -81,7 +81,7 @@
    },
    "error": {
     "kind": "validation",
-    "code": "invalid-input"
+    "code": "floorplan-bad-points"
    }
   },
   {
@@ -94,7 +94,7 @@
    },
    "error": {
     "kind": "validation",
-    "code": "invalid-input"
+    "code": "floorplan-bad-points"
    }
   }
  ]

@@ -64,7 +64,7 @@
    },
    "error": {
     "kind": "validation",
-    "code": "invalid-input"
+    "code": "floorplan-bad-axes"
    }
   },
   {
@@ -80,7 +80,7 @@
    },
    "error": {
     "kind": "validation",
-    "code": "invalid-input"
+    "code": "floorplan-bad-axes"
    }
   },
   {
@@ -90,7 +90,7 @@
    },
    "error": {
     "kind": "validation",
-    "code": "invalid-input"
+    "code": "floorplan-no-frame"
    }
   },
   {
@@ -106,7 +106,7 @@
    },
    "error": {
     "kind": "validation",
-    "code": "invalid-input"
+    "code": "floorplan-bad-axes"
    }
   }
  ]

@@ -316,7 +316,7 @@ def render_view(scene: Scene, view: ViewAngle, out_dir: Path, width: int = 1280,
 
     # instance: số nguyên, không khử răng cưa, đã qua z-buffer (chỉ phần nhìn thấy)
     if len(all_parts) >= 65535:
-        raise ValueError("Quá nhiều chi tiết cho instance 16-bit")
+        raise InvalidInput("Too many parts for a 16-bit instance image", code="too-many-parts")
     inst = (pid + 1).astype(np.uint16)
     Image.fromarray(inst).save(out_dir / "instance.png")
     vals, counts = np.unique(pid[hit], return_counts=True)

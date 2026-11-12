@@ -270,7 +270,7 @@
    },
    "error": {
     "kind": "validation",
-    "code": "invalid-input"
+    "code": "floorplan-room-not-found"
    }
   }
  ]

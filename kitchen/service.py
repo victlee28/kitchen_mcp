@@ -330,9 +330,9 @@ class KitchenService:
         spec, _rev = self.store.get(design_id)
         fp = spec.floorplan
         if not isinstance(fp, dict):
-            raise InvalidInput('The design has no imported floorplan')
+            raise InvalidInput('The design has no imported floorplan', code='no-floorplan')
         if not spec.module:
-            raise InvalidInput('The design has no cabinets to place')
+            raise InvalidInput('The design has no cabinets to place', code='no-cabinets')
         scene = geometry.compile_spec(spec)
         used = runs.walls_used(spec, scene.lsau)
         need = {'back': scene.lsau, 'right': scene.lphai if 'right' in used else 0, 'left': scene.lphai if 'left' in used else 0}
@@ -417,7 +417,7 @@ class KitchenService:
         """
         spec, current = self.store.get(design_id)
         if base_revision is not None and base_revision != current:
-            raise ConflictError(f'base_rev={base_revision}, but the latest revision is {current}; reload before editing')
+            raise ConflictError(f'base_rev={base_revision}, but the latest revision is {current}; reload before editing', params={'base': base_revision, 'latest': current})
         result = edit_intent.interpret_edit(spec, text, scope)
         if result['status'] == 'unsupported' and use_llm:
             guess, status = llm.edit_operation_llm(text, spec, self.config)
@@ -439,7 +439,7 @@ class KitchenService:
         """
         spec, current = self.store.get(design_id)
         if base_revision is not None and base_revision != current:
-            raise ConflictError(f'base_rev={base_revision}, but the latest revision is {current}; reload before editing')
+            raise ConflictError(f'base_rev={base_revision}, but the latest revision is {current}; reload before editing', params={'base': base_revision, 'latest': current})
         if template.get('kind') == 'corner':     # {"kind": "corner", "runA": "R1", "runB": "R2", "width"?: mm}: special corner cabinet between two runs
             plan = cabinet_run.plan_corner(spec, str(template.get('runA')), str(template.get('runB')), float(template.get('width') or 900.0),
                                            catalog=self.catalog())
@@ -840,7 +840,7 @@ class KitchenService:
         """
         spec, current = self.store.get(design_id)
         if base_revision is not None and base_revision != current:
-            raise ConflictError(f'base_rev={base_revision}, but the latest revision is {current}; reload before editing')
+            raise ConflictError(f'base_rev={base_revision}, but the latest revision is {current}; reload before editing', params={'base': base_revision, 'latest': current})
         kind = source.get('kind')
         if kind not in recognition.contract.SOURCE_KINDS:
             raise InvalidInput(f"source.kind must be one of {', '.join(recognition.contract.SOURCE_KINDS)}", code='bad-source-kind')
@@ -869,7 +869,7 @@ class KitchenService:
         """
         spec, current = self.store.get(design_id)
         if base_revision is not None and base_revision != current:
-            raise ConflictError(f'base_rev={base_revision}, but the latest revision is {current}; reload before editing')
+            raise ConflictError(f'base_rev={base_revision}, but the latest revision is {current}; reload before editing', params={'base': base_revision, 'latest': current})
         job_id = recognition.recognizer_wire.clean_job_id(job)
         if not job_id:
             raise InvalidInput('job is not a recognition job id', code='bad-job')
@@ -959,7 +959,7 @@ class KitchenService:
         from . import proposal
         spec, current = self.store.get(design_id)
         if base_revision is not None and base_revision != current:
-            raise ConflictError(f'base_rev={base_revision}, but the latest revision is {current}; reload before editing')
+            raise ConflictError(f'base_rev={base_revision}, but the latest revision is {current}; reload before editing', params={'base': base_revision, 'latest': current})
         base = {'id': design_id, 'baseRev': current, 'operation': operation, 'opHash': proposal.op_hash(operation, current)}
         try:
             updated = edit.apply_op(spec.model_copy(deep=True), operation, self.catalog())
@@ -1049,7 +1049,7 @@ class KitchenService:
     def render(self, design_id: str, revision: int | None=None, views: list[str] | None=None, width: int=1280, height: int=960) -> dict:
         """Render control images for selected views and persist them by revision."""
         if not (256 <= width <= 4096 and 256 <= height <= 4096):
-            raise InvalidInput('Width and height must be between 256 and 4096.')
+            raise InvalidInput('Width and height must be between 256 and 4096.', code='bad-image-size')
         spec, stored_revision = self.store.get(design_id, revision)
         output_dir = self.render_dir / design_id / f'rev{stored_revision}'
         result = render.render_views(spec, output_dir, views, width, height, meta={'designId': design_id, 'rev': stored_revision})
@@ -1103,7 +1103,8 @@ class KitchenService:
         """Insert or update a knowledge entry: a write of the workshop's layer of the catalog kind ``knowledge`` (history, undo)."""
         region_code = (region or 'GLOBAL').upper()
         if region_code not in regions.tables(self.catalog()).regions:
-            raise InvalidInput(f"region must be one of: {', '.join(regions.tables(self.catalog()).regions)}")
+            raise InvalidInput(f"region must be one of: {', '.join(regions.tables(self.catalog()).regions)}", code='bad-region',
+                               params={'code': region_code, 'allowed': ', '.join(regions.tables(self.catalog()).regions)})
         codes = [c.strip().upper() for c in (country or '').split(',') if c.strip()]
         for c in codes:
             regions.normalize(c, None, self.catalog())

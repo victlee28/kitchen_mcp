@@ -96,12 +96,12 @@ def style_source(images: "ImageJobs", did: str, view: str, wanted: str = "auto")
     if wanted not in ("auto", "", None):
         spec, _ = images.store.get(did)
         if wanted == view:
-            raise InvalidInput("styleFrom must be a different view than the one being made")
+            raise InvalidInput("styleFrom must be a different view than the one being made", code="style-from-same-view")
         if wanted not in geometry.views_of(spec):
-            raise InvalidInput(f"styleFrom: no view '{wanted}'")
+            raise InvalidInput(f"styleFrom: no view '{wanted}'", code="view-not-found", params={"view": wanted, "views": "-"})
         accepted = images.store.list_jobs(did, wanted, "accepted", 200)
         if not accepted:
-            raise InvalidInput(f"styleFrom: view '{wanted}' has no approved image yet")
+            raise InvalidInput(f"styleFrom: view '{wanted}' has no approved image yet", code="view-no-approved-image", params={"view": wanted})
         newest = max(accepted, key=lambda j: (j["result"].get("acceptNow", ""), j["updated_at"]))
         return {"view": wanted, "jobId": newest["id"], "auto": False}
     status = view_status(images, did)

@@ -52,8 +52,8 @@ def material_ops(spec: KitchenSpec, scene: Scene, part_ids: list[str], material:
         raise InvalidInput("No handle in the selection", code="no-handle-selected")
     partial = sorted(m for m, ids in chosen.items() if ids != all_by_module[m])
     if partial:
-        raise InvalidInput(f"Thiết kế lưu tay nắm theo module và theo tầng, không theo từng tay: {', '.join(partial)} mới chọn một phần "
-                         "tay nắm của module. Chọn trọn tay nắm của module (nhóm 'tay nắm <module>') hoặc dùng chế độ Thử nhanh.")
+        raise InvalidInput(f"Handles are stored per cabinet and storey, not one by one: only some handles of {', '.join(partial)} are selected",
+                           code="partial-handles", params={"ids": ', '.join(partial)})
     storey_of = {m.id: m.storey for m in spec.module}
     module_of = {m.id: m for m in spec.module}
     chosen_modules, all_modules = set(chosen), set(all_by_module)

@@ -100,7 +100,7 @@ class Store:
             raise TypeError(f"Unexpected options: {', '.join(legacy)}")
         region_code = (region or 'GLOBAL').upper()
         if region_code not in regions.REGIONS:
-            raise InvalidInput(f"region must be one of: {', '.join(regions.REGIONS)}")
+            raise InvalidInput(f"region must be one of: {', '.join(regions.REGIONS)}", code="bad-region", params={"code": region_code, "allowed": ', '.join(regions.REGIONS)})
         country_codes = [value.strip().upper() for value in (country or '').split(',') if value.strip()]
         for country_code in country_codes:
             regions.normalize(country_code)
@@ -197,7 +197,7 @@ class Store:
             if latest is None:
                 raise NotFound(f"Design '{design_id}' was not found", code="design-not-found", params={"id": design_id})
             if base_rev is not None and base_rev != latest:
-                raise ConflictError(f'base_rev={base_rev}, but the latest revision is {latest}; reload before editing')
+                raise ConflictError(f'base_rev={base_rev}, but the latest revision is {latest}; reload before editing', params={'base': base_rev, 'latest': latest})
             connection.execute('INSERT INTO revisions(design_id, rev, spec_json, operation, source, catalog_json) VALUES(?,?,?,?,?,?)', (design_id, latest + 1, json.dumps(dump_spec(spec), ensure_ascii=False), json.dumps(op, ensure_ascii=False), source, catalog_json))
             connection.execute('UPDATE designs SET name=? WHERE id=?', (spec.name, design_id))
             return latest + 1

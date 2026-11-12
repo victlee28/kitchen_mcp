@@ -23,26 +23,26 @@ def normalize(data: dict[str, Any], room_id: str | None = None) -> dict[str, Any
     The result never contains the source document (it is stored once, under ``ref``); everything in it is derived.
     """
     if as_dict(data) is None or data.get("kind") != "floorplan-audited":
-        raise InvalidInput("Expected a floorplan-audited JSON document")
+        raise InvalidInput("Expected a floorplan-audited JSON document", code="floorplan-bad-document")
     warnings: list[dict[str, Any]] = []
     cv = str(data.get("contractVersion", ""))
     if not cv.startswith(SUPPORTED_CONTRACT):
         warnings.append({"code": "contract-version", "message": f"contractVersion '{cv}' was not tested (expected {SUPPORTED_CONTRACT}x)"})
     unit = data.get("unit")
     if unit not in UNIT_MM:
-        raise InvalidInput("Floorplan unit must be cm, mm, or m")
+        raise InvalidInput("Floorplan unit must be cm, mm, or m", code="floorplan-bad-unit")
     frame_unit = (as_dict(data.get("frame")) or {}).get("unit")
     if frame_unit not in (None, unit):
-        raise InvalidInput(f"frame.unit '{frame_unit}' differs from unit '{unit}'")
+        raise InvalidInput(f"frame.unit '{frame_unit}' differs from unit '{unit}'", code="floorplan-bad-unit")
     k = UNIT_MM[unit]
     vx, vy = frame_vectors(data)
     elements = as_list(data.get("elements"))
     if elements is None:
-        raise InvalidInput("Floorplan elements must be an array")
+        raise InvalidInput("Floorplan elements must be an array", code="floorplan-bad-document")
     ids: list[Any] = [e.get("id") for e in elements]
     dup = sorted({str(i) for i in ids if ids.count(i) > 1})
     if dup:
-        raise InvalidInput("Duplicate element ids: " + ", ".join(dup))
+        raise InvalidInput("Duplicate element ids: " + ", ".join(dup), code="floorplan-duplicate-ids", params={"ids": ", ".join(dup)})
 
     rooms = [r for r in list_rooms(data) if r["kind"] == "room"]
     region: dict[str, Any] | None = None
@@ -61,13 +61,16 @@ def normalize(data: dict[str, Any], room_id: str | None = None) -> dict[str, Any
     else:
         if not rooms:
             cands = [r["id"] for r in list_rooms(data) if r["kind"] == "region"]
-            raise InvalidInput("No room outline (kind 'area' with tag 'room') in the floorplan" + (". To import the kitchen area pass one of: " + ", ".join(cands) if cands else ""))
+            raise InvalidInput("No room outline (kind 'area' with tag 'room') in the floorplan" + (". To import the kitchen area pass one of: " + ", ".join(cands) if cands else ""),
+                           code="floorplan-no-room")
         if room_id is None:
             if len(rooms) > 1:
-                raise InvalidInput("The floorplan has several rooms; pass room_id. Rooms: " + ", ".join(f"{r['id']} ({r['label']})" for r in rooms))
+                raise InvalidInput("The floorplan has several rooms; pass room_id. Rooms: " + ", ".join(f"{r['id']} ({r['label']})" for r in rooms),
+                           code="floorplan-several-rooms", params={"rooms": ", ".join(f"{r['id']} ({r['label']})" for r in rooms)})
             room_id = rooms[0]["id"]
         if room_id not in {r["id"] for r in rooms}:
-            raise InvalidInput(f"Room '{room_id}' not found. Rooms: " + ", ".join(str(r["id"]) for r in rooms))
+            raise InvalidInput(f"Room '{room_id}' not found. Rooms: " + ", ".join(str(r["id"]) for r in rooms), code="floorplan-room-not-found",
+                           params={"id": room_id, "rooms": ", ".join(str(r["id"]) for r in rooms)})
         room_id = require(room_id, "room_id")
         found: dict[str, Any] = next(e for e in elements if e.get("id") == room_id)
         room_el = found
@@ -95,15 +98,15 @@ def normalize(data: dict[str, Any], room_id: str | None = None) -> dict[str, Any
         warnings.append({"code": "duplicate-points", "message": f"{room_id}: {len(poly) - len(dedup)} repeated outline point(s) removed"})
     poly = dedup
     if len(poly) < 3 or abs(area2(poly)) < 1e-3:
-        raise InvalidInput(f"{room_id}: outline has zero area")
+        raise InvalidInput(f"{room_id}: outline has zero area", code="floorplan-bad-outline", params={"id": room_id})
     if self_intersects(poly):
-        raise InvalidInput(f"{room_id}: outline crosses itself; fix the drawing (nothing was changed)")
+        raise InvalidInput(f"{room_id}: outline crosses itself; fix the drawing (nothing was changed)", code="floorplan-bad-outline", params={"id": room_id})
     ccw = area2(poly) > 0
 
     edges = room_edges(poly)
     for ed in edges:
         if ed["length"] < 1.0:
-            raise InvalidInput(f"{room_id}: outline contains a zero-length edge at point {ed['i']}")
+            raise InvalidInput(f"{room_id}: outline contains a zero-length edge at point {ed['i']}", code="floorplan-bad-outline", params={"id": room_id})
         skew = min(angle_between(ed["dir"], (1, 0)), angle_between(ed["dir"], (0, 1)))
         if 0.5 < skew < 10:
             warnings.append({"code": "skewed-edge", "message": f"edge {ed['i']} is {skew:.1f} deg off the nearest axis; kept as drawn"})

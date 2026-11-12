@@ -92,9 +92,10 @@ def bind_kitchen(fp: dict[str, Any], need: dict[str, Any], back_edge: int | None
     if back_edge is not None:
         chosen = next((x for x in verdicts if x["edge"] == back_edge), None)
         if chosen is None:
-            raise InvalidInput(f"edge {back_edge} does not exist (0..{n_edges - 1})")
+            raise InvalidInput(f"edge {back_edge} does not exist (0..{n_edges - 1})", code="bad-back-edge-index", params={"edge": back_edge, "max": n_edges - 1})
         if not chosen["ok"]:
-            raise InvalidInput(f"edge {back_edge} cannot carry the kitchen: " + "; ".join(chosen["why"]))
+            raise InvalidInput(f"edge {back_edge} cannot carry the kitchen: " + "; ".join(chosen["why"]), code="edge-cannot-carry",
+                               params={"edge": back_edge, "why": "; ".join(chosen["why"])})
         source = "manual"
     else:
         ok = sorted((x for x in verdicts if x["ok"]), key=lambda x: -x["score"])

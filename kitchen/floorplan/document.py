@@ -21,19 +21,19 @@ def elements_of(data: dict[str, Any]) -> list[dict[str, Any]]:
 def frame_vectors(data: dict[str, Any]) -> tuple[Any, Any]:
     frame = as_dict(data.get("frame"))
     if frame is None:
-        raise InvalidInput("Floorplan has no 'frame'; axis directions would have to be guessed")
+        raise InvalidInput("Floorplan has no 'frame'; axis directions would have to be guessed", code="floorplan-no-frame")
     names: list[Any] = [frame.get(k) for k in ("x", "y", "z")]
     if any(n not in AXIS for n in names):
-        raise InvalidInput(f"Unsupported frame axes {names}; known names: {', '.join(AXIS)}")
+        raise InvalidInput(f"Unsupported frame axes {names}; known names: {', '.join(AXIS)}", code="floorplan-bad-axes")
     vx, vy, vz = (AXIS[str(n)] for n in names)
     if vx[2] or vy[2] or not vz[2]:
-        raise InvalidInput("Frame must have horizontal x and y axes and a vertical z axis")
+        raise InvalidInput("Frame must have horizontal x and y axes and a vertical z axis", code="floorplan-bad-axes")
     det = (vx[0] * (vy[1] * vz[2] - vy[2] * vz[1]) - vx[1] * (vy[0] * vz[2] - vy[2] * vz[0]) + vx[2] * (vy[0] * vz[1] - vy[1] * vz[0]))
     declared: Any = frame.get("handed")
     if declared in ("trai", "phai"):
         expected = -1 if declared == "trai" else 1
         if det != expected:
-            raise InvalidInput(f"Frame axes {names} are {'left' if det < 0 else 'right'}-handed but the file declares '{declared}'")
+            raise InvalidInput(f"Frame axes {names} are {'left' if det < 0 else 'right'}-handed but the file declares '{declared}'", code="floorplan-bad-axes")
     return vx, vy
 
 
@@ -41,17 +41,17 @@ def read_points(value: Any, element_id: str, what: str = "outline") -> list[tupl
     obj = as_dict(value)
     outline = as_list(obj.get(what)) if obj is not None else None
     if outline is None or len(outline) < 3:
-        raise InvalidInput(f"{element_id}: geometry.{what} must contain at least three points")
+        raise InvalidInput(f"{element_id}: geometry.{what} must contain at least three points", code="floorplan-bad-points", params={"id": element_id})
     pts: list[tuple[float, float]] = []
     for index, point in enumerate(outline):
         if not isinstance(point, (list, tuple)) or len(cast(list[Any], point)) != 2:
-            raise InvalidInput(f"{element_id}: {what} point {index} must be [x, y]")
+            raise InvalidInput(f"{element_id}: {what} point {index} must be [x, y]", code="floorplan-bad-points", params={"id": element_id})
         try:
             x, y = float(cast(list[Any], point)[0]), float(cast(list[Any], point)[1])
         except (TypeError, ValueError) as error:
-            raise InvalidInput(f"{element_id}: {what} point {index} must be numeric") from error
+            raise InvalidInput(f"{element_id}: {what} point {index} must be numeric", code="floorplan-bad-points", params={"id": element_id}) from error
         if not (math.isfinite(x) and math.isfinite(y)):
-            raise InvalidInput(f"{element_id}: {what} point {index} must be finite")
+            raise InvalidInput(f"{element_id}: {what} point {index} must be finite", code="floorplan-bad-points", params={"id": element_id})
         pts.append((x, y))
     return pts
 

@@ -30,20 +30,20 @@ def derive_region(data: dict[str, Any], seeds: list[str]) -> dict[str, Any]:
     """
     unit = data.get("unit")
     if unit not in UNIT_MM:
-        raise InvalidInput("Floorplan unit must be cm, mm, or m")
+        raise InvalidInput("Floorplan unit must be cm, mm, or m", code="floorplan-bad-unit")
     k = UNIT_MM[unit]
     tol = TOL / k
     by_id: dict[Any, dict[str, Any]] = {e.get("id"): e for e in elements_of(data)}
     boxes: list[list[float]] = []
     for sid in seeds:
         if sid not in by_id:
-            raise InvalidInput(f"Region seed '{sid}' not found")
+            raise InvalidInput(f"Region seed '{sid}' not found", code="floorplan-bad-region", params={"what": sid})
         bb = element_bbox(by_id[sid])
         if not bb:
-            raise InvalidInput(f"Region seed '{sid}' has no geometry")
+            raise InvalidInput(f"Region seed '{sid}' has no geometry", code="floorplan-bad-region", params={"what": sid})
         boxes.append(bb)
     if not boxes:
-        raise InvalidInput("A region needs at least one seed element")
+        raise InvalidInput("A region needs at least one seed element", code="floorplan-bad-region", params={"what": "-"})
     seed = [min(b[0] for b in boxes), min(b[1] for b in boxes), max(b[2] for b in boxes), max(b[3] for b in boxes)]
     walls: list[tuple[Any, list[float]]] = [(e.get("id"), bb) for e in by_id.values() if e.get("kind") == "wall" and (bb := element_bbox(e))]
     out = [0.0] * 4
@@ -141,7 +141,8 @@ def parse_region(data: dict[str, Any], spec: str) -> dict[str, Any]:
     if body == "kitchen":
         cands = _kitchen_candidates(data)
         if len(cands) != 1:
-            raise InvalidInput("region:kitchen needs exactly one kitchen area; found " + (", ".join("region:around=" + ",".join(g["seeds"]) for g in cands) or "none"))
+            raise InvalidInput("region:kitchen needs exactly one kitchen area; found " + (", ".join("region:around=" + ",".join(g["seeds"]) for g in cands) or "none"),
+                           code="floorplan-kitchen-area", params={"found": ", ".join("region:around=" + ",".join(g["seeds"]) for g in cands) or "-"})
         return derive_region(data, cands[0]["seeds"])
     if body.startswith("around="):
         return derive_region(data, [x for x in body[len("around="):].split(",") if x])
@@ -149,8 +150,8 @@ def parse_region(data: dict[str, Any], spec: str) -> dict[str, Any]:
         try:
             x0, y0, x1, y1 = (float(v) for v in body[len("bbox="):].split(","))
         except ValueError as err:
-            raise InvalidInput("region:bbox needs four numbers x0,y0,x1,y1") from err
+            raise InvalidInput("region:bbox needs four numbers x0,y0,x1,y1", code="floorplan-bad-region", params={"what": "bbox"}) from err
         if x1 <= x0 or y1 <= y0:
-            raise InvalidInput("region:bbox must have x1 > x0 and y1 > y0")
+            raise InvalidInput("region:bbox must have x1 > x0 and y1 > y0", code="floorplan-bad-region", params={"what": "bbox"})
         return {"bbox": [x0, y0, x1, y1], "seeds": None, "sides": None, "unit": data.get("unit")}
-    raise InvalidInput(f"Unknown region '{spec}'. Use region:kitchen, region:around=<ids> or region:bbox=x0,y0,x1,y1")
+    raise InvalidInput(f"Unknown region '{spec}'. Use region:kitchen, region:around=<ids> or region:bbox=x0,y0,x1,y1", code="floorplan-bad-region", params={"what": spec})

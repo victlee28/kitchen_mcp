@@ -68,7 +68,7 @@
    },
    "error": {
     "kind": "validation",
-    "code": "invalid-input"
+    "code": "floorplan-bad-region"
    }
   },
   {
@@ -81,7 +81,7 @@
    },
    "error": {
     "kind": "validation",
-    "code": "invalid-input"
+    "code": "floorplan-bad-region"
    }
   }
  ]

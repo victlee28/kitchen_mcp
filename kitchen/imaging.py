@@ -11,6 +11,8 @@ from pathlib import Path
 import numpy as np
 from PIL import Image, ImageFilter
 
+from .errors import InvalidInput
+
 
 def read(path: Path, mode: str = "RGB") -> np.ndarray:
     with Image.open(path) as im:
@@ -37,7 +39,7 @@ def pick(render_dir: Path, x: int, y: int, radius: int = 0) -> dict | None:
     """Instance at a pixel. With radius > 0 a handle within that many pixels wins over a non-handle hit: handles are only a few pixels wide."""
     inst, meta = load_instances(render_dir)
     if not (0 <= y < inst.shape[0] and 0 <= x < inst.shape[1]):
-        raise ValueError("Toạ độ ngoài ảnh")
+        raise InvalidInput("Point outside the image", code="point-outside-image")
     by_value = {i["value"]: i for i in meta["instances"]}
     v = int(inst[y, x])
     hit = by_value.get(v) if v else None

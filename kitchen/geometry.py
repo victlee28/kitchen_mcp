@@ -166,7 +166,7 @@ class _Builder:
             return runmod.free_seat(*(isl or self._isl[require(module, "island part module")]))
         seat = runmod.wall_seat(wall, self.lsau)
         if seat is None:
-            raise InvalidInput(wall)
+            raise InvalidInput(f"No seat on wall {wall!r}", code="bad-wall", params={"wall": wall})
         return seat
 
     def box(self, module: str | None, type: str, wall: str, s0: float, s1: float, d0: float, d1: float, y0: float, y1: float,
