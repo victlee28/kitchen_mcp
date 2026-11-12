@@ -169,7 +169,7 @@ def validate(spec: KitchenSpec, kb_rules: list[dict[str, Any]] | None = None, co
     rows = default_rows() if kb_rules is None else kb_rules
     sel = rules_kb.select(rows, qg, kv, catalog)
     kitchen = tv_system.kitchen_only(spec)       # kitchen rules (worktop, depths, appliances...) do not look at TV units
-    issues = check_geometry(spec) + rules_kb.check(kitchen, sel) + moldings.check(spec) + appliance_models.check(kitchen, catalog)
+    issues = check_geometry(spec) + rules_kb.check(kitchen, sel, catalog) + moldings.check(spec) + appliance_models.check(kitchen, catalog)
     if not (qg or kv):
         issues.append(words.finding("VUNG", "info", [], "finding.no-region"))
     order = {"error": 0, "warning": 1, "info": 2}

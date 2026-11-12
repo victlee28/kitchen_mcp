@@ -15,12 +15,13 @@ from .common import Component, VIEW_COLORS
 class BaseImages(Component):
     def ensure_render(self, did: str, rev: int | None, view: str, width: int | None = None, height: int | None = None):
         spec, r = self.store.get(did, rev)
-        views = geometry.views_of(spec)
+        dc = self.env.design_catalog(did, r)          # the catalog this revision is built with (its snapshot)
+        views = geometry.views_of(spec, dc)
         if view not in views:
             raise InvalidInput(f"No view {view!r}; there are: {', '.join(views)}", code="view-not-found", params={"view": view, "views": ', '.join(views)})
         d = self.view_dir(did, r, view)
         man = d / "manifest.json"
-        scene = geometry.compile_spec(spec)
+        scene = geometry.compile_spec(spec, dc)
         if man.exists():
             m = json.loads(man.read_text(encoding="utf-8"))
             w, h = width or m["width"], height or m["height"]
@@ -29,7 +30,7 @@ class BaseImages(Component):
         w, h = width or VIEW_COLORS[0], height or VIEW_COLORS[1]
         if not (256 <= w <= 4096 and 256 <= h <= 4096):
             raise InvalidInput("width/height must be 256-4096", code="bad-image-size")
-        render.render_views(spec, d.parent, [view], w, h, meta={"designId": did, "rev": r})
+        render.render_views(spec, d.parent, [view], w, h, meta={"designId": did, "rev": r}, catalog=dc)
         return spec, r, scene, d, json.loads(man.read_text(encoding="utf-8"))
 
     def layers(self, did: str, view: str, rev: int | None = None, all_layers: bool = False) -> dict:

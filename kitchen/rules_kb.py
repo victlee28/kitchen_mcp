@@ -124,7 +124,7 @@ def _range(ctx: _Ctx, topic: str, value: float, lo_key: str | None, hi_key: str 
         ctx.add(topic, mods, "finding.out-of-range", {"what": words.say(label), "value": value, "range": lim}, value, [openings, hi])
 
 
-def check(spec: KitchenSpec, sel: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+def check(spec: KitchenSpec, sel: dict[str, dict[str, Any]], catalog: Catalog = builtin.CATALOG) -> list[dict[str, Any]]:
     c = spec.common
     ctx = _Ctx(spec, sel)
     spots = {t.id: at for t in spec.appliances if t.type in ("sink", "cooktop") and (at := runs.spot(spec, t)) is not None}   # where each stands, by row
@@ -227,7 +227,7 @@ def check(spec: KitchenSpec, sel: dict[str, dict[str, Any]]) -> list[dict[str, A
         for t in spec.appliances:
             if t.type != "oven" or not t.module:
                 continue
-            parts = parts or compile_spec(spec).parts
+            parts = parts or compile_spec(spec, catalog).parts
             ps = [x for x in parts if x.module == t.id]
             if ps:
                 y0 = ps[0].min[1]

@@ -261,10 +261,11 @@ def _handle(hn: Handle, material_id: str, w: float, h: float, d: float, tier: st
     return out
 
 
-def _module_entry(spec: KitchenSpec, m: Module, parts: list[Part], frame: Frame, size: Vec3, mats: dict[str, Any], led: bool) -> dict[str, Any]:
+def _module_entry(spec: KitchenSpec, m: Module, parts: list[Part], frame: Frame, size: Vec3, mats: dict[str, Any], led: bool,
+                  catalog: Catalog = builtin.CATALOG) -> dict[str, Any]:
     c = spec.common
     storey = m.storey
-    ctype = cabinet_types.get(m.type)
+    ctype = cabinet_types.get(m.type, catalog)
     tier = TIER[storey]
     hn, hmat = effective_handle(c, m), mats.get(f"handle:{m.id}", mats["handle"])
     front = {"base": "base", "upper": "upper", "loft": "upper", "tall": "tall", "corner": "cornerShelf"}[storey]
@@ -409,7 +410,7 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
     from .rules import default_rows
     from .rules_kb import select
 
-    scene = compile_spec(spec)
+    scene = compile_spec(spec, catalog)
     c = spec.common
     mats_list, mats = _materials(spec, catalog)
     qg, kv = regions.normalize(country or spec.country, spec.region, catalog)
@@ -451,7 +452,7 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
     system_of = runs.systems(spec)
     for m in spec.module:
         frame, size = _module_frame(m, lsau, runs.frame_of(spec, m))
-        modules.append(_module_entry(spec, m, by_mod.get(m.id, []), frame, size, mats, has_led))
+        modules.append(_module_entry(spec, m, by_mod.get(m.id, []), frame, size, mats, has_led, catalog))
         modules[-1]["placement"]["cabinetSystemId"] = system_of[m.id]     # the cabinet system (runs.systems): a floorplan element id, auto-…, or design
 
     run_docs = _run_docs(spec, modules)
@@ -597,7 +598,7 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
 
     # camera (gocNhin: m -> mm)
     cameras: list[dict[str, Any]] = []
-    for key, v in views_of(spec).items():
+    for key, v in views_of(spec, catalog).items():
         pos = [x * 1000 for x in v.position]
         tgt = [x * 1000 for x in v.lookAt]
         d = [b - a for a, b in zip(pos, tgt)]

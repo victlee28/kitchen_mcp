@@ -105,8 +105,8 @@ class Results(Component):
             tasks = req.get("tasks") or [{"targetLayer": job["target"], "material": req.get("material"),
                                           "pendingOp": req.get("pendingOp"), "scope": req.get("scope")}]
             ops, scope, skip = [], [], []
-            spec, _ = self.store.get(job["design_id"])
-            scene = geometry.compile_spec(spec)
+            spec, latest = self.store.get(job["design_id"])
+            scene = geometry.compile_spec(spec, self.env.design_catalog(job["design_id"], latest))
             cur = spec
             for i, t in enumerate(tasks, 1):
                 op, pv = t.get("pendingOp"), t.get("scope")

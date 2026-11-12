@@ -162,7 +162,21 @@ def _with_props(t: CabinetType, data: Mapping[str, Any]) -> CabinetType:
 
 def _table(catalog: Catalog) -> dict[str, CabinetType]:
     raw = {it.id: it.data for it in catalog.all("cabinet-type")}
-    return {k: _compile(k, v, raw) for k, v in raw.items()}
+    out = {k: _compile(k, v, raw) for k, v in raw.items()}
+    for t in out.values():
+        if storey_by_name(t.id) != t.storey:
+            raise InvalidInput(f"cabinet type {t.id}: its id must start with its storey ({t.storey})", code="cabinet-type-id",
+                               params={"type": t.id, "storey": t.storey})
+    return out
+
+
+def check_known(types: list[str], catalog: Catalog = builtin.CATALOG) -> None:
+    """Raises when a cabinet of the design has a type the catalog does not have."""
+    table_ = table(catalog)
+    unknown = sorted({t for t in types if t not in table_})
+    if unknown and table_:            # a catalog without the kind at all (a test catalog) checks nothing
+        raise InvalidInput(f"Unknown cabinet type {', '.join(unknown)}; the catalog has {', '.join(table_)}", code="unknown-cabinet-type",
+                           params={"type": ", ".join(unknown)})
 
 
 def table(catalog: Catalog = builtin.CATALOG) -> dict[str, CabinetType]:
@@ -182,12 +196,25 @@ def get(type_id: str, catalog: Catalog = builtin.CATALOG) -> CabinetType | None:
     return table(catalog).get(type_id)
 
 
+def storey_by_name(type_id: str) -> str:
+    """The storey a type id says: ``tall…``, ``upper-loft…`` / ``loft…``, ``upper…``, ``corner…``, else base. A type's id must say its storey
+    (checked when the catalog loads), so code that has no catalog at hand (``Module.storey``) still knows the storey of a type the workshop
+    added."""
+    if type_id.startswith("tall"):
+        return "tall"
+    if type_id.startswith(("upper-loft", "loft")):
+        return "loft"
+    if type_id.startswith("upper"):
+        return "upper"
+    if type_id.startswith("corner"):
+        return "corner"
+    return "base"
+
+
 def storey_of(type_id: str, catalog: Catalog = builtin.CATALOG) -> str:
-    """The storey of a cabinet type (base, upper, loft, tall, corner); an unknown type by its name (``tall...``, ``upper...``, else base)."""
+    """The storey of a cabinet type (base, upper, loft, tall, corner)."""
     t = get(type_id, catalog)
-    if t is not None:
-        return t.storey
-    return "tall" if type_id.startswith("tall") else "upper" if type_id.startswith("upper") else "base"
+    return t.storey if t is not None else storey_by_name(type_id)
 
 
 def frontless(type_id: str, catalog: Catalog = builtin.CATALOG) -> bool:

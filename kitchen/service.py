@@ -52,7 +52,7 @@ class KitchenService:
         self.render_dir = Path(render_dir or self.config.render_dir)
         legacy_schema.migrate_renders(self.render_dir)
         from .images import ImageJobs
-        self.images = ImageJobs(self.store, self.render_dir, self.apply, self.config, catalog=self.catalog)
+        self.images = ImageJobs(self.store, self.render_dir, self.apply, self.config, catalog=self.catalog, design_catalog=self.catalog_for_revision)
 
     # ---------- catalog (data-driven business data: kitchen.catalog) and wording (kitchen.i18n)
     USER = "default"          # one user until accounts exist (decision of 11/11/2026)
@@ -221,9 +221,12 @@ class KitchenService:
         entries = [e for e in self._entries() if not (e.kind == kind and e.id == id and e.scope == scope)]
         if data is not None or disabled:
             entries.append(cat.Entry(kind, id, scope, data or {}, 1, disabled))
-        problems = cat.check_refs(cat.merge(entries), self.builtin.kinds)
+        trial = cat.merge(entries)
+        problems = cat.check_refs(trial, self.builtin.kinds)
         if problems:
             raise catalog_files.CatalogInvalid('; '.join(f"{p.kind} {p.id}: {p.path}: {p.message}" for p in problems[:10]))
+        if kind == 'cabinet-type':
+            cabinet_types.table(trial)            # every formula compiles, every "like" resolves (the error names the type and the place)
 
     def catalog_put(self, kind: str, id: str, data: dict, role: str, disabled: bool = False) -> dict:
         """Create or replace item ``id`` in the role's layer (``disabled``: hide the item of a lower layer instead)."""
@@ -323,7 +326,7 @@ class KitchenService:
     def _summary(self, design_id: str, revision: int, spec: KitchenSpec, **extra) -> dict:
         """Build the established API summary for a design revision."""
         validation = self.validate_spec(spec)
-        return {'id': design_id, 'rev': revision, 'name': spec.name, 'moduleCount': len(spec.module), 'country': spec.country, 'region': spec.region, 'module': [{'id': module.id, 'type': module.type, 'wall': module.wall, 'fromCorner': module.fromCorner, 'width': module.width, 'y': module.y, 'height': module.height} for module in spec.module], 'validation': {'valid': validation['valid'], 'dem': validation['dem'], 'issues': validation['issues'][:20]}, 'cameraViews': list(geometry.views_of(spec)), **extra}
+        return {'id': design_id, 'rev': revision, 'name': spec.name, 'moduleCount': len(spec.module), 'country': spec.country, 'region': spec.region, 'module': [{'id': module.id, 'type': module.type, 'wall': module.wall, 'fromCorner': module.fromCorner, 'width': module.width, 'y': module.y, 'height': module.height} for module in spec.module], 'validation': {'valid': validation['valid'], 'dem': validation['dem'], 'issues': validation['issues'][:20]}, 'cameraViews': list(geometry.views_of(spec, self.catalog())), **extra}
 
     def create_from_spec(self, spec_data: dict | KitchenSpec, source: str='spec', **legacy: Any) -> dict:
         """Create and persist a design from a complete specification."""
@@ -331,6 +334,7 @@ class KitchenService:
         if legacy:
             raise TypeError(f"Unexpected options: {', '.join(legacy)}")
         spec = spec_data if isinstance(spec_data, KitchenSpec) else load_spec(self.unword_names(spec_data))
+        cabinet_types.check_known([m.type for m in spec.module], self.catalog())
         record = self.store.create_design(spec, source)
         return self._summary(record['id'], 1, spec)
 
@@ -363,7 +367,7 @@ class KitchenService:
             raise InvalidInput('The design has no imported floorplan', code='no-floorplan')
         if not spec.module:
             raise InvalidInput('The design has no cabinets to place', code='no-cabinets')
-        scene = geometry.compile_spec(spec)
+        scene = geometry.compile_spec(spec, self.catalog())
         used = runs.walls_used(spec, scene.lsau)
         need = {'back': scene.lsau, 'right': scene.lphai if 'right' in used else 0, 'left': scene.lphai if 'left' in used else 0}
         binding = bind_kitchen(fp, need, back_edge, offset)
@@ -527,7 +531,7 @@ class KitchenService:
         object's longest edge against a wall, the doors into the object; the cabinets made against it before go, the object is no longer drawn
         (with no edge against a wall the nearest edge is used)."""
         kind = None
-        scene = geometry.compile_spec(spec)
+        scene = geometry.compile_spec(spec, self.catalog())
         ctx = roomctx.for_spec(spec, scene.lsau, scene.lphai)
         if ctx is not None and system is not None:
             kind = next((st['kind'] for st in ctx.structures if st.get('sourceElement') == system), None)
@@ -621,7 +625,7 @@ class KitchenService:
         (the longest run all of it, the others plain cabinets). Base and tall cabinets are as deep as the object (``cabinet_run.fit_depth``).
         With no edge against a wall and no ``back_edge``: ``plan = {"status": "choose-edge", "edges": [...]}`` (room frame) to ask the user."""
         from .placement import IDENTITY
-        scene = geometry.compile_spec(spec)
+        scene = geometry.compile_spec(spec, self.catalog())
         ctx = roomctx.for_spec(spec, scene.lsau, scene.lphai)
         if ctx is None:
             raise InvalidInput('This design has no imported floorplan, so there is no object to replace', code='no-floorplan')
@@ -773,7 +777,7 @@ class KitchenService:
             plan = planner(place)
             try:
                 after = edit.apply_op(spec.model_copy(deep=True), plan['operation'], self.catalog())
-                scene_after = geometry.compile_spec(after)
+                scene_after = geometry.compile_spec(after, self.catalog())
                 ctx_after = roomctx.for_spec(after, scene_after.lsau, scene_after.lphai)
             except Exception:       # the preview reports an operation that cannot be applied
                 break
@@ -789,7 +793,7 @@ class KitchenService:
         and the cabinet system of what stands against it: the id of the floorplan element (``elements[].id``, the structure's ``sourceElement``),
         the same each time something is made against that element. ``point`` is in the room frame (mm)."""
         from .placement import IDENTITY
-        scene = geometry.compile_spec(spec)
+        scene = geometry.compile_spec(spec, self.catalog())
         ctx = roomctx.for_spec(spec, scene.lsau, scene.lphai)
         if ctx is None:
             raise InvalidInput('This design has no imported floorplan, so there is no object to stand against', code='no-floorplan')
@@ -816,7 +820,7 @@ class KitchenService:
         tv = isinstance(prompt, str) and tv_system.asks_tv(prompt)
         described = intent.parse_prompt(prompt, self.catalog()) if isinstance(prompt, str) and prompt.strip() and not tv else None
 
-        scene = geometry.compile_spec(spec)
+        scene = geometry.compile_spec(spec, self.catalog())
         ctx = roomctx.for_spec(spec, scene.lsau, scene.lphai)
 
         def planner(place: Any) -> dict:
@@ -1067,7 +1071,7 @@ class KitchenService:
     def scene(self, design_id: str, revision: int | None=None) -> dict:
         """Compile a design revision into the basic geometry scene."""
         spec, stored_revision = self.store.get(design_id, revision)
-        return {'id': design_id, 'rev': stored_revision, **geometry.scene_json(spec)}
+        return {'id': design_id, 'rev': stored_revision, **geometry.scene_json(spec, self.catalog_for_revision(design_id, stored_revision))}
 
     def threejs(self, design_id: str, revision: int | None=None, country: str | None=None, **legacy: Any) -> dict:
         """Export a scene document using the Complete Kitchen Three.js schema."""
@@ -1083,7 +1087,8 @@ class KitchenService:
             raise InvalidInput('Width and height must be between 256 and 4096.', code='bad-image-size')
         spec, stored_revision = self.store.get(design_id, revision)
         output_dir = self.render_dir / design_id / f'rev{stored_revision}'
-        result = render.render_views(spec, output_dir, views, width, height, meta={'designId': design_id, 'rev': stored_revision})
+        result = render.render_views(spec, output_dir, views, width, height, meta={'designId': design_id, 'rev': stored_revision},
+                                     catalog=self.catalog_for_revision(design_id, stored_revision))
         return {'id': design_id, 'rev': stored_revision, **result}
 
     def ai_export(self, design_id: str, revision: int | None=None, views: list[str] | None=None, country: str | None=None, with_images: bool=False, embed: bool=False, lighting: str='daylight', **legacy: Any) -> dict:

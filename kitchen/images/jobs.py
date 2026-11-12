@@ -52,11 +52,13 @@ class ImageJobs:
     """
 
     def __init__(self, store: Any, render_dir: str | Path, apply: Callable[..., dict[str, Any]], config: Config | None = None, runtime: Runtime | None = None,
-                 catalog: Callable[[], Catalog] | None = None):
+                 catalog: Callable[[], Catalog] | None = None, design_catalog: Callable[[str, int], Catalog] | None = None):
         render_dir = Path(render_dir)
         self.env = JobEnv(store, render_dir, apply, config or Config(db_path=Path(":memory:"), render_dir=render_dir), runtime or Runtime())
         if catalog is not None:
             self.env.catalog = catalog
+        if design_catalog is not None:
+            self.env.design_catalog = design_catalog
         self.base = BaseImages(self.env)
         self.builder = RequestBuilder(self.env, self.base, self)
         self.packages = Packages(self.env)
@@ -174,10 +176,11 @@ class ImageJobs:
         if job["status"] != "awaiting-send":
             raise InvalidInput(f"Only a job waiting to be sent can be sent (now: {job['status']})", code="job-not-waiting", params={"status": job["status"]})
         spec, rev = self.store.get(job["design_id"])
-        views = geometry.views_of(spec)
+        dc = self.env.design_catalog(job["design_id"], rev)
+        views = geometry.views_of(spec, dc)
         if job["view"] in views:
             W, H = job["request"]["size"]
-            if render.render_key(geometry.compile_spec(spec), views[job["view"]], W, H) != job["render_key"]:
+            if render.render_key(geometry.compile_spec(spec, dc), views[job["view"]], W, H) != job["render_key"]:
                 raise InvalidInput("The design's geometry or view changed after the job was made; its masks no longer fit", code="job-stale")
         if job["backend"] in ("gemini", "job-package"):  # model nhận chỉ dẫn: request phải đủ ảnh, đúng kích thước
             kt = json.loads(self.packages.export_request(jid).read_text(encoding="utf-8")).get("validation") or {}

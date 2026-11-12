@@ -1018,5 +1018,6 @@
  "error.cabinet-type-step": "Cabinet type {type}, {where}: not a valid step",
  "error.cabinet-type-like": "Cabinet type {type}: \"built like\" {like} is missing or loops",
  "error.cabinet-type-repeat": "A cabinet type repeats a step {n} times (most {most})",
- "error.unknown-cabinet-type": "There is no cabinet type {type}"
+ "error.unknown-cabinet-type": "There is no cabinet type {type}",
+ "error.cabinet-type-id": "Cabinet type {type}: its id must start with its storey ({storey}), e.g. base-…, upper-…, tall-…"
 }

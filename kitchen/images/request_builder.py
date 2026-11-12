@@ -80,7 +80,7 @@ class RequestBuilder(Component):
                         raise InvalidInput(f"Task {i}: {layer['name']!r} cannot be changed in the design yet; use quick mode", code="layer-not-editable",
                                    params={"n": i, "name": layer["name"]})
                     nxt = edit.apply_op(cur, op[0], self.env.catalog())
-                    if render.scene_hash(geometry.compile_spec(nxt)) != render.scene_hash(scene):
+                    if render.scene_hash(geometry.compile_spec(nxt, self.env.catalog())) != render.scene_hash(scene):
                         raise InvalidInput(f"Task {i}: the change alters the geometry; an image edit only takes material changes", code="task-changes-geometry", params={"n": i})
                     selected = list(ids)
                     ids = layers.changed_parts(cur, nxt, scene)
@@ -199,14 +199,14 @@ class RequestBuilder(Component):
             nxt = edit.apply_op(nxt, pin, self.env.catalog())
             ops.append(pin)
         design_op = edit.combine_ops(ops)
-        render.render_views(nxt, jdir / "moi", [view], W, H, meta={"designId": did, "rev": "unspecified"})
+        render.render_views(nxt, jdir / "moi", [view], W, H, meta={"designId": did, "rev": "unspecified"}, catalog=self.env.catalog())
         nd = jdir / "moi" / view
         key_new = json.loads((nd / "manifest.json").read_text(encoding="utf-8"))["renderKey"]
         m, info = geometry_edit.diff_mask(d, nd)
         lines_new = imaging.read(nd / "lines.png", "L")
         forced = [id for x in desc for id in x.get("required", [])]
         if forced:  # đổi kiểu cánh: render nhanh không dựng khung -> bắt buộc vẽ lại mặt trước các module đó
-            fm, doors = geometry_edit.front_mask(nd, nxt, geometry.compile_spec(nxt), forced)
+            fm, doors = geometry_edit.front_mask(nd, nxt, geometry.compile_spec(nxt, self.env.catalog()), forced)
             m |= fm
             if any(x.get("doorStyle") == "frame" for x in desc):
                 lines_new = geometry_edit.shaker_lines(lines_new, doors)

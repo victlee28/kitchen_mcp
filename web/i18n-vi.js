@@ -1019,5 +1019,6 @@ export default {
  "error.cabinet-type-step": "Loại tủ {type}, {where}: bước dựng không hợp lệ",
  "error.cabinet-type-like": "Loại tủ {type}: \"dựng như\" {like} không có hoặc vòng lặp",
  "error.cabinet-type-repeat": "Một loại tủ lặp một bước {n} lần (tối đa {most})",
- "error.unknown-cabinet-type": "Không có loại tủ {type}"
+ "error.unknown-cabinet-type": "Không có loại tủ {type}",
+ "error.cabinet-type-id": "Loại tủ {type}: mã phải bắt đầu bằng tầng của nó ({storey}), vd base-…, upper-…, tall-…"
 };

@@ -57,6 +57,7 @@ class JobEnv:
     runtime: Runtime
     threads: dict[str, threading.Thread] = field(default_factory=dict)
     catalog: Callable[[], Catalog] = lambda: builtin.CATALOG     # the merged catalog (the service passes its own)
+    design_catalog: Callable[[str, int], Catalog] = lambda did, rev: builtin.CATALOG   # what a stored revision is built with (its snapshot)
 
 
 class Component:

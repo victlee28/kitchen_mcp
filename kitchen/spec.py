@@ -26,7 +26,7 @@ FACINGS = ("-z", "+z", "-x", "+x")       # direction the doors of a free-standin
 ORIENT_OF_FACING = {"-z": "island", "+z": "back", "-x": "right", "+x": "left"}   # which wall's frame has the same orientation
 
 
-MODULE_TYPES = (
+MODULE_TYPES = (    # the builtin cabinet types (what the recognizers may answer); a design may use any type of the catalog (kind cabinet-type)
     "base", "base-sink", "base-corner-sink", "base-cooktop", "base-oven", "base-end", "base-drawers",
     "upper", "upper-glass", "upper-open", "upper-hood", "upper-loft",
     "tall-fridge", "tall",
@@ -234,8 +234,8 @@ class Module(_Base):
             raise ValueError(f"{self.id}: run only applies to wall='island' without facing")
         if self.facing and self.wall != "island":
             raise ValueError(f"{self.id}: facing only applies to wall='island'")
-        if self.type not in MODULE_TYPES:
-            raise ValueError(f"loai '{self.type}' không hỗ trợ; dùng một trong: {', '.join(MODULE_TYPES)}")
+        if not self.type:
+            raise ValueError(f"{self.id}: type is empty")
         if self.turnsInto and (self.type != "corner-shelf" or not self.run):
             raise ValueError(f"{self.id}: turnsInto only applies to a corner-shelf standing in a run")
         if self.type == "corner-shelf":

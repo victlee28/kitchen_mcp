@@ -13,6 +13,7 @@ from .catalog import Catalog
 from .spec import Appliance, KitchenSpec, Module, Run, from_data, to_data
 from .errors import InvalidInput, NotFound
 from .jsonview import as_dict, as_list
+from . import cabinet_types
 
 
 def _clone(spec: KitchenSpec) -> KitchenSpec:
@@ -322,6 +323,13 @@ def update_common(spec: KitchenSpec, changes: dict[str, Any]) -> KitchenSpec:
 
 
 def apply_op(spec: KitchenSpec, op: dict[str, Any], catalog: Catalog = builtin.CATALOG) -> KitchenSpec:
+    """``_apply_op``, then every cabinet's type must be one of the catalog (catalog kind ``cabinet-type``)."""
+    out = _apply_op(spec, op, catalog)
+    cabinet_types.check_known([m.type for m in out.module], catalog)
+    return out
+
+
+def _apply_op(spec: KitchenSpec, op: dict[str, Any], catalog: Catalog = builtin.CATALOG) -> KitchenSpec:
     """Lệnh dạng dữ liệu (dùng chung cho MCP và HTTP).
     {"op": "add-run", "run": {"id"?, "x", "z", "yaw"}}  — an explicit run at any angle; modules join it with wall="island", run=<id>
     {"op": "move-run", "id": "R1", "changes": {"x"?, "z"?, "yaw"?}} | {"op": "remove-run", "id": "R1"}  — the run with all its cabinets

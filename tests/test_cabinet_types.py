@@ -67,5 +67,49 @@ class TestCabinetTypes(unittest.TestCase):
         self.assertEqual(len(shelves), 5)
 
 
+THREE_DRAWERS = {"storey": "base", "label": {"vi": "Tủ dưới 3 ngăn kéo", "en": "Three-drawer base cabinet"},
+                 "let": {"body": "max(y, plinthHeight) if y == 0 else y", "h": "(top - body) / 3"},
+                 "parts": [{"when": "y == 0", "part": "plinth", "s": ["fs0", "fs1"], "d": ["0", "depth - doorThickness - 50"], "y": ["0", "plinthHeight"]},
+                           {"part": "carcass", "s": ["fs0", "fs1"], "d": ["0", "depth - doorThickness"], "y": ["body", "top"]},
+                           {"repeat": "3", "as": "i", "parts": [{"fronts": "drawer", "s": ["fs0", "fs1"], "y": ["body + i * h", "body + (i + 1) * h"]}]}]}
+
+
+class TestWorkshopTypes(unittest.TestCase):
+    """5.7: the workshop adds a type; a design uses it; each revision keeps the types it was built with."""
+
+    def setUp(self):
+        from kitchen.service import KitchenService
+        self.tmp = Path(tempfile.mkdtemp())
+        self.s = KitchenService(db_path=self.tmp / "k.db", render_dir=self.tmp / "r")
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def _drawers(self, scene_json):
+        return [p for p in scene_json["parts"] if p["type"] == "drawer" and p["module"] == "TD9"]
+
+    def test_add_use_and_keep(self):
+        s = self.s
+        s.catalog_put("cabinet-type", "base-3-drawers", THREE_DRAWERS, "workshop")
+        design = s.create_from_spec(json.loads((ROOT / "fixtures" / "l-shaped-kitchen.json").read_text(encoding="utf-8")))["id"]
+        first = s.get(design)["spec"]["module"][0]["id"]
+        op = {"op": "add", "module": {"id": "TD9", "type": "base-3-drawers", "width": 600}, "afterModule": first}
+        rev = s.apply(design, op, s.propose(design, op)["baseRev"], s.propose(design, op)["opHash"])["rev"]
+        self.assertEqual(len(self._drawers(s.scene(design, rev))), 3)
+        changed = {**THREE_DRAWERS, "parts": [*THREE_DRAWERS["parts"][:2], {**THREE_DRAWERS["parts"][2], "repeat": "2"}]}
+        s.catalog_put("cabinet-type", "base-3-drawers", changed, "workshop")
+        self.assertEqual(len(self._drawers(s.scene(design, rev))), 3, "the revision keeps the type it was saved with")
+        with self.assertRaises(InvalidInput):
+            s.apply(design, {"op": "add", "module": {"type": "nope-type", "width": 600}, "afterModule": first}, rev, None)
+
+    def test_bad_types_are_refused_on_save(self):
+        with self.assertRaises(InvalidInput) as e:
+            self.s.catalog_put("cabinet-type", "base-bad", {**THREE_DRAWERS, "let": {"h": "top -"}}, "workshop")
+        self.assertEqual(e.exception.code, "cabinet-type-formula")
+        with self.assertRaises(InvalidInput) as e:
+            self.s.catalog_put("cabinet-type", "upper-x", THREE_DRAWERS, "workshop")      # a base type whose id says upper
+        self.assertEqual(e.exception.code, "cabinet-type-id")
+
+
 if __name__ == "__main__":
     unittest.main()

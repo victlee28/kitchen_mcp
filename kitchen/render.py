@@ -23,7 +23,8 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
-from . import runs
+from . import builtin, runs
+from .catalog import Catalog
 from .errors import InvalidInput
 from .geometry import Scene, compile_spec, views_of
 from .palette import SEGMENT_COLORS, module_color as _module_color
@@ -374,10 +375,10 @@ def part_colors(spec: KitchenSpec, scene: Scene) -> list[tuple[int, int, int]]:
 
 
 def render_views(spec: KitchenSpec, out_root: Path, views: list[str] | None = None,
-                 width: int = 1280, height: int = 960, meta: dict | None = None) -> dict:
-    scene = compile_spec(spec)
+                 width: int = 1280, height: int = 960, meta: dict | None = None, catalog: Catalog = builtin.CATALOG) -> dict:
+    scene = compile_spec(spec, catalog)
     colors = part_colors(spec, scene)
-    all_views = views_of(spec)
+    all_views = views_of(spec, catalog)
     chosen = views or list(all_views)
     unknown = [v for v in chosen if v not in all_views]
     if unknown:

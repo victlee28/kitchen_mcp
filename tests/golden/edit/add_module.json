@@ -128,7 +128,7 @@
    },
    "error": {
     "kind": "validation",
-    "code": "schema"
+    "code": "unknown-cabinet-type"
    }
   }
  ]

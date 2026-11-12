@@ -216,7 +216,6 @@
   "writers": [
    "workshop"
   ],
-  "closed": true,
   "refs": [
    [
     "like",
@@ -226,6 +225,9 @@
     "plainType",
     "cabinet-type"
    ]
+  ],
+  "usedBy": [
+   "module[].type"
   ]
  }
 }

@@ -572,10 +572,10 @@ def room_solids(spec: KitchenSpec, scene: Scene) -> tuple[list[tuple[float, floa
     return (room if len(room) >= 3 else None), solids
 
 
-def default_views(spec: KitchenSpec, scene: Scene | None = None) -> dict[str, ViewAngle]:
+def default_views(spec: KitchenSpec, scene: Scene | None = None, catalog: Catalog = builtin.CATALOG) -> dict[str, ViewAngle]:
     """Bộ góc nhìn chuẩn khi spec chưa khai báo gocNhin (m). Camera ở độ cao mắt 1,6 m; khi có mặt bằng hoặc dãy tủ tự do thì mỗi dãy có góc chính
     diện + góc chéo đặt trong phòng, và những vật thể không phải tủ (tường, cột, đồ) chắn giữa camera và tủ nằm trong ``hide`` của góc đó."""
-    scene = scene or compile_spec(spec)
+    scene = scene or compile_spec(spec, catalog)
     openings, hi = scene.bounds()
     cx, cz = (openings[0] + hi[0]) / 2000, (openings[2] + hi[2]) / 2000
     w, d = (hi[0] - openings[0]) / 1000, (hi[2] - openings[2]) / 1000
@@ -619,18 +619,18 @@ def default_views(spec: KitchenSpec, scene: Scene | None = None) -> dict[str, Vi
     return views
 
 
-def views_of(spec: KitchenSpec) -> dict[str, ViewAngle]:
-    return dict(spec.cameraViews) if spec.cameraViews else default_views(spec)
+def views_of(spec: KitchenSpec, catalog: Catalog = builtin.CATALOG) -> dict[str, ViewAngle]:
+    return dict(spec.cameraViews) if spec.cameraViews else default_views(spec, catalog=catalog)
 
 
-def scene_json(spec: KitchenSpec) -> dict[str, Any]:
-    sc = compile_spec(spec)
+def scene_json(spec: KitchenSpec, catalog: Catalog = builtin.CATALOG) -> dict[str, Any]:
+    sc = compile_spec(spec, catalog)
     openings, hi = sc.bounds()
     return {
         "version": "2.0", "units": "mm",
         "parts": [p.to_json() for p in sc.parts],
         "bounds": {"min": openings, "max": hi},
-        "views": {k: to_data(v) for k, v in views_of(spec).items()},
+        "views": {k: to_data(v) for k, v in default_views(spec, sc, catalog).items()} if not spec.cameraViews else {k: to_data(v) for k, v in spec.cameraViews.items()},
         "modules": [{"id": m.id, "name": m.name, "type": m.type, "wall": m.wall} for m in spec.module],
         "moldings": [{"id": m.id, "molding": m.module, "vertices": len(m.vertices), "faces": len(m.faces)} for m in sc.meshes],
     }
