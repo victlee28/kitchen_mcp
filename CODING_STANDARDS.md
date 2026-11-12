@@ -6,7 +6,7 @@ Rules the `code-review` skill checks the diff against. Where this file and `AGEN
 
 - S1. New or changed code, identifiers, docstrings, comments, log messages and docs are written in English.
 - S2. Field names, operation names, tool parameters, API keys, stored values, SQLite columns and file names are English. The old Vietnamese names appear only in `kitchen/legacy.py`.
-- S3. Vietnamese is allowed only in user-facing text (messages, UI) and in the user-input vocabulary tables (`kitchen/vocab.py`, `kitchen/regions.py`, intent parsing). Do not translate those tables.
+- S3. Vietnamese is allowed only in user-facing text, which lives in `data/i18n/<lang>.json`, and in the user-input vocabulary (`data/items/lexicon.json`, `kitchen/vocab.py`, `kitchen/regions.py`, intent parsing). Do not translate those tables.
 - S4. Domain concepts use the glossary term, not a listed `_Avoid_` synonym (for example `storey`, not `tier`; `module`, not `cabinet`).
 
 ## Architecture boundaries
@@ -18,7 +18,7 @@ Rules the `code-review` skill checks the diff against. Where this file and `AGEN
 - S9. A design changes only through an operation that produces a new revision. An accepted image job that changes the design does the same.
 - S10. Generated files stay in their established places: `renders/<design-id>/rev<N>/`, `logs/`, `kitchen.db`.
 
-## Portable core (rules R1-R23)
+## Portable core (rules R1-R24)
 
 The backend may be rewritten in Rust later. Python stays the reference implementation, JSON stays the contract. The rules below keep the logic portable; `tests/test_architecture.py`, `tests/test_golden.py`, `tests/test_errors.py` and `tests/test_typecheck.py` (pyright, per-file error count in `tests/typecheck_baseline.json`, may only shrink; `pip install pyright`) enforce what a machine can check. Rationale and the full discussion: `docs/adr/0003-portable-core.md`.
 
@@ -53,6 +53,7 @@ Zones (every module in `kitchen/` is in exactly one; the list lives in `tests/ar
 | R21 | Ratchet: new and changed code meets R1-R20. Existing exceptions are in `tests/architecture_allowlist.py` and may only shrink; adding one needs a reason in the PR. | architecture test |
 | R22 | No premature restructuring: no folder moves, no `core/` package, no imitation of `Result`/`Option`, no builders. Split a module only when its responsibilities are clear and tests pin its behaviour. | review |
 | R23 | Core uses only the standard library. Heavy libraries stay in the pixel zone. A new third-party dependency needs a note on its Rust counterpart. | review |
+| R24 | Business data is not in the core: cabinet types, layout templates and rules, sizes, finish names, command words and every word people read are catalog items (`data/items/<kind>.json`, schema in `data/schemas/`) or i18n keys. The core takes a `Catalog`, compiles it once (`catalog.derived`) and evaluates data formulas with `catalog/expr.py`. A new item kind is declared in `data/kinds.json` and refused on save if it does not compile (`service._check_trial`). See `docs/adr/0004-business-data-in-the-catalog.md`. | review + `VIETNAMESE_BASELINE` + `tests/test_cabinet_types.py` |
 
 Review question for every change that touches core: if this module were replaced by a Rust function, would it have to carry Pydantic, SQLite, `Path`, the environment, a clock, numpy or a web library with it? If yes, the boundary is not clean yet.
 

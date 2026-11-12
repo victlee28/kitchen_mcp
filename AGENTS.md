@@ -36,13 +36,14 @@ Both interfaces should delegate application behavior to `kitchen.service.Kitchen
 
 ## Portable core (read before touching `kitchen/`)
 
-The code is organised so the backend can later move to Rust without re-deciding behaviour. The rules are R1-R23 in `CODING_STANDARDS.md`; the reasoning is in `docs/adr/0003-portable-core.md`.
+The code is organised so the backend can later move to Rust without re-deciding behaviour. The rules are R1-R24 in `CODING_STANDARDS.md`; the reasoning is in `docs/adr/0003-portable-core.md` and `docs/adr/0004-business-data-in-the-catalog.md`.
 
 - Each module is in one zone: **core** (pure functions on JSON-like data), **data** (`spec`, `knowledge_seed`), **shell** (store, service, backends, config, llm, intent: may do I/O; `intent` is the text parser and is shell only because it uses Pydantic; the network call to the language model is in `kitchen/llm.py`), **pixel** (numpy/PIL, image jobs). The list is `tests/architecture_rules.py`; a new module must be added to a zone or `tests/test_architecture.py` fails.
 - Core code does not read files, the environment, the clock, random numbers or the network, and does not call Pydantic behaviour. Take a value as an argument instead; use `spec.to_data` / `spec.from_data` at the boundary, `numeric.round_half_away` for written-out numbers, `errors.*` for failures.
 - Raise `kitchen.errors` types with a stable `code`; do not raise bare `ValueError`/`KeyError` in core and do not `except Exception` to hide a failure.
 - A new public core function gets golden cases (`tests/golden/<area>/<name>.json`, a wrapper in `tests/golden_functions.py`). Fill expected values with `python tests/golden_regen.py`, then read the diff before committing.
 - The exceptions list `tests/architecture_allowlist.py` may only shrink. If a test says an entry is stale, delete it.
+- Business data goes to the catalog, not to a Python table: cabinet types (`data/items/cabinet-type.json`, engine `kitchen/cabinet_types.py`), layout templates and rules (`layout-template.json`, `layout-rules.json`, engine `kitchen/layout_solver.py`), TV layouts (`tv-layout.json`, `kitchen/tv_system.py`), default sizes and finish names (`defaults.json`, `kitchen/defaults.py`), command words (`lexicon.json`, `kitchen/lexicon.py`). Pass the design's catalog down (`catalog_for_revision`); words people read are `data/i18n` keys (`words.say`; run `node tests/js/gen-i18n.mjs` after editing `vi.json`). The workshop guide is `docs/guides/workshop-catalog.md` (vi: `workshop-catalog.vi.md`).
 - Run before finishing: `python -m unittest tests.test_architecture tests.test_golden tests.test_errors`, then the full suite.
 
 ## Important Runtime Flows
