@@ -135,6 +135,29 @@ class KitchenService:
         """An error in the reader's language (``error.<code>`` of data/i18n filled with its params), else its English message."""
         return self.builtin.messages.error(e.code, e.params, i18n.lang_of(lang), str(e))
 
+    def reword(self, data: Any, lang: str | None) -> Any:
+        """``data`` with every text the core worded from a key (``{"key", "params", "content"}`` findings and summary lines,
+        ``{"labelKey", "params", "label"}`` actions) re-worded in ``lang``. The rest is left as it is."""
+        lg = i18n.lang_of(lang)
+        m = self.builtin.messages
+        if lg == i18n.DEFAULT_LANG:
+            return data
+
+        def walk(o: Any) -> Any:
+            if isinstance(o, list):
+                return [walk(x) for x in o]
+            if not isinstance(o, dict):
+                return o
+            out = {k: walk(v) for k, v in o.items()}
+            raw = o.get('params')
+            params: dict[str, Any] = {str(k): v for k, v in raw.items()} if isinstance(raw, dict) else {}
+            if isinstance(o.get('key'), str) and 'content' in o and m.has(o['key']):
+                out['content'] = m.text(o['key'], lg, **params)
+            if isinstance(o.get('labelKey'), str) and 'label' in o and m.has(o['labelKey']):
+                out['label'] = m.text(o['labelKey'], lg, **params)
+            return out
+        return walk(data)
+
     def messages(self, lang: str | None) -> dict:
         lg = i18n.lang_of(lang)
         return {'lang': lg, 'langs': list(i18n.LANGS), 'messages': self.builtin.messages.table(lg)}

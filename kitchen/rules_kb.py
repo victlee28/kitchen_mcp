@@ -13,7 +13,7 @@ import math
 from collections.abc import Iterable
 
 from .numeric import round_half_away, round_int
-from . import builtin, regions, runs
+from . import builtin, regions, runs, words
 from .catalog import Catalog
 from .jsonview import as_dict, as_list
 from .spec import KitchenSpec, Appliance
@@ -51,10 +51,10 @@ class _Ctx:
         s = self.sel.get(topic)
         return s["params"] if s else None
 
-    def add(self, topic: str, mods: Iterable[str], msg: str, measured: Any = None, limit: Any = None) -> None:
+    def add(self, topic: str, mods: Iterable[str], key: str, params: dict[str, Any], measured: Any = None, limit: Any = None) -> None:
         s = self.sel[topic]
-        d: dict[str, Any] = {"rule": s["code"], "topic": topic, "severity": s["severity"], "module": list(mods), "content": msg,
-             "theo": f"{s['zone']} · {s['priority']}"}
+        d: dict[str, Any] = {**words.finding(s["code"], s["severity"], list(mods), key, **params), "topic": topic,
+                             "theo": f"{s['zone']} · {s['priority']}"}
         if s["reference"]:
             d["reference"] = True
         if measured is not None:
@@ -113,6 +113,7 @@ def _plan_point(spec: KitchenSpec, row: str, s: float, d: float) -> tuple[float,
 
 
 def _range(ctx: _Ctx, topic: str, value: float, lo_key: str | None, hi_key: str | None, label: str, mods: Iterable[str] = ()) -> None:
+    """``label``: the key of what is measured (``finding.label.<...>`` in data/i18n)."""
     p = ctx.p(topic)
     if not p:
         return
@@ -120,7 +121,7 @@ def _range(ctx: _Ctx, topic: str, value: float, lo_key: str | None, hi_key: str 
     hi = p.get(hi_key) if hi_key is not None else None
     if (openings is not None and value < openings - 1) or (hi is not None and value > hi + 1):
         lim = f"{openings if openings is not None else '…'}–{hi if hi is not None else '…'}"
-        ctx.add(topic, mods, f"{label} {value:g} mm ngoài {lim} mm", value, [openings, hi])
+        ctx.add(topic, mods, "finding.out-of-range", {"what": words.say(label), "value": value, "range": lim}, value, [openings, hi])
 
 
 def check(spec: KitchenSpec, sel: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
@@ -135,29 +136,29 @@ def check(spec: KitchenSpec, sel: dict[str, dict[str, Any]]) -> list[dict[str, A
 
     # kích thước
     if (p := ctx.p("countertop-height")):
-        _range(ctx, "countertop-height", c.countertop, "countertop_min", "countertop_max", "Cao mặt bàn")
+        _range(ctx, "countertop-height", c.countertop, "countertop_min", "countertop_max", "finding.label.countertop-height")
         allowed = p.get("countertop_allowed")
         if allowed and all(abs(c.countertop - a) > 1 for a in allowed) and p.get("countertop_min", 0) - 1 <= c.countertop <= p.get("countertop_max", 1e9) + 1:
-            ctx.add("countertop-height", [], f"Cao mặt bàn {c.countertop:g} mm không thuộc các mức phối hợp {allowed}", c.countertop, allowed)
+            ctx.add("countertop-height", [], "finding.countertop-not-allowed", {"value": c.countertop, "allowed": str(allowed)}, c.countertop, allowed)
     if (p := ctx.p("base-depth")):
         bad = [m.id for m in lows if not p.get("baseDepth_min", 0) - 1 <= m.depth <= p.get("baseDepth_max", 1e9) + 1]
         if bad:
-            ctx.add("base-depth", bad, f"Sâu tủ dưới ngoài {p.get('baseDepth_min')}–{p.get('baseDepth_max')} mm",
+            ctx.add("base-depth", bad, "finding.base-depth", {"min": p.get('baseDepth_min'), "max": p.get('baseDepth_max')},
                     sorted({spec.find(b).depth for b in bad}), [p.get("baseDepth_min"), p.get("baseDepth_max")])
     if (p := ctx.p("countertop-depth")) and lows:
         d = max(m.depth for m in lows) + c.countertopOverhang
         if d < p.get("countertopDepth_min", 0) - 1:
-            ctx.add("countertop-depth", [], f"Mặt bàn sâu {d:g} mm < {p['countertopDepth_min']}", d, p["countertopDepth_min"])
+            ctx.add("countertop-depth", [], "finding.countertop-depth", {"depth": d, "min": p['countertopDepth_min']}, d, p["countertopDepth_min"])
     if (p := ctx.p("upper-depth")):
         bad = [m.id for m in ups if not p.get("upperDepth_min", 0) - 1 <= m.depth <= p.get("upperDepth_max", 1e9) + 1]
         if bad:
-            ctx.add("upper-depth", bad, f"Sâu tủ trên ngoài {p.get('upperDepth_min')}–{p.get('upperDepth_max')} mm",
+            ctx.add("upper-depth", bad, "finding.upper-depth", {"min": p.get('upperDepth_min'), "max": p.get('upperDepth_max')},
                     sorted({spec.find(b).depth for b in bad}), [p.get("upperDepth_min"), p.get("upperDepth_max")])
     if ups:
-        _range(ctx, "upper-gap", c.upperBottom - c.countertop, "upper_gap_min", "upper_gap_max", "Mặt bàn tới đáy tủ trên")
+        _range(ctx, "upper-gap", c.upperBottom - c.countertop, "upper_gap_min", "upper_gap_max", "finding.label.upper-gap")
     if lows:
-        _range(ctx, "cabinet-plinth", c.plinthHeight, "plinthHeight_min", "plinthHeight_max", "Chân tủ cao")
-    _range(ctx, "clear-height", c.ceiling, "ceiling_min", None, "Chiều cao thông thủy (trần)")
+        _range(ctx, "cabinet-plinth", c.plinthHeight, "plinthHeight_min", "plinthHeight_max", "finding.label.plinth")
+    _range(ctx, "clear-height", c.ceiling, "ceiling_min", None, "finding.label.clear-height")
 
     # chậu – bếp
     if (p := ctx.p("sink-cooktop")):
@@ -166,9 +167,9 @@ def check(spec: KitchenSpec, sel: dict[str, dict[str, Any]]) -> list[dict[str, A
                 if spots[a.id].row == spots[b.id].row:
                     gap = abs(spots[a.id].center - spots[b.id].center) - (a.numeric_dimensions() or [0])[0] / 2 - (b.numeric_dimensions() or [0])[0] / 2
                     if gap < p["sink_cooktop_min"] - 1:
-                        ctx.add("sink-cooktop", [a.id, b.id], f"Chậu {a.id} cách bếp {b.id} {gap:g} mm < {p['sink_cooktop_min']}", gap, p["sink_cooktop_min"])
+                        ctx.add("sink-cooktop", [a.id, b.id], "finding.sink-cooktop", {"sink": a.id, "cooktop": b.id, "gap": gap, "min": p['sink_cooktop_min']}, gap, p["sink_cooktop_min"])
     # mặt bàn thao tác
-    for topic, items, name in (("sink-table", sink, "chậu"), ("cooktop-table", cooktop, "bếp")):
+    for topic, items, name in (("sink-table", sink, "finding.label.sink"), ("cooktop-table", cooktop, "finding.label.cooktop")):
         if (p := ctx.p(topic)):
             for t in items:
                 sides = _landing(spec, t, spots)
@@ -176,8 +177,8 @@ def check(spec: KitchenSpec, sel: dict[str, dict[str, Any]]) -> list[dict[str, A
                     continue
                 a, b = sorted(sides, reverse=True)
                 if a < p["larger_side"] - 1 or b < p["smaller_side"] - 1:
-                    ctx.add(topic, [t.id], f"Mặt bàn trống hai bên {name} {t.id}: {sides[0]:.0f} / {sides[1]:.0f} mm "
-                            f"(cần ≥{p['larger_side']} một bên, ≥{p['smaller_side']} bên kia)", [round_int(sides[0]), round_int(sides[1])],
+                    ctx.add(topic, [t.id], "finding.landing", {"what": words.say(name), "id": t.id, "a": sides[0], "b": sides[1],
+                                                 "larger": p['larger_side'], "smaller": p['smaller_side']}, [round_int(sides[0]), round_int(sides[1])],
                             [p["larger_side"], p["smaller_side"]])
     if (p := ctx.p("fridge-table")):
         for t in fridge:
@@ -197,7 +198,7 @@ def check(spec: KitchenSpec, sel: dict[str, dict[str, Any]]) -> list[dict[str, A
                                 free = min(free, (o0 - a) if near_start else (b - o1))
                     best = max(best, free)
             if best < p["floor_min"] - 1:
-                ctx.add("fridge-table", [m.id, t.id], f"Mặt bàn cạnh tủ lạnh {t.id} chỉ {best:.0f} mm (cần ≥{p['floor_min']})",
+                ctx.add("fridge-table", [m.id, t.id], "finding.fridge-landing", {"id": t.id, "free": best, "min": p['floor_min']},
                         best, p["floor_min"])
     # phía trên bếp
     hood = {t.module: t for t in spec.appliances if t.type == "hood" and t.module}
@@ -212,13 +213,13 @@ def check(spec: KitchenSpec, sel: dict[str, dict[str, Any]]) -> list[dict[str, A
             h = (hood[lowest.id].numeric_dimensions() + [0, 0])[1]
             gap = lowest.y - h - c.countertop
             if gap < p["gap_min"] - 1:
-                ctx.add("hood", [lowest.id, t.id, hood[lowest.id].id], f"Đáy máy hút mùi cách mặt bếp {gap:.0f} mm < {p['gap_min']}",
+                ctx.add("hood", [lowest.id, t.id, hood[lowest.id].id], "finding.hood-gap", {"gap": gap, "min": p['gap_min']},
                         gap, p["gap_min"])
         elif lowest.id not in hood and (p := ctx.p("above-cooktop")):
             gap = lowest.y - c.countertop
             if gap < p["no_hood_min"] - 1:
-                ctx.add("above-cooktop", [lowest.id, t.id], f"Tủ trên {lowest.id} ngay trên bếp {t.id}, cách {gap:.0f} mm, không có hút mùi "
-                        f"(cần ≥{p['no_hood_min']})", gap, p["no_hood_min"])
+                ctx.add("above-cooktop", [lowest.id, t.id], "finding.above-cooktop", {"id": lowest.id, "cooktop": t.id, "gap": gap, "min": p['no_hood_min']},
+                        gap, p["no_hood_min"])
     # lò vi sóng
     if (p := ctx.p("microwave")):
         from .geometry import compile_spec
@@ -231,10 +232,10 @@ def check(spec: KitchenSpec, sel: dict[str, dict[str, Any]]) -> list[dict[str, A
             if ps:
                 y0 = ps[0].min[1]
                 if y0 < c.baseTop and y0 < p["gap_under_countertop_min"] - 1:
-                    ctx.add("microwave", [t.module, t.id], f"Đáy lò {t.id} cao {y0:.0f} mm (dưới mặt bàn cần ≥{p['gap_under_countertop_min']})",
+                    ctx.add("microwave", [t.module, t.id], "finding.microwave-low", {"id": t.id, "y": y0, "min": p['gap_under_countertop_min']},
                             y0, p["gap_under_countertop_min"])
                 elif y0 > p["bottom_max"] + 1:
-                    ctx.add("microwave", [t.module, t.id], f"Đáy lò {t.id} cao {y0:.0f} mm > {p['bottom_max']}", y0, p["bottom_max"])
+                    ctx.add("microwave", [t.module, t.id], "finding.microwave-high", {"id": t.id, "y": y0, "max": p['bottom_max']}, y0, p["bottom_max"])
     # tam giác làm việc
     if (p := ctx.p("triangle")) and sink and cooktop and fridge:
         try:
@@ -249,8 +250,8 @@ def check(spec: KitchenSpec, sel: dict[str, dict[str, Any]]) -> list[dict[str, A
             bad = [k for k, v in legs.items() if not p.get("door_min", 0) - 1 <= v <= p.get("door_max", 1e9) + 1]
             if bad or total > p.get("total_max", 1e9) + 1:
                 ctx.add("triangle", [sink[0].id, cooktop[0].id, fridge[0].id],
-                        f"Tam giác làm việc: {', '.join(f'{k} {v:.0f}' for k, v in legs.items())} mm, tổng {total:.0f} "
-                        f"(cạnh {p.get('door_min', 0)}–{p.get('door_max', '…')}, tổng ≤{p.get('total_max', '…')})",
+                        "finding.triangle", {"legs": ', '.join(f'{k} {v:.0f}' for k, v in legs.items()), "total": total,
+                                            "min": p.get('door_min', 0), "max": p.get('door_max', '…'), "total_max": p.get('total_max', '…')},
                         {k: round_int(v) for k, v in legs.items()}, {k: p.get(k) for k in ("door_min", "door_max", "total_max")})
         except KeyError:
             pass
@@ -259,8 +260,8 @@ def check(spec: KitchenSpec, sel: dict[str, dict[str, Any]]) -> list[dict[str, A
         lim = p.get("walkway_min", p.get("walkway_1person"))
         if not spec.room or spec.room.walkway is None:
             s = sel["walkway"]
-            ctx.out.append({"rule": s["code"], "topic": "walkway", "severity": "info", "module": [],
-                            "content": f"Không kiểm được lối đi (cần ≥{lim} mm): spec chưa có phong.loiDi", "theo": f"{s['zone']} · {s['priority']}"})
+            ctx.out.append({**words.finding(s["code"], "info", [], "finding.walkway-unknown", min=lim), "topic": "walkway",
+                            "theo": f"{s['zone']} · {s['priority']}"})
         elif lim and spec.room.walkway < lim - 1:
-            ctx.add("walkway", [], f"Lối đi {spec.room.walkway:g} mm < {lim}", spec.room.walkway, lim)
+            ctx.add("walkway", [], "finding.walkway", {"width": spec.room.walkway, "min": lim}, spec.room.walkway, lim)
     return ctx.out

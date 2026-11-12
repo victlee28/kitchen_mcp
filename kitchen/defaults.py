@@ -48,8 +48,8 @@ def _build(catalog: Catalog) -> Defaults:
     item = catalog.find("defaults", ID)
     data = item.data if item is not None else fallback
     run, stretch, hole = (_section(data, fallback, k) for k in ("run", "stretch", "applianceHole"))
-    return Defaults(run["moduleWidth"], run["minWidth"], run["maxRun"], run["cornerMaxWidth"], stretch["min"], stretch["max"],
-                    hole["side"], hole["worktopEdge"], hole["hoodSide"], _section(data, fallback, "newDesign"), _section(data, fallback, "menu"))
+    return Defaults(float(run["moduleWidth"]), float(run["minWidth"]), float(run["maxRun"]), float(run["cornerMaxWidth"]),
+                    float(stretch["min"]), float(stretch["max"]), float(hole["side"]), float(hole["worktopEdge"]), float(hole["hoodSide"]), _section(data, fallback, "newDesign"), _section(data, fallback, "menu"))
 
 
 def of(catalog: Catalog = builtin.CATALOG) -> Defaults:

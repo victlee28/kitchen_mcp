@@ -13,7 +13,7 @@ from itertools import combinations
 
 from . import builtin
 from .catalog import Catalog
-from . import appliance_models, knowledge_seed, moldings, regions, rules_kb, runs, tv_system
+from . import appliance_models, knowledge_seed, moldings, regions, rules_kb, runs, tv_system, words
 from .errors import require
 from .jsonview import as_dict
 from .spec import KitchenSpec
@@ -21,8 +21,8 @@ from .spec import KitchenSpec
 TOL = 1.0  # mm
 
 
-def _issue(code: str, level: str, mods: Iterable[str], msg: str, measured: Any = None, limit: Any = None) -> dict[str, Any]:
-    d: dict[str, Any] = {"rule": code, "severity": level, "module": list(mods), "content": msg}
+def _issue(code: str, level: str, mods: Iterable[str], key: str, params: dict[str, Any], measured: Any = None, limit: Any = None) -> dict[str, Any]:
+    d: dict[str, Any] = words.finding(code, level, list(mods), key, **params)
     if measured is not None:
         d["measured"] = measured
     if limit is not None:
@@ -76,27 +76,27 @@ def check_geometry(spec: KitchenSpec) -> list[dict[str, Any]]:
             pa = angled.get(id) or [(mn[0], mn[2]), (mx[0], mn[2]), (mx[0], mx[2]), (mn[0], mx[2])]
             pb = angled.get(mb) or [(nn[0], nn[2]), (nx[0], nn[2]), (nx[0], nx[2]), (nn[0], nx[2])]
             if runs.penetration(pa, pb) > TOL:
-                issues.append(_issue("GEO-COLLISION", "error", [id, mb], f"{id} và {mb} chồng lên nhau"))
+                issues.append(_issue("GEO-COLLISION", "error", [id, mb], "finding.collision", {"a": id, "b": mb}))
         elif _overlap((mn, mx), (nn, nx)) > 0:
-            issues.append(_issue("GEO-COLLISION", "error", [id, mb], f"{id} và {mb} chồng lên nhau"))
+            issues.append(_issue("GEO-COLLISION", "error", [id, mb], "finding.collision", {"a": id, "b": mb}))
     tier_level = {"base": c.baseTop, "upper": c.upperTierSplit, "loft": c.cabinetTop, "tall": c.cabinetTop, "corner": None}
     tv = tv_system.tv_modules(spec)          # a TV unit keeps its own heights (low console, floating shelf)
     for m in spec.module:
         top = m.y + m.height
         lim = None if m.id in tv else tier_level[m.storey]
         if lim is not None and abs(top - lim) > TOL:
-            issues.append(_issue("GEO-HEIGHTS", "warning", [m.id], f"{m.id}: đỉnh {top:g} lệch cao độ tầng {m.storey} ({lim:g})", top, lim))
+            issues.append(_issue("GEO-HEIGHTS", "warning", [m.id], "finding.storey-top", {"id": m.id, "top": top, "storey": m.storey, "level": lim}, top, lim))
         if m.storey == "upper" and m.type != "upper-hood" and m.id not in tv and abs(m.y - c.upperBottom) > TOL:
-            issues.append(_issue("GEO-HEIGHTS", "warning", [m.id], f"{m.id}: đáy {m.y:g} khác dayTuTren {c.upperBottom:g}", m.y, c.upperBottom))
+            issues.append(_issue("GEO-HEIGHTS", "warning", [m.id], "finding.upper-bottom", {"id": m.id, "y": m.y, "level": c.upperBottom}, m.y, c.upperBottom))
         if m.doors:
             total = sum(m.doors) + m.blindCorner + m.endPanel
             if abs(total - m.width) > TOL:
                 issues.append(_issue("GEO-DOOR", "warning", [m.id],
-                                     f"{m.id}: tổng cánh + góc khuất + tấm hông = {total:g} ≠ rộng {m.width:g}", total, m.width))
+                                     "finding.door-sum", {"id": m.id, "total": total, "width": m.width}, total, m.width))
         if spec.room and m.wall in ("back", "right", "left"):
             L = spec.room.length(m.wall)
             if L and m.endAt > L + TOL:
-                issues.append(_issue("GEO-WALL", "error", [m.id], f"{m.id} vượt chiều dài tường {m.wall} ({m.endAt:g} > {L:g})", m.endAt, L))
+                issues.append(_issue("GEO-WALL", "error", [m.id], "finding.past-wall", {"id": m.id, "wall": m.wall, "end": m.endAt, "length": L}, m.endAt, L))
     if spec.room and not isinstance(getattr(spec, "floorplan", None), dict):      # explicit runs against the drawn room (an imported plan has its own walls)
         back = spec.room.length("back")
         for m in spec.module:
@@ -107,15 +107,15 @@ def check_geometry(spec: KitchenSpec) -> list[dict[str, Any]]:
             over = max(-x - back for x, _ in pts) if back else 0.0        # along the back wall; how deep the room is, the walls' lengths do not say
             over = max(over, max(x for x, _ in pts), max(-z for _, z in pts))
             if over > TOL:
-                issues.append(_issue("GEO-WALL", "error", [m.id], f"{m.id} vượt ra ngoài phòng {over:g} mm (dãy {m.run})", over, 0))
+                issues.append(_issue("GEO-WALL", "error", [m.id], "finding.out-of-room", {"id": m.id, "over": over, "run": m.run}, over, 0))
     joints = {(j.a, j.b) for j in runs.corner_joints(spec) if j.square}
     for m in spec.module:
         if m.turnsInto and (m.run, m.turnsInto) not in joints:
-            issues.append(_issue("GEO-CORNER", "warning", [m.id], f"{m.id}: kệ góc nối dãy {m.run} với dãy {m.turnsInto}, nhưng hai dãy không còn gặp nhau ở góc vuông"))
+            issues.append(_issue("GEO-CORNER", "warning", [m.id], "finding.corner-shelf-apart", {"id": m.id, "run": m.run, "other": m.turnsInto}))
     if c.cabinetTop > c.ceiling + TOL:
-        issues.append(_issue("GEO-CEILING", "error", [], f"Đỉnh tủ {c.cabinetTop:g} cao hơn trần {c.ceiling:g}", c.cabinetTop, c.ceiling))
+        issues.append(_issue("GEO-CEILING", "error", [], "finding.above-ceiling", {"top": c.cabinetTop, "ceiling": c.ceiling}, c.cabinetTop, c.ceiling))
     if abs(c.countertop - (c.baseTop + c.countertopThickness)) > TOL:
-        issues.append(_issue("GEO-COUNTERTOP", "warning", [], f"matDa {c.countertop:g} ≠ deMatDa + dayMatDa = {c.baseTop + c.countertopThickness:g}"))
+        issues.append(_issue("GEO-COUNTERTOP", "warning", [], "finding.countertop-sum", {"countertop": c.countertop, "sum": c.baseTop + c.countertopThickness}))
     # khe hở giữa các module liền kề trong cùng tường/tầng
     for wall in ("back", "right", "left"):
         for storey in ("base", "upper", "loft"):
@@ -125,14 +125,14 @@ def check_geometry(spec: KitchenSpec) -> list[dict[str, Any]]:
                     continue
                 gap = b.fromCorner - a.endAt
                 if gap > TOL:
-                    issues.append(_issue("GEO-GAPS", "info", [a.id, b.id], f"Khe hở {gap:g} mm giữa {a.id} và {b.id} (tường {wall})", gap))
+                    issues.append(_issue("GEO-GAPS", "info", [a.id, b.id], "finding.gap-wall", {"gap": gap, "a": a.id, "b": b.id, "wall": wall}, gap))
     for r in spec.runs:                # gaps inside an explicit run, per storey
         for storey in ("base", "upper", "loft"):
             ms = sorted((m for m in spec.module if m.run == r.id and m.storey in (storey, "tall")), key=lambda m: m.fromCorner)
             for a, b in zip(ms, ms[1:]):
                 gap = b.fromCorner - a.endAt
                 if gap > TOL and not (a.storey == b.storey == "tall"):
-                    issues.append(_issue("GEO-GAPS", "info", [a.id, b.id], f"Khe hở {gap:g} mm giữa {a.id} và {b.id} (dãy {r.id})", gap))
+                    issues.append(_issue("GEO-GAPS", "info", [a.id, b.id], "finding.gap-run", {"gap": gap, "a": a.id, "b": b.id, "run": r.id}, gap))
     # thiết bị lọt module
     for tb in spec.appliances:
         k = tb.numeric_dimensions()
@@ -141,18 +141,18 @@ def check_geometry(spec: KitchenSpec) -> list[dict[str, Any]]:
         try:
             m = spec.find(tb.module)
         except KeyError:
-            issues.append(_issue("TB-MODULE", "error", [], f"{tb.id}: module '{tb.module}' không tồn tại"))
+            issues.append(_issue("TB-MODULE", "error", [], "finding.appliance-no-module", {"id": tb.id, "module": tb.module}))
             continue
         if tb.type == "fridge" and len(k) >= 3:
             w, h, d = k[:3]
             inner = m.width - 2 * c.doorThickness
             if w > inner + TOL or (m.niche and h > m.niche + TOL) or d > m.depth + TOL:
-                issues.append(_issue("APPLIANCE-NICHE", "error", [m.id, tb.id], f"{tb.id} {w:g}×{h:g}×{d:g} không lọt hốc {m.id}"))
+                issues.append(_issue("APPLIANCE-NICHE", "error", [m.id, tb.id], "finding.fridge-niche", {"id": tb.id, "w": w, "h": h, "d": d, "module": m.id}))
         if tb.type == "oven" and len(k) >= 2:
             w, h = k[:2]
             niche = next((t.height for t in m.frontSections if t.type == "niche"), None)
             if w > m.width - 2 * c.doorThickness + TOL or (niche and h > niche - 2 * c.doorThickness + TOL):
-                issues.append(_issue("APPLIANCE-NICHE", "error", [m.id, tb.id], f"{tb.id} không lọt hộc {m.id}"))
+                issues.append(_issue("APPLIANCE-NICHE", "error", [m.id, tb.id], "finding.oven-niche", {"id": tb.id, "module": m.id}))
     return issues
 
 
@@ -171,8 +171,7 @@ def validate(spec: KitchenSpec, kb_rules: list[dict[str, Any]] | None = None, co
     kitchen = tv_system.kitchen_only(spec)       # kitchen rules (worktop, depths, appliances...) do not look at TV units
     issues = check_geometry(spec) + rules_kb.check(kitchen, sel) + moldings.check(spec) + appliance_models.check(kitchen, catalog)
     if not (qg or kv):
-        issues.append({"rule": "VUNG", "severity": "info", "module": [], "content": "Chưa chọn quốc gia/khu vực (spec.quocGia): "
-                       "chỉ tiêu chuẩn toàn cầu được áp, tiêu chuẩn của các nước chỉ để tham khảo"})
+        issues.append(words.finding("VUNG", "info", [], "finding.no-region"))
     order = {"error": 0, "warning": 1, "info": 2}
     issues.sort(key=lambda i: order[i["severity"]])
     dem = {k: sum(i["severity"] == k for i in issues) for k in order}

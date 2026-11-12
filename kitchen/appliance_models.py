@@ -11,7 +11,7 @@ import unicodedata
 from collections.abc import Callable
 from typing import Any
 
-from . import builtin, defaults
+from . import builtin, defaults, words
 from .catalog import Catalog
 from .errors import InvalidInput
 from .i18n import pick
@@ -335,10 +335,10 @@ def check(spec: KitchenSpec, catalog: Catalog = builtin.CATALOG) -> list[dict[st
         h = host(spec, app)
         mods = [app.id, *([h.id] if h is not None else [])]
         if status == "bad":
-            issues.extend({"rule": "APPLIANCE-MODEL-FIT", "severity": "error", "module": mods, "content": f"{app.id} ({by_id[mid]['name']}): {r}"}
+            issues.extend(words.finding("APPLIANCE-MODEL-FIT", "error", mods, "finding.model-fit-named", id=app.id, model=by_id[mid]['name'], reason=r)
                           for r in reasons if "narrower than the hob" not in r)
         if status == "check":
-            issues.extend({"rule": "APPLIANCE-MODEL-FIT", "severity": "warning", "module": mods, "content": f"{app.id}: {r}"}
+            issues.extend(words.finding("APPLIANCE-MODEL-FIT", "warning", mods, "finding.model-fit", id=app.id, reason=r)
                           for r in reasons if "narrower than the hob" not in r)
     for hood in (a for a in spec.appliances if a.type == "hood"):
         hm = host(spec, hood)
@@ -352,7 +352,6 @@ def check(spec: KitchenSpec, catalog: Catalog = builtin.CATALOG) -> list[dict[st
                 continue                                           # an old design: as it was
             a, b = size_of(hood), size_of(hob)
             if a and b and a["w"] < b["w"]:
-                issues.append({"rule": "HOOD-WIDTH", "severity": "warning", "module": [hood.id, hob.id],
-                               "content": f"Hood {hood.id} ({a['w']:g} mm) is narrower than the hob {hob.id} below it ({b['w']:g} mm)",
-                               "measured": a["w"], "limit": [b["w"], None]})
+                issues.append({**words.finding("HOOD-WIDTH", "warning", [hood.id, hob.id], "finding.hood-narrow", hood=hood.id, hood_w=a["w"],
+                                               cooktop=hob.id, cooktop_w=b["w"]), "measured": a["w"], "limit": [b["w"], None]})
     return issues

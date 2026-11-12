@@ -524,5 +524,26 @@ class TestPromptsFromTheCatalog(unittest.TestCase):
             s.catalog_put("prompt-text", "my-text", {"text": "x"}, "workshop")                         # closed: the code reads known ids only
 
 
+class TestFindingWording(unittest.TestCase):
+    """Stage 3.3: findings carry key + params; the shell re-words them in the reader's language."""
+
+    def test_findings_reworded(self):
+        tmp = Path(tempfile.mkdtemp())
+        try:
+            from kitchen.service import KitchenService
+            s = KitchenService(db_path=tmp / "k.db", render_dir=tmp / "r")
+            fixture = json.loads((ROOT / "fixtures" / "l-shaped-kitchen.json").read_text(encoding="utf-8"))
+            fixture["common"]["ceiling"] = 2000
+            from kitchen.spec import KitchenSpec
+            v = s.validate_spec(KitchenSpec.model_validate(fixture))
+            hit = next(i for i in v["issues"] if i.get("key") == "finding.above-ceiling")
+            self.assertIn("cao hơn trần", hit["content"])
+            en = s.reword(v, "en")
+            self.assertIn("above the ceiling", next(i for i in en["issues"] if i.get("key") == "finding.above-ceiling")["content"])
+            self.assertEqual(s.reword(v, "vi"), v)
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+
 if __name__ == "__main__":
     unittest.main()

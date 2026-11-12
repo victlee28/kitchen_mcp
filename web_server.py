@@ -99,7 +99,14 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def _json(self, status: int, data):
+        if 200 <= status < 300 and SVC is not None and self._wanted_lang() not in ("", "vi"):
+            data = SVC.reword(data, self._wanted_lang())      # findings, summaries, action labels in the reader's language
         self._send(status, json.dumps(data, ensure_ascii=False).encode("utf-8"), "application/json; charset=utf-8")
+
+    def _wanted_lang(self) -> str:
+        """The reader's language as asked: ?lang=, else the X-Lang header the web sends, else Accept-Language ("" = not said)."""
+        q = parse_qs(urlparse(self.path).query)
+        return ((q.get("lang") or [""])[0] or self.headers.get("X-Lang") or (self.headers.get("Accept-Language") or "")[:2]).lower()
 
     def _host_ok(self) -> bool:
         host = (self.headers.get("Host") or "").rsplit(":", 1)[0].strip("[]")
@@ -411,10 +418,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def _words(self, e: "errors.KitchenError") -> str:
         """The error in the reader's language: ?lang=, else the X-Lang header the web sends, else Accept-Language (service.error_words)."""
-        q = parse_qs(urlparse(self.path).query)
-        wanted = (q.get("lang") or [""])[0] or self.headers.get("X-Lang") or (self.headers.get("Accept-Language") or "")[:2]
         try:
-            return errors.require(SVC, "kitchen service").error_words(e, wanted.lower())
+            return errors.require(SVC, "kitchen service").error_words(e, self._wanted_lang())
         except Exception:  # noqa: BLE001 — wording must never hide the error itself
             return str(e)
 

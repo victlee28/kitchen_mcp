@@ -12,7 +12,7 @@ from typing import Any
 import math
 from dataclasses import dataclass, field
 
-from . import builtin
+from . import builtin, words
 from .catalog import Catalog
 from .i18n import pick
 from .spec import KitchenSpec, Molding, MoldingProfile, Module, from_data, to_data
@@ -433,13 +433,11 @@ def check(spec: KitchenSpec) -> list[dict[str, Any]]:
             continue
         prof = profile_of(spec, mol.profile)
         if prof is None:
-            out.append({"rule": "MOLDING-PROFILE-001", "severity": "error", "module": [mol.id],
-                        "content": f"Phào {mol.id}: không có mặt cắt '{mol.profile}'"})
+            out.append(words.finding("MOLDING-PROFILE-001", "error", [mol.id], "finding.molding-no-profile", id=mol.id, profile=mol.profile))
             continue
         mine = [r for r in runs if r.molding.id == mol.id]
         if not mine:
-            out.append({"rule": "MOLDING-RUN-001", "severity": "info", "module": [mol.id],
-                        "content": f"Phào {mol.id}: không có dãy tủ phù hợp để chạy phào"})
+            out.append(words.finding("MOLDING-RUN-001", "info", [mol.id], "finding.molding-no-run", id=mol.id))
             continue
         if mol.variant == "crown":
             top = mine[0].y + prof.height
@@ -448,28 +446,27 @@ def check(spec: KitchenSpec) -> list[dict[str, Any]]:
                 delta = c.cabinetTop - new_top
                 actions: list[dict[str, Any]] = []
                 if delta > 0 and _can_lower(spec, delta):
-                    actions.append({"label": f"Hạ đỉnh tủ {delta:g} mm ({c.cabinetTop:g} → {new_top:g})",
+                    actions.append({"label": words.say("action.lower-top", delta=delta, top=c.cabinetTop, new=new_top),
+                                    "labelKey": "action.lower-top", "params": {"delta": delta, "top": c.cabinetTop, "new": new_top},
                                     "op": {"op": "lower-top", "newTop": new_top}})
                 if not mol.ignoreCeiling:
-                    actions.append({"label": "Để nguyên", "op": {"op": "molding", "id": mol.id, "changes": {"ignoreCeiling": True}}})
-                    out.append({"rule": "MOLDING-CEILING-001", "severity": "error", "module": [mol.id] + mine[0].modules[:3],
-                                "content": f"Phào nóc {mol.id} cao tới {top:g} mm, vượt trần {c.ceiling:g} mm",
+                    actions.append({"label": words.say("action.keep"), "labelKey": "action.keep",
+                                    "op": {"op": "molding", "id": mol.id, "changes": {"ignoreCeiling": True}}})
+                    out.append({**words.finding("MOLDING-CEILING-001", "error", [mol.id] + mine[0].modules[:3], "finding.crown-above-ceiling",
+                                                id=mol.id, top=top, ceiling=c.ceiling),
                                 "measured": top, "limit": c.ceiling, "action": actions})
                 else:
-                    out.append({"rule": "MOLDING-CEILING-001", "severity": "info", "module": [mol.id],
-                                "content": f"Phào nóc {mol.id} vượt trần {top - c.ceiling:g} mm — đã chọn để nguyên",
+                    out.append({**words.finding("MOLDING-CEILING-001", "info", [mol.id], "finding.crown-above-ceiling-kept", id=mol.id, over=top - c.ceiling),
                                 "measured": top, "limit": c.ceiling,
-                                "action": actions + [{"label": "Bỏ chọn để nguyên", "op": {"op": "molding", "id": mol.id, "changes": {"ignoreCeiling": False}}}]})
+                                "action": actions + [{"label": words.say("action.unkeep"), "labelKey": "action.unkeep",
+                                                      "op": {"op": "molding", "id": mol.id, "changes": {"ignoreCeiling": False}}}]})
             flaps = sorted({id for r in mine for id in r.modules if id in by_id and _flap(by_id[id])})
             if flaps and prof.overhang > 0:
-                out.append({"rule": "MOLDING-FLIPUP-001", "severity": "warning", "module": flaps,
-                            "content": f"Cánh lật lên của {', '.join(flaps)} có thể chạm phào nóc nhô {prof.overhang:g} mm; "
-                                       "cân nhắc cánh mở ngang hoặc tay nâng có góc mở nhỏ"})
+                out.append(words.finding("MOLDING-FLIPUP-001", "warning", flaps, "finding.flap-hits-crown", ids=', '.join(flaps), overhang=prof.overhang))
         else:
             if prof.height > c.plinthHeight + 2:
-                out.append({"rule": "MOLDING-BASE-001", "severity": "warning", "module": [mol.id],
-                            "content": f"Phào chân cao {prof.height:g} mm > chân tủ {c.plinthHeight:g} mm: che mép dưới cánh",
-                            "measured": prof.height, "limit": c.plinthHeight})
+                out.append({**words.finding("MOLDING-BASE-001", "warning", [mol.id], "finding.base-molding-high", height=prof.height,
+                                            plinth=c.plinthHeight), "measured": prof.height, "limit": c.plinthHeight})
     return out
 
 
