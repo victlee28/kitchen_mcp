@@ -91,6 +91,11 @@ def parse_prompt(prompt: str, catalog: Catalog = builtin.CATALOG) -> tuple[Kitch
     data: dict = {}
     if lex.updates.get("geometry_edit"):
         data["geometry_edit"] = lex.updates["geometry_edit"]
+    named = layout_solver.named_in(prompt, catalog)      # a layout template called by its name ("theo mẫu Bếp nhà tôi")
+    if named:
+        data["geometry_edit"] = named[0]
+        if named[0] not in ("I", "L", "U"):
+            notes.append(said("note.layout-template", name=named[1]))
     word = lambda id: lexicon.source(id, catalog)      # the words of a dictionary entry (``regex`` group) as a regular expression
     lens = [_mm(v, u) for v, u in re.findall(_KW + word("dim.length") + r"[^0-9]{0,12}" + _NUM, t)]
     lens += [_mm(v, u) for v, u in re.findall(word("dim.and") + r"\s*" + _NUM, t)]
@@ -280,19 +285,44 @@ def from_template(color: KitchenTemplate, name: str = "", rows: list[dict] | Non
         length -= sum(float(e["width"]) for e in ends)
         plan = layout_solver.base_plan(length, appliance, rules, front, toward_end=fridge_at_end)   # với tủ lạnh: chậu (cuối danh sách) sát tủ lạnh
         for w, type in plan:
-            doors = [w / 2, w / 2] if w >= rules.double_door_from else [w]
-            m = Module(id=id("TD"), type=type, name=say(f"name.cabinet.{type if type in ('base-sink', 'base-cooktop') else 'base'}"),
-                       wall=wall, fromCorner=s, width=w, y=0, height=c.baseTop, depth=c.baseDepth, doors=doors,
-                       frontSections=_drawers(rules) if type == "base-cooktop" else [])
-            mods.append(m)
-            if type == "base-sink":
-                tb.append(Appliance(id=f"TB{len(tb)+1}", type="sink", name=say("name.appliance.sink"), dimensions=f"{min(780, w - 40):g} × 430", wall=wall, center=s + w / 2))
-                tb.append(Appliance(id=f"TB{len(tb)+1}", type="faucet", name=say("name.appliance.faucet"), dimensions="cao 300", wall=wall, center=s + w / 2))
-            if type == "base-cooktop":
-                tb.append(Appliance(id=f"TB{len(tb)+1}", type="cooktop", name=say("name.appliance.cooktop"), dimensions=f"{min(730, w - 10):g} × 430", wall=wall, center=s + w / 2))
+            base_cabinet(wall, s, w, type)
             s += w
         for e in ends:
             tail += extra(wall, tail, e)
+
+    def base_cabinet(wall: WallSide, s: float, w: float, type: str) -> None:
+        """A plain, sink or cooktop base cabinet at ``s`` with the sink and tap / the cooktop on the worktop above it."""
+        doors = [w / 2, w / 2] if w >= rules.double_door_from else [w]
+        mods.append(Module(id=id("TD"), type=type, name=say(f"name.cabinet.{type if type in ('base-sink', 'base-cooktop') else 'base'}"),
+                           wall=wall, fromCorner=s, width=w, y=0, height=c.baseTop, depth=c.baseDepth, doors=doors,
+                           frontSections=_drawers(rules) if type == "base-cooktop" else []))
+        if type == "base-sink":
+            tb.append(Appliance(id=f"TB{len(tb)+1}", type="sink", name=say("name.appliance.sink"), dimensions=f"{min(780, w - 40):g} × 430", wall=wall, center=s + w / 2))
+            tb.append(Appliance(id=f"TB{len(tb)+1}", type="faucet", name=say("name.appliance.faucet"), dimensions="cao 300", wall=wall, center=s + w / 2))
+        if type == "base-cooktop":
+            tb.append(Appliance(id=f"TB{len(tb)+1}", type="cooktop", name=say("name.appliance.cooktop"), dimensions=f"{min(730, w - 10):g} × 430", wall=wall, center=s + w / 2))
+
+    def cabinets(wall: WallSide, start: float, length: float, items: list[dict[str, Any]]) -> None:
+        """The cabinets of a ``cabinets`` step in order (``layout_solver.fit_items``): base ones as a run makes them, the fridge cabinet
+        with its fridge, any other type at its storey's height."""
+        s = start
+        for w, type in layout_solver.fit_items(length, items, rules):
+            if type == layout_solver.GAP:
+                pass
+            elif type in ("base", "base-sink", "base-cooktop"):
+                base_cabinet(wall, s, w, type)
+            elif type == "tall-fridge":
+                fr = rules.fridge
+                mods.append(Module(id=id("TC"), type="tall-fridge", name=say("name.cabinet.tall-fridge"), wall=wall, fromCorner=s, width=w, y=0,
+                                   height=c.cabinetTop, depth=fr.get("depth", 640), doors=[w / 2, w / 2], niche=fr.get("niche", 1650)))
+                tb.append(Appliance(id=f"TB{len(tb)+1}", type="fridge", name=say("name.appliance.fridge"), dimensions=str(fr.get("dimensions", "")),
+                                    module=mods[-1].id))
+            else:
+                tall = cabinet_types.storey_of(type, catalog) == "tall"
+                mods.append(Module(id=id("TC" if tall else "TD"), type=type, name=cabinet_types.label_of(type, catalog), wall=wall, fromCorner=s,
+                                   width=w, y=0, height=c.cabinetTop if tall else c.baseTop, depth=c.baseDepth,
+                                   doors=[w / 2, w / 2] if w >= rules.double_door_from else [w]))
+            s += w
 
     def upper(wall: WallSide, start: float, end: float):
         """Tủ trên chia theo đúng ranh giới tủ dưới bên dưới; ô ngay trên bếp thành tủ hút mùi."""
@@ -338,6 +368,8 @@ def from_template(color: KitchenTemplate, name: str = "", rows: list[dict] | Non
         wall = cast(WallSide, v.get("wall", "back"))
         if do == "base-run":
             thickness(wall, v["start"], v["length"], v["appliances"], v["front"], v["fridgeAtEnd"], v.get("extras"))
+        elif do == "cabinets":
+            cabinets(wall, v["start"], v["length"], v["items"])
         elif do == "corner-base":
             corner_base(wall, v["type"], v["width"], v["blind"], v["doors"])
         elif do == "upper-run":

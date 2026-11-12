@@ -83,3 +83,19 @@ export function groupLayerIds(g, many) {
   const roles = { front: ['front', 'door', 'drawer', 'all'], door: ['door', 'front', 'all'], drawer: ['drawer', 'front', 'all'], handle: ['handle'], all: ['all', 'front', 'door', 'drawer'] }[g.role];
   return roles.map((r) => `${prefix}:${g.tier}:${r}`);
 }
+
+// "Save the cabinet system as a layout template": the request for the selected cabinet's system and the message after.
+/** The body of POST /api/designs/<id>/layout-template for the system the selected cabinet belongs to. Throws when there is none. */
+export function saveTemplateRequest(state, label) {
+  const system = state.systems?.[state.selected]?.system;
+  if (!system) throw new Error(tx('ui.save-template.no-system'));
+  const name = String(label ?? '').trim();
+  if (!name) throw new Error(tx('ui.save-template.empty-name'));
+  return { system, label: name, rev: state.rev };
+}
+
+/** What to tell the user once the template is saved: its name, its id and the cabinets it could not hold. */
+export function savedMessage(res, label) {
+  const done = tx('ui.save-template.done', { 0: label, 1: res.id });
+  return res.skipped?.length ? done + tx('ui.save-template.skipped', { 0: res.skipped.join(', ') }) : done;
+}

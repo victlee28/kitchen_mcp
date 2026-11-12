@@ -25,6 +25,14 @@ Loại bị khóa (luật dành cho lập trình viên) chỉ xem, không sửa.
 3. **Lưu**. Máy chủ kiểm tra mục có dịch được không; nếu không, không lưu gì và báo lý do.
 4. **Lịch sử** liệt kê các bản trước; **So sánh** chỉ ra các trường khác với mục gốc.
 
+## Lưu một bếp thành mẫu bố trí
+
+Trong trình sửa, chọn một tủ của hệ tủ muốn giữ, bấm **💾 Lưu hệ tủ thành mẫu** rồi đặt tên. Hệ tủ vào danh mục thành một mẫu bố trí của
+lớp bạn: tủ góc, các tủ dưới và tủ cao theo đúng thứ tự (bước `cabinets`), tủ trên, kệ góc. Dãy có nhiều góc nhất thành tường sau, dãy
+vuông góc với nó thành tường bên. Tủ dưới thường co giãn (`fill`) để cùng bếp đó vừa tường dài ngắn khác; chậu, bếp nấu, tủ lạnh và tủ
+khác giữ bề rộng. Dùng ở **Tạo thiết kế → Hình**, hoặc gõ "… theo mẫu <tên>" khi thay hệ tủ (mẫu một tường được trải dọc dãy). Tủ mẫu
+không giữ được (đảo, dãy xiên) được liệt kê khi lưu.
+
 ## Thiết kế đang có thì sao
 
 Mỗi thiết kế giữ danh mục lúc nó được lưu. Khi danh mục đổi, trình sửa hiện thông báo (**Danh mục đã cập nhật**) trên thiết kế dùng mục

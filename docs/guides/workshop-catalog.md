@@ -26,6 +26,15 @@ Locked kinds (developer rules) are shown but not editable.
 3. **Save**. The server checks the item can be compiled; if it cannot, nothing is saved and the error says why.
 4. **History** lists earlier versions of the item; **Compare** shows the fields that differ from the builtin item.
 
+## Saving a kitchen as a layout template
+
+In the editor, select a cabinet of the system to keep and press **💾 Save system as template**, then give it a name. The system goes into
+the catalog as a layout template of your layer: its corner cabinet, its base and tall cabinets in order (a `cabinets` step), its wall
+cabinets and its corner shelf. The run with most corners becomes the back wall, runs square to it the side walls. Plain base cabinets
+stretch (`fill`) so the same kitchen fits other wall lengths; sinks, cooktops, fridges and other cabinets keep their widths. Use it from
+**New design → Shape**, or type "… theo mẫu <name>" when you replace a system (a one-wall template is laid along the run). Cabinets the
+template cannot hold (an island, a run at an angle) are listed when it is saved.
+
 ## What happens to existing designs
 
 A design keeps the catalog it was saved with. When the catalog changes, the editor shows a notice (**Catalog updated**) on designs that

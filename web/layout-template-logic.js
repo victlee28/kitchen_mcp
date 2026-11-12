@@ -1,11 +1,12 @@
 // The layout template editor's data, without the DOM: a step's fields by kind (text, JSON or a comma list), and the top view of a sample.
 
-export const STEP_DOS = ['base-run', 'corner-base', 'corner-shelf', 'upper-run'];
+export const STEP_DOS = ['base-run', 'cabinets', 'corner-base', 'corner-shelf', 'upper-run'];
 export const WALLS = ['back', 'right', 'left'];
 
 /** The fields a step of each kind shows: [key, how] — how = 'text' | 'json' | 'list' (comma separated formulas) | 'bool-text'. */
 export const FIELDS = {
   'base-run': [['start', 'text'], ['length', 'text'], ['front', 'text'], ['fridgeAtEnd', 'text'], ['appliances', 'json'], ['extras', 'json']],
+  'cabinets': [['start', 'text'], ['length', 'text'], ['items', 'json']],
   'corner-base': [['type', 'text'], ['width', 'text'], ['blind', 'text'], ['doors', 'list']],
   'corner-shelf': [],
   'upper-run': [['start', 'text'], ['end', 'text']],

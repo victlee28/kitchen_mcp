@@ -72,3 +72,85 @@ class TestLayoutTemplates(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestSaveSystemAsTemplate(unittest.TestCase):
+    """A cabinet system of a design saved as a layout template, and new kitchens laid out from it."""
+
+    def setUp(self):
+        from kitchen.service import KitchenService
+        self.tmp = Path(tempfile.mkdtemp())
+        self.svc = KitchenService(self.tmp / "k.db", self.tmp / "renders")
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def _make(self, **request):
+        from kitchen.intent import KitchenTemplate
+        return self.svc.create_from_template(KitchenTemplate.model_validate(request), "test")["id"]
+
+    def _system(self, did):
+        return sorted({v["system"] for k, v in self.svc.get(did)["systems"].items() if k.startswith(("TD", "TC", "TT", "TN", "KG"))})[0]
+
+    def _cabinets(self, did, storeys=("base", "tall", "upper", "corner")):
+        spec = self.svc.get(did)["spec"]
+        return sorted((m.get("run") or m["wall"], m["type"], round(m["fromCorner"]), round(m["width"])) for m in spec["module"]
+                      if m["type"].split("-")[0] in storeys and (m["wall"] != "island" or m.get("run")))
+
+    def _by_run(self, did):
+        """The cabinets of each run, the runs in no particular order (a rebuilt kitchen may number them otherwise)."""
+        runs: dict[str, list[tuple]] = {}
+        for run, kind, s, w in self._cabinets(did):
+            runs.setdefault(run, []).append((kind, s, w))
+        return sorted(sorted(v) for v in runs.values())
+
+    def test_an_L_and_a_U_come_back_the_same(self):
+        for request in ({"geometry_edit": "L", "backWallLength": 3200, "rightWallLength": 2400, "fridge": True, "loft": True},
+                        {"geometry_edit": "U", "backWallLength": 3000, "rightWallLength": 2400, "leftWallLength": 2000, "fridge": True}):
+            did = self._make(**request)
+            saved = self.svc.layout_template_from_design(did, "user", label="Mẫu " + request["geometry_edit"], system=self._system(did))
+            self.assertEqual(saved["skipped"], [])
+            self.assertEqual(saved["scope"], "user:default")
+            again = self._make(**{**request, "geometry_edit": saved["id"]})
+            self.assertEqual(self._by_run(again), self._by_run(did), request["geometry_edit"])
+
+    def test_a_longer_wall_stretches_the_plain_cabinets_only(self):
+        did = self._make(geometry_edit="I", backWallLength=3200, fridge=True)
+        saved = self.svc.layout_template_from_design(did, "user", label="Thẳng có tủ lạnh")
+        before = [(t, w) for _, t, _, w in self._cabinets(did, ("base", "tall"))]
+        after = [(t, w) for _, t, _, w in self._cabinets(self._make(geometry_edit=saved["id"], backWallLength=3900), ("base", "tall"))]
+        self.assertEqual(sum(w for _, w in after), sum(w for _, w in before) + 700)
+        fixed = lambda rows: sorted(r for r in rows if r[0] != "base")
+        self.assertEqual(fixed(after), fixed(before))                      # the fridge, the sink, the cooktop keep their widths
+        self.assertTrue(all(w % 10 == 0 for _, w in after))
+
+    def test_a_saved_run_is_laid_along_another_system_by_its_name(self):
+        did = self._make(geometry_edit="I", backWallLength=3200, fridge=True)
+        saved = self.svc.layout_template_from_design(did, "user", label="Bếp nhà tôi")
+        other = self._make(geometry_edit="I", backWallLength=4000)
+        plan = self.svc.template(other, {"kind": "replace-system", "system": self._system(other), "prompt": "thay hệ tủ theo mẫu bếp nhà tôi"})
+        added = sorted((o["module"]["fromCorner"], o["module"]["type"]) for o in plan["operation"]["ops"] if o.get("op") == "add")
+        kinds = [t for _, t in added if t in ("tall-fridge", "base-sink", "base-cooktop")]
+        mine = [t for _, t, _, _ in sorted(self._cabinets(did, ("base", "tall")), key=lambda r: r[2]) if t in ("tall-fridge", "base-sink", "base-cooktop")]
+        self.assertEqual(kinds, mine)
+        self.assertTrue(any("Bếp nhà tôi".lower() in str(line).lower() for line in plan["summary"]), plan["summary"])
+        self.assertEqual(saved["id"], "bep-nha-toi")
+
+    def test_a_design_with_two_systems_asks_which(self):
+        did = self._make(geometry_edit="I", backWallLength=3600, island=True)
+        with self.assertRaises(InvalidInput) as e:
+            self.svc.layout_template_from_design(did, "user", label="x")
+        self.assertEqual(e.exception.code, "pick-system")
+
+    def test_the_same_name_twice_gets_a_new_id(self):
+        did = self._make(geometry_edit="I", backWallLength=3200)
+        first = self.svc.layout_template_from_design(did, "user", label="Bếp A")
+        second = self.svc.layout_template_from_design(did, "user", label="Bếp A")
+        self.assertEqual((first["id"], second["id"]), ("bep-a", "bep-a-2"))
+
+    def test_a_draft_is_not_saved(self):
+        did = self._make(geometry_edit="I", backWallLength=3200)
+        draft = self.svc.layout_template_from_design(did, "user", label="Nháp", save=False)
+        self.assertNotIn("version", draft)
+        self.assertNotIn("nhap", {it.id for it in self.svc.catalog().all("layout-template")})
+

@@ -1106,5 +1106,15 @@
  "catalog.compareTitle": "{id}: what differs from the builtin item",
  "catalog.historyTitle": "Edits of {id}",
  "catalog.noHistory": "Nobody has edited this item",
- "catalog.exportAll": "Export everything (workshop + user)"
+ "catalog.exportAll": "Export everything (workshop + user)",
+ "note.layout-template": "Laid out by the layout template “{name}”",
+ "ui.save-template.button": "💾 Save system as template",
+ "ui.save-template.title": "Save the selected cabinet's system as a layout template in the catalog",
+ "ui.save-template.ask": "Layout template name:",
+ "ui.save-template.no-system": "This cabinet belongs to no known cabinet system",
+ "ui.save-template.empty-name": "The template needs a name",
+ "ui.save-template.doing": "save the system as a template",
+ "ui.save-template.done": "Saved the template “{0}” ({1}). Use it in New design → Shape, or type “… theo mẫu {0}” when replacing a system.",
+ "ui.save-template.skipped": " Left out of the template: {0}.",
+ "catalog.layout.f.items": "cabinets (JSON)"
 }

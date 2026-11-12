@@ -1107,5 +1107,15 @@ export default {
  "catalog.compareTitle": "{id}: khác bản gốc ở",
  "catalog.historyTitle": "Lịch sử sửa {id}",
  "catalog.noHistory": "Chưa ai sửa mục này",
- "catalog.exportAll": "Xuất cả gói (xưởng + người dùng)"
+ "catalog.exportAll": "Xuất cả gói (xưởng + người dùng)",
+ "note.layout-template": "Xếp theo mẫu bố trí “{name}”",
+ "ui.save-template.button": "💾 Lưu hệ tủ thành mẫu",
+ "ui.save-template.title": "Lưu hệ tủ của tủ đang chọn thành một mẫu bố trí trong danh mục",
+ "ui.save-template.ask": "Tên mẫu bố trí:",
+ "ui.save-template.no-system": "Không biết tủ này thuộc hệ tủ nào",
+ "ui.save-template.empty-name": "Cần đặt tên cho mẫu",
+ "ui.save-template.doing": "lưu hệ tủ thành mẫu",
+ "ui.save-template.done": "Đã lưu mẫu “{0}” ({1}). Dùng ở Tạo thiết kế → Hình, hoặc gõ “… theo mẫu {0}” khi thay hệ tủ.",
+ "ui.save-template.skipped": " Không đưa vào mẫu: {0}.",
+ "catalog.layout.f.items": "các tủ (JSON)"
 };

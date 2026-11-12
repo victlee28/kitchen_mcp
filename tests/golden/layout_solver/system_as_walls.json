@@ -1,0 +1,269 @@
+{
+ "function": "layout_solver.system_as_walls",
+ "cases": [
+  {
+   "name": "a U in runs: the run with two corners is the back wall, whatever run is asked",
+   "input": {
+    "runs": [
+     {
+      "id": "R1",
+      "x": 0,
+      "z": 0,
+      "yaw": -90
+     },
+     {
+      "id": "R2",
+      "x": -3000,
+      "z": 2000,
+      "yaw": 90
+     },
+     {
+      "id": "R3",
+      "x": -2420,
+      "z": 0,
+      "yaw": 0
+     }
+    ],
+    "modules": [
+     {
+      "id": "TD1",
+      "type": "base-corner-sink",
+      "run": "R1",
+      "fromCorner": 0,
+      "width": 1030,
+      "blindCorner": 580
+     },
+     {
+      "id": "TD2",
+      "type": "base-cooktop",
+      "run": "R1",
+      "fromCorner": 1030,
+      "width": 800
+     },
+     {
+      "id": "TD4",
+      "type": "base",
+      "run": "R2",
+      "fromCorner": 970,
+      "width": 1030
+     },
+     {
+      "id": "TD6",
+      "type": "base",
+      "run": "R2",
+      "fromCorner": 0,
+      "width": 370
+     },
+     {
+      "id": "TC1",
+      "type": "tall-fridge",
+      "run": "R3",
+      "fromCorner": 0,
+      "width": 700
+     },
+     {
+      "id": "TD8",
+      "type": "base-sink",
+      "run": "R3",
+      "fromCorner": 700,
+      "width": 600
+     },
+     {
+      "id": "KG1",
+      "type": "corner-shelf",
+      "run": "R3",
+      "fromCorner": 1820,
+      "width": 600
+     }
+    ],
+    "main": "R1"
+   },
+   "expected": {
+    "module": [
+     {
+      "id": "TC1",
+      "type": "tall-fridge",
+      "fromCorner": 1720.0,
+      "width": 700,
+      "wall": "back"
+     },
+     {
+      "id": "TD8",
+      "type": "base-sink",
+      "fromCorner": 1120.0,
+      "width": 600,
+      "wall": "back"
+     },
+     {
+      "id": "KG1",
+      "type": "corner-shelf",
+      "fromCorner": 0.0,
+      "width": 600,
+      "wall": "corner"
+     },
+     {
+      "id": "TD1",
+      "type": "base-corner-sink",
+      "fromCorner": 0.0,
+      "width": 1030,
+      "blindCorner": 580,
+      "wall": "right"
+     },
+     {
+      "id": "TD2",
+      "type": "base-cooktop",
+      "fromCorner": 1030.0,
+      "width": 800,
+      "wall": "right"
+     },
+     {
+      "id": "TD4",
+      "type": "base",
+      "fromCorner": 0.0,
+      "width": 1030,
+      "wall": "left"
+     },
+     {
+      "id": "TD6",
+      "type": "base",
+      "fromCorner": 1630.0,
+      "width": 370,
+      "wall": "left"
+     }
+    ],
+    "room": {
+     "wall": [
+      {
+       "id": "back",
+       "length": 3000.0
+      },
+      {
+       "id": "right",
+       "length": 1830.0
+      },
+      {
+       "id": "left",
+       "length": 2000.0
+      }
+     ]
+    },
+    "skipped": []
+   }
+  },
+  {
+   "name": "one run: the back wall, mirrored",
+   "input": {
+    "runs": [
+     {
+      "id": "R1",
+      "x": 500,
+      "z": 0,
+      "yaw": 0
+     }
+    ],
+    "modules": [
+     {
+      "id": "TC1",
+      "type": "tall-fridge",
+      "run": "R1",
+      "fromCorner": 0,
+      "width": 700
+     },
+     {
+      "id": "TD8",
+      "type": "base-sink",
+      "run": "R1",
+      "fromCorner": 700,
+      "width": 600
+     }
+    ],
+    "main": "R1"
+   },
+   "expected": {
+    "module": [
+     {
+      "id": "TC1",
+      "type": "tall-fridge",
+      "fromCorner": 600.0,
+      "width": 700,
+      "wall": "back"
+     },
+     {
+      "id": "TD8",
+      "type": "base-sink",
+      "fromCorner": 0.0,
+      "width": 600,
+      "wall": "back"
+     }
+    ],
+    "room": {
+     "wall": [
+      {
+       "id": "back",
+       "length": 1300.0
+      }
+     ]
+    },
+    "skipped": []
+   }
+  },
+  {
+   "name": "a run at 45 degrees is no wall",
+   "input": {
+    "runs": [
+     {
+      "id": "R1",
+      "x": 0,
+      "z": 0,
+      "yaw": 0
+     },
+     {
+      "id": "R2",
+      "x": 0,
+      "z": 0,
+      "yaw": 45
+     }
+    ],
+    "modules": [
+     {
+      "id": "TC1",
+      "type": "tall-fridge",
+      "run": "R1",
+      "fromCorner": 0,
+      "width": 700
+     },
+     {
+      "id": "TD9",
+      "type": "base",
+      "run": "R2",
+      "fromCorner": 0,
+      "width": 600
+     }
+    ],
+    "main": "R1"
+   },
+   "expected": {
+    "module": [
+     {
+      "id": "TC1",
+      "type": "tall-fridge",
+      "fromCorner": 0.0,
+      "width": 700,
+      "wall": "back"
+     }
+    ],
+    "room": {
+     "wall": [
+      {
+       "id": "back",
+       "length": 700.0
+      }
+     ]
+    },
+    "skipped": [
+     "TD9"
+    ]
+   }
+  }
+ ]
+}

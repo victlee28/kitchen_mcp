@@ -48,7 +48,10 @@ def run_from_template(color: KitchenTemplate, length: float, catalog: Catalog = 
     Each module is ``{type, width, s, y, height, depth, name?, doors?, frontSections?, niche?, appliances?, ...}`` (``s`` from the run's start).
     ``common`` holds only what the sentence itself asked for (materials, handle, backsplash), to be merged into the design's own.
     """
-    t = color.model_copy(update={"geometry_edit": "I", "island": False, "peninsula": False, "backWallLength": float(length)})
+    from .layout_solver import templates
+    one_wall = templates(catalog).get(color.geometry_edit)
+    layout = color.geometry_edit if one_wall is not None and one_wall.walls == ("back",) else "I"    # a one-wall template (a saved run) is kept
+    t = color.model_copy(update={"geometry_edit": layout, "island": False, "peninsula": False, "backWallLength": float(length)})
     spec = from_template(t, catalog=catalog)
     back = [m for m in spec.module if m.wall == "back"]
     entries = {m.id: _module(m, length) for m in back}

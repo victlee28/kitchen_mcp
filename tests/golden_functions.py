@@ -41,6 +41,19 @@ def layout_solver_base_plan(i):
     return {"plan": [[w, t] for w, t in plan]}
 
 
+def layout_solver_fit_items(i):
+    return {"plan": [[w, t] for w, t in layout_solver.fit_items(i["length"], i["items"], layout_solver.rules())]}
+
+
+def layout_solver_system_as_walls(i):
+    return layout_solver.system_as_walls(i["runs"], i["modules"], i["main"])
+
+
+def layout_solver_template_from_design(i):
+    storeys = {"base": "base", "tall": "tall", "upper": "upper", "corner": "corner"}
+    return layout_solver.template_from_design(i["spec"], i["label"], lambda t: storeys.get(t.split("-")[0], "base"))
+
+
 def catalog_expr_run(i):
     """The value of a formula, or the error code and the position it points at."""
     try:
@@ -1337,6 +1350,9 @@ FUNCTIONS = {
     "catalog.expr.run": catalog_expr_run,
     "layout_solver.split": layout_solver_split,
     "layout_solver.base_plan": layout_solver_base_plan,
+    "layout_solver.fit_items": layout_solver_fit_items,
+    "layout_solver.system_as_walls": layout_solver_system_as_walls,
+    "layout_solver.template_from_design": layout_solver_template_from_design,
     "catalog.expr.compile": catalog_expr_compile,
     "palette.module_color": palette_module_color,
     "errors.kind_of": errors_kind_of,

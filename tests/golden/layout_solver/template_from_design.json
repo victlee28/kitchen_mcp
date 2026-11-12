@@ -1,0 +1,227 @@
+{
+ "function": "layout_solver.template_from_design",
+ "cases": [
+  {
+   "name": "an L with a corner cabinet, a gap, a fridge, wall cabinets, a corner shelf and an island; a cabinet in a run is skipped",
+   "input": {
+    "spec": {
+     "common": {
+      "baseDepth": 580
+     },
+     "room": {
+      "wall": [
+       {
+        "id": "back",
+        "length": 3200
+       },
+       {
+        "id": "right",
+        "length": 2400
+       }
+      ]
+     },
+     "module": [
+      {
+       "id": "TD1",
+       "type": "base-corner-sink",
+       "wall": "right",
+       "fromCorner": 0,
+       "width": 1030,
+       "blindCorner": 580,
+       "doors": [
+        450
+       ]
+      },
+      {
+       "id": "TD2",
+       "type": "base-cooktop",
+       "wall": "right",
+       "fromCorner": 1030,
+       "width": 800
+      },
+      {
+       "id": "TD3",
+       "type": "base",
+       "wall": "right",
+       "fromCorner": 1830,
+       "width": 570
+      },
+      {
+       "id": "TC1",
+       "type": "tall-fridge",
+       "wall": "back",
+       "fromCorner": 2500,
+       "width": 700
+      },
+      {
+       "id": "TD4",
+       "type": "base",
+       "wall": "back",
+       "fromCorner": 580,
+       "width": 420
+      },
+      {
+       "id": "TD5",
+       "type": "base-sink",
+       "wall": "back",
+       "fromCorner": 1100,
+       "width": 800
+      },
+      {
+       "id": "TT1",
+       "type": "upper",
+       "wall": "back",
+       "fromCorner": 600,
+       "width": 500
+      },
+      {
+       "id": "TT2",
+       "type": "upper",
+       "wall": "back",
+       "fromCorner": 1100,
+       "width": 800
+      },
+      {
+       "id": "KG1",
+       "type": "corner-shelf",
+       "wall": "corner",
+       "fromCorner": 0,
+       "width": 0
+      },
+      {
+       "id": "TD9",
+       "type": "base",
+       "wall": "island",
+       "fromCorner": 600,
+       "width": 900
+      },
+      {
+       "id": "TD10",
+       "type": "base",
+       "wall": "island",
+       "fromCorner": 1500,
+       "width": 900
+      },
+      {
+       "id": "R9",
+       "type": "base",
+       "wall": "island",
+       "run": "RX",
+       "fromCorner": 0,
+       "width": 600
+      }
+     ]
+    },
+    "label": "Bếp nhà tôi"
+   },
+   "expected": {
+    "data": {
+     "label": {
+      "vi": "Bếp nhà tôi",
+      "en": "Bếp nhà tôi"
+     },
+     "walls": [
+      "back",
+      "right"
+     ],
+     "steps": [
+      {
+       "do": "corner-base",
+       "wall": "right",
+       "type": "base-corner-sink",
+       "width": "1030",
+       "blind": "g",
+       "doors": [
+        "450"
+       ]
+      },
+      {
+       "do": "cabinets",
+       "wall": "right",
+       "start": "1030",
+       "length": "right - 1030",
+       "items": [
+        {
+         "type": "base-cooktop",
+         "width": "800"
+        },
+        {
+         "type": "base",
+         "width": "570",
+         "fill": true
+        }
+       ]
+      },
+      {
+       "do": "cabinets",
+       "wall": "back",
+       "start": "580",
+       "length": "back - 580",
+       "items": [
+        {
+         "type": "base",
+         "width": "420",
+         "fill": true
+        },
+        {
+         "type": "gap",
+         "width": "100"
+        },
+        {
+         "type": "base-sink",
+         "width": "800"
+        },
+        {
+         "type": "gap",
+         "width": "600"
+        },
+        {
+         "type": "tall-fridge",
+         "width": "700"
+        }
+       ]
+      },
+      {
+       "do": "corner-shelf"
+      },
+      {
+       "do": "upper-run",
+       "wall": "back",
+       "start": "600",
+       "end": "back - 1300"
+      }
+     ],
+     "island": {
+      "start": "600",
+      "length": "1800"
+     }
+    },
+    "skipped": [
+     "R9"
+    ]
+   }
+  },
+  {
+   "name": "no cabinets: no steps",
+   "input": {
+    "spec": {
+     "module": []
+    },
+    "label": "x"
+   },
+   "expected": {
+    "data": {
+     "label": {
+      "vi": "x",
+      "en": "x"
+     },
+     "walls": [
+      "back"
+     ],
+     "steps": []
+    },
+    "skipped": []
+   }
+  }
+ ]
+}

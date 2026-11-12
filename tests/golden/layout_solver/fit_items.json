@@ -1,0 +1,273 @@
+{
+ "function": "layout_solver.fit_items",
+ "cases": [
+  {
+   "name": "the length saved: the widths kept",
+   "input": {
+    "length": 3920,
+    "items": [
+     {
+      "type": "tall-fridge",
+      "width": 700
+     },
+     {
+      "type": "base",
+      "width": 450,
+      "fill": true
+     },
+     {
+      "type": "base-sink",
+      "width": 800
+     },
+     {
+      "type": "base",
+      "width": 600,
+      "fill": true
+     },
+     {
+      "type": "base-cooktop",
+      "width": 800
+     },
+     {
+      "type": "base",
+      "width": 570,
+      "fill": true
+     }
+    ]
+   },
+   "expected": {
+    "plan": [
+     [
+      700.0,
+      "tall-fridge"
+     ],
+     [
+      450.0,
+      "base"
+     ],
+     [
+      800.0,
+      "base-sink"
+     ],
+     [
+      600.0,
+      "base"
+     ],
+     [
+      800.0,
+      "base-cooktop"
+     ],
+     [
+      570.0,
+      "base"
+     ]
+    ]
+   }
+  },
+  {
+   "name": "700 mm longer: each plain stretch grows in proportion, to 10 mm, split into standard widths",
+   "input": {
+    "length": 4620,
+    "items": [
+     {
+      "type": "tall-fridge",
+      "width": 700
+     },
+     {
+      "type": "base",
+      "width": 450,
+      "fill": true
+     },
+     {
+      "type": "base-sink",
+      "width": 800
+     },
+     {
+      "type": "base",
+      "width": 600,
+      "fill": true
+     },
+     {
+      "type": "base-cooktop",
+      "width": 800
+     },
+     {
+      "type": "base",
+      "width": 570,
+      "fill": true
+     }
+    ]
+   },
+   "expected": {
+    "plan": [
+     [
+      700.0,
+      "tall-fridge"
+     ],
+     [
+      300.0,
+      "base"
+     ],
+     [
+      340.0,
+      "base"
+     ],
+     [
+      800.0,
+      "base-sink"
+     ],
+     [
+      450.0,
+      "base"
+     ],
+     [
+      410.0,
+      "base"
+     ],
+     [
+      800.0,
+      "base-cooktop"
+     ],
+     [
+      450.0,
+      "base"
+     ],
+     [
+      370.0,
+      "base"
+     ]
+    ]
+   }
+  },
+  {
+   "name": "shorter: a stretch under the narrowest cabinet joins the cabinet before it",
+   "input": {
+    "length": 2800,
+    "items": [
+     {
+      "type": "tall-fridge",
+      "width": 700
+     },
+     {
+      "type": "base",
+      "width": 450,
+      "fill": true
+     },
+     {
+      "type": "base-sink",
+      "width": 800
+     },
+     {
+      "type": "base",
+      "width": 600,
+      "fill": true
+     },
+     {
+      "type": "base-cooktop",
+      "width": 800
+     },
+     {
+      "type": "base",
+      "width": 570,
+      "fill": true
+     }
+    ]
+   },
+   "expected": {
+    "plan": [
+     [
+      700.0,
+      "tall-fridge"
+     ],
+     [
+      1130.0,
+      "base-sink"
+     ],
+     [
+      970.0,
+      "base-cooktop"
+     ]
+    ]
+   }
+  },
+  {
+   "name": "empty room stays empty",
+   "input": {
+    "length": 2000,
+    "items": [
+     {
+      "type": "base",
+      "width": 600,
+      "fill": true
+     },
+     {
+      "type": "gap",
+      "width": 200
+     },
+     {
+      "type": "base-sink",
+      "width": 800
+     }
+    ]
+   },
+   "expected": {
+    "plan": [
+     [
+      600.0,
+      "base"
+     ],
+     [
+      400.0,
+      "base"
+     ],
+     [
+      200.0,
+      "gap"
+     ],
+     [
+      800.0,
+      "base-sink"
+     ]
+    ]
+   }
+  },
+  {
+   "name": "no fill item: the cabinets as they are",
+   "input": {
+    "length": 5000,
+    "items": [
+     {
+      "type": "base",
+      "width": 600
+     },
+     {
+      "type": "base-sink",
+      "width": 800
+     }
+    ]
+   },
+   "expected": {
+    "plan": [
+     [
+      600.0,
+      "base"
+     ],
+     [
+      800.0,
+      "base-sink"
+     ]
+    ]
+   }
+  },
+  {
+   "name": "no items",
+   "input": {
+    "length": 3000,
+    "items": []
+   },
+   "expected": {
+    "plan": []
+   }
+  }
+ ]
+}

@@ -24,6 +24,7 @@ API:
   GET  /api/catalog-csv/<kind>             {csv}; POST {csv}: ghi từng dòng vào lớp của vai trò
   GET  /api/regions                       khu vực, quốc gia, số mục
   GET  /api/designs/<id>/history         lịch sử
+  POST /api/designs/<id>/layout-template {"label"?, "id"?, "system"?, "rev"?, "save"?: true} hệ tủ của thiết kế thành một mẫu bố trí (lưu vào danh mục)
   GET  /api/designs/<id>/catalog-updates[?rev=N]  mục danh mục đã đổi kể từ khi bản lưu được ghi + thao tác cập nhật ({"op": "catalog-refresh"})
   POST /api/designs/<id>/ops             {"baseRev": N, "op": {...}, "expect"?: opHash của /propose: chỉ lưu đúng thao tác đã xem trước}
   POST /api/designs/<id>/interpret       {"text": "xóa TD3", "baseRev"?: N, "scope"?: ["TD1"], "useLlm"?: false} câu lệnh tự do -> thao tác + bản xem trước (không lưu) hoặc câu hỏi làm rõ
@@ -270,7 +271,7 @@ class Handler(BaseHTTPRequestHandler):
                 b = self._body()
                 return self._json(201, self._job_out(s.images.regenerate(jid, b.get("seed"))))
             raise ApiError(405, "Phương thức không hỗ trợ")
-        m = re.fullmatch(r"/api/designs/([a-z0-9-]+)(?:/(scene|threejs|validate|history|catalog-updates|ops|revert|render|layers|mask|pick|image-jobs|beauty|base-image|ai-export|floorplan-bind|view-status|regenerate-stale|propose|interpret|recognize|recognize-job|template))?", p)
+        m = re.fullmatch(r"/api/designs/([a-z0-9-]+)(?:/(scene|threejs|validate|history|catalog-updates|ops|revert|render|layers|mask|pick|image-jobs|beauty|base-image|ai-export|floorplan-bind|view-status|regenerate-stale|propose|interpret|recognize|recognize-job|template|layout-template))?", p)
         if not m:
             raise ApiError(404, "Không có endpoint")
         did, sub = m.groups()
@@ -359,6 +360,9 @@ class Handler(BaseHTTPRequestHandler):
                 if scope is not None and not (isinstance(scope, list) and all(isinstance(x, str) for x in scope)):
                     raise ApiError(400, "scope phải là danh sách id module")
                 return self._json(200, s.propose(did, b["op"], b.get("baseRev"), scope, b.get("country")))
+            if sub == "layout-template":
+                return self._json(200, s.layout_template_from_design(did, self._role(), str(b.get("label") or ""), str(b.get("id") or ""),
+                                                                     b.get("system") or None, b.get("rev"), b.get("save", True) is not False))
             if sub == "template":
                 if not isinstance(b.get("template"), dict):
                     raise ApiError(400, "thiếu template")

@@ -19,6 +19,7 @@
      "type": "string",
      "enum": [
       "base-run",
+      "cabinets",
       "corner-base",
       "corner-shelf",
       "upper-run"
@@ -124,6 +125,34 @@
          "start",
          "end"
         ]
+       }
+      }
+     }
+    },
+    "items": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+       "type",
+       "width"
+      ],
+      "properties": {
+       "when": {
+        "type": "string",
+        "minLength": 1
+       },
+       "type": {
+        "type": "string",
+        "minLength": 1
+       },
+       "width": {
+        "type": "string",
+        "minLength": 1
+       },
+       "fill": {
+        "type": "boolean"
        }
       }
      }

@@ -1,7 +1,7 @@
 // Design editor: issue list, module list, module form and the add/remove/undo buttons.
 // Owns the module selection (state.selected) and the Shift-selected group (state.multi). Receives its dependencies; never imports app.js.
 import { $, el } from './dom.js';
-import { FIELDS, moduleOrder, moduleLabel, formChanges, groupLabel, shiftGroup } from './design-logic.js';
+import { FIELDS, moduleOrder, moduleLabel, formChanges, groupLabel, shiftGroup, saveTemplateRequest, savedMessage } from './design-logic.js';
 import { tx } from './i18n.js';
 
 export function createDesignEditor({ state, api, run, setStatus, afterChange, setViewerSelected }) {
@@ -102,6 +102,16 @@ export function createDesignEditor({ state, api, run, setStatus, afterChange, se
   $('removeModule').addEventListener('click', () => {
     const id = state.selected; if (!id) return;
     run(tx('ui.xoa', { 0: id }), async () => { state.selected = null; await afterChange(await post('ops', { baseRev: state.rev, op: { op: 'remove', id, closeGap: true } })); });
+  });
+  $('saveTemplate').addEventListener('click', async () => {
+    const label = window.prompt(tx('ui.save-template.ask'), state.spec?.name || '');
+    if (label === null) return;
+    let said = '';
+    await run(tx('ui.save-template.doing'), async () => {
+      const body = saveTemplateRequest(state, label);
+      said = savedMessage(await post('layout-template', body), body.label);
+    });
+    if (said) setStatus(said, 'ok');      // after run's own "done" line
   });
   $('undo').addEventListener('click', () => {
     if (!state.id || state.rev <= 1) return setStatus(tx('ui.khong-con-ban-truoc'));

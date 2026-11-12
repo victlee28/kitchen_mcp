@@ -5,6 +5,7 @@ import binascii
 import datetime as _dt
 import json
 import re
+import unicodedata
 import os
 from pathlib import Path
 from typing import Any, Callable
@@ -333,6 +334,54 @@ class KitchenService:
                                         for m in spec.module],
                             'notes': [n for n in (spec.promptInterpretation or []) if n.get('message')]})
         return {'id': id, 'samples': samples}
+
+    def layout_template_from_design(self, design_id: str, role: str, label: str = '', id: str = '', system: str | None = None,
+                                    revision: int | None = None, save: bool = True) -> dict:
+        """The cabinet system of a design saved as a layout template (``layout_solver.template_from_design``), so new kitchens can be laid
+        out the same way: ``system`` (a system id, ``module_systems``) picks it; without one, the design's only system, or its wall rows.
+        A system in runs: the run with most corners is the back wall, runs square to it at its ends the side walls (``layout_solver.system_as_walls``); a one-wall template can also be laid
+        along any edge (called by its name in a sentence).
+        ``save=False``: only the template (to edit first). Returns ``{"id", "data", "skipped", "system", "scope"?, "version"?}``."""
+        cat.check_write(self._kind('layout-template'), role)
+        spec, rev = self.store.get(design_id, revision)
+        catalog = self.catalog_for_revision(design_id, rev)
+        by_system = runs.systems(spec)
+        if system is None:
+            found = sorted({by_system[m.id] for m in spec.module if m.run and m.id in by_system})
+            if len(found) > 1:
+                raise InvalidInput(f"The design has {len(found)} cabinet systems; say which one to save", code='pick-system',
+                                   params={'systems': ', '.join(found)})
+            system = found[0] if found else None
+        mods = system_replace.members(spec, system) if system else list(spec.module)
+        common = to_data(spec.common)
+        others: list[str] = []
+        if any(m.run for m in mods):
+            main = system_replace.run_slots(spec, mods)[0]
+            walls = layout_solver.system_as_walls([to_data(r) for r in spec.runs], [to_data(m) for m in mods if m.run], main.run)
+            shape: dict[str, Any] = {'module': walls['module'], 'room': walls['room'], 'common': common}
+            others = [*walls['skipped'], *(m.id for m in mods if not m.run)]
+        else:
+            shape = {'module': [to_data(m) for m in mods], 'room': to_data(spec.room) if spec.room else {}, 'common': common}
+        name = (label or '').strip() or spec.name or design_id
+        built = layout_solver.template_from_design(shape, name, lambda t: cabinet_types.storey_of(t, catalog))
+        data = built['data']
+        if not data['steps']:
+            raise InvalidInput('No cabinet of this system can be saved as a layout template', code='nothing-to-save')
+        tid = id or self._free_template_id(name)
+        out: dict[str, Any] = {'id': tid, 'data': data, 'skipped': sorted({*built['skipped'], *others}), 'system': system}
+        if save:
+            out.update(self.catalog_put('layout-template', tid, data, role))
+        return out
+
+    def _free_template_id(self, name: str) -> str:
+        """An unused layout template id made from a name (ASCII letters, digits and ``-``)."""
+        flat = unicodedata.normalize('NFD', name.translate({0x111: 'd', 0x110: 'D'}))      # d with stroke has no NFD split
+        slug = re.sub(r'[^a-z0-9]+', '-', ''.join(ch for ch in flat if not unicodedata.combining(ch)).lower()).strip('-')[:48] or 'template'
+        taken = {it.id for it in self.catalog().all('layout-template')}
+        tid, n = slug, 2
+        while tid in taken:
+            tid, n = f'{slug}-{n}', n + 1
+        return tid
 
     def catalog_put(self, kind: str, id: str, data: dict, role: str, disabled: bool = False) -> dict:
         """Create or replace item ``id`` in the role's layer (``disabled``: hide the item of a lower layer instead)."""
