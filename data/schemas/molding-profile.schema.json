@@ -1,0 +1,77 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "molding-profile",
+ "type": "object",
+ "required": [
+  "name",
+  "variant",
+  "points"
+ ],
+ "additionalProperties": false,
+ "properties": {
+  "name": {
+   "type": "object",
+   "required": [
+    "vi"
+   ],
+   "properties": {
+    "vi": {
+     "type": "string"
+    },
+    "en": {
+     "type": "string"
+    }
+   },
+   "additionalProperties": false,
+   "x-label": {
+    "vi": "Tên",
+    "en": "Name"
+   }
+  },
+  "description": {
+   "type": "object",
+   "required": [
+    "vi"
+   ],
+   "properties": {
+    "vi": {
+     "type": "string"
+    },
+    "en": {
+     "type": "string"
+    }
+   },
+   "additionalProperties": false,
+   "x-label": {
+    "vi": "Mô tả",
+    "en": "Description"
+   }
+  },
+  "variant": {
+   "enum": [
+    "crown",
+    "base"
+   ],
+   "x-label": {
+    "vi": "Phào nóc / chân",
+    "en": "Crown / base"
+   }
+  },
+  "points": {
+   "type": "array",
+   "minItems": 3,
+   "items": {
+    "type": "array",
+    "minItems": 2,
+    "maxItems": 2,
+    "items": {
+     "type": "number"
+    }
+   },
+   "x-label": {
+    "vi": "Mặt cắt [u, v] mm (u: nhô ra phòng từ mặt cánh; v: lên từ đường chạy)",
+    "en": "Profile [u, v] mm (u: out from the door face; v: up from the run)"
+   }
+  }
+ }
+}

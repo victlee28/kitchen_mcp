@@ -12,27 +12,34 @@ from typing import Any
 import math
 from dataclasses import dataclass, field
 
+from . import builtin
+from .catalog import Catalog
+from .i18n import pick
 from .spec import KitchenSpec, Molding, MoldingProfile, Module, from_data, to_data
 from . import runs as runmod
 from .errors import InvalidInput
 
-PRESETS: dict[str, MoldingProfile] = {p.id: p for p in [
-    MoldingProfile(id="classic-crown-simple", name="Phào nóc đơn giản",
-                   points=[(-40, 0), (0, 0), (0, 20), (30, 50), (40, 50), (40, 60), (-40, 60)],
-                   description="Cao 60, nhô 40. Hợp tủ trên thấp hoặc trần thấp."),
-    MoldingProfile(id="classic-crown-layered", name="Phào nóc nhiều lớp",
-                   points=[(-40, 0), (0, 0), (0, 10), (12, 14), (16, 24), (34, 42), (52, 58), (62, 70), (68, 78),
-                           (68, 90), (-40, 90)],
-                   description="Cao 90, nhô 68, có gờ chỉ ở chân. Tủ cổ điển tiêu chuẩn."),
-    MoldingProfile(id="classic-crown-cornice", name="Phào nóc cornice lớn",
-                   points=[(-50, 0), (0, 0), (0, 30), (20, 36), (24, 50), (60, 80), (90, 104), (100, 110), (100, 130), (-50, 130)],
-                   description="Cao 130, nhô 100. Cần trần cao."),
-    MoldingProfile(id="classic-base", name="Phào chân",
-                   points=[(-70, 0), (15, 0), (15, 15), (8, 25), (5, 80), (0, 95), (-70, 95)],
-                   description="Cao 95, ốp che chân tủ, nhô 15 trước mặt cánh."),
-    MoldingProfile(id="classic-base-low", name="Phào chân thấp",
-                   points=[(-70, 0), (10, 0), (10, 12), (4, 20), (0, 70), (-70, 70)], description="Cao 70."),
-]}
+def _profiles(catalog: Catalog) -> dict[str, MoldingProfile]:
+    return {it.id: MoldingProfile(id=it.id, name=pick(it.data.get("name"), "vi"), description=pick(it.data.get("description"), "vi") or None,
+                                  points=[(float(u), float(v)) for u, v in it.data.get("points") or []]) for it in catalog.all("molding-profile")}
+
+
+def presets(catalog: Catalog = builtin.CATALOG) -> dict[str, MoldingProfile]:
+    """The molding profiles offered (catalog kind ``molding-profile``: workshop and user edit them)."""
+    return catalog.derived("moldings.presets", _profiles)
+
+
+PRESETS: dict[str, MoldingProfile] = presets()
+"""The builtin profiles: what a design that names a profile without carrying it is drawn with. A profile from the catalog that is not
+exactly a builtin one is copied into the design (``embedded``), so editing the catalog never redraws a stored design."""
+
+
+def embedded(ids: list[str], own: list[MoldingProfile], catalog: Catalog = builtin.CATALOG) -> list[MoldingProfile]:
+    """``own`` plus the catalog profiles among ``ids`` the design must carry: those that are not exactly the builtin profile of that id."""
+    have = {p.id for p in own}
+    offered = presets(catalog)
+    extra = [offered[i] for i in dict.fromkeys(ids) if i in offered and i not in have and offered[i] != PRESETS.get(i)]
+    return [*own, *extra]
 
 
 def profile_of(spec: KitchenSpec, id: str) -> MoldingProfile | None:

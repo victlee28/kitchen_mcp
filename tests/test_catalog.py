@@ -443,5 +443,36 @@ class TestKnowledgeInTheCatalog(unittest.TestCase):
         self.assertEqual(again.catalog().get("knowledge", "HAND-01").source, "workshop")
 
 
+class TestMoldingProfilesFromTheCatalog(unittest.TestCase):
+    """Stage 2.4: molding profiles are catalog items; a design carries any profile that is not exactly a builtin one."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        from kitchen.service import KitchenService
+        self.s = KitchenService(db_path=self.tmp / "k.db", render_dir=self.tmp / "r")
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_a_user_profile_travels_with_the_design(self):
+        s = self.s
+        mine = {"name": {"vi": "Phào của tôi"}, "variant": "crown", "points": [[-40, 0], [0, 0], [20, 40], [-40, 40]]}
+        s.catalog_put("molding-profile", "my-crown", mine, "user")
+        self.assertIn("my-crown", s.molding_profiles())
+        fixture = json.loads((ROOT / "fixtures" / "l-shaped-kitchen.json").read_text(encoding="utf-8"))
+        rec = s.create_from_spec(fixture)
+        done = s.set_moldings(rec["id"], rec["rev"], crown_profile="my-crown")
+        spec = s.store.get(rec["id"], done["rev"])[0]
+        self.assertEqual([p.id for p in spec.moldingProfiles], ["my-crown"])
+        s.catalog_put("molding-profile", "my-crown", {**mine, "points": [[-40, 0], [0, 0], [0, 80], [-40, 80]]}, "user")
+        self.assertEqual(s.store.get(rec["id"], done["rev"])[0].moldingProfiles[0].height, 40)              # the design keeps its copy
+
+    def test_builtin_profiles_are_not_copied(self):
+        fixture = json.loads((ROOT / "fixtures" / "l-shaped-kitchen.json").read_text(encoding="utf-8"))
+        rec = self.s.create_from_spec(fixture)
+        done = self.s.set_moldings(rec["id"], rec["rev"])
+        self.assertEqual(self.s.store.get(rec["id"], done["rev"])[0].moldingProfiles, [])
+
+
 if __name__ == "__main__":
     unittest.main()

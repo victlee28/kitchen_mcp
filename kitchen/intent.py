@@ -265,7 +265,8 @@ def from_template(color: KitchenTemplate, name: str = "Thiết kế tủ bếp",
     co_dien = color.style in ("Classic", "Neoclassical", "Transitional")
     crown_molding = color.crownMolding if color.crownMolding is not None else co_dien
     base_molding = color.baseMolding if color.baseMolding is not None else co_dien
-    h_loft = _mol.PRESETS[color.crownMoldingProfile].height if crown_molding and color.crownMoldingProfile in _mol.PRESETS else 0
+    offered = _mol.presets(catalog)
+    h_loft = offered[color.crownMoldingProfile].height if crown_molding and color.crownMoldingProfile in offered else 0
     countertop = color.countertop or kt["countertop"]
     upper_bottom = countertop + kt["upperGap"]
     ceiling = color.ceiling or max(color.cabinetTop + max(30, h_loft), 2400)
@@ -449,5 +450,7 @@ def from_template(color: KitchenTemplate, name: str = "Thiết kế tủ bếp",
                        renderPreferences=list(dict.fromkeys(color.renderPreferences)),
                        promptInterpretation=_merge_notes(color.promptInterpretation, notes_built) or None,
                        moldings=_mol.default_moldings(crown_molding, base_molding, color.crownMoldingProfile, color.baseMoldingProfile),
+                       moldingProfiles=_mol.embedded([p for p, on in ((color.crownMoldingProfile, crown_molding), (color.baseMoldingProfile, base_molding)) if on], [],
+                                                     catalog),
                        source="Sinh từ mẫu; kích thước theo: " + ", ".join(f"{k}={v}" for k, v in check_source.items()))
     return KitchenSpec.model_validate(spec.model_dump(mode="json"))

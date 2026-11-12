@@ -1052,7 +1052,7 @@ class KitchenService:
     def molding_profiles(self, design_id: str | None=None) -> dict:
         """Return built-in molding profiles plus profiles defined by a design."""
         from . import moldings
-        profiles = dict(moldings.PRESETS)
+        profiles = dict(moldings.presets(self.catalog()))
         if design_id:
             spec, _ = self.store.get(design_id)
             profiles.update({profile.id: profile for profile in spec.moldingProfiles})

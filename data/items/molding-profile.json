@@ -1,0 +1,236 @@
+[
+ {
+  "id": "classic-crown-simple",
+  "name": {
+   "vi": "Phào nóc đơn giản",
+   "en": "Simple crown molding"
+  },
+  "description": {
+   "vi": "Cao 60, nhô 40. Hợp tủ trên thấp hoặc trần thấp.",
+   "en": "Height 60, projection 40. For low wall cabinets or low ceilings."
+  },
+  "variant": "crown",
+  "points": [
+   [
+    -40.0,
+    0.0
+   ],
+   [
+    0.0,
+    0.0
+   ],
+   [
+    0.0,
+    20.0
+   ],
+   [
+    30.0,
+    50.0
+   ],
+   [
+    40.0,
+    50.0
+   ],
+   [
+    40.0,
+    60.0
+   ],
+   [
+    -40.0,
+    60.0
+   ]
+  ]
+ },
+ {
+  "id": "classic-crown-layered",
+  "name": {
+   "vi": "Phào nóc nhiều lớp",
+   "en": "Layered crown molding"
+  },
+  "description": {
+   "vi": "Cao 90, nhô 68, có gờ chỉ ở chân. Tủ cổ điển tiêu chuẩn.",
+   "en": "Height 90, projection 68, with a bead at the foot. Standard classic cabinets."
+  },
+  "variant": "crown",
+  "points": [
+   [
+    -40.0,
+    0.0
+   ],
+   [
+    0.0,
+    0.0
+   ],
+   [
+    0.0,
+    10.0
+   ],
+   [
+    12.0,
+    14.0
+   ],
+   [
+    16.0,
+    24.0
+   ],
+   [
+    34.0,
+    42.0
+   ],
+   [
+    52.0,
+    58.0
+   ],
+   [
+    62.0,
+    70.0
+   ],
+   [
+    68.0,
+    78.0
+   ],
+   [
+    68.0,
+    90.0
+   ],
+   [
+    -40.0,
+    90.0
+   ]
+  ]
+ },
+ {
+  "id": "classic-crown-cornice",
+  "name": {
+   "vi": "Phào nóc cornice lớn",
+   "en": "Large cornice"
+  },
+  "description": {
+   "vi": "Cao 130, nhô 100. Cần trần cao.",
+   "en": "Height 130, projection 100. Needs a high ceiling."
+  },
+  "variant": "crown",
+  "points": [
+   [
+    -50.0,
+    0.0
+   ],
+   [
+    0.0,
+    0.0
+   ],
+   [
+    0.0,
+    30.0
+   ],
+   [
+    20.0,
+    36.0
+   ],
+   [
+    24.0,
+    50.0
+   ],
+   [
+    60.0,
+    80.0
+   ],
+   [
+    90.0,
+    104.0
+   ],
+   [
+    100.0,
+    110.0
+   ],
+   [
+    100.0,
+    130.0
+   ],
+   [
+    -50.0,
+    130.0
+   ]
+  ]
+ },
+ {
+  "id": "classic-base",
+  "name": {
+   "vi": "Phào chân",
+   "en": "Base molding"
+  },
+  "description": {
+   "vi": "Cao 95, ốp che chân tủ, nhô 15 trước mặt cánh.",
+   "en": "Height 95, covers the plinth, 15 in front of the doors."
+  },
+  "variant": "base",
+  "points": [
+   [
+    -70.0,
+    0.0
+   ],
+   [
+    15.0,
+    0.0
+   ],
+   [
+    15.0,
+    15.0
+   ],
+   [
+    8.0,
+    25.0
+   ],
+   [
+    5.0,
+    80.0
+   ],
+   [
+    0.0,
+    95.0
+   ],
+   [
+    -70.0,
+    95.0
+   ]
+  ]
+ },
+ {
+  "id": "classic-base-low",
+  "name": {
+   "vi": "Phào chân thấp",
+   "en": "Low base molding"
+  },
+  "description": {
+   "vi": "Cao 70.",
+   "en": "Height 70."
+  },
+  "variant": "base",
+  "points": [
+   [
+    -70.0,
+    0.0
+   ],
+   [
+    10.0,
+    0.0
+   ],
+   [
+    10.0,
+    12.0
+   ],
+   [
+    4.0,
+    20.0
+   ],
+   [
+    0.0,
+    70.0
+   ],
+   [
+    -70.0,
+    70.0
+   ]
+  ]
+ }
+]

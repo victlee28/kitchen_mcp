@@ -378,6 +378,12 @@ def apply_op(spec: KitchenSpec, op: dict[str, Any], catalog: Catalog = builtin.C
         data["moldings"] = op.get("moldings", [])
         if "moldingProfiles" in op:
             data["moldingProfiles"] = op["moldingProfiles"]
+        from .moldings import embedded      # a catalog profile the builtin ones do not have travels with the design
+        own = from_data(KitchenSpec, data).moldingProfiles
+        ids = [str(m.get("profile")) for m in (as_dict(x) or {} for x in data["moldings"]) if m.get("profile")]
+        carried = embedded(ids, own, catalog)
+        if len(carried) != len(own):
+            data["moldingProfiles"] = [to_data(p) for p in carried]
         if op.get("style"):
             data["style"] = op["style"]
         return from_data(KitchenSpec, data)

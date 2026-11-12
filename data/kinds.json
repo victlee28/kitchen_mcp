@@ -152,5 +152,15 @@
     "source-type"
    ]
   ]
+ },
+ "molding-profile": {
+  "label": {
+   "vi": "Mặt cắt phào",
+   "en": "Molding profiles"
+  },
+  "writers": [
+   "workshop",
+   "user"
+  ]
  }
 }
