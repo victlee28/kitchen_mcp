@@ -1,0 +1,1456 @@
+{
+ "function": "catalog.expr.run",
+ "cases": [
+  {
+   "name": "arithmetic follows precedence",
+   "input": {
+    "text": "width - 2 * side",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "value": 564.0
+   }
+  },
+  {
+   "name": "parentheses group",
+   "input": {
+    "text": "(width - side) / n",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "value": 194.0
+   }
+  },
+  {
+   "name": "unary minus binds tighter than *",
+   "input": {
+    "text": "-width / 4 + 1",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "value": -149.0
+   }
+  },
+  {
+   "name": "double minus",
+   "input": {
+    "text": "--3",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "value": 3.0
+   }
+  },
+  {
+   "name": "minus before parentheses",
+   "input": {
+    "text": "-(2 + 3) * 2",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "value": -10.0
+   }
+  },
+  {
+   "name": "left to right for - and /",
+   "input": {
+    "text": "100 - 10 - 1",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "value": 89.0
+   }
+  },
+  {
+   "name": "division left to right",
+   "input": {
+    "text": "120 / 4 / 3",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "value": 10.0
+   }
+  },
+  {
+   "name": "decimal numbers",
+   "input": {
+    "text": ".5 + 1.25",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "value": 1.75
+   }
+  },
+  {
+   "name": "dotted names",
+   "input": {
+    "text": "common.doorGap * 2",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "value": 6.0
+   }
+  },
+  {
+   "name": "spaces and newlines",
+   "input": {
+    "text": "  width\n -\tside ",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "value": 582.0
+   }
+  },
+  {
+   "name": "comparison true",
+   "input": {
+    "text": "width > 500",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "value": true
+   }
+  },
+  {
+   "name": "comparison false",
+   "input": {
+    "text": "width <= 500",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "value": false
+   }
+  },
+  {
+   "name": "equality of numbers",
+   "input": {
+    "text": "depth == 560",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "value": true
+   }
+  },
+  {
+   "name": "inequality",
+   "input": {
+    "text": "depth != 560",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "value": false
+   }
+  },
+  {
+   "name": "equality of booleans",
+   "input": {
+    "text": "glass == true",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "value": true
+   }
+  },
+  {
+   "name": "and",
+   "input": {
+    "text": "glass and width > 500",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "value": true
+   }
+  },
+  {
+   "name": "or",
+   "input": {
+    "text": "open or width < 100",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "value": false
+   }
+  },
+  {
+   "name": "not binds looser than comparison",
+   "input": {
+    "text": "not width > 700",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "value": true
+   }
+  },
+  {
+   "name": "and binds tighter than or",
+   "input": {
+    "text": "true or false and false",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "value": true
+   }
+  },
+  {
+   "name": "if else picks then",
+   "input": {
+    "text": "width if glass else 0",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "value": 600.0
+   }
+  },
+  {
+   "name": "if else picks else",
+   "input": {
+    "text": "width if open else 0",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "value": 0.0
+   }
+  },
+  {
+   "name": "nested if else is right-associative",
+   "input": {
+    "text": "1 if open else 2 if glass else 3",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "value": 2.0
+   }
+  },
+  {
+   "name": "if else of booleans",
+   "input": {
+    "text": "glass if width > 0 else open",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "value": true
+   }
+  },
+  {
+   "name": "short-circuit and skips the division",
+   "input": {
+    "text": "open and width / zero > 1",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "value": false
+   }
+  },
+  {
+   "name": "short-circuit or skips the division",
+   "input": {
+    "text": "glass or width / zero > 1",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "value": true
+   }
+  },
+  {
+   "name": "if skips the untaken side",
+   "input": {
+    "text": "width / zero if open else 1",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "value": 1.0
+   }
+  },
+  {
+   "name": "min of many",
+   "input": {
+    "text": "min(width, height, depth)",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "value": 560.0
+   }
+  },
+  {
+   "name": "max",
+   "input": {
+    "text": "max(1, side, n)",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "value": 18.0
+   }
+  },
+  {
+   "name": "clamp inside",
+   "input": {
+    "text": "clamp(450, 300, 600)",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "value": 450.0
+   }
+  },
+  {
+   "name": "clamp below",
+   "input": {
+    "text": "clamp(100, 300, 600)",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "value": 300.0
+   }
+  },
+  {
+   "name": "clamp above",
+   "input": {
+    "text": "clamp(width, 300, 500)",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "value": 500.0
+   }
+  },
+  {
+   "name": "round halves away from zero",
+   "input": {
+    "text": "round(2.5)",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "value": 3.0
+   }
+  },
+  {
+   "name": "round negative halves away from zero",
+   "input": {
+    "text": "round(-2.5)",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "value": -3.0
+   }
+  },
+  {
+   "name": "round to digits",
+   "input": {
+    "text": "round(1.23456, 2)",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "value": 1.23
+   }
+  },
+  {
+   "name": "round binary 1.005 stays 1.0",
+   "input": {
+    "text": "round(1.005, 2)",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "value": 1.0
+   }
+  },
+  {
+   "name": "floor",
+   "input": {
+    "text": "floor(7 / 2)",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "value": 3.0
+   }
+  },
+  {
+   "name": "floor of a negative",
+   "input": {
+    "text": "floor(-3.5)",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "value": -4.0
+   }
+  },
+  {
+   "name": "ceil",
+   "input": {
+    "text": "ceil(7 / 2)",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "value": 4.0
+   }
+  },
+  {
+   "name": "abs",
+   "input": {
+    "text": "abs(side - width)",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "value": 582.0
+   }
+  },
+  {
+   "name": "calls nest",
+   "input": {
+    "text": "max(min(width, 500), round(depth / 3))",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "value": 500.0
+   }
+  },
+  {
+   "name": "a typical panel formula",
+   "input": {
+    "text": "(width - 2 * side - common.doorGap * (n - 1)) / n",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "value": 186.0
+   }
+  },
+  {
+   "name": "error: empty",
+   "input": {
+    "text": "",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "error": "expr-syntax",
+    "at": 0
+   }
+  },
+  {
+   "name": "error: blank",
+   "input": {
+    "text": "   ",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "error": "expr-syntax",
+    "at": 0
+   }
+  },
+  {
+   "name": "error: operator without operand",
+   "input": {
+    "text": "2 + * 3",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "error": "expr-syntax",
+    "at": 4
+   }
+  },
+  {
+   "name": "error: missing operand at the end",
+   "input": {
+    "text": "width +",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "error": "expr-syntax",
+    "at": 7
+   }
+  },
+  {
+   "name": "error: unclosed parenthesis",
+   "input": {
+    "text": "(width - side",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "error": "expr-syntax",
+    "at": 13
+   }
+  },
+  {
+   "name": "error: stray closing parenthesis",
+   "input": {
+    "text": "width)",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "error": "expr-syntax",
+    "at": 5
+   }
+  },
+  {
+   "name": "error: unknown name",
+   "input": {
+    "text": "foo + 1",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "error": "expr-unknown-name",
+    "at": 0
+   }
+  },
+  {
+   "name": "error: unknown function",
+   "input": {
+    "text": "sqrt(4)",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "error": "expr-unknown-function",
+    "at": 0
+   }
+  },
+  {
+   "name": "error: function without parentheses",
+   "input": {
+    "text": "min + 1",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "error": "expr-syntax",
+    "at": 0
+   }
+  },
+  {
+   "name": "error: too few arguments",
+   "input": {
+    "text": "min(1)",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "error": "expr-arity",
+    "at": 0
+   }
+  },
+  {
+   "name": "error: clamp needs three",
+   "input": {
+    "text": "clamp(1, 2)",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "error": "expr-arity",
+    "at": 0
+   }
+  },
+  {
+   "name": "error: number plus boolean",
+   "input": {
+    "text": "1 + true",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "error": "expr-type",
+    "at": 4
+   }
+  },
+  {
+   "name": "error: condition must be boolean",
+   "input": {
+    "text": "3 if width else 2",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "error": "expr-type",
+    "at": 5
+   }
+  },
+  {
+   "name": "error: branches of different kinds",
+   "input": {
+    "text": "width if glass else true",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "error": "expr-type",
+    "at": 20
+   }
+  },
+  {
+   "name": "error: comparisons do not chain",
+   "input": {
+    "text": "1 < 2 < 3",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "error": "expr-syntax",
+    "at": 6
+   }
+  },
+  {
+   "name": "error: equality across kinds",
+   "input": {
+    "text": "glass == 1",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "error": "expr-type",
+    "at": 9
+   }
+  },
+  {
+   "name": "error: not of a number",
+   "input": {
+    "text": "not width",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "error": "expr-type",
+    "at": 4
+   }
+  },
+  {
+   "name": "error: and of numbers",
+   "input": {
+    "text": "width and depth",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "error": "expr-type",
+    "at": 0
+   }
+  },
+  {
+   "name": "error: bad number",
+   "input": {
+    "text": "1.2.3",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "error": "expr-syntax",
+    "at": 0
+   }
+  },
+  {
+   "name": "error: number glued to a name",
+   "input": {
+    "text": "3width",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "error": "expr-syntax",
+    "at": 0
+   }
+  },
+  {
+   "name": "error: unexpected character",
+   "input": {
+    "text": "width % 2",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "error": "expr-syntax",
+    "at": 6
+   }
+  },
+  {
+   "name": "error: keyword as a value",
+   "input": {
+    "text": "else",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "error": "expr-syntax",
+    "at": 0
+   }
+  },
+  {
+   "name": "error: division by zero",
+   "input": {
+    "text": "width / zero",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "error": "expr-division-by-zero",
+    "at": 6
+   }
+  },
+  {
+   "name": "error: clamp range",
+   "input": {
+    "text": "clamp(1, 5, 2)",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "error": "expr-clamp-range",
+    "at": 0
+   }
+  },
+  {
+   "name": "error: round digits not whole",
+   "input": {
+    "text": "round(1.5, 0.5)",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "error": "expr-round-digits",
+    "at": 0
+   }
+  },
+  {
+   "name": "error: value after the end",
+   "input": {
+    "text": "width side",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "error": "expr-syntax",
+    "at": 6
+   }
+  },
+  {
+   "name": "wanted kind: a number where a boolean is wanted",
+   "input": {
+    "text": "width",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    },
+    "want": "bool"
+   },
+   "expected": {
+    "error": "expr-type",
+    "at": 0
+   }
+  },
+  {
+   "name": "wanted kind: a boolean is fine",
+   "input": {
+    "text": "width > 1",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    },
+    "want": "bool"
+   },
+   "expected": {
+    "value": true
+   }
+  },
+  {
+   "name": "error: too deep",
+   "input": {
+    "text": "((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((1))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "error": "expr-too-deep",
+    "at": 64
+   }
+  },
+  {
+   "name": "error: too long",
+   "input": {
+    "text": "1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1",
+    "env": {
+     "width": 600,
+     "height": 720,
+     "depth": 560,
+     "side": 18,
+     "n": 3,
+     "glass": true,
+     "open": false,
+     "common.doorGap": 3,
+     "zero": 0
+    }
+   },
+   "expected": {
+    "error": "expr-too-long",
+    "at": 2000
+   }
+  }
+ ]
+}

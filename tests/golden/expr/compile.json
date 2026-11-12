@@ -1,0 +1,57 @@
+{
+ "function": "catalog.expr.compile",
+ "cases": [
+  {
+   "name": "names read, sorted, and the type",
+   "input": {
+    "text": "(width - side) / n if glass else depth",
+    "names": {
+     "width": "num",
+     "side": "num",
+     "n": "num",
+     "glass": "bool",
+     "depth": "num",
+     "unused": "num"
+    }
+   },
+   "expected": {
+    "type": "num",
+    "names": [
+     "depth",
+     "glass",
+     "n",
+     "side",
+     "width"
+    ]
+   }
+  },
+  {
+   "name": "a boolean formula",
+   "input": {
+    "text": "not open",
+    "names": {
+     "open": "bool"
+    }
+   },
+   "expected": {
+    "type": "bool",
+    "names": [
+     "open"
+    ]
+   }
+  },
+  {
+   "name": "error: a boolean name used as a number",
+   "input": {
+    "text": "open + 1",
+    "names": {
+     "open": "bool"
+    }
+   },
+   "expected": {
+    "error": "expr-type",
+    "at": 0
+   }
+  }
+ ]
+}

@@ -23,6 +23,28 @@ from kitchen import cabinet_run, edit_intent, rows_to_runs, threejs_export  # no
 from kitchen.spec import Handle, Module  # noqa: E402
 from kitchen.placement import Placement  # noqa: E402
 from kitchen.spec import load_spec, to_data  # noqa: E402
+from kitchen.catalog import expr  # noqa: E402
+from kitchen.errors import InvalidInput  # noqa: E402
+
+
+def _env(raw: dict) -> dict:
+    return {k: v if isinstance(v, bool) else float(v) for k, v in raw.items()}
+
+
+def catalog_expr_run(i):
+    """The value of a formula, or the error code and the position it points at."""
+    try:
+        return {"value": expr.run(i["text"], _env(i["env"]), i.get("want"))}
+    except InvalidInput as e:
+        return {"error": e.code, "at": e.params.get("at")}
+
+
+def catalog_expr_compile(i):
+    try:
+        f = expr.compile(i["text"], i["names"], i.get("want"))
+        return {"type": f.type, "names": list(f.names)}
+    except InvalidInput as e:
+        return {"error": e.code, "at": e.params.get("at")}
 
 
 def _placement(i: dict) -> Placement:
@@ -1302,6 +1324,8 @@ FUNCTIONS = {
     "proposal.validation_delta": proposal_validation_delta,
     "numeric.round_int": numeric_round_int,
     "numeric.near": numeric_near,
+    "catalog.expr.run": catalog_expr_run,
+    "catalog.expr.compile": catalog_expr_compile,
     "palette.module_color": palette_module_color,
     "errors.kind_of": errors_kind_of,
     "runs.trig": runs_trig,

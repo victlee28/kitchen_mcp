@@ -23,6 +23,7 @@ from typing import Any
 from .numeric import round_int
 from . import builtin, vocab
 from .catalog import Catalog
+from .jsonview import as_dict, as_list
 from .errors import require
 
 STATUSES = ("built", "exported", "ai-only", "unsupported", "ambiguous")
@@ -77,13 +78,19 @@ ALIAS_LANGS = ("vi", "en")   # the order aliases are tried in (all of them are t
 
 
 def _tuple(v: Any) -> Any:
-    return tuple(_tuple(x) for x in v) if isinstance(v, list) else v
+    xs = as_list(v)
+    return tuple(_tuple(x) for x in xs) if xs is not None else v
+
+
+def _by_language(value: Any) -> list[str]:
+    """The strings of a ``{lang: [...]}`` field, the languages of ``ALIAS_LANGS`` first."""
+    d = as_dict(value) or {}
+    langs = [*ALIAS_LANGS, *(k for k in d if k not in ALIAS_LANGS)]
+    return [str(x).strip() for lg in langs for x in (as_list(d.get(lg)) or []) if str(x).strip()]
 
 
 def _entry(id: str, d: Mapping[str, Any]) -> E:
-    aliases = d.get("aliases") or {}
-    langs = [*ALIAS_LANGS, *(k for k in aliases if k not in ALIAS_LANGS)]
-    return E(id=id, kind=str(d["group"]), aliases=tuple(str(a).strip() for lg in langs for a in (aliases.get(lg) or []) if str(a).strip()),
+    return E(id=id, kind=str(d["group"]), aliases=tuple(_by_language(d.get("aliases"))),
              label=str(d.get("label", "")), value=_tuple(d.get("value")), slot=d.get("slot"), status=str(d.get("status", "built")),
              message=str(d.get("message", "")), ai=str(d.get("ai", "")), weak=bool(d.get("weak", False)),
              needs=tuple(d.get("needs") or ()), forbid=tuple(d.get("forbid") or ()), wood_plain=str(d.get("woodPlain", "")))
@@ -132,9 +139,7 @@ def _commands(catalog: Catalog) -> dict[str, tuple[tuple[str, Any], ...]]:
 def _patterns(catalog: Catalog) -> dict[str, str]:
     out: dict[str, str] = {}
     for it in catalog.all("lexicon"):
-        pats = it.data.get("patterns") or {}
-        langs = [*ALIAS_LANGS, *(k for k in pats if k not in ALIAS_LANGS)]
-        alts = [str(x) for lg in langs for x in (pats.get(lg) or []) if str(x)]
+        alts = _by_language(it.data.get("patterns"))
         if it.data.get("group") == "regex":
             out[it.id] = "(?:" + "|".join(f"(?:{x})" for x in alts) + ")" if alts else NEVER
     return out

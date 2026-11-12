@@ -7,7 +7,6 @@ caller makes base and tall cabinets as deep as the object they replace (``cabine
 from __future__ import annotations
 
 import math
-import re
 import unicodedata
 from typing import Any
 

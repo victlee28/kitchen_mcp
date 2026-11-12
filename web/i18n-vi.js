@@ -1003,5 +1003,16 @@ export default {
  "side.left": "trái",
  "note.standard-for": "Áp tiêu chuẩn ưu tiên cho {place}",
  "note.size-out-of-range": "Bỏ qua số đo ngoài phạm vi: {detail}",
- "note.no-length": "Không thấy chiều dài trong mô tả, dùng mặc định 3000 mm"
+ "note.no-length": "Không thấy chiều dài trong mô tả, dùng mặc định 3000 mm",
+ "error.expr-syntax": "Công thức sai cú pháp ở vị trí {at}",
+ "error.expr-unknown-name": "Công thức dùng tên không có: {name} (vị trí {at})",
+ "error.expr-unknown-function": "Không có hàm {name} (vị trí {at})",
+ "error.expr-arity": "Hàm {name} cần từ {fewest} đến {most} giá trị, đang có {n} (vị trí {at})",
+ "error.expr-type": "Sai loại giá trị ở vị trí {at}: cần {expected}, có {got}",
+ "error.expr-division-by-zero": "Chia cho 0 ở vị trí {at}",
+ "error.expr-too-long": "Công thức dài quá {limit} ký tự",
+ "error.expr-too-deep": "Công thức lồng sâu quá {limit} tầng",
+ "error.expr-missing-value": "Thiếu giá trị cho {name} (vị trí {at})",
+ "error.expr-clamp-range": "clamp cần cận dưới không lớn hơn cận trên ({lo} > {hi})",
+ "error.expr-round-digits": "round cần số chữ số nguyên từ 0 đến 9 (đang là {digits})"
 };

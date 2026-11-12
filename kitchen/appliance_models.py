@@ -6,7 +6,6 @@ double when its name says "đôi") and its own ``dimensions`` stay its size, so 
 """
 from __future__ import annotations
 
-import re
 import unicodedata
 from collections.abc import Callable
 from typing import Any
