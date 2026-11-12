@@ -19,7 +19,7 @@ ROUND_BASELINE: dict[str, int] = {}
 VIETNAMESE_BASELINE: dict[str, int] = {
     # Data-driven stage 4 (command dictionary: words and patterns that read what people type)
     "kitchen/lexicon.py": 30,
-    "kitchen/intent.py": 47,
+    "kitchen/intent.py": 32,
     "kitchen/regions.py": 4,
     "kitchen/appliance_models.py": 1,
     "kitchen/floorplan/structures.py": 2,

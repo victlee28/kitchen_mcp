@@ -1,0 +1,249 @@
+[
+ {
+  "id": "I",
+  "label": {
+   "vi": "Bếp chữ I",
+   "en": "Straight kitchen"
+  },
+  "peninsulaUses": "L",
+  "vars": {
+   "W": "back"
+  },
+  "steps": [
+   {
+    "do": "base-run",
+    "wall": "back",
+    "start": "0",
+    "length": "back",
+    "appliances": [
+     {
+      "when": "fridge",
+      "items": [
+       "cooktop",
+       "sink"
+      ]
+     },
+     {
+      "items": [
+       "sink",
+       "cooktop"
+      ]
+     }
+    ],
+    "fridgeAtEnd": "fridge"
+   },
+   {
+    "do": "upper-run",
+    "wall": "back",
+    "start": "0",
+    "end": "back - lr"
+   }
+  ],
+  "island": {
+   "start": "max(0, (W - n) / 2)",
+   "length": "islandLength if islandLength > 0 else min(2400, max(900, W - 600))"
+  }
+ },
+ {
+  "id": "L",
+  "label": {
+   "vi": "Bếp chữ L",
+   "en": "L-shaped kitchen"
+  },
+  "vars": {
+   "W": "back",
+   "R": "right if right > 0 else back"
+  },
+  "steps": [
+   {
+    "do": "corner-base",
+    "wall": "right",
+    "type": "base-corner-sink",
+    "width": "g + 450",
+    "blind": "g",
+    "doors": [
+     "450"
+    ]
+   },
+   {
+    "do": "base-run",
+    "wall": "right",
+    "start": "g + 450",
+    "length": "R - g - 450",
+    "appliances": [
+     {
+      "when": "fridge",
+      "items": [
+       "cooktop"
+      ]
+     },
+     {
+      "items": [
+       "sink"
+      ]
+     }
+    ],
+    "front": "0"
+   },
+   {
+    "do": "base-run",
+    "wall": "back",
+    "start": "g",
+    "length": "back - g",
+    "appliances": [
+     {
+      "when": "fridge",
+      "items": [
+       "sink"
+      ]
+     },
+     {
+      "items": [
+       "cooktop"
+      ]
+     }
+    ],
+    "fridgeAtEnd": "fridge"
+   },
+   {
+    "do": "corner-shelf"
+   },
+   {
+    "do": "upper-run",
+    "wall": "back",
+    "start": "600",
+    "end": "back - lr"
+   },
+   {
+    "do": "upper-run",
+    "wall": "right",
+    "start": "600",
+    "end": "R"
+   }
+  ],
+  "island": {
+   "start": "g + aisle",
+   "length": "min(islandLength if islandLength > 0 else 2400, W - (g + aisle))"
+  },
+  "peninsula": {
+   "at": "R",
+   "room": "W - g - 600"
+  }
+ },
+ {
+  "id": "U",
+  "label": {
+   "vi": "Bếp chữ U",
+   "en": "U-shaped kitchen"
+  },
+  "vars": {
+   "W": "max(back, 2 * g + 900)",
+   "R": "right if right > 0 else W",
+   "Lf": "left if left > 0 else R"
+  },
+  "steps": [
+   {
+    "do": "corner-base",
+    "wall": "right",
+    "type": "base-corner-sink",
+    "width": "g + 450",
+    "blind": "g",
+    "doors": [
+     "450"
+    ]
+   },
+   {
+    "do": "base-run",
+    "wall": "right",
+    "start": "g + 450",
+    "length": "R - g - 450",
+    "appliances": [
+     {
+      "when": "fridge",
+      "items": [
+       "cooktop"
+      ]
+     },
+     {
+      "items": [
+       "sink"
+      ]
+     }
+    ],
+    "front": "0"
+   },
+   {
+    "do": "corner-base",
+    "wall": "left",
+    "type": "base",
+    "width": "g + 450",
+    "blind": "g",
+    "doors": [
+     "450"
+    ]
+   },
+   {
+    "do": "base-run",
+    "wall": "left",
+    "start": "g + 450",
+    "length": "Lf - g - 450",
+    "appliances": [
+     {
+      "items": []
+     }
+    ],
+    "front": "0"
+   },
+   {
+    "do": "base-run",
+    "wall": "back",
+    "start": "g",
+    "length": "W - 2 * g",
+    "appliances": [
+     {
+      "when": "fridge",
+      "items": [
+       "sink"
+      ]
+     },
+     {
+      "items": [
+       "cooktop"
+      ]
+     }
+    ],
+    "fridgeAtEnd": "fridge"
+   },
+   {
+    "do": "corner-shelf"
+   },
+   {
+    "do": "upper-run",
+    "wall": "back",
+    "start": "600",
+    "end": "W - (g + lr if fridge else 0)"
+   },
+   {
+    "do": "upper-run",
+    "wall": "right",
+    "start": "600",
+    "end": "R"
+   },
+   {
+    "do": "upper-run",
+    "wall": "left",
+    "start": "ceil(upperDepth / 10) * 10",
+    "end": "Lf"
+   }
+  ],
+  "room": "W",
+  "island": {
+   "start": "g + aisle",
+   "length": "min(islandLength if islandLength > 0 else 2400, W - 2 * (g + aisle))"
+  },
+  "peninsula": {
+   "at": "R",
+   "room": "W - 2 * g - 600"
+  }
+ }
+]

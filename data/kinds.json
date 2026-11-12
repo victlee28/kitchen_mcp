@@ -229,5 +229,31 @@
   "usedBy": [
    "module[].type"
   ]
+ },
+ "layout-template": {
+  "label": {
+   "vi": "Mẫu bố trí bếp",
+   "en": "Kitchen layout templates"
+  },
+  "writers": [
+   "workshop",
+   "user"
+  ],
+  "refs": [
+   [
+    "peninsulaUses",
+    "layout-template"
+   ]
+  ]
+ },
+ "layout-rules": {
+  "label": {
+   "vi": "Quy tắc xếp tủ",
+   "en": "Layout rules"
+  },
+  "writers": [
+   "workshop"
+  ],
+  "closed": true
  }
 }

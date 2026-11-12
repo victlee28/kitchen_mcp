@@ -1054,5 +1054,17 @@
  "catalog.type.col.d1": "đến",
  "catalog.type.col.y0": "Cao từ",
  "catalog.type.col.y1": "đến",
- "catalog.type.prompt": "Tên tiếng Anh cho ảnh AI"
+ "catalog.type.prompt": "Tên tiếng Anh cho ảnh AI",
+ "name.cabinet.island": "Tủ đảo",
+ "name.cabinet.peninsula": "Tủ bán đảo",
+ "term.island": "đảo bếp",
+ "term.peninsula": "bán đảo",
+ "note.island-built": "Đảo dài {length:g} mm, cách dãy tủ sau {aisle:g} mm.",
+ "note.island-no-room": "Không đủ chỗ cho đảo (cần lối đi {aisle:g} mm mỗi bên và dài ≥ 600 mm); chưa thêm.",
+ "note.peninsula-built": "Bán đảo dài {length:g} mm gắn vào cuối dãy tường phải.",
+ "note.peninsula-no-room": "Không đủ chỗ cho bán đảo; chưa thêm.",
+ "note.peninsula-needs-l": "Bán đảo cần dãy tường phải để gắn vào, nên đã dùng bếp chữ L.",
+ "error.layout-template-formula": "Mẫu bố trí {template}, {where}: công thức sai ({detail}) ở vị trí {at}",
+ "error.layout-template-step": "Mẫu bố trí {template}, {where}: bước không hợp lệ",
+ "error.unknown-layout-template": "Không có mẫu bố trí {template}"
 }

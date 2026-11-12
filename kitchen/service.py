@@ -13,7 +13,7 @@ from .intent import KitchenTemplate as KitchenTemplate
 from .spec import Common, KitchenSpec, LaidModule, Room, Wall, dump_spec, load_spec, to_data
 from .store import ConflictError, Store
 from . import legacy as legacy_schema
-from . import builtin, cabinet_types, catalog as cat, catalog_csv, catalog_files, i18n, lexicon, words
+from . import builtin, cabinet_types, catalog as cat, layout_solver, catalog_csv, catalog_files, i18n, lexicon, words
 from .config import Config
 from .errors import InvalidInput, KitchenError, NotFound
 ROOT = Path(__file__).resolve().parent.parent
@@ -231,6 +231,8 @@ class KitchenService:
             raise catalog_files.CatalogInvalid('; '.join(f"{p.kind} {p.id}: {p.path}: {p.message}" for p in problems[:10]))
         if kind == 'cabinet-type':
             cabinet_types.table(trial)            # every formula compiles, every "like" resolves (the error names the type and the place)
+        if kind in ('layout-template', 'layout-rules'):
+            layout_solver.templates(trial)
 
     PREVIEW_SIZES = {      # storey -> (y, height, depth) of the sample cabinets the type editor shows, at PREVIEW_WIDTHS
         'base': (0.0, 840.0, 560.0), 'upper': (1450.0, 700.0, 350.0), 'loft': (2150.0, 400.0, 350.0), 'tall': (0.0, 2150.0, 580.0),

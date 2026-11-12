@@ -24,12 +24,21 @@ from kitchen.spec import Handle, Module  # noqa: E402
 from kitchen.placement import Placement  # noqa: E402
 from kitchen.spec import load_spec, to_data  # noqa: E402
 from kitchen.catalog import expr  # noqa: E402
-from kitchen import cabinet_types  # noqa: E402
+from kitchen import cabinet_types, layout_solver  # noqa: E402
 from kitchen.errors import InvalidInput  # noqa: E402
 
 
 def _env(raw: dict) -> dict:
     return {k: v if isinstance(v, bool) else float(v) for k, v in raw.items()}
+
+
+def layout_solver_split(i):
+    return {"widths": layout_solver.split(i["length"], layout_solver.rules(), i.get("priority"))}
+
+
+def layout_solver_base_plan(i):
+    plan = layout_solver.base_plan(i["length"], i["appliances"], layout_solver.rules(), i.get("front", 450), i.get("towardEnd", False))
+    return {"plan": [[w, t] for w, t in plan]}
 
 
 def catalog_expr_run(i):
@@ -1326,6 +1335,8 @@ FUNCTIONS = {
     "numeric.round_int": numeric_round_int,
     "numeric.near": numeric_near,
     "catalog.expr.run": catalog_expr_run,
+    "layout_solver.split": layout_solver_split,
+    "layout_solver.base_plan": layout_solver_base_plan,
     "catalog.expr.compile": catalog_expr_compile,
     "palette.module_color": palette_module_color,
     "errors.kind_of": errors_kind_of,

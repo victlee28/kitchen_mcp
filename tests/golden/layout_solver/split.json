@@ -1,0 +1,95 @@
+{
+ "function": "layout_solver.split",
+ "cases": [
+  {
+   "name": "a 3 m wall",
+   "input": {
+    "length": 3000
+   },
+   "expected": {
+    "widths": [
+     900.0,
+     900.0,
+     900.0,
+     300.0
+    ]
+   }
+  },
+  {
+   "name": "the rest goes to the last cabinet",
+   "input": {
+    "length": 2350
+   },
+   "expected": {
+    "widths": [
+     900.0,
+     900.0,
+     550.0
+    ]
+   }
+  },
+  {
+   "name": "exactly one standard width",
+   "input": {
+    "length": 600
+   },
+   "expected": {
+    "widths": [
+     600.0
+    ]
+   }
+  },
+  {
+   "name": "shorter than the narrowest cabinet",
+   "input": {
+    "length": 250
+   },
+   "expected": {
+    "widths": [
+     250.0
+    ]
+   }
+  },
+  {
+   "name": "nothing",
+   "input": {
+    "length": 0
+   },
+   "expected": {
+    "widths": []
+   }
+  },
+  {
+   "name": "priority widths first",
+   "input": {
+    "length": 2400,
+    "priority": [
+     800,
+     800
+    ]
+   },
+   "expected": {
+    "widths": [
+     800.0,
+     800.0,
+     800.0
+    ]
+   }
+  },
+  {
+   "name": "a priority width that would leave a sliver is skipped",
+   "input": {
+    "length": 1000,
+    "priority": [
+     800
+    ]
+   },
+   "expected": {
+    "widths": [
+     600.0,
+     400.0
+    ]
+   }
+  }
+ ]
+}

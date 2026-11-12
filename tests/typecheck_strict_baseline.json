@@ -42,6 +42,7 @@
   "images/runtime.py": 0,
   "jsonview.py": 0,
   "layers.py": 0,
+  "layout_solver.py": 0,
   "lexicon.py": 0,
   "moldings.py": 0,
   "numeric.py": 0,

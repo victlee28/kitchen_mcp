@@ -1,0 +1,79 @@
+[
+ {
+  "id": "default",
+  "standardWidths": [
+   900,
+   800,
+   600,
+   450,
+   400,
+   300
+  ],
+  "minWidth": 300,
+  "smallestPiece": 150,
+  "applianceTypes": {
+   "sink": "base-sink",
+   "cooktop": "base-cooktop"
+  },
+  "applianceTiers": [
+   {
+    "appliance": 800,
+    "between": 600,
+    "end": 450
+   },
+   {
+    "appliance": 800,
+    "between": 450,
+    "end": 450,
+    "startMax": 450
+   },
+   {
+    "appliance": 600,
+    "between": 450,
+    "end": 400,
+    "startMax": 400
+   },
+   {
+    "appliance": 600,
+    "between": 300,
+    "end": 300,
+    "startMax": 300
+   },
+   {
+    "appliance": 600,
+    "between": 300,
+    "end": 0,
+    "startMax": 0
+   },
+   {
+    "appliance": 600,
+    "between": 0,
+    "end": 0,
+    "startMax": 0
+   }
+  ],
+  "fridge": {
+   "width": 700,
+   "depth": 640,
+   "niche": 1650,
+   "doors": [
+    350,
+    350
+   ],
+   "dimensions": "600 × 1600 × 620"
+  },
+  "cornerShelf": {
+   "back": 600,
+   "right": 600,
+   "shelfCount": 3
+  },
+  "doubleDoorFrom": 600,
+  "hoodHeight": 165,
+  "loftHeight": 330,
+  "aisle": 1100,
+  "drawers": [
+   180,
+   250
+  ]
+ }
+]

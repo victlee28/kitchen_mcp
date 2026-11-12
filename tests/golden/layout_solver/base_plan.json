@@ -1,0 +1,190 @@
+{
+ "function": "layout_solver.base_plan",
+ "cases": [
+  {
+   "name": "sink and cooktop on 3 m",
+   "input": {
+    "length": 3000,
+    "appliances": [
+     "sink",
+     "cooktop"
+    ]
+   },
+   "expected": {
+    "plan": [
+     [
+      450.0,
+      "base"
+     ],
+     [
+      800.0,
+      "base-sink"
+     ],
+     [
+      450.0,
+      "base"
+     ],
+     [
+      800.0,
+      "base-cooktop"
+     ],
+     [
+      500.0,
+      "base"
+     ]
+    ]
+   }
+  },
+  {
+   "name": "the sink at the end, next to a fridge",
+   "input": {
+    "length": 2300,
+    "appliances": [
+     "cooktop",
+     "sink"
+    ],
+    "towardEnd": true
+   },
+   "expected": {
+    "plan": [
+     [
+      500.0,
+      "base"
+     ],
+     [
+      600.0,
+      "base-cooktop"
+     ],
+     [
+      300.0,
+      "base"
+     ],
+     [
+      600.0,
+      "base-sink"
+     ],
+     [
+      300.0,
+      "base"
+     ]
+    ]
+   }
+  },
+  {
+   "name": "a short run takes a fallback step",
+   "input": {
+    "length": 1900,
+    "appliances": [
+     "sink",
+     "cooktop"
+    ]
+   },
+   "expected": {
+    "plan": [
+     [
+      600.0,
+      "base-sink"
+     ],
+     [
+      300.0,
+      "base"
+     ],
+     [
+      600.0,
+      "base-cooktop"
+     ],
+     [
+      400.0,
+      "base"
+     ]
+    ]
+   }
+  },
+  {
+   "name": "no worktop in front",
+   "input": {
+    "length": 2000,
+    "appliances": [
+     "sink"
+    ],
+    "front": 0
+   },
+   "expected": {
+    "plan": [
+     [
+      800.0,
+      "base-sink"
+     ],
+     [
+      900.0,
+      "base"
+     ],
+     [
+      300.0,
+      "base"
+     ]
+    ]
+   }
+  },
+  {
+   "name": "too short for the appliances: plain cabinets",
+   "input": {
+    "length": 1000,
+    "appliances": [
+     "sink",
+     "cooktop"
+    ]
+   },
+   "expected": {
+    "plan": [
+     [
+      600.0,
+      "base"
+     ],
+     [
+      400.0,
+      "base"
+     ]
+    ]
+   }
+  },
+  {
+   "name": "too short for any cabinet",
+   "input": {
+    "length": 200,
+    "appliances": []
+   },
+   "expected": {
+    "plan": [
+     [
+      200.0,
+      "base"
+     ]
+    ]
+   }
+  },
+  {
+   "name": "no appliance",
+   "input": {
+    "length": 1800,
+    "appliances": []
+   },
+   "expected": {
+    "plan": [
+     [
+      450.0,
+      "base"
+     ],
+     [
+      900.0,
+      "base"
+     ],
+     [
+      450.0,
+      "base"
+     ]
+    ]
+   }
+  }
+ ]
+}

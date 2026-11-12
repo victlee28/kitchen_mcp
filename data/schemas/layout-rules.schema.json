@@ -1,0 +1,42 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "layout-rules",
+ "type": "object",
+ "additionalProperties": true,
+ "properties": {
+  "standardWidths": {
+   "type": "array",
+   "items": {
+    "type": "number"
+   },
+   "x-label": {
+    "vi": "Bề rộng tủ lấp chỗ (ưu tiên trước)",
+    "en": "Filler widths (first preferred)"
+   }
+  },
+  "minWidth": {
+   "type": "number",
+   "x-label": {
+    "vi": "Tủ hẹp nhất",
+    "en": "Narrowest cabinet"
+   }
+  },
+  "applianceTiers": {
+   "type": "array",
+   "items": {
+    "type": "object"
+   },
+   "x-label": {
+    "vi": "Các bậc lùi khi dãy chật (rộng tủ thiết bị, khoảng giữa, cuối, đầu tối đa)",
+    "en": "Fallback steps when a run is short"
+   }
+  },
+  "aisle": {
+   "type": "number",
+   "x-label": {
+    "vi": "Lối đi quanh đảo",
+    "en": "Aisle round an island"
+   }
+  }
+ }
+}

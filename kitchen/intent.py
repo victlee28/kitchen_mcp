@@ -10,11 +10,11 @@ import json
 import math
 import re
 import unicodedata
-from typing import Literal
+from typing import Any, Literal, cast
 
 from pydantic import BaseModel, Field, ValidationError
 
-from . import builtin, defaults, lexicon, regions
+from . import builtin, defaults, layout_solver, lexicon, regions
 from .catalog import Catalog
 from .spec import Appliance, Common, FrontSection, Handle, KitchenSpec, Module, Room, Wall
 from .words import say
@@ -23,9 +23,9 @@ from .words import said
 WallSide = Literal["back", "right", "left"]
 
 
-def _DRAWERS() -> list[FrontSection]:
-    """The two drawers of a hob or drawer cabinet (180 + 250 mm, from the top)."""
-    return [FrontSection(type="drawer", height=180), FrontSection(type="drawer", height=250)]
+def _drawers(rules: layout_solver.Rules) -> list[FrontSection]:
+    """The drawers of a hob or drawer cabinet from the top (``layout-rules.drawers``: 180 + 250 mm)."""
+    return [FrontSection(type="drawer", height=h) for h in rules.drawers]
 
 
 _NUM = r"(\d+(?:[.,]\d+)?)\s*(mm|cm|mét|met|m)?(?![a-zà-ỹ])"
@@ -156,58 +156,6 @@ def merge_lexicon(template: KitchenTemplate, prompt: str, catalog: Catalog = bui
     return KitchenTemplate.model_validate({**cur, **upd}), lexicon.notes(lex.items)
 
 
-def _split(length: float, priority: list[float]) -> list[float]:
-    """Chia một đoạn thành các bề rộng module chuẩn (bội 10 mm), phần dư dồn vào module cuối."""
-    out, con = [], length
-    standard_widths = [900, 800, 600, 450, 400, 300]
-    for w in priority:
-        if con - w >= 300:
-            out.append(w); con -= w
-    while con >= 300:
-        w = next((x for x in standard_widths if con - x >= 300 or con - x == 0), 300)
-        if con - w < 300 and con - w != 0:
-            w = con
-        out.append(w); con -= w
-    if con > 0.5:
-        if out:
-            out[-1] += con
-        else:
-            out.append(con)
-    return [round(w) for w in out]
-
-
-# Quy ước bố trí (người dùng, 10/11/2026): có tủ lạnh thì chậu rửa đứng gần tủ lạnh hơn bếp nấu; hút mùi luôn ở tủ trên ngay trên bếp nấu.
-SINK_NEAR_FRIDGE = ["cooktop", "sink"]     # thứ tự từ đầu dãy; tủ lạnh ở cuối dãy
-
-
-def _layout(length: float, appliance: list[str], front: float = 450, toward_end: bool = False) -> list[tuple[float, str]]:
-    """Trả [(rộng, loại)] cho một dãy. Thiết bị chiếm module 800 (co về 600 nếu chật).
-    ``toward_end``: chỗ thừa dồn về đầu dãy thay vì cuối, để thiết bị cuối danh sách đứng sát cuối dãy (vd chậu sát tủ lạnh)."""
-    appliance_type = {"sink": "base-sink", "cooktop": "base-cooktop"}
-    for w_tb, gap_mid, gap_end, gap_start in ((800, 600, 450, front), (800, 450, 450, min(front, 450)), (600, 450, 400, min(front, 400)),
-                                              (600, 300, 300, min(front, 300)), (600, 300, 0, 0), (600, 0, 0, 0)):
-        need = gap_start + len(appliance) * w_tb + gap_mid * max(0, len(appliance) - 1) + gap_end
-        if need <= length:
-            break
-    else:
-        return [(w, "base") for w in _split(length, [])] if length >= 300 else []
-    extra = length - need
-    gaps = ([gap_start + extra] if toward_end else [gap_start]) + [gap_mid] * max(0, len(appliance) - 1) + [gap_end + (0 if toward_end else extra)]
-    out: list[tuple[float, str]] = []
-    for i, g in enumerate(gaps):
-        if g >= 300:
-            out += [(w, "base") for w in _split(g, [])]
-        elif g > 0:  # khoảng < 300: nhập vào module thiết bị liền kề
-            if out:
-                out[-1] = (out[-1][0] + g, out[-1][1])
-            else:
-                gaps[i + 1 if i + 1 < len(gaps) else i] += 0
-                out.append((g, "base")) if g >= 150 else None
-        if i < len(appliance):
-            out.append((w_tb, appliance_type[appliance[i]]))
-    return [(round(w), l) for w, l in out]
-
-
 def _middle(openings, hi, priority, step=10):
     """Giá trị ưu tiên kẹp trong [lo, hi], làm tròn theo bước."""
     v = priority
@@ -267,6 +215,7 @@ def from_template(color: KitchenTemplate, name: str = "", rows: list[dict] | Non
     if "cabinetTop" not in color.model_fields_set and "cabinetTop" in new:
         color = color.model_copy(update={"cabinetTop": new["cabinetTop"]})
     from . import moldings as _mol
+    rules = layout_solver.rules(catalog)
     kt, check_source = dimensions_by_region(rows, color.country, color.region, catalog)
     co_dien = color.style in ("Classic", "Neoclassical", "Transitional")
     crown_molding = color.crownMolding if color.crownMolding is not None else co_dien
@@ -280,19 +229,18 @@ def from_template(color: KitchenTemplate, name: str = "", rows: list[dict] | Non
     material = {"wallTile": "Đá ốp tường đồng bộ mặt bàn", **color.material}
     handle = Handle.model_validate({k: v for k, v in (("variant", color.handleVariant), ("material", color.handleMaterial)) if v})
     c = Common(countertop=countertop, baseTop=countertop - new.get("countertopThickness", 60), plinthHeight=kt["plinthHeight"], baseDepth=color.baseDepth or kt["baseDepth"],
-              upperDepth=kt["upperDepth"], cabinetTop=top, ceiling=ceiling, upperTierSplit=top if not color.loft else top - 330,
+              upperDepth=kt["upperDepth"], cabinetTop=top, ceiling=ceiling, upperTierSplit=top if not color.loft else top - rules.loft_height,
               upperBottom=upper_bottom if top - upper_bottom >= 450 else top - 600, material=material, backsplashHeight=color.backsplashHeight,
               backsplashHeightMm=color.backsplashHeightMm, wallTilePattern=color.wallTilePattern, handle=handle)
     for key in ("countertopThickness", "countertopOverhang", "doorThickness", "doorGap", "backThickness"):   # the workshop's sizes (defaults)
         if key in new:
             setattr(c, key, new[key])
-    y_hood = c.countertop + kt["hoodGap"] + 165  # đáy tủ hút mùi = mặt bàn + khoảng tối thiểu + chiều cao máy
+    y_hood = c.countertop + kt["hoodGap"] + rules.hood_height  # đáy tủ hút mùi = mặt bàn + khoảng tối thiểu + chiều cao máy
     if color.loft:
         c.cabinetTop = ceiling - max(30, h_loft)
-        c.upperTierSplit = c.cabinetTop - 330
+        c.upperTierSplit = c.cabinetTop - rules.loft_height
     mods: list[Module] = []
     tb: list[Appliance] = []
-    upper_height = c.upperTierSplit - c.upperBottom
     upper_depth = c.upperDepth
     n = {"TD": 0, "TT": 0, "TC": 0, "TN": 0}
 
@@ -300,23 +248,25 @@ def from_template(color: KitchenTemplate, name: str = "", rows: list[dict] | Non
         n[p] += 1
         return f"{p}{n[p]}"
 
-    def thickness(wall: WallSide, start: float, length: float, appliance: list[str], front: float = 450):
-        """Bố trí một dãy tủ dưới: [khoảng trước] + thiết bị xen khoảng 600 + [khoảng sau 450].
+    def thickness(wall: WallSide, start: float, length: float, appliance: list[str], front: float = 450, fridge_at_end: bool = False):
+        """Bố trí một dãy tủ dưới: [khoảng trước] + thiết bị xen khoảng 600 + [khoảng sau 450] (``layout_solver.base_plan``).
         Khoảng trống là mặt bàn thao tác (NKBA-10/14/15); thiếu chỗ thì co về 300 rồi bỏ."""
-        nonlocal tb
         s = start
-        if color.fridge and wall == "back":
-            mods.append(Module(id=id("TC"), type="tall-fridge", name=say("name.cabinet.tall-fridge"), wall=wall, fromCorner=start + length - 700,
-                               width=700, y=0, height=c.cabinetTop, depth=640, doors=[350, 350], niche=1650))
-            tb.append(Appliance(id=f"TB{len(tb)+1}", type="fridge", name=say("name.appliance.fridge"), dimensions="600 × 1600 × 620", module=mods[-1].id))
-            length -= 700
-        near_fridge = color.fridge and wall == "back"
-        plan = _layout(length, appliance, front, toward_end=near_fridge)      # với tủ lạnh: chậu (cuối danh sách) sát tủ lạnh
+        if fridge_at_end:
+            fr = rules.fridge
+            width = float(fr.get("width", 700))
+            mods.append(Module(id=id("TC"), type="tall-fridge", name=say("name.cabinet.tall-fridge"), wall=wall, fromCorner=start + length - width,
+                               width=width, y=0, height=c.cabinetTop, depth=fr.get("depth", 640), doors=list(fr.get("doors", [350, 350])),
+                               niche=fr.get("niche", 1650)))
+            tb.append(Appliance(id=f"TB{len(tb)+1}", type="fridge", name=say("name.appliance.fridge"), dimensions=str(fr.get("dimensions", "")),
+                                module=mods[-1].id))
+            length -= width
+        plan = layout_solver.base_plan(length, appliance, rules, front, toward_end=fridge_at_end)   # với tủ lạnh: chậu (cuối danh sách) sát tủ lạnh
         for w, type in plan:
-            doors = [w / 2, w / 2] if w >= 600 else [w]
+            doors = [w / 2, w / 2] if w >= rules.double_door_from else [w]
             m = Module(id=id("TD"), type=type, name=say(f"name.cabinet.{type if type in ('base-sink', 'base-cooktop') else 'base'}"),
                        wall=wall, fromCorner=s, width=w, y=0, height=c.baseTop, depth=c.baseDepth, doors=doors,
-                       frontSections=_DRAWERS() if type == "base-cooktop" else [])
+                       frontSections=_drawers(rules) if type == "base-cooktop" else [])
             mods.append(m)
             if type == "base-sink":
                 tb.append(Appliance(id=f"TB{len(tb)+1}", type="sink", name=say("name.appliance.sink"), dimensions=f"{min(780, w - 40):g} × 430", wall=wall, center=s + w / 2))
@@ -333,7 +283,7 @@ def from_template(color: KitchenTemplate, name: str = "", rows: list[dict] | Non
         segs = [(a, b) for a, b in zip(cuts, cuts[1:]) if b - a >= 1]
         merged: list[list[float]] = []
         for a, b in segs:  # gộp ô quá hẹp vào ô bên cạnh
-            if merged and (b - a < 300 or merged[-1][1] - merged[-1][0] < 300):
+            if merged and (b - a < rules.min_width or merged[-1][1] - merged[-1][0] < rules.min_width):
                 merged[-1][1] = b
             else:
                 merged.append([a, b])
@@ -341,100 +291,91 @@ def from_template(color: KitchenTemplate, name: str = "", rows: list[dict] | Non
             w = b - a
             type = "upper-hood" if any(a <= t < b for t in cooktop_centers) else "upper"
             y = max(c.upperBottom + 150, y_hood) if type == "upper-hood" else c.upperBottom
+            two = w >= rules.double_door_from
             mods.append(Module(id=id("TT"), type=type, name=say("name.cabinet.upper-hood" if type == "upper-hood" else "name.cabinet.upper"), wall=wall,
-                               fromCorner=a, width=w, y=y, height=c.upperTierSplit - y, depth=upper_depth, doors=[w / 2, w / 2] if w >= 600 else [w]))
+                               fromCorner=a, width=w, y=y, height=c.upperTierSplit - y, depth=upper_depth, doors=[w / 2, w / 2] if two else [w]))
             if type == "upper-hood":
-                tb.append(Appliance(id=f"TB{len(tb)+1}", type="hood", name=say("name.appliance.hood"), dimensions=f"{min(w - 40, 730):g} × 165", module=mods[-1].id))
+                tb.append(Appliance(id=f"TB{len(tb)+1}", type="hood", name=say("name.appliance.hood"),
+                                    dimensions=f"{min(w - 40, 730):g} × {rules.hood_height:g}", module=mods[-1].id))
             if color.loft:
                 # có phào nóc: cánh nóc mở ngang thay vì lật lên để không chạm phào (MOLDING-CANH-LAT-001)
-                hinge: list[Literal["left", "right", "upper", "base"]] = ["left", "right"] if (h_loft and w >= 600) else ["left"] if h_loft else []
-                loft_door = [w / 2, w / 2] if (h_loft and w >= 600) else [w]
+                hinge: list[Literal["left", "right", "upper", "base"]] = ["left", "right"] if (h_loft and two) else ["left"] if h_loft else []
+                loft_door = [w / 2, w / 2] if (h_loft and two) else [w]
                 mods.append(Module(id=id("TN"), type="upper-loft", name=say("name.cabinet.top"), wall=wall, fromCorner=a, width=w, y=c.upperTierSplit,
                                    height=c.cabinetTop - c.upperTierSplit, depth=upper_depth, doors=loft_door, hingeSides=hinge))
 
+    def corner_base(wall: WallSide, type: str, width: float, blind: float, doors: list[float]):
+        mods.append(Module(id=id("TD"), type=type, name=say("name.cabinet.blind-corner"), wall=wall, fromCorner=0, width=width, y=0,
+                           height=c.baseTop, depth=c.baseDepth, doors=doors, blindCorner=blind))
+
+    def corner_shelf():
+        cs = rules.corner_shelf
+        mods.append(Module(id="KG1", type="corner-shelf", name=say("name.cabinet.corner-shelf"), wall="corner", backLength=cs.get("back", 600),
+                           rightLength=cs.get("right", 600), y=c.upperBottom, height=c.upperTierSplit - c.upperBottom, depth=upper_depth,
+                           shelfCount=int(cs.get("shelfCount", 3))))
+
+    def step(do: str, v: dict[str, Any]) -> None:
+        wall = cast(WallSide, v.get("wall", "back"))
+        if do == "base-run":
+            thickness(wall, v["start"], v["length"], v["appliances"], v["front"], v["fridgeAtEnd"])
+        elif do == "corner-base":
+            corner_base(wall, v["type"], v["width"], v["blind"], v["doors"])
+        elif do == "upper-run":
+            upper(wall, v["start"], v["end"])
+        else:
+            corner_shelf()
+
     notes_built: list[dict] = []
-    if color.peninsula and color.geometry_edit == "I":  # bán đảo cần một dãy vuông góc để gắn vào
-        color = color.model_copy(update={"geometry_edit": "L"})
-        notes_built.append({"term": "bán đảo", "canonical": "peninsula-layout", "scope": ["whole"], "target": "geometry_edit", "status": "ambiguous",
-                            "message": "Bán đảo cần dãy tường phải để gắn vào, nên đã dùng bếp chữ L."})
-    lr = 700 if color.fridge else 0
-    room = None
-    if color.geometry_edit == "I":
-        thickness("back", 0, color.backWallLength, SINK_NEAR_FRIDGE if color.fridge else ["sink", "cooktop"])
-        upper("back", 0, color.backWallLength - lr)
-    elif color.geometry_edit == "U":
-        g = c.baseDepth
-        W = max(color.backWallLength, 2 * g + 900)  # bề rộng trong lòng chữ U; dãy tường sau còn tối thiểu 900 giữa hai tủ góc
-        R = color.rightWallLength or W
-        Lf = color.leftWallLength or R
-        mods.append(Module(id=id("TD"), type="base-corner-sink", name=say("name.cabinet.blind-corner"), wall="right", fromCorner=0, width=g + 450, y=0,
-                           height=c.baseTop, depth=c.baseDepth, doors=[450], blindCorner=g))
-        thickness("right", g + 450, R - g - 450, ["cooktop"] if color.fridge else ["sink"], front=0)   # tủ lạnh ở tường sau: chậu sang đó
-        mods.append(Module(id=id("TD"), type="base", name=say("name.cabinet.blind-corner"), wall="left", fromCorner=0, width=g + 450, y=0,
-                           height=c.baseTop, depth=c.baseDepth, doors=[450], blindCorner=g))
-        thickness("left", g + 450, Lf - g - 450, [], front=0)
-        thickness("back", g, W - 2 * g, ["sink"] if color.fridge else ["cooktop"])
-        mods.append(Module(id="KG1", type="corner-shelf", name=say("name.cabinet.corner-shelf"), wall="corner", backLength=600, rightLength=600, y=c.upperBottom,
-                           height=c.upperTierSplit - c.upperBottom, depth=upper_depth, shelfCount=3))
-        upper("back", 600, W - (g + lr if color.fridge else 0))
-        upper("right", 600, R)
-        upper("left", math.ceil(upper_depth / 10) * 10, Lf)  # bắt đầu sau bề dày tủ trên tường sau để hai dãy không chồng nhau
-        room = Room(wall=[Wall(id="back", length=W)])
-    else:
-        L2 = color.rightWallLength or color.backWallLength
-        g = c.baseDepth
-        # tường phải: tủ góc khuất đầu dãy + chậu; tường sau: bếp (+ tủ lạnh cuối dãy)
-        mods.append(Module(id=id("TD"), type="base-corner-sink", name=say("name.cabinet.blind-corner"), wall="right", fromCorner=0, width=g + 450, y=0,
-                           height=c.baseTop, depth=c.baseDepth, doors=[450], blindCorner=g))
-        thickness("right", g + 450, L2 - g - 450, ["cooktop"] if color.fridge else ["sink"], front=0)  # tủ góc phía trước đã là mặt bàn thao tác
-        thickness("back", g, color.backWallLength - g, ["sink"] if color.fridge else ["cooktop"])      # tủ lạnh ở cuối tường sau: chậu sát nó
-        mods.append(Module(id="KG1", type="corner-shelf", name=say("name.cabinet.corner-shelf"), wall="corner", backLength=600, rightLength=600, y=c.upperBottom,
-                           height=c.upperTierSplit - c.upperBottom, depth=upper_depth, shelfCount=3))
-        upper("back", 600, color.backWallLength - lr)
-        upper("right", 600, L2)
-    Wback = max(color.backWallLength, 2 * c.baseDepth + 900) if color.geometry_edit == "U" else color.backWallLength
-    g, aisle = c.baseDepth, 1100  # lối đi giữa đảo và dãy tủ (NKBA 1067–1220)
+    layout = layout_solver.template(color.geometry_edit, catalog)
+    if color.peninsula and layout.peninsula is None and layout.peninsula_uses:  # bán đảo cần một dãy vuông góc để gắn vào
+        color = color.model_copy(update={"geometry_edit": layout.peninsula_uses})
+        layout = layout_solver.template(layout.peninsula_uses, catalog)
+        notes_built.append({"term": say("term.peninsula"), "canonical": "peninsula-layout", "scope": ["whole"], "target": "geometry_edit", "status": "ambiguous",
+                            "message": say("note.peninsula-needs-l", layout=layout.id)})
+    fridge_width = float(rules.fridge.get("width", 700))
+    g, aisle = c.baseDepth, rules.aisle  # lối đi giữa đảo và dãy tủ (NKBA 1067–1220)
+    inputs: dict[str, Any] = {"back": color.backWallLength, "right": color.rightWallLength or 0.0, "left": color.leftWallLength or 0.0, "g": g,
+                              "upperDepth": upper_depth, "fridge": color.fridge, "lr": fridge_width if color.fridge else 0.0,
+                              "islandLength": color.islandLength or 0.0, "aisle": aisle}
+    env = layout_solver.plan(layout, inputs, rules, step)
+    room = Room(wall=[Wall(id="back", length=float(layout_solver.expr.evaluate(layout.room, env)))]) if layout.room is not None else None
+    Wback = float(env.get("W", color.backWallLength))
 
     def free_run(label: str, z: float, start: float, length: float, blind: float = 0) -> bool:
         """Dãy đặt rời (đảo / bán đảo) song song tường sau, mặt cánh hướng về tường sau."""
         s = start
         if blind:  # đầu sát tường phải: phần góc khuất không cánh để không đụng tủ bên cạnh
             mods.append(Module(id=id("TD"), type="base-drawers", name=label, wall="island", offset=z, fromCorner=s, width=blind + 450, y=0,
-                               height=c.baseTop, depth=g, blindCorner=blind, frontSections=_DRAWERS()))
+                               height=c.baseTop, depth=g, blindCorner=blind, frontSections=_drawers(rules)))
             s += blind + 450
             length -= blind + 450
-        for w in _split(length, []) if length >= 300 else []:
+        for w in layout_solver.split(length, rules) if length >= rules.min_width else []:
             mods.append(Module(id=id("TD"), type="base-drawers", name=label, wall="island", offset=z, fromCorner=s, width=w, y=0,
-                               height=c.baseTop, depth=g, frontSections=_DRAWERS()))
+                               height=c.baseTop, depth=g, frontSections=_drawers(rules)))
             s += w
-        return length >= 300
+        return length >= rules.min_width
 
-    if color.island:
-        if color.geometry_edit == "I":
-            ln = color.islandLength or min(2400, max(900, Wback - 600))
-            start = max(0, (Wback - ln) / 2)
-        elif color.geometry_edit == "L":
-            start = g + aisle
-            ln = min(color.islandLength or 2400, Wback - start)
+    if color.island and layout.island is not None:
+        start_f, length_f = layout.island
+        ln = float(layout_solver.expr.evaluate(length_f, env))
+        start = float(layout_solver.expr.evaluate(start_f, {**env, "n": ln}))
+        if ln >= 600 and free_run(say("name.cabinet.island"), g + aisle, start, ln):
+            notes_built.append({"term": say("term.island"), "canonical": "island", "scope": ["whole"], "target": "module.wall=island", "status": "built",
+                                "message": say("note.island-built", length=ln, aisle=aisle)})
         else:
-            start = g + aisle
-            ln = min(color.islandLength or 2400, Wback - 2 * start)
-        if ln >= 600 and free_run("Tủ đảo", g + aisle, start, ln):
-            notes_built.append({"term": "đảo bếp", "canonical": "island", "scope": ["whole"], "target": "module.wall=island", "status": "built",
-                                "message": f"Đảo dài {ln:g} mm, cách dãy tủ sau {aisle} mm."})
-        else:
-            notes_built.append({"term": "đảo bếp", "canonical": "island", "scope": ["whole"], "target": "module.wall=island", "status": "ambiguous",
-                                "message": f"Không đủ chỗ cho đảo (cần lối đi {aisle} mm mỗi bên và dài ≥ 600 mm); chưa thêm."})
-    if color.peninsula:
-        Rlen = color.rightWallLength or Wback
-        room_len = Wback - (2 * g if color.geometry_edit == "U" else g) - 600
+            notes_built.append({"term": say("term.island"), "canonical": "island", "scope": ["whole"], "target": "module.wall=island", "status": "ambiguous",
+                                "message": say("note.island-no-room", aisle=aisle)})
+    if color.peninsula and layout.peninsula is not None:
+        at_f, room_f = layout.peninsula
+        Rlen = float(layout_solver.expr.evaluate(at_f, env))
+        room_len = float(layout_solver.expr.evaluate(room_f, env))
         ln = min(color.islandLength or 1800, room_len)
-        if ln >= g + 750 and free_run("Tủ bán đảo", Rlen, 0, ln, blind=g):
-            notes_built.append({"term": "bán đảo", "canonical": "peninsula", "scope": ["whole"], "target": "module.wall=island", "status": "built",
-                                "message": f"Bán đảo dài {ln:g} mm gắn vào cuối dãy tường phải."})
+        if ln >= g + 750 and free_run(say("name.cabinet.peninsula"), Rlen, 0, ln, blind=g):
+            notes_built.append({"term": say("term.peninsula"), "canonical": "peninsula", "scope": ["whole"], "target": "module.wall=island", "status": "built",
+                                "message": say("note.peninsula-built", length=ln)})
         else:
-            notes_built.append({"term": "bán đảo", "canonical": "peninsula", "scope": ["whole"], "target": "module.wall=island", "status": "ambiguous",
-                                "message": "Không đủ chỗ cho bán đảo; chưa thêm."})
+            notes_built.append({"term": say("term.peninsula"), "canonical": "peninsula", "scope": ["whole"], "target": "module.wall=island", "status": "ambiguous",
+                                "message": say("note.peninsula-no-room")})
     if color.openShelf:
         sink = next((t for t in tb if t.type == "sink"), None)
         ups = [m for m in mods if m.type == "upper"]

@@ -1,0 +1,206 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "layout-template",
+ "type": "object",
+ "required": [
+  "label",
+  "steps"
+ ],
+ "additionalProperties": false,
+ "$defs": {
+  "step": {
+   "type": "object",
+   "required": [
+    "do"
+   ],
+   "additionalProperties": false,
+   "properties": {
+    "do": {
+     "type": "string",
+     "enum": [
+      "base-run",
+      "corner-base",
+      "corner-shelf",
+      "upper-run"
+     ]
+    },
+    "wall": {
+     "type": "string",
+     "enum": [
+      "back",
+      "right",
+      "left"
+     ]
+    },
+    "start": {
+     "type": "string",
+     "minLength": 1
+    },
+    "length": {
+     "type": "string",
+     "minLength": 1
+    },
+    "end": {
+     "type": "string",
+     "minLength": 1
+    },
+    "front": {
+     "type": "string",
+     "minLength": 1
+    },
+    "fridgeAtEnd": {
+     "type": "string",
+     "minLength": 1
+    },
+    "type": {
+     "type": "string"
+    },
+    "width": {
+     "type": "string",
+     "minLength": 1
+    },
+    "blind": {
+     "type": "string",
+     "minLength": 1
+    },
+    "doors": {
+     "type": "array",
+     "items": {
+      "type": "string",
+      "minLength": 1
+     }
+    },
+    "appliances": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+       "items"
+      ],
+      "properties": {
+       "when": {
+        "type": "string",
+        "minLength": 1
+       },
+       "items": {
+        "type": "array",
+        "items": {
+         "type": "string",
+         "enum": [
+          "sink",
+          "cooktop"
+         ]
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ },
+ "properties": {
+  "label": {
+   "type": "object",
+   "properties": {
+    "vi": {
+     "type": "string"
+    },
+    "en": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "vi"
+   ],
+   "additionalProperties": false,
+   "x-label": {
+    "vi": "Tên",
+    "en": "Name"
+   }
+  },
+  "vars": {
+   "type": "object",
+   "additionalProperties": {
+    "type": "string",
+    "minLength": 1
+   },
+   "x-label": {
+    "vi": "Biến (công thức)",
+    "en": "Values (formulas)"
+   }
+  },
+  "steps": {
+   "type": "array",
+   "items": {
+    "$ref": "#/$defs/step"
+   },
+   "x-label": {
+    "vi": "Các bước xếp tủ",
+    "en": "Layout steps"
+   }
+  },
+  "room": {
+   "type": "string",
+   "minLength": 1,
+   "x-label": {
+    "vi": "Chiều dài tường sau của phòng",
+    "en": "Back wall length of the room"
+   }
+  },
+  "island": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "start",
+    "length"
+   ],
+   "properties": {
+    "start": {
+     "type": "string",
+     "minLength": 1
+    },
+    "length": {
+     "type": "string",
+     "minLength": 1
+    },
+    "name": {
+     "type": "string"
+    }
+   },
+   "x-label": {
+    "vi": "Đảo",
+    "en": "Island"
+   }
+  },
+  "peninsula": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "at",
+    "room"
+   ],
+   "properties": {
+    "at": {
+     "type": "string",
+     "minLength": 1
+    },
+    "room": {
+     "type": "string",
+     "minLength": 1
+    }
+   },
+   "x-label": {
+    "vi": "Bán đảo",
+    "en": "Peninsula"
+   }
+  },
+  "peninsulaUses": {
+   "type": "string",
+   "x-label": {
+    "vi": "Có bán đảo thì dùng mẫu",
+    "en": "With a peninsula use the template"
+   }
+  }
+ }
+}

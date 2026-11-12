@@ -1054,5 +1054,17 @@
  "catalog.type.col.d1": "to",
  "catalog.type.col.y0": "Height from",
  "catalog.type.col.y1": "to",
- "catalog.type.prompt": "English name for the AI image"
+ "catalog.type.prompt": "English name for the AI image",
+ "name.cabinet.island": "Island cabinet",
+ "name.cabinet.peninsula": "Peninsula cabinet",
+ "term.island": "kitchen island",
+ "term.peninsula": "peninsula",
+ "note.island-built": "Island {length:g} mm long, {aisle:g} mm from the back run.",
+ "note.island-no-room": "No room for an island (it needs a {aisle:g} mm aisle each side and 600 mm of length); not added.",
+ "note.peninsula-built": "Peninsula {length:g} mm long, joined to the end of the right-wall run.",
+ "note.peninsula-no-room": "No room for a peninsula; not added.",
+ "note.peninsula-needs-l": "A peninsula needs a right-wall run to join, so an L-shaped kitchen is used.",
+ "error.layout-template-formula": "Layout template {template}, {where}: bad formula ({detail}) at position {at}",
+ "error.layout-template-step": "Layout template {template}, {where}: not a valid step",
+ "error.unknown-layout-template": "There is no layout template {template}"
 }
