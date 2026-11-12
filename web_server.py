@@ -24,6 +24,7 @@ API:
   GET  /api/catalog-csv/<kind>             {csv}; POST {csv}: ghi từng dòng vào lớp của vai trò
   GET  /api/regions                       khu vực, quốc gia, số mục
   GET  /api/designs/<id>/history         lịch sử
+  GET  /api/designs/<id>/catalog-updates[?rev=N]  mục danh mục đã đổi kể từ khi bản lưu được ghi + thao tác cập nhật ({"op": "catalog-refresh"})
   POST /api/designs/<id>/ops             {"baseRev": N, "op": {...}, "expect"?: opHash của /propose: chỉ lưu đúng thao tác đã xem trước}
   POST /api/designs/<id>/interpret       {"text": "xóa TD3", "baseRev"?: N, "scope"?: ["TD1"], "useLlm"?: false} câu lệnh tự do -> thao tác + bản xem trước (không lưu) hoặc câu hỏi làm rõ
   POST /api/designs/<id>/template        {"template": {"kind": "run-i", "structureId": "STRUCT-..", "point": {"x": mm, "z": mm}, "prompt"?: "tạo tủ bếp có tủ lạnh, mặt đá đen…"}, "baseRev"?: N} tủ chữ I dựa vào cạnh gần điểm bấm nhất của vật thể, cánh quay ra ngoài; xem trước, không lưu
@@ -267,7 +268,7 @@ class Handler(BaseHTTPRequestHandler):
                 b = self._body()
                 return self._json(201, self._job_out(s.images.regenerate(jid, b.get("seed"))))
             raise ApiError(405, "Phương thức không hỗ trợ")
-        m = re.fullmatch(r"/api/designs/([a-z0-9-]+)(?:/(scene|threejs|validate|history|ops|revert|render|layers|mask|pick|image-jobs|beauty|base-image|ai-export|floorplan-bind|view-status|regenerate-stale|propose|interpret|recognize|recognize-job|template))?", p)
+        m = re.fullmatch(r"/api/designs/([a-z0-9-]+)(?:/(scene|threejs|validate|history|catalog-updates|ops|revert|render|layers|mask|pick|image-jobs|beauty|base-image|ai-export|floorplan-bind|view-status|regenerate-stale|propose|interpret|recognize|recognize-job|template))?", p)
         if not m:
             raise ApiError(404, "Không có endpoint")
         did, sub = m.groups()
@@ -282,6 +283,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(200, s.validate(did, rev, q.get("country"), q.get("region")))
             if sub == "history":
                 return self._json(200, s.history(did))
+            if sub == "catalog-updates":
+                return self._json(200, s.catalog_updates(did, rev))
             if sub == "ai-export":  # tải thẳng JSON cuối cùng (không ghi ảnh)
                 emb = q.get("embedImages") == "1" and q.get("format") != "full"  # day-du = ai-request.json đầy đủ (cảnh three.js…)
                 res = s.ai_export(did, rev, [v for v in (q.get("views") or "").split(",") if v] or None, q.get("country"), False, emb,

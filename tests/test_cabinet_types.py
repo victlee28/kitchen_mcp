@@ -129,3 +129,29 @@ class TestWorkshopTypes(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestCatalogUpdates(unittest.TestCase):
+    """Stage 7: a design says what changed in the catalog since it was saved, and takes the new items only through a previewed change."""
+
+    def test_updates_and_refresh(self):
+        tmp = Path(tempfile.mkdtemp())
+        try:
+            from kitchen.service import KitchenService
+            s = KitchenService(db_path=tmp / "k.db", render_dir=tmp / "r")
+            design = s.create_from_spec(_fixture().model_dump(mode="json"))["id"]
+            self.assertEqual(s.catalog_updates(design)["updates"], [])
+            row = next(i for i in s.catalog_list("cabinet-type", "workshop")["items"] if i["id"] == "upper")
+            extra = {"part": "shelf", "s": ["fs0", "fs1"], "d": ["0", "depth - doorThickness"], "y": ["y + height / 2", "y + height / 2 + doorThickness"]}
+            s.catalog_put("cabinet-type", "upper", {**row["data"], "parts": [*row["data"]["parts"], extra]}, "workshop")
+            u = s.catalog_updates(design)
+            self.assertIn({"kind": "cabinet-type", "id": "upper", "change": "changed"}, u["updates"])
+            self.assertTrue(u["geometryChanges"])
+            before = len(s.scene(design)["parts"])
+            p = s.propose(design, u["operation"])
+            self.assertTrue(p["applicable"])
+            s.apply(design, u["operation"], p["baseRev"], expect=p["opHash"])
+            self.assertEqual(s.catalog_updates(design)["updates"], [])
+            self.assertGreater(len(s.scene(design)["parts"]), before)
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)

@@ -344,9 +344,12 @@ def _apply_op(spec: KitchenSpec, op: dict[str, Any], catalog: Catalog = builtin.
     {"op": "lower-top", "newTop": 2550} | {"op": "molding", "id": "crown-molding", "changes": {"ignoreCeiling": true}}
     {"op": "set-moldings", "moldings": [...], "moldingProfiles"?: [...], "style"?: "Classic"}
     {"op": "set-views", "cameraViews": {...}}  — ghim góc nhìn
+    {"op": "catalog-refresh"}  — nothing changes in the design; its new revision is built with the catalog as it is now
     {"op": "multi", "ops": [...]}  — nhiều thao tác áp lần lượt, ghi thành một rev (vd job sửa ảnh nhiều việc)"""
     kind = op.get("op")
     dd = op.get("closeGap", True)
+    if kind == "catalog-refresh":       # the design as it is; saving it keeps the catalog items it uses as they are now (the revision's snapshot)
+        return from_data(KitchenSpec, to_data(spec))
     if kind == "add":
         return add_module(spec, op["module"], op.get("afterModule"), dd)
     if kind == "add-run":

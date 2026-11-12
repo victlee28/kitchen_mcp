@@ -75,6 +75,32 @@ class KitchenService:
         return cat.with_snapshot(self.catalog(), [cat.Item(x['kind'], x['id'], x['data'], x.get('source', 'snapshot'), x.get('version', 1)) for x in saved],
                                 [k for k, info in self.builtin.kinds.items() if info.whole])
 
+    def catalog_updates(self, design_id: str, revision: int | None = None) -> dict:
+        """What changed in the catalog since a revision was saved, among the items it was built with: ``updates`` (each ``{kind, id,
+        change: "changed" | "removed"}``), ``geometryChanges`` (the cabinets would be built differently), and the ``operation`` that
+        takes the catalog as it is now (preview it with :meth:`propose`, save it with :meth:`apply`). A revision saved before a kind
+        existed is built with the current items of that kind: nothing to report for it."""
+        spec, rev = self.store.get(design_id, revision)
+        saved = self.store.revision_catalog(design_id, rev) or []
+        now = self.catalog()
+        updates: list[dict[str, str]] = []
+        for x in saved:
+            item = now.find(x['kind'], x['id'])
+            if item is None:
+                updates.append({'kind': x['kind'], 'id': x['id'], 'change': 'removed'})
+            elif dict(item.data) != x['data']:
+                updates.append({'kind': x['kind'], 'id': x['id'], 'change': 'changed'})
+        whole = {k for k, info in self.builtin.kinds.items() if info.whole}
+        for kind in sorted({x['kind'] for x in saved} & whole):          # a whole table: an item added since counts too
+            kept = {x['id'] for x in saved if x['kind'] == kind}
+            updates += [{'kind': kind, 'id': i, 'change': 'added'} for i in now.ids(kind) if i not in kept]
+        geometry_changes = False
+        if updates:
+            from . import render as render_
+            geometry_changes = render_.scene_hash(geometry.compile_spec(spec, self.catalog_for_revision(design_id, rev))) != \
+                render_.scene_hash(geometry.compile_spec(spec, now))
+        return {'id': design_id, 'rev': rev, 'updates': updates, 'geometryChanges': geometry_changes, 'operation': {'op': 'catalog-refresh'}}
+
     def _snapshot_json(self, spec: KitchenSpec) -> str | None:
         used = cat.used_items(to_data(spec), self.catalog(), self.builtin.kinds)
         return json.dumps([i.to_data() for i in used], ensure_ascii=False) if used else None

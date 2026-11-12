@@ -1095,5 +1095,8 @@ export default {
  "catalog.layout.f.type": "loại",
  "catalog.layout.f.width": "rộng",
  "catalog.layout.f.blind": "góc khuất",
- "catalog.layout.f.doors": "cánh"
+ "catalog.layout.f.doors": "cánh",
+ "ui.catalog-newer": "Danh mục có {0} mục mới hơn bản lưu này ({1}); hình tủ không đổi.",
+ "ui.catalog-newer-shape": "Danh mục có {0} mục mới hơn bản lưu này ({1}); cập nhật sẽ đổi hình tủ.",
+ "ui.catalog-update": "Cập nhật theo danh mục"
 };

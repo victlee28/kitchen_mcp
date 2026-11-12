@@ -1094,5 +1094,8 @@
  "catalog.layout.f.type": "type",
  "catalog.layout.f.width": "width",
  "catalog.layout.f.blind": "blind",
- "catalog.layout.f.doors": "doors"
+ "catalog.layout.f.doors": "doors",
+ "ui.catalog-newer": "The catalog has {0} items newer than this revision ({1}); the cabinets look the same.",
+ "ui.catalog-newer-shape": "The catalog has {0} items newer than this revision ({1}); updating changes the cabinets.",
+ "ui.catalog-update": "Update to the catalog"
 }
