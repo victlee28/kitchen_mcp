@@ -2,6 +2,7 @@
 // Owns the module selection (state.selected) and the Shift-selected group (state.multi). Receives its dependencies; never imports app.js.
 import { $, el } from './dom.js';
 import { FIELDS, moduleOrder, moduleLabel, formChanges, groupLabel, shiftGroup } from './design-logic.js';
+import { tx } from './i18n.js';
 
 export function createDesignEditor({ state, api, run, setStatus, afterChange, setViewerSelected }) {
   const post = (path, body) => api(`/api/designs/${state.id}/${path}`, 'POST', body);
@@ -9,8 +10,8 @@ export function createDesignEditor({ state, api, run, setStatus, afterChange, se
 
   function renderIssues(v) {
     const ul = $('issues'); ul.replaceChildren();
-    ul.append(el('li', { class: 'muted' }, `Áp tiêu chuẩn: ${v.country || v.region || 'toàn cầu (chưa chọn quốc gia)'}`));
-    ul.append(el('li', { class: v.valid ? 'ok' : 'warn' }, v.valid ? `Hợp lệ · ${v.dem.warning} cảnh báo · ${v.dem.info} ghi chú` : `${v.dem.error} lỗi · ${v.dem.warning} cảnh báo`));
+    ul.append(el('li', { class: 'muted' }, tx('ui.ap-tieu-chuan', { 0: v.country || v.region || tx('ui.toan-cau-chua-chon-quoc-gia') })));
+    ul.append(el('li', { class: v.valid ? 'ok' : 'warn' }, v.valid ? tx('ui.hop-le-canh-bao-ghi-chu', { 0: v.dem.warning, 1: v.dem.info }) : tx('ui.loi-canh-bao', { 0: v.dem.error, 1: v.dem.warning })));
     for (const i of v.issues) {
       const li = el('li', { class: 'issue ' + i.severity }, el('b', {}, `[${i.severity}] ${i.rule}`), ' ', i.content,
         i.theo ? el('small', { class: 'muted' }, ` — ${i.theo}`) : '');
@@ -30,7 +31,7 @@ export function createDesignEditor({ state, api, run, setStatus, afterChange, se
   function renderModuleList() {
     const ul = $('moduleList'); ul.replaceChildren();
     const g = state.multi;
-    if (g) ul.append(el('li', { class: 'muted' }, `Đang chọn ${groupLabel(g)} — chuột phải vào một tủ đã chọn để đổi cả nhóm, Esc để bỏ`));
+    if (g) ul.append(el('li', { class: 'muted' }, tx('ui.dang-chon-chuot-phai-vao-mot-tu', { 0: groupLabel(g) })));
     for (const m of moduleOrder(state.spec.module)) {
       ul.append(el('li', { class: m.id === state.selected || g?.modules.includes(m.id) ? 'sel' : '', onclick: () => selectModule(m.id) },
         el('b', {}, m.id), ` ${moduleLabel(m)}`));
@@ -40,10 +41,10 @@ export function createDesignEditor({ state, api, run, setStatus, afterChange, se
   // Shift+click in the 3D view: the same role in the same tier of the same cabinet system (has: does the view show such a part on a module).
   function shiftPick(target, has) {
     const g = shiftGroup(target, state.systems, has);
-    if (!g) return setStatus('Shift+bấm vào cánh, mặt ngăn kéo, tay nắm hoặc thân tủ để chọn cả nhóm cùng loại', 'warn');
+    if (!g) return setStatus(tx('ui.shift-bam-vao-canh-mat-ngan-keo'), 'warn');
     state.selected = null; state.multi = g; setViewerSelected(g);
     $('moduleForm').hidden = true; renderModuleList();
-    setStatus(`Đã chọn ${groupLabel(g)}`, 'ok');
+    setStatus(tx('ui.da-chon', { 0: groupLabel(g) }), 'ok');
   }
 
   function clearGroup() {
@@ -88,23 +89,23 @@ export function createDesignEditor({ state, api, run, setStatus, afterChange, se
     ev.preventDefault();
     const f = ev.target; const m = findModule(state.selected);
     const changes = formChanges(m, Object.fromEntries(FIELDS.map(([k]) => [k, f.elements[k].value])), f.elements.doors.value);
-    if (!Object.keys(changes).length) return setStatus('Không có thay đổi');
-    run(`sửa ${m.id}`, async () => afterChange(await post('ops',
+    if (!Object.keys(changes).length) return setStatus(tx('ui.khong-co-thay-doi'));
+    run(tx('ui.sua', { 0: m.id }), async () => afterChange(await post('ops',
       { baseRev: state.rev, op: { op: 'update', id: m.id, changes, closeGap: f.elements.closeGap.checked } })));
   });
   $('addAfter').addEventListener('click', () => {
     const m = findModule(state.selected); if (!m) return;
-    const width = Number(prompt('Bề rộng tủ mới (mm)', '600')); if (!width) return;
-    run('thêm tủ', async () => afterChange(await post('ops',
+    const width = Number(prompt(tx('ui.be-rong-tu-moi-mm'), '600')); if (!width) return;
+    run(tx('ui.them-tu'), async () => afterChange(await post('ops',
       { baseRev: state.rev, op: { op: 'add', afterModule: m.id, module: { width, doors: width >= 600 ? [width / 2, width / 2] : [width] }, closeGap: true } })));
   });
   $('removeModule').addEventListener('click', () => {
     const id = state.selected; if (!id) return;
-    run(`xóa ${id}`, async () => { state.selected = null; await afterChange(await post('ops', { baseRev: state.rev, op: { op: 'remove', id, closeGap: true } })); });
+    run(tx('ui.xoa', { 0: id }), async () => { state.selected = null; await afterChange(await post('ops', { baseRev: state.rev, op: { op: 'remove', id, closeGap: true } })); });
   });
   $('undo').addEventListener('click', () => {
-    if (!state.id || state.rev <= 1) return setStatus('Không còn bản trước');
-    run('hoàn tác', async () => afterChange(await post('revert', { baseRev: state.rev, rev: state.rev - 1 })));
+    if (!state.id || state.rev <= 1) return setStatus(tx('ui.khong-con-ban-truoc'));
+    run(tx('ui.hoan-tac'), async () => afterChange(await post('revert', { baseRev: state.rev, rev: state.rev - 1 })));
   });
 
   return { renderIssues, renderModuleList, selectModule, clearSelection, onDesignOpened, shiftPick, clearGroup, inGroup };

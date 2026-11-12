@@ -6,7 +6,7 @@ import { interpretBody, describeInterpret, templateIntent, systemIntent, mention
 import { actionsFor, buildGroupOp, buildOp, describeProposal, groupActions, layerFor, lineTemplate, menuPosition, DOOR_STYLES, HANDLE_VARIANTS, RUN_ACTIONS, RUN_TURNS, systemTemplate, edgeChoices, modelChoices, applianceLayer, lineAlongWall, wallSegments } from './menu-logic.js';
 import { groupLabel, groupLayerIds, manySystems } from './design-logic.js';
 import * as catalog from './catalog-client.js';
-import { applianceName, lang } from './i18n.js';
+import { applianceName, lang, tx } from './i18n.js';
 
 let styles = [];                     // the style presets of a whole cabinet system (catalog kind "style"), named in a sentence
 catalog.list('style', lang()).then((d) => {
@@ -32,7 +32,7 @@ export function createModuleMenu(ctx) {
   box.setAttribute('role', 'dialog'); box.hidden = true;
 
   const close = () => { box.hidden = true; box.replaceChildren(); target = null; step = null; busy = false; attached = null; ctx.guide?.(lineFrom); };   // a line being drawn goes back to following the pointer
-  const header = (text) => el('div', { class: 'ctx-head' }, text, el('button', { type: 'button', class: 'ctx-x', title: 'Đóng (Esc)', onclick: close }, '×'));
+  const header = (text) => el('div', { class: 'ctx-head' }, text, el('button', { type: 'button', class: 'ctx-x', title: tx('ui.dong-esc'), onclick: close }, '×'));
   const err = (text) => el('p', { class: 'ctx-msg bad', role: 'alert' }, text);
 
   function place(x, y) {
@@ -45,7 +45,7 @@ export function createModuleMenu(ctx) {
   function listGroup() {
     const g = target.group;
     box.onkeydown = null;
-    box.replaceChildren(header(`Nhóm · ${groupLabel(g)}`), el('ul', { class: 'ctx-list' }, ...groupActions(g).map((a) =>
+    box.replaceChildren(header(tx('ui.nhom-2', { 0: groupLabel(g) })), el('ul', { class: 'ctx-list' }, ...groupActions(g).map((a) =>
       el('li', {}, el('button', { type: 'button', onclick: () => choose(a.id) }, a.label)))));
   }
 
@@ -54,11 +54,11 @@ export function createModuleMenu(ctx) {
   function list() {
     if (target.group) return listGroup();
     const { spec } = ctx.getState();
-    const partName = { door: 'Cánh', drawer: 'Mặt ngăn kéo', handle: 'Tay nắm', countertop: 'Mặt bàn' }[target.part];
+    const partName = { door: tx('ui.canh-2'), drawer: tx('ui.mat-ngan-keo-2'), handle: tx('ui.tay-nam-3'), countertop: tx('ui.mat-ban-2') }[target.part];
     const appl = target.kind === 'appliance' ? spec.appliances?.find((a) => a.id === target.id) : null;
-    const title = appl ? `${applianceName(appl.type)} ${appl.id}${appl.name ? ` · ${appl.name}` : ''}` : target.kind === 'part' ? (target.part === 'countertop' ? 'Mặt bàn' : `${partName} · ${target.id}`)
-      : target.kind === 'module' ? `Module ${target.id}` : target.kind === 'floor' ? (lineFrom ? 'Sàn · đang vẽ dãy tủ' : 'Sàn')
-        : `Thành phần mặt bằng ${target.id.replace(/^STRUCT-/, '')}`;
+    const title = appl ? `${applianceName(appl.type)} ${appl.id}${appl.name ? ` · ${appl.name}` : ''}` : target.kind === 'part' ? (target.part === 'countertop' ? tx('ui.mat-ban-2') : `${partName} · ${target.id}`)
+      : target.kind === 'module' ? `Module ${target.id}` : target.kind === 'floor' ? (lineFrom ? tx('ui.san-dang-ve-day-tu') : tx('ui.san-2'))
+        : tx('ui.thanh-phan-mat-bang', { 0: target.id.replace(/^STRUCT-/, '') });
     box.onkeydown = null;
     const cmd = target.kind === 'floor' ? null : commandBox();
     box.replaceChildren(header(title), ...(cmd ? [cmd] : []), el('ul', { class: 'ctx-list' }, ...actionsFor(target, spec, lineFrom).map((a) =>
@@ -67,12 +67,12 @@ export function createModuleMenu(ctx) {
 
   // A free sentence about THIS module (a floorplan object has no module: the sentence then covers the whole design) ("đổi sang màu trắng", "rộng 800"): the server reads it, the preview shows the result, nothing is saved before Áp dụng.
   function commandBox(text = '', message = '', choices = []) {
-    const input = el('input', { type: 'text', value: text, placeholder: target.kind === 'structure' ? 'Ra lệnh cho cả thiết kế… (Enter)' : target.kind === 'appliance' ? 'vd "đổi sang bếp gas", "thay chậu đôi" · để trống rồi Enter: xem mọi mẫu' : `Ra lệnh cho ${target.id}… (Enter)`, autocomplete: 'off', 'aria-label': 'Câu lệnh cho module này' });
+    const input = el('input', { type: 'text', value: text, placeholder: target.kind === 'structure' ? tx('ui.ra-lenh-cho-ca-thiet-ke-enter') : target.kind === 'appliance' ? tx('ui.vd-doi-sang-bep-gas-thay-chau') : tx('ui.ra-lenh-cho-enter', { 0: target.id }), autocomplete: 'off', 'aria-label': tx('ui.cau-lenh-cho-module-nay') });
     const run = () => (attached ? recognizeImage(attached.file, attached.kind, input.value) : command(input.value));
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); run(); } });
-    const kind = el('select', { 'aria-label': 'Loại ảnh tham chiếu', title: 'Loại ảnh tham chiếu' }, el('option', { value: 'photo' }, 'Ảnh chụp'), el('option', { value: 'drawing' }, 'Bản vẽ'));
-    const mode = el('select', { 'aria-label': 'Cách đặt dãy tủ nhận diện', title: 'Thêm dãy tủ vào các tủ hiện có, hoặc thay các tủ hiện có' },
-      el('option', { value: 'add' }, 'Thêm vào'), el('option', { value: 'replace' }, 'Thay tủ cũ'));
+    const kind = el('select', { 'aria-label': tx('ui.loai-anh-tham-chieu'), title: tx('ui.loai-anh-tham-chieu') }, el('option', { value: 'photo' }, tx('ui.anh-chup')), el('option', { value: 'drawing' }, tx('ui.ban-ve')));
+    const mode = el('select', { 'aria-label': tx('ui.cach-dat-day-tu-nhan-dien'), title: tx('ui.them-day-tu-vao-cac-tu-hien') },
+      el('option', { value: 'add' }, tx('ui.them-vao')), el('option', { value: 'replace' }, tx('ui.thay-tu-cu')));
     mode.value = recMode;
     mode.addEventListener('change', () => { recMode = mode.value; });
     const file = el('input', { type: 'file', accept: 'image/png,image/jpeg,image/webp', hidden: true });
@@ -81,14 +81,14 @@ export function createModuleMenu(ctx) {
     });
     kind.addEventListener('change', () => { if (attached) attached.kind = kind.value; });
     if (attached) kind.value = attached.kind;
-    const attach = el('button', { type: 'button', class: 'ghost', title: 'Nhập ảnh chụp bếp hoặc bản vẽ làm tham chiếu: nhận diện ra các tủ rồi xem trước (thay cả thiết kế khi áp dụng)', onclick: () => file.click() }, '📎 Ảnh tham chiếu');
-    const chip = attached ? el('div', { class: 'ctx-pending' }, el('span', {}, `📎 ${attached.file.name} — bấm "Xem trước" để nhận diện`),
-      el('button', { type: 'button', class: 'ghost small', title: 'Bỏ ảnh', onclick: () => { attached = null; redraw(input.value, ''); } }, 'Bỏ ảnh')) : null;
+    const attach = el('button', { type: 'button', class: 'ghost', title: tx('ui.nhap-anh-chup-bep-hoac-ban-ve'), onclick: () => file.click() }, tx('ui.anh-tham-chieu'));
+    const chip = attached ? el('div', { class: 'ctx-pending' }, el('span', {}, tx('ui.bam-xem-truoc-de-nhan-dien', { 0: attached.file.name })),
+      el('button', { type: 'button', class: 'ghost small', title: tx('ui.bo-anh'), onclick: () => { attached = null; redraw(input.value, ''); } }, tx('ui.bo-anh'))) : null;
     const waiting = pendingJob ? el('div', { class: 'ctx-pending' },
-      el('span', {}, `Job ${pendingJob} đang chờ Claude. `),
-      el('button', { type: 'button', class: 'primary', title: 'Lấy kết quả Claude đã trả lời và xem trước các tủ nhận diện được', onclick: () => updateJob(input.value) }, 'Cập nhật'),
-      el('button', { type: 'button', class: 'ghost small', title: 'Bỏ job này', onclick: () => { setJob(null); redraw(input.value, ''); } }, 'Bỏ')) : null;
-    return el('div', { class: 'ctx-cmd' }, input, el('button', { type: 'button', class: 'primary', onclick: run }, 'Xem trước'), attach, kind, mode, file,
+      el('span', {}, tx('ui.job-dang-cho-claude', { 0: pendingJob })),
+      el('button', { type: 'button', class: 'primary', title: tx('ui.lay-ket-qua-claude-da-tra-loi'), onclick: () => updateJob(input.value) }, tx('ui.cap-nhat')),
+      el('button', { type: 'button', class: 'ghost small', title: tx('ui.bo-job-nay'), onclick: () => { setJob(null); redraw(input.value, ''); } }, tx('ui.bo'))) : null;
+    return el('div', { class: 'ctx-cmd' }, input, el('button', { type: 'button', class: 'primary', onclick: run }, tx('ui.xem-truoc')), attach, kind, mode, file,
       ...(chip ? [chip] : []), ...(waiting ? [waiting] : []),
       ...(message ? [el('p', { class: 'ctx-msg warn' }, message)] : []),
       ...(choices.length ? [el('div', { class: 'chips' }, ...choices.map((c) => el('button', { type: 'button', class: 'ghost small', onclick: () => command(`${input.value.trim()} ${c}`) }, c)))] : []));
@@ -96,24 +96,24 @@ export function createModuleMenu(ctx) {
 
   async function command(text) {
     if (busy) return; const { id, rev } = ctx.getState();
-    if (mentionsReference(text)) return redraw(text, 'Câu lệnh nhắc tới ảnh tham chiếu: hãy bấm "📎 Ảnh tham chiếu" để chọn ảnh trước, rồi bấm "Xem trước".');
+    if (mentionsReference(text)) return redraw(text, tx('ui.cau-lenh-nhac-toi-anh-tham-chieu'));
     if (target.kind === 'appliance') return applianceModels(text);
     const wish = target.kind === 'structure' ? null : systemIntent(text, styles);
     if (wish) return replaceSystem(text, wish);
     const intent = templateIntent(text);
-    if (intent?.kind === 'shape') return redraw(text, `Chưa tạo được tủ chữ ${intent.shape} bằng lệnh. Hãy dùng "Tạo từ mẫu" ở cột trái, hoặc nói "tủ chữ I" để tạo một dãy dọc cạnh vật thể.`);
+    if (intent?.kind === 'shape') return redraw(text, tx('ui.chua-tao-duoc-tu-chu-bang-lenh', { 0: intent.shape }));
     if (intent?.kind === 'run-i') {
       if (target.kind === 'structure') return runI(text);
-      if (!intent.described) return redraw(text, 'Muốn tạo dãy tủ dọc một cạnh: bấm chuột phải vào vật thể của mặt bằng (tường, cột, đồ) rồi ra lệnh.');
+      if (!intent.described) return redraw(text, tx('ui.muon-tao-day-tu-doc-mot-canh'));
     }
     let body;
     try { body = interpretBody(text, rev, { scope: target.kind === 'structure' ? undefined : [target.id] }); } catch (e) { return ctx.setStatus(e.message, 'warn'); }
-    busy = true; ctx.setStatus('Đọc câu lệnh…');
+    busy = true; ctx.setStatus(tx('ui.doc-cau-lenh-2'));
     try {
       const { status, data } = await call(`/api/designs/${id}/interpret`, body);
       busy = false;
       if (status === 409) return stale('cmd');
-      if (!data || data.error) return redraw(text, data?.error || `Lỗi ${status}`);
+      if (!data || data.error) return redraw(text, data?.error || tx('ui.loi', { 0: status }));
       const d = describeInterpret(data);
       if (d.kind === 'preview') return showPreview('cmd', d.proposal, null, d.summary);
       redraw(text, d.kind === 'clarify' ? d.question : d.message, d.kind === 'clarify' ? d.choices : []);
@@ -124,7 +124,7 @@ export function createModuleMenu(ctx) {
     return new Promise((resolve, reject) => {
       const r = new FileReader();
       r.onload = () => resolve(String(r.result).split(',')[1] || '');
-      r.onerror = () => reject(new Error('Không đọc được tệp'));
+      r.onerror = () => reject(new Error(tx('ui.khong-doc-duoc-tep')));
       r.readAsDataURL(file);
     });
   }
@@ -142,22 +142,22 @@ export function createModuleMenu(ctx) {
   }
 
   function warning(data) {
-    if (!data.structureId) return 'Kết quả nhận diện sẽ thay toàn bộ tủ của thiết kế hiện tại (phòng và mặt bằng giữ nguyên; có thể hoàn tác).';
-    return data.mode === 'replace' ? 'Các tủ hiện có sẽ bị thay bằng dãy tủ nhận diện được, đứng dọc cạnh vật thể đã chọn (có thể hoàn tác).'
-      : 'Dãy tủ nhận diện được sẽ được thêm vào, đứng dọc cạnh vật thể đã chọn; các tủ hiện có giữ nguyên (có thể hoàn tác).';
+    if (!data.structureId) return tx('ui.ket-qua-nhan-dien-se-thay-toan');
+    return data.mode === 'replace' ? tx('ui.cac-tu-hien-co-se-bi-thay')
+      : tx('ui.day-tu-nhan-dien-duoc-se-duoc');
   }
 
   async function recognizeImage(file, kind, text) {
     if (busy) return; const { id, rev } = ctx.getState();
     const bad = checkUpload(file); if (bad) return redraw(text, bad);
     const anchor = anchorFor(target);
-    if (!anchor) return redraw(text, 'Hãy chuột phải vào một cạnh vật thể của mặt bằng (tường, cột, đồ…) rồi chọn ảnh: dãy tủ nhận diện được sẽ đứng dọc cạnh đó.');
-    busy = true; ctx.setStatus('Nhận diện ảnh tham chiếu…');
+    if (!anchor) return redraw(text, tx('ui.hay-chuot-phai-vao-mot-canh-vat'));
+    busy = true; ctx.setStatus(tx('ui.nhan-dien-anh-tham-chieu'));
     try {
       const { status, data } = await call(`/api/designs/${id}/recognize`, recognizeBody(kind, file.name, file.type, await fileBase64(file), rev, text, anchor, recMode));
       busy = false;
       if (status === 409) return stale('cmd');
-      if (!data || data.error) return redraw(text, data?.error || `Lỗi ${status}`);
+      if (!data || data.error) return redraw(text, data?.error || tx('ui.loi', { 0: status }));
       attached = null;
       showRecognition(data, text, { anchor, mode: recMode });
     } catch (e) { busy = false; redraw(text, e.message); }
@@ -165,12 +165,12 @@ export function createModuleMenu(ctx) {
 
   async function updateJob(text) {
     if (busy || !pendingJob) return; const { id, rev } = ctx.getState();
-    busy = true; ctx.setStatus('Lấy kết quả của job…');
+    busy = true; ctx.setStatus(tx('ui.lay-ket-qua-cua-job'));
     try {
       const { status, data } = await call(`/api/designs/${id}/recognize-job`, recognizeJobBody(pendingJob, rev, pendingPlace.anchor, pendingPlace.mode));
       busy = false;
       if (status === 409) return stale('cmd');
-      if (!data || data.error) return redraw(text, data?.error || `Lỗi ${status}`);
+      if (!data || data.error) return redraw(text, data?.error || tx('ui.loi', { 0: status }));
       showRecognition(data, text, pendingPlace);
     } catch (e) { busy = false; redraw(text, e.message); }
   }
@@ -184,8 +184,8 @@ export function createModuleMenu(ctx) {
 
   function choose(action) {
     if (action === 'run-i') return runI();
-    if (action === 'line-start') { lineFrom = { ...target.point }; close(); return ctx.setStatus('Đã đặt điểm đầu của dãy tủ. Chuột phải vào sàn ở điểm cuối để vẽ tiếp.', 'ok'); }
-    if (action === 'line-cancel') { lineFrom = null; close(); return ctx.setStatus('Đã bỏ dãy đang vẽ.'); }
+    if (action === 'line-start') { lineFrom = { ...target.point }; close(); return ctx.setStatus(tx('ui.da-dat-diem-dau-cua-day-tu'), 'ok'); }
+    if (action === 'line-cancel') { lineFrom = null; close(); return ctx.setStatus(tx('ui.da-bo-day-dang-ve')); }
     if (action === 'line-end') return lineForm();
     if (action === 'struct-hide') { ctx.structure.hide(); return close(); }
     if (action === 'struct-isolate') { ctx.structure.isolate(); return close(); }
@@ -203,15 +203,15 @@ export function createModuleMenu(ctx) {
     const from = lineFrom; const to = { ...target.point };
     ctx.guide?.(from, to);
     const len = Math.round(Math.hypot(to.x - from.x, to.z - from.z));
-    const side = el('select', {}, el('option', { value: 'left' }, 'Bên trái hướng vẽ'), el('option', { value: 'right' }, 'Bên phải hướng vẽ'));
+    const side = el('select', {}, el('option', { value: 'left' }, tx('ui.ben-trai-huong-ve')), el('option', { value: 'right' }, tx('ui.ben-phai-huong-ve')));
     side.value = keep.side || 'left';
-    const text = el('input', { type: 'text', value: keep.text || '', placeholder: 'để trống: toàn tủ dưới · vd "có chậu rửa và bếp"', autocomplete: 'off' });
+    const text = el('input', { type: 'text', value: keep.text || '', placeholder: tx('ui.de-trong-toan-tu-duoi-vd-co'), autocomplete: 'off' });
     const out = el('div', { class: 'ctx-msg' }); if (message) out.append(err(message));
-    const go = el('button', { type: 'button', class: 'primary', onclick: () => drawRun(from, to, side.value, text.value) }, 'Xem trước');
+    const go = el('button', { type: 'button', class: 'primary', onclick: () => drawRun(from, to, side.value, text.value) }, tx('ui.xem-truoc'));
     const along = lineAlongWall(from, to, wallSegments(ctx.getState().doc));     // the server turns the backs to the wall: nothing to ask
-    const facing = along ? el('p', { class: 'ctx-msg' }, 'Dãy chạy sát tường: lưng tủ tự quay vào tường.') : el('label', {}, 'Cánh tủ quay ra', side);
-    box.replaceChildren(header(`Dãy tủ mới · dài ${len} mm`), facing, el('label', {}, 'Trong dãy có gì (không bắt buộc)', text), out,
-      el('div', { class: 'row' }, go, el('button', { type: 'button', class: 'ghost', onclick: list }, 'Quay lại')));
+    const facing = along ? el('p', { class: 'ctx-msg' }, tx('ui.day-chay-sat-tuong-lung-tu-tu')) : el('label', {}, tx('ui.canh-tu-quay-ra'), side);
+    box.replaceChildren(header(tx('ui.day-tu-moi-dai-mm', { 0: len })), facing, el('label', {}, tx('ui.trong-day-co-gi-khong-bat-buoc'), text), out,
+      el('div', { class: 'row' }, go, el('button', { type: 'button', class: 'ghost', onclick: list }, tx('ui.quay-lai'))));
     box.onkeydown = (e) => { if (e.key === 'Enter' && e.target.tagName !== 'BUTTON') { e.preventDefault(); go.click(); } };
     go.focus();
   }
@@ -220,12 +220,12 @@ export function createModuleMenu(ctx) {
     if (busy) return; const { id, rev } = ctx.getState();
     let template;
     try { template = lineTemplate(from, to, side, text); } catch (e) { return lineForm(e.message, { side, text }); }
-    busy = true; ctx.setStatus('Tính dãy tủ trên đường vừa vẽ…');
+    busy = true; ctx.setStatus(tx('ui.tinh-day-tu-tren-duong-vua-ve'));
     try {
       const { status, data } = await call(`/api/designs/${id}/template`, { template, baseRev: rev });
       busy = false;
       if (status === 409) return stale('run-line');
-      if (!data || data.error || !data.proposal) return lineForm(data?.error || `Lỗi ${status}`, { side, text });
+      if (!data || data.error || !data.proposal) return lineForm(data?.error || tx('ui.loi', { 0: status }), { side, text });
       showPreview('run-line', data.proposal, null, data.summary || []);
     } catch (e) { busy = false; lineForm(e.message, { side, text }); }
   }
@@ -235,12 +235,12 @@ export function createModuleMenu(ctx) {
     if (busy) return; const { id, rev, systems } = ctx.getState();
     let template;
     try { template = systemTemplate(systems?.[target.id]?.system, wish.prompt, wish.style, styles.length ? styles : null); } catch (e) { return redraw(text, e.message); }
-    busy = true; ctx.setStatus(template.prompt ? 'Xếp lại cả hệ tủ theo mô tả…' : 'Đổi phong cách cả hệ tủ…');
+    busy = true; ctx.setStatus(template.prompt ? tx('ui.xep-lai-ca-he-tu-theo-mo') : tx('ui.doi-phong-cach-ca-he-tu'));
     try {
       const { status, data } = await call(`/api/designs/${id}/template`, { template, baseRev: rev });
       busy = false;
       if (status === 409) return stale('cmd');
-      if (!data || data.error || !data.proposal) return redraw(text, data?.error || `Lỗi ${status}`);
+      if (!data || data.error || !data.proposal) return redraw(text, data?.error || tx('ui.loi', { 0: status }));
       showPreview('cmd', data.proposal, null, data.summary || []);
     } catch (e) { busy = false; redraw(text, e.message); }
   }
@@ -251,64 +251,64 @@ export function createModuleMenu(ctx) {
     const f = {}; const fields = [];
     if (action === 'countertopMaterial' || action === 'handleMaterial') {
       f.material = el('input', { type: 'text', value: action === 'handleMaterial' ? (m?.handle?.material || spec.common?.handle?.material || '') : (spec.common?.material?.countertop || ''),
-        placeholder: action === 'handleMaterial' ? 'vd Nhôm đen mờ' : 'vd Đá granite tối', autocomplete: 'off' });
-      fields.push(el('label', {}, action === 'handleMaterial' ? 'Vật liệu tay nắm' : 'Vật liệu mặt bàn', f.material));
+        placeholder: action === 'handleMaterial' ? tx('ui.vd-nhom-den-mo') : tx('ui.vd-da-granite-toi'), autocomplete: 'off' });
+      fields.push(el('label', {}, action === 'handleMaterial' ? tx('ui.vat-lieu-tay-nam') : tx('ui.vat-lieu-mat-ban'), f.material));
     } else if (action === 'countertopOverhang') {
       f.overhang = el('input', { type: 'number', min: 0, max: 100, step: 5, value: spec.common?.countertopOverhang ?? 20 });
-      fields.push(el('label', {}, 'Độ nhô phía trước (mm)', f.overhang));
+      fields.push(el('label', {}, tx('ui.do-nho-phia-truoc-mm'), f.overhang));
     } else if (action === 'handleVariant') {
       const storey = ctx.getState().systems?.[m?.id]?.storey;      // the spec JSON has no storey: the server sends it with the systems
       const current = m?.handle?.variant || spec.common?.handleByStorey?.[storey]?.variant || spec.common?.handle?.variant;
       f.variant = el('select', {}, ...HANDLE_VARIANTS.map(([v, t]) => el('option', { value: v, selected: v === current }, t)));
-      fields.push(el('label', {}, 'Kiểu tay nắm', f.variant));
+      fields.push(el('label', {}, tx('ui.kieu-tay-nam'), f.variant));
     } else if (action === 'material') {
       const used = [...new Set([...Object.values(spec.common?.material || {}), ...spec.module.map((x) => x.material)].filter((v) => typeof v === 'string' && v))];
       const dl = el('datalist', { id: 'ctxMats' }, ...used.map((v) => el('option', { value: v })));
       catalog.list('material', lang()).then((d) => {               // the suggested materials are catalog items (workshop + user)
         for (const it of d.items) if (!used.includes(it.data.text)) dl.append(el('option', { value: it.data.text }));
       }).catch(() => { /* suggestions only */ });
-      f.material = el('input', { type: 'text', value: m?.material || '', placeholder: 'vd Laminate xanh rêu mờ', autocomplete: 'off' }); f.material.setAttribute('list', 'ctxMats');
-      fields.push(el('label', {}, 'Vật liệu mặt trước', f.material, dl));
+      f.material = el('input', { type: 'text', value: m?.material || '', placeholder: tx('ui.vd-laminate-xanh-reu-mo'), autocomplete: 'off' }); f.material.setAttribute('list', 'ctxMats');
+      fields.push(el('label', {}, tx('ui.vat-lieu-mat-truoc'), f.material, dl));
     } else if (action === 'doorStyle') {
       f.style = el('select', {}, ...DOOR_STYLES.map(([v, t]) => el('option', { value: v, selected: v === m?.doorStyle }, t)));
-      fields.push(el('label', {}, 'Kiểu cánh', f.style));
+      fields.push(el('label', {}, tx('ui.kieu-canh'), f.style));
     } else if (action === 'remove') {
       f.closeGap = el('input', { type: 'checkbox', checked: true });
       const owned = spec.appliances.filter((a) => a.module === target.id).map((a) => a.name || a.id);
-      fields.push(el('label', { class: 'inline' }, f.closeGap, ' Dồn các tủ còn lại lấp chỗ trống'));
-      if (owned.length) fields.push(el('p', { class: 'ctx-msg warn' }, `Thiết bị gắn theo module này cũng bị xóa: ${owned.join(', ')}`));
+      fields.push(el('label', { class: 'inline' }, f.closeGap, tx('ui.don-cac-tu-con-lai-lap-cho')));
+      if (owned.length) fields.push(el('p', { class: 'ctx-msg warn' }, tx('ui.thiet-bi-gan-theo-module-nay-cung', { 0: owned.join(', ') })));
     } else if (action === 'runMove') {
       f.along = el('input', { type: 'number', step: 50, value: 0 });
       f.out = el('input', { type: 'number', step: 50, value: 0 });
       f.turn = el('select', {}, ...RUN_TURNS.map(([v, t]) => el('option', { value: v }, t)));
-      fields.push(el('label', {}, 'Dọc theo dãy, sang phải khi nhìn từ trước (mm; âm: sang trái)', f.along), el('label', {}, 'Ra phía trước cánh tủ (mm; âm: lùi về sau)', f.out),
-        el('label', {}, 'Xoay quanh đầu trái của dãy', f.turn));
+      fields.push(el('label', {}, tx('ui.doc-theo-day-sang-phai-khi-nhin'), f.along), el('label', {}, tx('ui.ra-phia-truoc-canh-tu-mm-am'), f.out),
+        el('label', {}, tx('ui.xoay-quanh-dau-trai-cua-day'), f.turn));
     } else if (action === 'runStretch') {
-      f.end = el('select', {}, el('option', { value: 'end' }, 'Đầu phải (nhìn từ trước)'), el('option', { value: 'start' }, 'Đầu trái (nhìn từ trước)'));
+      f.end = el('select', {}, el('option', { value: 'end' }, tx('ui.dau-phai-nhin-tu-truoc')), el('option', { value: 'start' }, tx('ui.dau-trai-nhin-tu-truoc')));
       f.delta = el('input', { type: 'number', step: 50, value: 100 });
-      fields.push(el('label', {}, 'Kéo đầu nào', f.end), el('label', {}, 'Bao nhiêu mm (dương: dài ra, âm: ngắn lại)', f.delta),
-        el('p', { class: 'ctx-msg' }, 'Tủ đứng ngay đầu được kéo sẽ đổi bề rộng; các tủ khác đứng yên.'));
+      fields.push(el('label', {}, tx('ui.keo-dau-nao'), f.end), el('label', {}, tx('ui.bao-nhieu-mm-duong-dai-ra-am'), f.delta),
+        el('p', { class: 'ctx-msg' }, tx('ui.tu-dung-ngay-dau-duoc-keo-se')));
     } else if (action === 'runRemove') {
       const inRun = spec.module.filter((x) => x.run === m?.run).map((x) => x.id);
-      fields.push(el('p', { class: 'ctx-msg warn' }, `Sẽ xóa ${inRun.length} module của dãy ${m?.run} cùng thiết bị gắn theo chúng: ${inRun.join(', ')}`));
+      fields.push(el('p', { class: 'ctx-msg warn' }, tx('ui.se-xoa-module-cua-day-cung-thiet', { 0: inRun.length, 1: m?.run, 2: inRun.join(', ') })));
     } else if (action === 'add') {
-      f.side = m?.run ? el('select', {}, el('option', { value: 'after' }, 'Bên phải (nhìn từ trước)'), el('option', { value: 'before' }, 'Bên trái (nhìn từ trước)'))
-        : el('select', {}, el('option', { value: 'after' }, 'Phía sau (xa góc hơn)'), el('option', { value: 'before' }, 'Phía trước (gần góc hơn)'));
+      f.side = m?.run ? el('select', {}, el('option', { value: 'after' }, tx('ui.ben-phai-nhin-tu-truoc')), el('option', { value: 'before' }, tx('ui.ben-trai-nhin-tu-truoc')))
+        : el('select', {}, el('option', { value: 'after' }, tx('ui.phia-sau-xa-goc-hon')), el('option', { value: 'before' }, tx('ui.phia-truoc-gan-goc-hon')));
       f.width = el('input', { type: 'number', min: 200, max: 1200, step: 10, value: m?.width || 600 });
       f.closeGap = el('input', { type: 'checkbox', checked: true });
-      fields.push(el('label', {}, 'Vị trí', f.side), el('label', {}, 'Chiều rộng (mm)', f.width), el('label', { class: 'inline' }, f.closeGap, ' Đẩy các tủ phía sau ra'));
+      fields.push(el('label', {}, tx('ui.vi-tri'), f.side), el('label', {}, tx('ui.chieu-rong-mm-2'), f.width), el('label', { class: 'inline' }, f.closeGap, tx('ui.day-cac-tu-phia-sau-ra')));
     }
     const out = el('div', { class: 'ctx-msg' });
     if (message) out.append(err(message));
     const read = () => Object.fromEntries(Object.entries(f).map(([k, n]) => [k, n.type === 'checkbox' ? n.checked : n.value]));
-    const go = el('button', { type: 'button', class: 'primary', onclick: () => preview(action, read) }, 'Xem trước');
+    const go = el('button', { type: 'button', class: 'primary', onclick: () => preview(action, read) }, tx('ui.xem-truoc'));
     const extra = [];
     if (action === 'material' && !target.group) {   // same material, but as a picture first: opens the image tab with the job form filled (quick mode, preview on)
-      extra.push(el('button', { type: 'button', class: 'ghost', title: 'Mở tab sửa ảnh với vật liệu này; chưa đổi thiết kế',
-        onclick: () => { const material = read().material.trim(); if (!material) return form(action, 'Nhập tên vật liệu'); const id = target.id; close(); ctx.imageEdit({ layer: layerFor('material', id), module: id, material, mode: 'quick', preview: true }); } }, 'Tạo ảnh với vật liệu này'));
+      extra.push(el('button', { type: 'button', class: 'ghost', title: tx('ui.mo-tab-sua-anh-voi-vat-lieu'),
+        onclick: () => { const material = read().material.trim(); if (!material) return form(action, tx('ui.nhap-ten-vat-lieu')); const id = target.id; close(); ctx.imageEdit({ layer: layerFor('material', id), module: id, material, mode: 'quick', preview: true }); } }, tx('ui.tao-anh-voi-vat-lieu-nay')));
     }
-    box.replaceChildren(header(`${target.group ? groupLabel(target.group) : target.part === 'countertop' ? 'Mặt bàn' : target.id}: ${actionList(spec).find((a) => a.id === action)?.label}`), ...fields, out,
-      el('div', { class: 'row' }, go, ...extra, el('button', { type: 'button', class: 'ghost', onclick: list }, 'Quay lại')));
+    box.replaceChildren(header(`${target.group ? groupLabel(target.group) : target.part === 'countertop' ? tx('ui.mat-ban-2') : target.id}: ${actionList(spec).find((a) => a.id === action)?.label}`), ...fields, out,
+      el('div', { class: 'row' }, go, ...extra, el('button', { type: 'button', class: 'ghost', onclick: list }, tx('ui.quay-lai'))));
     (f.material || f.style || f.width || f.along || f.delta || go).focus?.();
     box.onkeydown = (e) => { if (e.key === 'Enter' && e.target.tagName !== 'BUTTON') { e.preventDefault(); go.click(); } };
   }
@@ -317,12 +317,12 @@ export function createModuleMenu(ctx) {
     if (busy) return; const { id, rev, spec } = ctx.getState();
     let op;
     try { op = target.group ? buildGroupOp(action, target.group, read(), spec) : buildOp(action, target.id, read(), spec); } catch (e) { return form(action, e.message); }
-    busy = true; ctx.setStatus('Xem trước thay đổi…');
+    busy = true; ctx.setStatus(tx('ui.xem-truoc-thay-doi'));
     try {
       const { status, data } = await call(`/api/designs/${id}/propose`, { op, baseRev: rev, ...(target.group ? { scope: target.group.modules } : target.part === 'countertop' || RUN_ACTIONS.includes(action) ? {} : { scope: [target.id] }) });   // a run action is meant to touch the whole run
       busy = false;
       if (status === 409) return stale(action);
-      if (!data || data.error) return form(action, data?.error || `Lỗi ${status}`);
+      if (!data || data.error) return form(action, data?.error || tx('ui.loi', { 0: status }));
       showPreview(action, data, read);
     } catch (e) { busy = false; form(action, e.message); }
   }
@@ -330,15 +330,15 @@ export function createModuleMenu(ctx) {
   // A cabinet run against the clicked edge of a floorplan object: the server picks the edge and the facing, the preview shows the result.
   async function runI(text = '', backEdge = null) {
     if (busy) return; const { id, rev } = ctx.getState();
-    busy = true; ctx.setStatus(target.structureKind === 'furniture' ? 'Tính dãy tủ thay vật này…' : 'Tính dãy tủ dọc cạnh vật thể…');
+    busy = true; ctx.setStatus(target.structureKind === 'furniture' ? tx('ui.tinh-day-tu-thay-vat-nay') : tx('ui.tinh-day-tu-doc-canh-vat-the'));
     try {
       const { status, data } = await call(`/api/designs/${id}/template`, { template: { kind: 'run-i', structureId: target.id, point: target.point, ...(text.trim() ? { prompt: text.trim() } : {}), ...(backEdge != null ? { backEdge } : {}) }, baseRev: rev });
       busy = false;
       if (status === 409) return stale('run-i');
       if (data?.status === 'choose-edge') return chooseEdge(data, text);
       if (!data || data.error || !data.proposal) {
-        box.replaceChildren(header(`Dãy tủ · ${target.id.replace(/^STRUCT-/, '')}`), err(data?.error || `Lỗi ${status}`),
-          el('div', { class: 'row' }, el('button', { type: 'button', class: 'ghost', onclick: list }, 'Quay lại')));
+        box.replaceChildren(header(tx('ui.day-tu', { 0: target.id.replace(/^STRUCT-/, '') })), err(data?.error || tx('ui.loi', { 0: status })),
+          el('div', { class: 'row' }, el('button', { type: 'button', class: 'ghost', onclick: list }, tx('ui.quay-lai'))));
         return;
       }
       showPreview('run-i', data.proposal, null, data.summary || []);
@@ -348,13 +348,13 @@ export function createModuleMenu(ctx) {
   // An appliance: the sentence picks the models offered ("đổi sang bếp gas"); a popup lists them, the one picked is previewed.
   async function applianceModels(text) {
     if (busy) return; const { id, rev } = ctx.getState();
-    busy = true; ctx.setStatus('Tìm mẫu thiết bị…');
+    busy = true; ctx.setStatus(tx('ui.tim-mau-thiet-bi'));
     try {
       const { status, data } = await call(`/api/designs/${id}/template`, { template: { kind: 'replace-appliance', id: target.id, prompt: text }, baseRev: rev });
       busy = false;
       if (status === 409) return stale('cmd');
-      if (!data || data.error) return redraw(text, data?.error || `Lỗi ${status}`);
-      ctx.setStatus(`${data.models?.length || 0} mẫu ${applianceName(data.appliance?.type)} có thể thay`, 'ok');
+      if (!data || data.error) return redraw(text, data?.error || tx('ui.loi', { 0: status }));
+      ctx.setStatus(tx('ui.mau-co-the-thay', { 0: data.models?.length || 0, 1: applianceName(data.appliance?.type) }), 'ok');
       chooseModel(data, text);
     } catch (e) { busy = false; redraw(text, e.message); }
   }
@@ -364,29 +364,29 @@ export function createModuleMenu(ctx) {
     const rows = modelChoices(data.models).map((c) => el('li', {}, el('button', { type: 'button', disabled: !c.pickable, title: c.reasons.join('\n'),
       onclick: () => (c.status === 'bad' ? fitChoice(c, text) : replaceAppliance(c.id, false, text)) }, c.label),
       ...(c.reasons.length ? [el('small', { class: 'muted' }, c.reasons[0])] : [])));
-    box.replaceChildren(header(`Đổi mẫu · ${applianceName(now.type)} ${now.id}`),
-      el('p', { class: 'ctx-msg' }, `Đang dùng: ${now.name || now.model}${now.size ? ` (${now.size.w}×${now.size.d} mm)` : ''}`),
-      rows.length ? el('ul', { class: 'ctx-list' }, ...rows) : err('Không có mẫu nào khác cùng loại'),
-      el('div', { class: 'row' }, el('button', { type: 'button', class: 'ghost', onclick: list }, 'Quay lại')));
+    box.replaceChildren(header(tx('ui.doi-mau-2', { 0: applianceName(now.type), 1: now.id })),
+      el('p', { class: 'ctx-msg' }, tx('ui.dang-dung', { 0: now.name || now.model, 1: now.size ? ` (${now.size.w}×${now.size.d} mm)` : '' })),
+      rows.length ? el('ul', { class: 'ctx-list' }, ...rows) : err(tx('ui.khong-co-mau-nao-khac-cung-loai')),
+      el('div', { class: 'row' }, el('button', { type: 'button', class: 'ghost', onclick: list }, tx('ui.quay-lai'))));
     box.querySelector('.ctx-list button:not([disabled])')?.focus();
   }
 
   // A model that does not fit where it is: keep the cabinet (and see the warning) or widen it.
   function fitChoice(c, text) {
     box.replaceChildren(header(c.label.split(' — ')[0]), el('p', { class: 'ctx-msg warn' }, c.reasons.join(' · ')),
-      el('div', { class: 'row' }, el('button', { type: 'button', class: 'primary', onclick: () => replaceAppliance(c.id, true, text) }, 'Nới tủ đỡ'),
-        el('button', { type: 'button', onclick: () => replaceAppliance(c.id, false, text) }, 'Giữ tủ'),
-        el('button', { type: 'button', class: 'ghost', onclick: () => applianceModels(text) }, 'Quay lại')));
+      el('div', { class: 'row' }, el('button', { type: 'button', class: 'primary', onclick: () => replaceAppliance(c.id, true, text) }, tx('ui.noi-tu-do')),
+        el('button', { type: 'button', onclick: () => replaceAppliance(c.id, false, text) }, tx('ui.giu-tu')),
+        el('button', { type: 'button', class: 'ghost', onclick: () => applianceModels(text) }, tx('ui.quay-lai'))));
   }
 
   async function replaceAppliance(model, resizeHost, text) {
     if (busy) return; const { id, rev } = ctx.getState();
-    busy = true; ctx.setStatus('Xem trước mẫu mới…');
+    busy = true; ctx.setStatus(tx('ui.xem-truoc-mau-moi'));
     try {
       const { status, data } = await call(`/api/designs/${id}/template`, { template: { kind: 'replace-appliance', id: target.id, model, resizeHost }, baseRev: rev });
       busy = false;
       if (status === 409) return stale('cmd');
-      if (!data || data.error || !data.proposal) return redraw(text, data?.error || `Lỗi ${status}`);
+      if (!data || data.error || !data.proposal) return redraw(text, data?.error || tx('ui.loi', { 0: status }));
       lastAppliance = { id: target.id, type: data.appliance.type, model, facts: data.aiFacts };
       showPreview('appliance', data.proposal, null, data.summary || []);
     } catch (e) { busy = false; redraw(text, e.message); }
@@ -395,38 +395,38 @@ export function createModuleMenu(ctx) {
   // No edge of the object lies against a wall: the user picks the edge the backs go on (hovering one draws it in the 3D view).
   function chooseEdge(data, text) {
     const choices = edgeChoices(data.edges);
-    box.replaceChildren(header(`Chọn hướng dãy tủ · ${target.id.replace(/^STRUCT-/, '')}`),
-      el('p', { class: 'ctx-msg' }, 'Vật này không có cạnh nào sát tường. Chọn cạnh đặt lưng tủ; cánh tủ quay vào phía trong vật.'),
+    box.replaceChildren(header(tx('ui.chon-huong-day-tu', { 0: target.id.replace(/^STRUCT-/, '') })),
+      el('p', { class: 'ctx-msg' }, tx('ui.vat-nay-khong-co-canh-nao-sat')),
       el('ul', { class: 'ctx-list' }, ...choices.map((c) => el('li', {}, el('button', { type: 'button',
         onmouseenter: () => ctx.guide?.(c.a, c.b), onfocus: () => ctx.guide?.(c.a, c.b), onmouseleave: () => ctx.guide?.(null),
         onclick: () => { ctx.guide?.(null); runI(text, c.index); } }, c.label)))),
-      el('div', { class: 'row' }, el('button', { type: 'button', class: 'ghost', onclick: () => { ctx.guide?.(null); list(); } }, 'Quay lại')));
-    if (!choices.length) box.append(err('Không có cạnh nào dài từ 600 mm'));
+      el('div', { class: 'row' }, el('button', { type: 'button', class: 'ghost', onclick: () => { ctx.guide?.(null); list(); } }, tx('ui.quay-lai'))));
+    if (!choices.length) box.append(err(tx('ui.khong-co-canh-nao-dai-tu-600')));
     box.querySelector('.ctx-list button')?.focus();
   }
 
   function showPreview(action, p, read, extra = []) {
     const lines = [...extra.map((x) => (typeof x === 'string' ? { kind: 'info', text: x } : x)), ...describeProposal(p)];
     const confirm = el('button', { type: 'button', class: p.validation?.introducesErrors ? 'danger' : 'primary', disabled: !p.applicable || p.unchanged,
-      onclick: () => apply(action, p) }, p.validation?.introducesErrors ? 'Vẫn áp dụng' : 'Áp dụng');
+      onclick: () => apply(action, p) }, p.validation?.introducesErrors ? tx('ui.van-ap-dung') : tx('ui.ap-dung'));
     const back = ['run-i', 'run-line', 'cmd', 'appliance'].includes(action) ? list : () => form(action);
-    box.replaceChildren(header(`Xem trước · ${action === 'run-line' ? 'dãy tủ mới' : target.group ? groupLabel(target.group) : target.id}`), el('ul', { class: 'ctx-preview' }, ...lines.map((l) => el('li', { class: l.kind }, l.text))),
-      el('div', { class: 'row' }, confirm, el('button', { type: 'button', class: 'ghost', onclick: back }, ['run-i', 'run-line', 'cmd', 'appliance'].includes(action) ? 'Quay lại' : 'Sửa lại'), el('button', { type: 'button', class: 'ghost', onclick: close }, 'Hủy')));
+    box.replaceChildren(header(tx('ui.xem-truoc-2', { 0: action === 'run-line' ? tx('ui.day-tu-moi') : target.group ? groupLabel(target.group) : target.id })), el('ul', { class: 'ctx-preview' }, ...lines.map((l) => el('li', { class: l.kind }, l.text))),
+      el('div', { class: 'row' }, confirm, el('button', { type: 'button', class: 'ghost', onclick: back }, ['run-i', 'run-line', 'cmd', 'appliance'].includes(action) ? tx('ui.quay-lai') : tx('ui.sua-lai')), el('button', { type: 'button', class: 'ghost', onclick: close }, tx('ui.huy'))));
     confirm.focus();
   }
 
   async function apply(action, p) {
-    if (busy) return; busy = true; ctx.setStatus('Áp dụng…');
+    if (busy) return; busy = true; ctx.setStatus(tx('ui.ap-dung-2'));
     try {
       const { status, data } = await call(`/api/designs/${p.id}/ops`, { op: p.operation, baseRev: p.baseRev, expect: p.opHash });
       busy = false;
       if (status === 409) return stale(action);
-      if (!data || data.error) { ctx.setStatus(data?.error || `Lỗi ${status}`, 'warn'); return ['cmd', 'appliance'].includes(action) ? list() : form(action, data?.error || `Lỗi ${status}`); }
+      if (!data || data.error) { ctx.setStatus(data?.error || tx('ui.loi', { 0: status }), 'warn'); return ['cmd', 'appliance'].includes(action) ? list() : form(action, data?.error || tx('ui.loi', { 0: status })); }
       if (previewOfJob && previewOfJob === pendingJob) setJob(null);
       previewOfJob = null;
       if (action === 'run-line') lineFrom = null;
       const swapped = action === 'appliance' ? lastAppliance : null;
-      close(); await ctx.afterChange(data); ctx.setStatus(`Đã áp dụng: rev ${data.rev}`, 'ok');
+      close(); await ctx.afterChange(data); ctx.setStatus(tx('ui.da-ap-dung-rev', { 0: data.rev }), 'ok');
       if (swapped) {        // the picture follows: the image tab opens on that appliance with the model's description filled in (nothing sent yet)
         ctx.imageEdit({ layer: applianceLayer(swapped.id, swapped.type), module: swapped.id, material: '',     // not a material: the model goes in the request
           instruction: swapped.facts?.prompt || '', mode: 'quick', preview: true });
@@ -435,9 +435,9 @@ export function createModuleMenu(ctx) {
   }
 
   function stale(action) {
-    box.replaceChildren(header('Thiết kế đã thay đổi'), el('p', { class: 'ctx-msg warn' }, 'Có bản sửa mới hơn (ở tab khác hoặc do job ảnh). Tải lại rồi xem trước lại để không ghi đè.'),
-      el('div', { class: 'row' }, el('button', { type: 'button', class: 'primary', onclick: async () => { const id = target.id; await ctx.reload(); if (action === 'cmd' && target.kind === 'structure') list(); else if (ctx.getState().spec.module.some((x) => x.id === id)) (action === 'cmd' ? list() : form(action)); else close(); } }, 'Tải lại'),
-        el('button', { type: 'button', class: 'ghost', onclick: close }, 'Hủy')));
+    box.replaceChildren(header(tx('ui.thiet-ke-da-thay-doi')), el('p', { class: 'ctx-msg warn' }, tx('ui.co-ban-sua-moi-hon-o-tab')),
+      el('div', { class: 'row' }, el('button', { type: 'button', class: 'primary', onclick: async () => { const id = target.id; await ctx.reload(); if (action === 'cmd' && target.kind === 'structure') list(); else if (ctx.getState().spec.module.some((x) => x.id === id)) (action === 'cmd' ? list() : form(action)); else close(); } }, tx('ui.tai-lai-2')),
+        el('button', { type: 'button', class: 'ghost', onclick: close }, tx('ui.huy'))));
   }
 
   document.addEventListener('pointerdown', (e) => { if (!box.hidden && !box.contains(e.target) && !ctx.keepOpenOn?.(e.target)) close(); }, true);

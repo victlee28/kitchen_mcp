@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Render ảnh từ JSON</title>
+  <title data-i18n="ui.render-anh-tu-json">Render ảnh từ JSON</title>
   <link rel="stylesheet" href="styles.css">
   <style>
     body{height:auto;min-height:100vh}
@@ -19,19 +19,19 @@
   </style>
 </head>
 <body>
-  <header><h1>Render ảnh từ JSON three.js</h1><span class="spacer"></span><a href="./" style="color:#c8c0b4">← Kitchen Editor</a><span id="status" class="status"></span></header>
+  <header><h1><span data-i18n="ui.render-anh-tu-json-three-js">Render ảnh từ JSON three.js</span></h1><span class="spacer"></span><a href="./" style="color:#c8c0b4">← Kitchen Editor</a><span id="status" class="status"></span></header>
   <div class="wrap">
     <div class="card">
       <div class="bar">
-        <label>Thiết kế<select id="design"><option value="">— chọn —</option></select></label>
-        <span class="muted">hoặc</span>
-        <label class="file">Mở file JSON three.js<input id="file" type="file" accept=".json,application/json"></label>
-        <label>Rộng<input id="w" type="number" value="1280" min="256" max="4096" step="16"></label>
+        <label><span data-i18n="ui.thiet-ke">Thiết kế</span><select id="design"><option value="" data-i18n="ui.chon">— chọn —</option></select></label>
+        <span class="muted"><span data-i18n="ui.hoac">hoặc</span></span>
+        <label class="file"><span data-i18n="ui.mo-file-json-three-js">Mở file JSON three.js</span><input id="file" type="file" accept=".json,application/json"></label>
+        <label><span data-i18n="ui.rong">Rộng</span><input id="w" type="number" value="1280" min="256" max="4096" step="16"></label>
         <label>Cao<input id="h" type="number" value="960" min="256" max="4096" step="16"></label>
-        <label>Độ sáng<input id="exp" type="number" value="1.0" min="0.2" max="3" step="0.1"></label>
-        <label><span><input id="save" type="checkbox" checked> Lưu vào thiết kế làm ảnh gốc</span></label>
+        <label><span data-i18n="ui.do-sang">Độ sáng</span><input id="exp" type="number" value="1.0" min="0.2" max="3" step="0.1"></label>
+        <label><span><input id="save" type="checkbox" checked> <span data-i18n="ui.luu-vao-thiet-ke-lam-anh-goc">Lưu vào thiết kế làm ảnh gốc</span></span></label>
         <button id="go" disabled>Render</button>
-        <button id="dlAll" class="ghost" hidden>Tải tất cả PNG</button>
+        <button id="dlAll" class="ghost" hidden><span data-i18n="ui.tai-tat-ca-png">Tải tất cả PNG</span></button>
       </div>
       <div id="src" class="muted small"></div>
       <div id="views"></div>

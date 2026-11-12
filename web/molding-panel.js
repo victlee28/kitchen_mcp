@@ -1,6 +1,7 @@
 // Style & moulding panel: profile pickers, profile preview canvas and the apply button.
 import { $, el } from './dom.js';
 import { moldingsOp, styleHasMoldings } from './design-logic.js';
+import { tx } from './i18n.js';
 
 export function createMoldingPanel({ state, api, run, afterChange }) {
   // ---------------- phong cách & phào
@@ -34,7 +35,7 @@ export function createMoldingPanel({ state, api, run, afterChange }) {
   $('pApply').addEventListener('click', () => {
     if (!state.id) return;
     const op = moldingsOp(state.spec, { crown: $('pCrown').checked, base: $('pBase').checked, crownProfile: $('pCrownProf').value, baseProfile: $('pBaseProf').value, openEnd: $('pEnd').value, style: $('pStyle').value });
-    run('áp dụng phào', async () => afterChange(await api(`/api/designs/${state.id}/ops`, 'POST',
+    run(tx('ui.ap-dung-phao'), async () => afterChange(await api(`/api/designs/${state.id}/ops`, 'POST',
       { baseRev: state.rev, op })));
   });
   return { loadProfiles, syncMoldingPanel };

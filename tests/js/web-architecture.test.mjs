@@ -64,14 +64,14 @@ test('kitchen-viewer.js knows nothing of the design state, the API or the popup'
 });
 
 test('design-editor.js depends only on dom/design-logic and receives everything else', () => {
-  assert.deepEqual(deps('design-editor.js').sort(), ['design-logic.js', 'dom.js']);
+  assert.deepEqual(deps('design-editor.js').sort(), ['design-logic.js', 'dom.js', 'i18n.js']);
   const code = src['design-editor.js'].replace(/\/\/.*$/gm, '');
   assert.ok(!/window\.kitchen|\bfetch\(/.test(code));
 });
 
 test('panels and header controls take their dependencies as arguments (no app.js, no window.kitchen)', () => {
   for (const f of ['design-create-panel.js', 'floorplan-panel.js', 'molding-panel.js', 'output-panel.js', 'header-controls.js']) {
-    assert.ok(deps(f).every((d) => ['dom.js', 'design-logic.js'].includes(d)), `${f} imports ${deps(f).join(', ')}`);
+    assert.ok(deps(f).every((d) => ['dom.js', 'design-logic.js', 'i18n.js'].includes(d)), `${f} imports ${deps(f).join(', ')}`);
     assert.ok(!/window\.kitchen\b(?!Json)/.test(src[f].replace(/\/\/.*$/gm, '')), `${f} uses window.kitchen`);
   }
 });

@@ -13,6 +13,7 @@ import { createMoldingPanel } from './molding-panel.js';
 import { createDesignCreatePanel } from './design-create-panel.js';
 import { createFloorplanPanel } from './floorplan-panel.js';
 import { createHeaderControls } from './header-controls.js';
+import { tx } from './i18n.js';
 import './boot.js';   // wording + catalog palettes, loaded before the viewer draws
 
 const { setStatus, run } = createStatus($('status'));
@@ -66,7 +67,7 @@ $('moduleActions').addEventListener('click', (ev) => { const r = ev.currentTarge
 function renderDesignList(list, selectedId) {
   const sel = $('designSelect'); sel.replaceChildren();
   for (const d of list) sel.append(el('option', { value: d.id, textContent: `${d.name} · rev ${d.rev}` }));
-  if (!list.length) sel.append(el('option', { value: '', textContent: '(chưa có thiết kế)' }));
+  if (!list.length) sel.append(el('option', { value: '', textContent: tx('ui.chua-co-thiet-ke') }));
   if (selectedId) sel.value = selectedId;
 }
 // Show a freshly loaded design (the controller has already updated `state`).
@@ -81,10 +82,9 @@ function showDesign({ id, rev, spec, scene: sc, validation: v, doc, keepView }) 
   editor.onDesignOpened(v); syncMoldingPanel();
   $('openRender').href = `render.html?design=${encodeURIComponent(id)}`;
   refreshViewSync().catch((e) => console.warn('view-status', e));
-  syncAiExport().catch((e) => setStatus('Xuất JSON cho AI lỗi: ' + e.message, 'warn'));
+  syncAiExport().catch((e) => setStatus(tx('ui.xuat-json-cho-ai-loi') + e.message, 'warn'));
   window.dispatchEvent(new CustomEvent('design-opened', { detail: { id, rev } }));
 }
-
 // ---------------- panels
 const clearSelection = () => editor.clearSelection();
 const { refreshViewSync, syncAiExport } = createOutputPanel({ state, api, run, setStatus });
@@ -94,6 +94,6 @@ createFloorplanPanel({ state, api, run, setStatus, loadDesigns, openDesign });
 const { loadRegions } = createHeaderControls({ state, api, run, openDesign, clearSelection, setView: (k) => viewer.setView(k),
   onViewChanged: (key) => window.dispatchEvent(new CustomEvent('view-changed', { detail: key })) });
 // imgedit.js (separate script, works without three.js) asks for a reload by event instead of reaching into this app.
-window.addEventListener('design-reload-request', (ev) => run('tải lại', () => afterChange({ id: ev.detail.id })));
+window.addEventListener('design-reload-request', (ev) => run(tx('ui.tai-lai'), () => afterChange({ id: ev.detail.id })));
 
-run('tải', async () => { await loadRegions(); await loadProfiles(); await loadDesigns(); });
+run(tx('ui.tai'), async () => { await loadRegions(); await loadProfiles(); await loadDesigns(); });

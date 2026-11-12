@@ -2,12 +2,13 @@
 import { $, el } from './dom.js';
 import { request } from './api-client.js';
 import { interpretBody, describeInterpret, confirmBody, checkUpload, recognizeBody, describeRecognition } from './assist-logic.js';
+import { tx } from './i18n.js';
 
 function toBase64(file) {
   return new Promise((resolve, reject) => {
     const r = new FileReader();
     r.onload = () => resolve(String(r.result).split(',')[1] || '');
-    r.onerror = () => reject(new Error('Không đọc được tệp'));
+    r.onerror = () => reject(new Error(tx('ui.khong-doc-duoc-tep')));
     r.readAsDataURL(file);
   });
 }
@@ -24,21 +25,21 @@ export function createAssist(ctx) {
   const showLines = (lines) => el('ul', { class: 'ctx-preview' }, ...lines.map((l) => el('li', { class: l.kind }, l.text)));
 
   function showPreview(d) {
-    const apply = el('button', { type: 'button', class: d.introducesErrors ? 'danger' : 'primary', onclick: () => confirm(d) }, d.introducesErrors ? 'Vẫn áp dụng' : 'Áp dụng');
+    const apply = el('button', { type: 'button', class: d.introducesErrors ? 'danger' : 'primary', onclick: () => confirm(d) }, d.introducesErrors ? tx('ui.van-ap-dung') : tx('ui.ap-dung'));
     if (!d.canApply) apply.disabled = true;
     out.replaceChildren(...d.summary.map((s) => el('p', { class: 'muted small' }, s)), showLines(d.lines),
-      el('div', { class: 'row' }, apply, el('button', { type: 'button', class: 'ghost', onclick: clear }, 'Hủy')));
+      el('div', { class: 'row' }, apply, el('button', { type: 'button', class: 'ghost', onclick: clear }, tx('ui.huy'))));
   }
   function showMessage(text, tone, lines = []) {
     out.replaceChildren(el('p', { class: `ctx-msg ${tone || ''}` }, text), showLines(lines));
   }
   async function confirm(d) {
-    await guard('Áp dụng', async () => {
+    await guard(tx('ui.ap-dung'), async () => {
       const { id } = ctx.getState();
       const { status, data } = await post('ops', confirmBody(d.proposal));
-      if (status === 409) return showMessage('Thiết kế đã thay đổi từ lúc xem trước. Hãy chạy lại lệnh.', 'warn');
-      if (!data || data.error) return showMessage(data?.error || `Lỗi ${status}`, 'bad');
-      clear(); await ctx.afterChange(data); ctx.setStatus(`Đã áp dụng: rev ${data.rev}`, 'ok'); void id;
+      if (status === 409) return showMessage(tx('ui.thiet-ke-da-thay-doi-tu-luc'), 'warn');
+      if (!data || data.error) return showMessage(data?.error || tx('ui.loi', { 0: status }), 'bad');
+      clear(); await ctx.afterChange(data); ctx.setStatus(tx('ui.da-ap-dung-rev', { 0: data.rev }), 'ok'); void id;
     });
   }
 
@@ -55,25 +56,25 @@ export function createAssist(ctx) {
     const { rev, selected } = ctx.getState();
     let body;
     try { body = interpretBody($('cmdText').value, rev, { scope: selected ? [selected] : undefined, useLlm: $('cmdLlm').checked }); } catch (e) { return ctx.setStatus(e.message, 'warn'); }
-    await guard('Đọc câu lệnh', async () => {
+    await guard(tx('ui.doc-cau-lenh'), async () => {
       const { status, data } = await post('interpret', body);
-      if (status === 409) return showMessage('Thiết kế đã thay đổi. Tải lại rồi chạy lại.', 'warn');
-      if (!data || data.error) return showMessage(data?.error || `Lỗi ${status}`, 'bad');
-      showResult(describeInterpret(data)); ctx.setStatus('Xem trước câu lệnh (chưa lưu)', 'ok');
+      if (status === 409) return showMessage(tx('ui.thiet-ke-da-thay-doi-tai-lai'), 'warn');
+      if (!data || data.error) return showMessage(data?.error || tx('ui.loi', { 0: status }), 'bad');
+      showResult(describeInterpret(data)); ctx.setStatus(tx('ui.xem-truoc-cau-lenh-chua-luu'), 'ok');
     });
   }
 
   async function recognize() {
     const file = $('recFile').files[0]; const bad = checkUpload(file);
     if (bad) return ctx.setStatus(bad, 'warn');
-    await guard('Nhận diện ảnh', async () => {
+    await guard(tx('ui.nhan-dien-anh'), async () => {
       const body = recognizeBody($('recKind').value, file.name, file.type, await toBase64(file), ctx.getState().rev);
       const { status, data } = await post('recognize', body);
-      if (status === 409) return showMessage('Thiết kế đã thay đổi. Tải lại rồi nhận diện lại.', 'warn');
-      if (!data || data.error) return showMessage(data?.error || `Lỗi ${status}`, 'bad');
+      if (status === 409) return showMessage(tx('ui.thiet-ke-da-thay-doi-tai-lai-2'), 'warn');
+      if (!data || data.error) return showMessage(data?.error || tx('ui.loi', { 0: status }), 'bad');
       const d = describeRecognition(data);
       if (d.kind === 'preview') showPreview(d); else showMessage(d.text, d.tone, d.lines);
-      ctx.setStatus('Đã nhận diện (bản xem trước, chưa lưu)', d.kind === 'preview' ? 'ok' : 'warn');
+      ctx.setStatus(tx('ui.da-nhan-dien-ban-xem-truoc-chua'), d.kind === 'preview' ? 'ok' : 'warn');
     });
   }
 

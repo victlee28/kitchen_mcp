@@ -1,6 +1,7 @@
 // Output panel: view-sync status, controlled-image render, final JSON/zip export for the AI image generator.
 import { $, el } from './dom.js';
 import { aiExportUrls } from './design-logic.js';
+import { tx } from './i18n.js';
 
 export function createOutputPanel({ state, api, run, setStatus }) {
   const SYNC_TEXT = { current: 'approved image up to date', 'stale-appearance': 'approved image out of date (material changed)', 'stale-geometry': 'approved image belongs to older geometry', unknown: 'approved image: cannot tell (no snapshot)' };
@@ -36,14 +37,14 @@ export function createOutputPanel({ state, api, run, setStatus }) {
     }
   }
   $('renderOne').addEventListener('click', () => state.id && run('render', () => runRender([$('viewSelect').value])));
-  $('renderAll').addEventListener('click', () => state.id && run('render tất cả góc', () => runRender(null)));
+  $('renderAll').addEventListener('click', () => state.id && run(tx('ui.render-tat-ca-goc'), () => runRender(null)));
   // ---------------- xuất JSON cuối cùng cho AI tạo ảnh
   const aiDone = {};  // id -> rev đã tự xuất trong phiên này
   try { const v = localStorage.getItem('aiAuto'); if (v !== null) $('aiAuto').checked = v === '1'; } catch { /* không có storage */ }
   $('aiAuto').addEventListener('change', (e) => { try { localStorage.setItem('aiAuto', e.target.checked ? '1' : '0'); } catch { /* bỏ qua */ } if (e.target.checked) syncAiExport(true).catch(console.error); });
   function aiInfo(res) {
     const t = new Date(res.taoLuc).toLocaleTimeString();
-    $('aiInfo').textContent = `Bản cuối: rev ${res.rev} · ${res.views.length} góc · xuất lúc ${t}${res.withImage ? ' · kèm ảnh' : ''}`;
+    $('aiInfo').textContent = tx('ui.ban-cuoi-rev-goc-xuat-luc', { 0: res.rev, 1: res.views.length, 2: t, 3: res.withImage ? tx('ui.kem-anh') : '' });
     const box = $('aiLinks'); box.replaceChildren();
     for (const [k, u] of Object.entries(res.url || {})) if (u) box.append(el('a', { href: u, target: '_blank', textContent: k === 'zip' ? 'ai-package.zip' : 'ai-request.json' }));
   }
@@ -54,7 +55,7 @@ export function createOutputPanel({ state, api, run, setStatus }) {
     $('aiJson').href = urls.shortUrl;  // một file: nhúng sẵn ảnh nên gửi của từng góc
     $('aiJson').setAttribute('download', urls.shortName);
     if (!$('aiAuto').checked || (!force && aiDone[state.id] === state.rev)) {
-      if (aiDone[state.id] !== state.rev) $('aiInfo').textContent = `Thiết kế đang ở rev ${state.rev} — chưa xuất bản này`;
+      if (aiDone[state.id] !== state.rev) $('aiInfo').textContent = tx('ui.thiet-ke-dang-o-rev-chua-xuat', { 0: state.rev });
       return;
     }
     const id = state.id;
@@ -62,8 +63,8 @@ export function createOutputPanel({ state, api, run, setStatus }) {
     aiDone[id] = res.rev;
     if (state.id === id) aiInfo(res);   // the user may have switched design while the export ran
   }
-  $('aiLight').addEventListener('change', () => run('xuất lại cho AI', () => syncAiExport(true)));
-  $('aiZip').addEventListener('click', () => state.id && run('xuất gói kèm ảnh cho AI', async () => {
+  $('aiLight').addEventListener('change', () => run(tx('ui.xuat-lai-cho-ai'), () => syncAiExport(true)));
+  $('aiZip').addEventListener('click', () => state.id && run(tx('ui.xuat-goi-kem-anh-cho-ai'), async () => {
     const res = await api(`/api/designs/${state.id}/ai-export`, 'POST', { rev: state.rev, withImage: true, lighting: $('aiLight').value });
     aiDone[state.id] = res.rev; aiInfo(res);
     if (res.url?.zip) el('a', { href: res.url.zip, download: aiExportUrls(state.id, state.rev, '').zipName(res.rev) }).click();
@@ -73,10 +74,10 @@ export function createOutputPanel({ state, api, run, setStatus }) {
     if (!state.id) return;
     const u = aiExportUrls(state.id, state.rev, $('aiLight').value);
     const variants = [
-      { label: 'Rút gọn', hint: 'Bản gửi AI: chỉ dẫn + ảnh đính kèm', url: u.shortUrl, name: u.shortName, title: u.shortTitle },
-      { label: 'Đầy đủ', hint: 'Bản kiểm tra, không gửi AI', url: u.fullUrl, name: u.fullName, title: u.fullTitle },
+      { label: tx('ui.rut-gon'), hint: tx('ui.ban-gui-ai-chi-dan-anh-dinh'), url: u.shortUrl, name: u.shortName, title: u.shortTitle },
+      { label: tx('ui.day-du'), hint: tx('ui.ban-kiem-tra-khong-gui-ai'), url: u.fullUrl, name: u.fullName, title: u.fullTitle },
     ];
-    run('mở JSON cuối cùng', () => window.kitchenJson.showJsonUrl(variants[0].title, variants[0].url, variants[0].name, variants));
+    run(tx('ui.mo-json-cuoi-cung'), () => window.kitchenJson.showJsonUrl(variants[0].title, variants[0].url, variants[0].name, variants));
   });
   return { refreshViewSync, syncAiExport };
 }

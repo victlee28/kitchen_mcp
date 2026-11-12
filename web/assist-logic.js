@@ -1,14 +1,15 @@
 // Pure logic for the free-command box, the photo/drawing upload and the styleFrom select (no DOM, no fetch).
 import { describeProposal } from './menu-logic.js';
+import { tx } from './i18n.js';
 
 export const MAX_UPLOAD_BYTES = 12 * 1024 * 1024;
 export const UPLOAD_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
 
 /** Options of the styleFrom select: the default (server decides), auto, none, then every other view. */
 export function styleFromOptions(views, current) {
-  return [{ value: '', label: 'Mặc định (gen-0 tự chọn, job sửa không dùng)' }, { value: 'auto', label: 'Tự chọn ảnh đã duyệt mới nhất còn đúng' },
-    { value: 'none', label: 'Không dùng ảnh tham chiếu phong cách' },
-    ...views.filter((v) => v !== current).map((v) => ({ value: v, label: `Lấy phong cách từ góc “${v}”` }))];
+  return [{ value: '', label: tx('ui.mac-dinh-gen-0-tu-chon-job') }, { value: 'auto', label: tx('ui.tu-chon-anh-da-duyet-moi-nhat') },
+    { value: 'none', label: tx('ui.khong-dung-anh-tham-chieu-phong-cach') },
+    ...views.filter((v) => v !== current).map((v) => ({ value: v, label: tx('ui.lay-phong-cach-tu-goc', { 0: v }) }))];
 }
 
 /** The value to send as `styleFrom`, or undefined to leave it out. A view that no longer exists falls back to the default. */
@@ -20,7 +21,7 @@ export function styleFromValue(value, views, current) {
 
 export function interpretBody(text, baseRev, { scope, useLlm } = {}) {
   const t = String(text ?? '').trim();
-  if (!t) throw new Error('Hãy nhập câu lệnh');
+  if (!t) throw new Error(tx('ui.hay-nhap-cau-lenh'));
   const body = { text: t, baseRev };
   if (scope?.length) body.scope = scope;
   if (useLlm) body.useLlm = true;
@@ -34,7 +35,7 @@ export function describeInterpret(r) {
       canApply: r.proposal.applicable && !r.proposal.unchanged, introducesErrors: !!r.proposal.validation?.introducesErrors };
   }
   if (r.status === 'clarify') return { kind: 'clarify', question: r.question || '', choices: r.choices || [] };
-  return { kind: 'unsupported', message: r.message || 'Chưa hiểu câu lệnh này', llm: r.llm || null };
+  return { kind: 'unsupported', message: r.message || tx('ui.chua-hieu-cau-lenh-nay'), llm: r.llm || null };
 }
 
 /** The body of POST /ops that confirms exactly the previewed proposal. */
@@ -43,9 +44,9 @@ export function confirmBody(proposal) {
 }
 
 export function checkUpload(file) {
-  if (!file) return 'Chưa chọn tệp';
-  if (!UPLOAD_TYPES.includes(file.type)) return 'Chỉ nhận ảnh PNG, JPEG hoặc WebP';
-  if (file.size > MAX_UPLOAD_BYTES) return `Ảnh quá lớn (tối đa ${MAX_UPLOAD_BYTES / 1048576} MB)`;
+  if (!file) return tx('ui.chua-chon-tep');
+  if (!UPLOAD_TYPES.includes(file.type)) return tx('ui.chi-nhan-anh-png-jpeg-hoac-webp');
+  if (file.size > MAX_UPLOAD_BYTES) return tx('ui.anh-qua-lon-toi-da-mb', { 0: MAX_UPLOAD_BYTES / 1048576 });
   return null;
 }
 
@@ -59,7 +60,7 @@ export function anchorFor(target) {
 const place = (anchor, mode) => ({ ...(anchor ? { anchor } : {}), ...(mode === 'replace' ? { mode } : {}) });
 
 export function recognizeBody(kind, name, mediaType, base64, baseRev, note = '', anchor = null, mode = 'add') {
-  if (kind !== 'photo' && kind !== 'drawing') throw new Error('kind phải là photo hoặc drawing');
+  if (kind !== 'photo' && kind !== 'drawing') throw new Error(tx('ui.kind-phai-la-photo-hoac-drawing'));
   const hint = String(note ?? '').replace(/\s+/g, ' ').trim().slice(0, 500);   // same limit as the server; empty = not sent
   return { source: { kind, name, mediaType, imageBase64: base64, ...(hint ? { note: hint } : {}) }, baseRev, ...place(anchor, mode) };
 }
@@ -67,7 +68,7 @@ export function recognizeBody(kind, name, mediaType, base64, baseRev, note = '',
 /** Body of POST .../recognize-job: ask again for the result of a recognition that answered `pending`. */
 export function recognizeJobBody(job, baseRev, anchor = null, mode = 'add') {
   const id = String(job ?? '').trim();
-  if (!/^\d{8}-\d{6}(-\d+)?$/.test(id)) throw new Error('Mã job không hợp lệ');
+  if (!/^\d{8}-\d{6}(-\d+)?$/.test(id)) throw new Error(tx('ui.ma-job-khong-hop-le'));
   return { job: id, baseRev, ...place(anchor, mode) };
 }
 
@@ -78,18 +79,18 @@ export function describeRecognition(r) {
   const draft = r.draft;
   const draftLines = draft ? [
     ...draft.modules.map((m) => ({ kind: m.needsReview ? 'warn' : 'info',
-      text: `${m.type} · tường ${m.wall} · ${m.width} mm${m.label ? ` · ${m.label}` : ''} (${pct(m.confidence)}${m.needsReview ? ', cần kiểm tra' : ''})` })),
-    ...draft.rejected.map((x) => ({ kind: 'bad', text: `Bỏ qua mục ${x.index + 1}: ${x.reason}` })),
+      text: tx('ui.tuong-mm', { 0: m.type, 1: m.wall, 2: m.width, 3: m.label ? ` · ${m.label}` : '', 4: pct(m.confidence), 5: m.needsReview ? tx('ui.can-kiem-tra-2') : '' }) })),
+    ...draft.rejected.map((x) => ({ kind: 'bad', text: tx('ui.bo-qua-muc', { 0: x.index + 1, 1: x.reason }) })),
     ...draft.notes.map((text) => ({ kind: 'info', text }))] : [];
   switch (r.status) {
     case 'ok': return { kind: 'preview', summary: r.summary || [], lines: [...draftLines, ...describeProposal(r.proposal)], proposal: r.proposal,
       canApply: r.proposal.applicable && !r.proposal.unchanged, introducesErrors: !!r.proposal.validation?.introducesErrors };
     case 'pending': return { kind: 'pending', job: r.job, step: r.step, lines: [],
-      text: `Đã tạo job ${r.job}${r.step ? ` (đang chờ bước ${r.step})` : ''}. Hãy nhắn Claude: "trả lời hộp thư job ${r.job}"; khi Claude báo xong, bấm "Cập nhật".` };
-    case 'empty': return { kind: 'message', tone: 'warn', text: 'Không nhận ra tủ nào trong ảnh.', lines: draftLines };
-    case 'unavailable': return { kind: 'message', tone: 'warn', text: 'Chưa có bộ nhận diện: chạy bằng `python run.py` (đặt CABINET_RECOGNIZER_URL) hoặc đặt GEMINI_API_KEY (hoặc GEMINI_ENV_FILE) cho máy chủ rồi chạy lại.', lines: [] };
-    case 'failed': return { kind: 'message', tone: 'bad', text: `Bộ nhận diện lỗi: ${r.message || 'không rõ'}`, lines: [] };
-    default: return { kind: 'message', tone: 'warn', text: `Trạng thái lạ: ${r.status}`, lines: [] };
+      text: tx('ui.da-tao-job-hay-nhan-claude-tra', { 0: r.job, 1: r.step ? tx('ui.dang-cho-buoc', { 0: r.step }) : '', 2: r.job }) };
+    case 'empty': return { kind: 'message', tone: 'warn', text: tx('ui.khong-nhan-ra-tu-nao-trong-anh'), lines: draftLines };
+    case 'unavailable': return { kind: 'message', tone: 'warn', text: tx('ui.chua-co-bo-nhan-dien-chay-bang'), lines: [] };
+    case 'failed': return { kind: 'message', tone: 'bad', text: tx('ui.bo-nhan-dien-loi', { 0: r.message || tx('ui.khong-ro') }), lines: [] };
+    default: return { kind: 'message', tone: 'warn', text: tx('ui.trang-thai-la', { 0: r.status }), lines: [] };
   }
 }
 

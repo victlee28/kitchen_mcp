@@ -2,6 +2,7 @@
 // Chuỗi ảnh base64 (data:image/...) hiện thành hình thu nhỏ + dung lượng thay vì hàng trăm nghìn ký tự.
 // Mọi chữ hiển thị qua textContent.
 import { $, el } from './dom.js';
+import { tx } from './i18n.js';
 
 const kb = (s) => `${Math.round((s.length * 3) / 4 / 1024)} KB`;
 
@@ -9,8 +10,8 @@ function leaf(v) {
   if (v === null) return el('span', { class: 'jv-null' }, 'null');
   if (typeof v === 'string') {
     if (/^data:image\//.test(v)) {
-      return el('span', { class: 'jv-img' }, el('img', { src: v, alt: 'ảnh nhúng', loading: 'lazy' }),
-        el('small', {}, `ảnh base64 · ${kb(v)}`));
+      return el('span', { class: 'jv-img' }, el('img', { src: v, alt: tx('ui.anh-nhung'), loading: 'lazy' }),
+        el('small', {}, tx('ui.anh-base64', { 0: kb(v) })));
     }
     return el('span', { class: 'jv-str' }, JSON.stringify(v));
   }
@@ -54,9 +55,9 @@ export function showJson(title, obj, downloadName = 'data.json') {
   $('jvTitle').textContent = title;
   const text = JSON.stringify(obj);
   const n = (text.match(/data:image\//g) || []).length + (text.match(/"mime_?[tT]ype":"image\//g) || []).length;
-  $('jvMeta').textContent = `${Math.round(text.length / 1024)} KB · ${n} ảnh nhúng`;
+  $('jvMeta').textContent = tx('ui.kb-anh-nhung', { 0: Math.round(text.length / 1024), 1: n });
   $('jvTree').replaceChildren(node(null, obj, 0));
-  $('jvRaw').hidden = true; $('jvTree').hidden = false; $('jvMode').textContent = 'Xem dạng chữ';
+  $('jvRaw').hidden = true; $('jvTree').hidden = false; $('jvMode').textContent = tx('ui.xem-dang-chu');
   if (!$('jsonView').open) $('jsonView').showModal();
 }
 
@@ -66,12 +67,12 @@ $('jvMode').addEventListener('click', () => {
   if (raw.hidden) {  // dạng chữ: rút gọn base64 để đọc được
     raw.textContent = JSON.stringify(current.obj, (k, v) => (typeof v === 'string' && (v.startsWith('data:image/') || (k === 'data' && v.length > 200))
       ? `${v.slice(0, 40)}… (${kb(v)})` : v), 2);
-    raw.hidden = false; $('jvTree').hidden = true; $('jvMode').textContent = 'Xem dạng cây';
-  } else { raw.hidden = true; $('jvTree').hidden = false; $('jvMode').textContent = 'Xem dạng chữ'; }
+    raw.hidden = false; $('jvTree').hidden = true; $('jvMode').textContent = tx('ui.xem-dang-cay');
+  } else { raw.hidden = true; $('jvTree').hidden = false; $('jvMode').textContent = tx('ui.xem-dang-chu'); }
 });
 $('jvCopy').addEventListener('click', async () => {
-  try { await navigator.clipboard.writeText(JSON.stringify(current.obj, null, 1)); $('jvMeta').textContent += ' · đã chép'; }
-  catch { $('jvMeta').textContent += ' · không chép được (trình duyệt chặn)'; }
+  try { await navigator.clipboard.writeText(JSON.stringify(current.obj, null, 1)); $('jvMeta').textContent += tx('ui.da-chep'); }
+  catch { $('jvMeta').textContent += tx('ui.khong-chep-duoc-trinh-duyet-chan'); }
 });
 $('jvDownload').addEventListener('click', () => {
   const url = URL.createObjectURL(new Blob([JSON.stringify(current.obj, null, 1)], { type: 'application/json' }));
@@ -87,7 +88,7 @@ export async function showJsonUrl(title, url, downloadName, variants = null) {
       onclick: () => showJsonUrl(v.title || title, v.url, v.name || downloadName, variants).catch((e) => { $('jvMeta').textContent = e.message; }) })));
     box.hidden = false;
   } else { box.replaceChildren(); box.hidden = true; }
-  $('jvMeta').textContent = 'đang tải…';
+  $('jvMeta').textContent = tx('ui.dang-tai');
   const r = await fetch(url);
   const d = await r.json().catch(() => null);
   if (!r.ok || !d) throw new Error((d && d.error) || `HTTP ${r.status}`);

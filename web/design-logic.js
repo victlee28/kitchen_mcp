@@ -1,3 +1,4 @@
+import { tx } from './i18n.js';
 // Pure logic of the design panels (no DOM, no fetch): list order, form diff, molding payload, AI export URLs.
 export const FIELDS = [['type', 'text'], ['wall', 'text'], ['fromCorner', 'number'], ['width', 'number'], ['y', 'number'], ['tall', 'number'], ['back', 'number'], ['blindCorner', 'number'], ['endPanel', 'number']];
 const WALL_ORDER = { back: 0, corner: 1, right: 2, left: 3, island: 4 };
@@ -45,14 +46,14 @@ export function aiExportUrls(id, rev, light) {
     fullUrl: `${base}?format=day-du&lighting=${light}`,
     fullName: `${id}-rev${rev}-ai-request.json`,
     zipName: (r) => `${id}-rev${r}-ai-package.zip`,
-    shortTitle: `JSON gửi AI (rút gọn, kèm ảnh) · ${tag}`,
-    fullTitle: `JSON đầy đủ (cảnh three.js, vật liệu, camera) · ${tag}`,
+    shortTitle: tx('ui.json-gui-ai-rut-gon-kem-anh', { 0: tag }),
+    fullTitle: tx('ui.json-day-du-canh-three-js-vat', { 0: tag }),
   };
 }
 
 // ---- Shift-selection by cabinet system (server: runs.systems; `systems` = GET /api/designs/<id> -> systems: {module: {system, tier, storey}})
-export const TIER_VI = { base: 'tủ dưới', upper: 'tủ trên', tall: 'tủ cao', corner: 'kệ góc' };
-const GROUP_ROLE_VI = { front: 'cánh và ngăn kéo', door: 'cánh', drawer: 'mặt ngăn kéo', handle: 'tay nắm', all: 'mặt trước và tay nắm' };
+export const TIER_VI = { base: tx('ui.tu-duoi'), upper: tx('ui.tu-tren'), tall: tx('ui.tu-cao'), corner: tx('ui.ke-goc') };
+const GROUP_ROLE_VI = { front: tx('ui.canh-va-ngan-keo'), door: tx('ui.canh'), drawer: tx('ui.mat-ngan-keo'), handle: tx('ui.tay-nam'), all: tx('ui.mat-truoc-va-tay-nam') };
 
 /** Role a Shift+click picks from what was clicked: a door, a drawer front, a handle, or the cabinet body (its fronts and handles). */
 export function groupRole(target) {
@@ -71,7 +72,7 @@ export function shiftGroup(target, systems, has = () => true) {
   return modules.length ? { system: info.system, tier: info.tier, role, modules } : null;
 }
 
-export const groupLabel = (g) => `${g.modules.length} tủ · ${GROUP_ROLE_VI[g.role]} ${TIER_VI[g.tier] || g.tier} · hệ ${g.system}`;
+export const groupLabel = (g) => tx('ui.tu-he', { 0: g.modules.length, 1: GROUP_ROLE_VI[g.role], 2: TIER_VI[g.tier] || g.tier, 3: g.system });
 
 /** Whether the design has more than one cabinet system (the image tab then has sys:… groups). */
 export const manySystems = (systems) => new Set(Object.values(systems || {}).map((s) => s.system)).size > 1;

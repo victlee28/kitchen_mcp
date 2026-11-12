@@ -7,7 +7,7 @@ import { styleFromOptions, styleFromValue } from './assist-logic.js';
 import { modelChoices } from './menu-logic.js';
 import './boot.js';
 import { PALETTES } from './palette-client.js';
-import { applianceName } from './i18n.js';
+import { applianceName, tx } from './i18n.js';
 const S = { id: null, view: null, data: null, layer: null, job: null, jobs: [], poll: null, maskImg: null, tasks: [], maskCache: {}, sel: [], key: '' };
 const PALETTE = (PALETTES.zone || []).map((z) => z.rgb).concat(PALETTES.zone?.length ? [] : [[255, 0, 0]]);   // numbered edit zones (catalog palette "zone")
 const MAX_TASKS = 8;
@@ -20,7 +20,7 @@ function showTab(img, skipLoad = false) {
   $('tab3d').classList.toggle('on', !img); $('tabImg').classList.toggle('on', img);
   $('tab3d').setAttribute('aria-selected', String(!img)); $('tabImg').setAttribute('aria-selected', String(img));
   $('pane3d').hidden = img; $('paneImg').hidden = !img; $('bar3d').hidden = img; $('barImg').hidden = !img;
-  if (img && !skipLoad) run('mở ảnh', load);
+  if (img && !skipLoad) run(tx('ui.mo-anh'), load);
 }
 $('tab3d').addEventListener('click', () => showTab(false));
 $('tabImg').addEventListener('click', () => showTab(true));
@@ -36,14 +36,14 @@ async function load() {
   geometryForm(); fillStyleFrom();
   const bt = d.baseImage.type;
   const lineBad = bt === 'imported' && d.baseImage.lineMatch && d.baseImage.lineMatch.khop === false;
-  $('imgInfo').textContent = `rev ${d.rev} · ${d.width}×${d.height} · renderKey ${d.renderKey} · ảnh gốc: ${bt === 'job' ? d.baseImage.jobId : bt === 'imported' ? 'ảnh nhập từ AI' : bt}` +
-    (lineBad ? ' · ⚠ nét ảnh lệch so với thiết kế (ảnh AI có thể đã vẽ lại hình, mask sửa sẽ không khớp)' : '');
+  $('imgInfo').textContent = tx('ui.rev-renderkey-anh-goc', { 0: d.rev, 1: d.width, 2: d.height, 3: d.renderKey, 4: bt === 'job' ? d.baseImage.jobId : bt === 'imported' ? tx('ui.anh-nhap-tu-ai') : bt }) +
+    (lineBad ? tx('ui.net-anh-lech-so-voi-thiet-ke') : '');
   $('baseClear').hidden = bt !== 'imported';
   $('imgBase').src = bust(d.baseImage.url);
   $('imgAfter').hidden = true; $('cmpWrap').hidden = true;
   const sel = $('layerSelect'); const prev = S.layer; sel.replaceChildren();
   const groups = d.layers.filter((x) => x.variant === 'group'), parts = d.layers.filter((x) => x.variant === 'part');
-  for (const [label, xs] of [['Nhóm', groups], ['Chi tiết', parts]]) {
+  for (const [label, xs] of [[tx('ui.nhom'), groups], [tx('ui.chi-tiet'), parts]]) {
     const og = el('optgroup', { label });
     for (const x of xs) og.append(el('option', { value: x.id, textContent: `${x.name} · ${x.id}` }));
     sel.append(og);
@@ -58,8 +58,8 @@ async function selectLayer(id, alts) {
   const x = S.data?.layers.find((l) => l.id === id);
   S.sel = x ? [...(x.component || [x.id])] : partsOf(id, S.data?.layers || []);
   if (x?.module && [...$('hId').options].some((o) => o.value === x.module)) $('hId').value = x.module;  // bấm vào tủ -> chọn sẵn cho sửa hình
-  $('layerInfo').textContent = x ? `${x.semanticClass} · vật liệu: ${x.material || '—'} · ${x.pixels} px` +
-    (x.designEdit ? ` · sửa thiết kế áp cho ${x.designEdit}` : x.designEditNote ? ` · thử nhanh (không ghi được vào thiết kế): ${x.designEditNote}` : ' · chỉ sửa được ảnh (thử nhanh)') : '';
+  $('layerInfo').textContent = x ? tx('ui.vat-lieu-px', { 0: x.semanticClass, 1: x.material || '—', 2: x.pixels }) +
+    (x.designEdit ? tx('ui.sua-thiet-ke-ap-cho', { 0: x.designEdit }) : x.designEditNote ? tx('ui.thu-nhanh-khong-ghi-duoc-vao-thiet', { 0: x.designEditNote }) : tx('ui.chi-sua-duoc-anh-thu-nhanh')) : '';
   const box = $('layerAlt'); box.replaceChildren();
   for (const a of alts) box.append(el('button', { type: 'button', class: a === id ? 'on' : '', textContent: a, onclick: () => selectLayer(a, alts) }));
   renderSel();
@@ -82,35 +82,35 @@ async function renderSwap(layer) {
   const pick = el('select', {}, ...choices.map((c) => el('option', { value: c.id, disabled: !c.pickable }, c.label)));
   const widen = el('input', { type: 'checkbox' });
   const out = el('ul', { class: 'small' });
-  const apply = el('button', { type: 'button' }, 'Áp dụng mẫu này + điền job'); apply.hidden = true;
+  const apply = el('button', { type: 'button' }, tx('ui.ap-dung-mau-nay-dien-job')); apply.hidden = true;
   let preview = null;
   for (const input of [pick, widen]) input.addEventListener('change', () => { apply.hidden = true; out.replaceChildren(); });   // another choice: preview again
-  const show = () => run('xem trước mẫu', async () => {
+  const show = () => run(tx('ui.xem-truoc-mau'), async () => {
     preview = await api(`/api/designs/${S.id}/template`, 'POST', { template: { kind: 'replace-appliance', id, model: pick.value, resizeHost: widen.checked } });
     out.replaceChildren(...(preview.summary || []).map((t) => el('li', { textContent: t })));
     apply.hidden = !preview.proposal?.applicable;
   });
-  apply.addEventListener('click', () => run('đổi mẫu thiết bị', async () => {
+  apply.addEventListener('click', () => run(tx('ui.doi-mau-thiet-bi'), async () => {
     const p = preview.proposal;
     await api(`/api/designs/${p.id}/ops`, 'POST', { op: p.operation, baseRev: p.baseRev, expect: p.opHash });
     window.dispatchEvent(new CustomEvent('design-reload-request', { detail: { id: S.id } }));
     $('jItem').value = ''; $('jInstr').value = preview.aiFacts?.prompt || ''; $('jMode').value = 'quick';      // the model is described in the request itself
-    status(`Đã đổi ${id} sang ${preview.aiFacts?.name || pick.value}. Ảnh nền sẽ được render lại; bấm "Tạo job sửa" để AI vẽ mẫu mới`, 'ok');
+    status(tx('ui.da-doi-sang-anh-nen-se-duoc', { 0: id, 1: preview.aiFacts?.name || pick.value }), 'ok');
     out.replaceChildren(); apply.hidden = true;
   }));
-  box.append(el('b', { textContent: `Đổi mẫu ${applianceName(layer.type)} ${id}` }),
-    el('label', {}, 'Mẫu', pick), el('label', { class: 'inline' }, widen, ' Nới tủ đỡ nếu không vừa'),
-    el('button', { type: 'button', class: 'ghost', onclick: show }, 'Xem trước'), apply, out);
+  box.append(el('b', { textContent: tx('ui.doi-mau', { 0: applianceName(layer.type), 1: id }) }),
+    el('label', {}, tx('ui.mau'), pick), el('label', { class: 'inline' }, widen, tx('ui.noi-tu-do-neu-khong-vua')),
+    el('button', { type: 'button', class: 'ghost', onclick: show }, tx('ui.xem-truoc')), apply, out);
 }
 // Chọn nhiều: S.sel là danh sách id chi tiết; S.layer là tên layer tương ứng (layer có sẵn nếu khớp đúng, không thì `parts:a,b,c`).
 async function setSel(ids, alts) {
-  if (!ids.length) { S.sel = []; S.layer = null; $('layerInfo').textContent = 'Chưa chọn chi tiết nào'; $('layerAlt').replaceChildren(); renderSel(); return drawMask(); }
+  if (!ids.length) { S.sel = []; S.layer = null; $('layerInfo').textContent = tx('ui.chua-chon-chi-tiet-nao'); $('layerAlt').replaceChildren(); renderSel(); return drawMask(); }
   const id = layerIdFor(ids, S.data.layers);
   if (id) return selectLayer(id, alts);
   S.sel = [...ids]; S.layer = targetFor(ids);
   const idx = partIndex(S.data.layers); const types = new Set(ids.map((i) => idx.get(i)?.type));
-  $('layerInfo').textContent = `${ids.length} chi tiết${types.size === 1 ? ' · ' + roleName([...types][0]) : ' · nhiều loại (sẽ tách thành từng việc theo loại)'} · ` +
-    'Thử nhanh sửa đúng các chi tiết này; Sửa thiết kế chỉ ghi được khi diễn đạt chính xác trong thiết kế, nếu không máy chủ sẽ báo lý do';
+  $('layerInfo').textContent = tx('ui.chi-tiet-2', { 0: ids.length, 1: types.size === 1 ? ' · ' + roleName([...types][0]) : tx('ui.nhieu-loai-se-tach-thanh-tung-viec') }) +
+    tx('ui.thu-nhanh-sua-dung-cac-chi-tiet');
   $('layerAlt').replaceChildren();
   renderSel(); await drawMask();
 }
@@ -119,10 +119,10 @@ function renderSel() {
   const idx = partIndex(S.data?.layers || []);
   if (S.sel.length < 2) { box.hidden = true; return; }
   box.hidden = false;
-  box.append(el('span', { class: 'muted small', textContent: `Đã chọn ${S.sel.length}: ` }));
-  for (const i of S.sel.slice(0, 40)) box.append(el('button', { type: 'button', title: 'Bỏ chi tiết này', textContent: `${i} ✕`, onclick: () => run('bỏ chọn', () => setSel(S.sel.filter((x) => x !== i), [])) }));
-  if (S.sel.length > 40) box.append(el('span', { class: 'muted small', textContent: ` …và ${S.sel.length - 40} chi tiết nữa` }));
-  box.append(el('button', { type: 'button', class: 'clr', textContent: 'Xóa chọn', onclick: () => run('xóa chọn', () => setSel([], [])) }));
+  box.append(el('span', { class: 'muted small', textContent: tx('ui.da-chon-2', { 0: S.sel.length }) }));
+  for (const i of S.sel.slice(0, 40)) box.append(el('button', { type: 'button', title: tx('ui.bo-chi-tiet-nay'), textContent: `${i} ✕`, onclick: () => run(tx('ui.bo-chon'), () => setSel(S.sel.filter((x) => x !== i), [])) }));
+  if (S.sel.length > 40) box.append(el('span', { class: 'muted small', textContent: tx('ui.va-chi-tiet-nua', { 0: S.sel.length - 40 }) }));
+  box.append(el('button', { type: 'button', class: 'clr', textContent: tx('ui.xoa-chon'), onclick: () => run(tx('ui.xoa-chon-2'), () => setSel([], [])) }));
 }
 async function maskData(layer) {
   const key = `${S.id}|${S.view}|${S.data.rev}|${layer}`;
@@ -152,43 +152,43 @@ function renderTasks() {
     const c = PALETTE[k % PALETTE.length];
     ol.append(el('li', {}, el('span', { class: 'sw', style: `background:rgb(${c.join(',')})` }),
       `${targetLabel(t.targetLayer, S.data?.layers || [])}${t.material ? ' → ' + t.material : ''}${t.instruction ? ' · ' + t.instruction : ''}`,
-      el('button', { type: 'button', textContent: 'xóa', onclick: () => { S.tasks.splice(k, 1); renderTasks(); drawMask().catch(console.error); } })));
+      el('button', { type: 'button', textContent: tx('ui.xoa-2'), onclick: () => { S.tasks.splice(k, 1); renderTasks(); drawMask().catch(console.error); } })));
   });
   $('tClear').hidden = !S.tasks.length;
-  $('jCreate').textContent = S.tasks.length ? `Tạo job sửa (${S.tasks.length} việc)` : 'Tạo job sửa';
+  $('jCreate').textContent = S.tasks.length ? tx('ui.tao-job-sua-viec', { 0: S.tasks.length }) : tx('ui.tao-job-sua');
 }
-$('tAdd').addEventListener('click', () => run('thêm việc', async () => {
-  if (!S.layer) throw new Error('Hãy chọn chi tiết trước');
+$('tAdd').addEventListener('click', () => run(tx('ui.them-viec'), async () => {
+  if (!S.layer) throw new Error(tx('ui.hay-chon-chi-tiet-truoc'));
   const vat = $('jItem').value.trim(), instr = $('jInstr').value.trim();
-  if (!vat && !instr) throw new Error('Nhập vật liệu mới hoặc yêu cầu cho việc này');
+  if (!vat && !instr) throw new Error(tx('ui.nhap-vat-lieu-moi-hoac-yeu-cau'));
   // Một việc chỉ có một vai trò (để lời nhắc đúng): lựa chọn nhiều loại được tách thành mỗi loại một việc.
   const idx = partIndex(S.data.layers);
   const targets = S.layer.startsWith('parts:') ? partitionByType(S.sel, idx).map(targetFor) : [S.layer];
-  if (S.tasks.length + targets.length > MAX_TASKS) throw new Error(`Tối đa ${MAX_TASKS} việc mỗi job (lựa chọn này cần thêm ${targets.length} việc, đang có ${S.tasks.length})`);
+  if (S.tasks.length + targets.length > MAX_TASKS) throw new Error(tx('ui.toi-da-viec-moi-job-lua-chon', { 0: MAX_TASKS, 1: targets.length, 2: S.tasks.length }));
   const used = new Set(S.tasks.flatMap((t) => partsOf(t.targetLayer, S.data.layers)));
   const clash = targets.flatMap((t) => partsOf(t, S.data.layers)).filter((i) => used.has(i));
-  if (clash.length) throw new Error(`${clash.length} chi tiết (vd ${clash[0]}) đã nằm trong một việc khác; bỏ việc cũ hoặc bỏ chọn chúng`);
+  if (clash.length) throw new Error(tx('ui.chi-tiet-vd-da-nam-trong-mot', { 0: clash.length, 1: clash[0] }));
   for (const t of targets) S.tasks.push({ targetLayer: t, material: vat || null, instruction: instr });
   $('jItem').value = ''; $('jInstr').value = '';
   renderTasks(); await drawMask();
 }));
 $('tClear').addEventListener('click', () => { S.tasks = []; renderTasks(); drawMask().catch(console.error); });
-$('layerSelect').addEventListener('change', (e) => run('chọn layer', () => selectLayer(e.target.value, [])));
+$('layerSelect').addEventListener('change', (e) => run(tx('ui.chon-layer'), () => selectLayer(e.target.value, [])));
 $('showMask').addEventListener('change', () => { $('maskOverlay').hidden = !$('showMask').checked; });
 $('imgBase').addEventListener('click', (ev) => {
   if (!S.data) return;
   const im = ev.currentTarget; const r = im.getBoundingClientRect();
   const x = Math.floor(((ev.clientX - r.left) / r.width) * S.data.width), y = Math.floor(((ev.clientY - r.top) / r.height) * S.data.height);
   const ctrl = ev.ctrlKey || ev.metaKey, shift = ev.shiftKey;
-  run('chọn chi tiết', async () => {
+  run(tx('ui.chon-chi-tiet'), async () => {
     // radius: tay nắm chỉ rộng 23–86 px, cho phép bấm lệch vài điểm ảnh
     const p = await api(`/api/designs/${S.id}/pick?view=${encodeURIComponent(S.view)}&x=${x}&y=${y}&radius=4`);
-    if (!p.part) return status('Không có chi tiết ở điểm này');
+    if (!p.part) return status(tx('ui.khong-co-chi-tiet-o-diem-nay'));
     const idx = partIndex(S.data.layers); const part = idx.get(p.part.id);
     if (!part) return selectLayer(p.layers[0], p.layers);
     if (shift) {  // cả nhóm cùng vai trò, cùng tầng, cùng hệ tủ
       const gid = shiftGroupId(part, S.data.layers); const g = gid && S.data.layers.find((l) => l.id === gid);
-      if (!g) throw new Error('Không có nhóm cùng loại để chọn');
+      if (!g) throw new Error(tx('ui.khong-co-nhom-cung-loai-de-chon'));
       return setSel([...(g.component || [])], []);
     }
     if (ctrl) {  // thêm/bớt một chi tiết cùng loại
@@ -203,11 +203,11 @@ $('imgBase').addEventListener('click', (ev) => {
 
 // các bản JSON của một job, chuyển ngay trong ô xem
 function jobVariants(id, notSent) {
-  const t = notSent ? ' (chưa gửi)' : '';
+  const t = notSent ? tx('ui.chua-gui') : '';
   return [
-    { label: 'Rút gọn', hint: 'Bản gửi AI: chỉ dẫn + ảnh đính kèm', url: `/api/image-jobs/${id}/request`, name: `${id}-request.json`, title: `Request gửi AI (rút gọn) · ${id}${t}` },
-    { label: 'Đầy đủ', hint: 'Bản kiểm tra, không gửi AI', url: `/api/image-jobs/${id}/request?format=day-du`, name: `${id}-request.full.json`, title: `Bản đầy đủ (không gửi AI) · ${id}${t}` },
-    { label: 'Gemini API', hint: 'Thân request Gemini API (ảnh ở inline_data)', url: `/api/image-jobs/${id}/request?format=gemini`, name: `${id}-gemini-request.json`, title: `Thân request Gemini API · ${id}${t}` },
+    { label: tx('ui.rut-gon'), hint: tx('ui.ban-gui-ai-chi-dan-anh-dinh'), url: `/api/image-jobs/${id}/request`, name: `${id}-request.json`, title: tx('ui.request-gui-ai-rut-gon', { 0: id, 1: t }) },
+    { label: tx('ui.day-du'), hint: tx('ui.ban-kiem-tra-khong-gui-ai'), url: `/api/image-jobs/${id}/request?format=day-du`, name: `${id}-request.full.json`, title: tx('ui.ban-day-du-khong-gui-ai', { 0: id, 1: t }) },
+    { label: 'Gemini API', hint: tx('ui.than-request-gemini-api-anh-o-inline'), url: `/api/image-jobs/${id}/request?format=gemini`, name: `${id}-gemini-request.json`, title: tx('ui.than-request-gemini-api', { 0: id, 1: t }) },
   ];
 }
 
@@ -228,7 +228,7 @@ async function loadBackends() {
   $('jBackend').replaceChildren(...Object.entries(b.backends).map(([k, v]) => el('option', { value: k, textContent: `${k} — ${v.name}` })));
   if (b.default && b.backends[b.default]) $('jBackend').value = b.default;
   S.operation = b.operation || {};
-  $('jOperation').replaceChildren(el('option', { value: '', textContent: 'tự động' }),
+  $('jOperation').replaceChildren(el('option', { value: '', textContent: tx('ui.tu-dong') }),
     ...Object.entries(S.operation).map(([k, v]) => el('option', { value: k, textContent: `${v.name} (${v.kind})`, title: v.description })));
 }
 function operationFor(kind) {  // chỉ gửi cấu hình chọn sẵn khi khớp loại job
@@ -238,8 +238,8 @@ function operationFor(kind) {  // chỉ gửi cấu hình chọn sẵn khi khớ
 
 // ------------------------------------------------------------------ sửa hình (xóa / thêm / thay vật)
 const KIEU = {
-  'door-style': [['flat', 'Cánh phẳng'], ['frame', 'Cánh khung (shaker)'], ['glass', 'Cánh kính']],
-  'handle': [['bar', 'Tay thanh'], ['knob', 'Núm tròn'], ['concealed', 'Tay âm (khoét)'], ['none', 'Không tay (nhấn mở)']],
+  'door-style': [['flat', tx('ui.canh-phang')], ['frame', tx('ui.canh-khung-shaker')], ['glass', tx('ui.canh-kinh')]],
+  'handle': [['bar', 'Tay thanh'], ['knob', tx('ui.num-tron')], ['concealed', tx('ui.tay-am-khoet')], ['none', tx('ui.khong-tay-nhan-mo')]],
 };
 S.geometry_edit = [];
 function geometryForm() {
@@ -252,7 +252,7 @@ function geometryForm() {
   if (KIEU[k]) $('hStyle').replaceChildren(...KIEU[k].map(([v, t]) => el('option', { value: v, textContent: t })));
   const mods = (S.data?.layers || []).filter((l) => l.id.startsWith('module:') && l.type === 'module').map((l) => l.module);
   const cur = $('hId').value;
-  $('hId').replaceChildren(...(k === 'door-style' ? [el('option', { value: '*', textContent: '* mọi module' })] : []),
+  $('hId').replaceChildren(...(k === 'door-style' ? [el('option', { value: '*', textContent: tx('ui.moi-module') })] : []),
     ...mods.map((m) => el('option', { value: m, textContent: m })));
   if (cur && [...$('hId').options].some((o) => o.value === cur)) $('hId').value = cur;
 }
@@ -262,25 +262,25 @@ function geometryItem() {
   if (k === 'door-style') return { type: k, id: $('hId').value, variant: $('hStyle').value };
   if (k === 'handle') return { type: k, variant: $('hStyle').value };
   let j;
-  try { j = JSON.parse($('hJson').value || '{}'); } catch (e) { throw new Error(`JSON lỗi: ${e.message}`); }
+  try { j = JSON.parse($('hJson').value || '{}'); } catch (e) { throw new Error(tx('ui.json-loi', { 0: e.message })); }
   return k === 'op' ? { type: 'op', op: j } : { type: k, ...j };
 }
 function geometryText(x) {
-  if (x.type === 'remove-module') return `Xóa ${x.id}${x.closeGap ? ' (dồn tủ)' : ''}`;
-  if (x.type === 'door-style') return `${x.id === '*' ? 'Mọi module' : x.id}: ${KIEU['door-style'].find((k) => k[0] === x.variant)[1]}`;
-  if (x.type === 'handle') return `Tay nắm: ${KIEU['handle'].find((k) => k[0] === x.variant)[1]}`;
-  if (x.type === 'add-module') return `Thêm ${x.module?.id || 'module'}`;
-  return `Thao tác ${x.op?.op || '?'}`;
+  if (x.type === 'remove-module') return tx('ui.xoa-3', { 0: x.id, 1: x.closeGap ? tx('ui.don-tu') : '' });
+  if (x.type === 'door-style') return `${x.id === '*' ? tx('ui.moi-module-2') : x.id}: ${KIEU['door-style'].find((k) => k[0] === x.variant)[1]}`;
+  if (x.type === 'handle') return tx('ui.tay-nam-2', { 0: KIEU['handle'].find((k) => k[0] === x.variant)[1] });
+  if (x.type === 'add-module') return tx('ui.them', { 0: x.module?.id || 'module' });
+  return tx('ui.thao-tac', { 0: x.op?.op || '?' });
 }
 function renderGeometry() {
   $('hList').replaceChildren(...S.geometry_edit.map((x, i) => el('li', {}, geometryText(x), ' ',
     el('button', { type: 'button', class: 'ghost small', textContent: '✕', onclick: () => { S.geometry_edit.splice(i, 1); renderGeometry(); } }))));
-  $('hCreate').textContent = S.geometry_edit.length > 1 ? `Tạo job sửa hình (${S.geometry_edit.length} thao tác)` : 'Tạo job sửa hình';
+  $('hCreate').textContent = S.geometry_edit.length > 1 ? tx('ui.tao-job-sua-hinh-thao-tac', { 0: S.geometry_edit.length }) : tx('ui.tao-job-sua-hinh');
 }
 $('hType').addEventListener('change', geometryForm);
 $('geometryBox').addEventListener('toggle', geometryForm);
-$('hAdd').addEventListener('click', () => run('thêm thao tác', async () => { S.geometry_edit.push(geometryItem()); renderGeometry(); }));
-$('hCreate').addEventListener('click', () => S.data && run('tạo job sửa hình', async () => {
+$('hAdd').addEventListener('click', () => run(tx('ui.them-thao-tac'), async () => { S.geometry_edit.push(geometryItem()); renderGeometry(); }));
+$('hCreate').addEventListener('click', () => S.data && run(tx('ui.tao-job-sua-hinh-2'), async () => {
   if (!S.geometry_edit.length) S.geometry_edit.push(geometryItem());
   await create('geometry_edit');
 }));
@@ -306,12 +306,12 @@ async function create(kind) {
   if (kind === 'geometry_edit') { S.geometry_edit = []; renderGeometry(); }
   await loadJobs();
   if (j.status === 'awaiting-send') {  // xem trước: mở ngay request sẽ gửi
-    status('Job đang chờ gửi — kiểm tra JSON rồi bấm Gửi', 'ok');
-    await window.kitchenJson?.showJsonUrl(`Xem trước request · ${j.id} (chưa gửi)`, `/api/image-jobs/${j.id}/request`, `${j.id}-request.json`, jobVariants(j.id, true));
+    status(tx('ui.job-dang-cho-gui-kiem-tra-json'), 'ok');
+    await window.kitchenJson?.showJsonUrl(tx('ui.xem-truoc-request-chua-gui', { 0: j.id }), `/api/image-jobs/${j.id}/request`, `${j.id}-request.json`, jobVariants(j.id, true));
   }
 }
-$('jCreate').addEventListener('click', () => S.data && run('tạo job sửa', () => create('edit')));
-$('jGen0').addEventListener('click', () => S.data && run('tạo job gen-0', () => create('gen0')));
+$('jCreate').addEventListener('click', () => S.data && run(tx('ui.tao-job-sua-2'), () => create('edit')));
+$('jGen0').addEventListener('click', () => S.data && run(tx('ui.tao-job-gen-0'), () => create('gen0')));
 
 async function loadJobs() {
   S.jobs = await api(`/api/image-jobs?design=${encodeURIComponent(S.id)}&view=${encodeURIComponent(S.view)}`);
@@ -331,24 +331,24 @@ function showJob(j) {
   if (!j) { compare(null); return; }
   const r = j.result || {}; const rep = r.report || {}; const req = j.request || {};
   box.append(el('p', {}, el('b', {}, j.id), ` · ${j.mode} · rev ${j.rev}`));
-  if (req.scope) box.append(el('p', {}, `Phạm vi thiết kế: ${req.scope}`));
+  if (req.scope) box.append(el('p', {}, tx('ui.pham-vi-thiet-ke', { 0: req.scope })));
   if (req.prompt) box.append(el('p', { class: 'muted' }, `Prompt: ${req.prompt}`));
   if (j.error) box.append(el('p', { class: 'st error' }, j.error));
   if (rep.outsideMask) {
-    box.append(el('p', {}, `Ngoài mask: ${rep.outsideMask.setPreserve ? 'giữ nguyên ✓' : rep.outsideMask.pixelsChanged + ' px khác ✗'} · ` +
-      `trong mask đổi ${rep.insideMask.meanChange}` + (rep.bien ? ` · biên ${rep.bien.setEdge ? '✓' : '✗'} (${rep.bien.resultLineRatio}/${rep.bien.baseLineRatio})` : '') +
-      ` · ảnh thô lệch ngoài vùng sửa ${rep.rawImage.changesOutsideEditZone}`));
+    box.append(el('p', {}, tx('ui.ngoai-mask', { 0: rep.outsideMask.setPreserve ? tx('ui.giu-nguyen') : rep.outsideMask.pixelsChanged + tx('ui.px-khac') }) +
+      tx('ui.trong-mask-doi', { 0: rep.insideMask.meanChange }) + (rep.bien ? tx('ui.bien', { 0: rep.bien.setEdge ? '✓' : '✗', 1: rep.bien.resultLineRatio, 2: rep.bien.baseLineRatio }) : '') +
+      tx('ui.anh-tho-lech-ngoai-vung-sua', { 0: rep.rawImage.changesOutsideEditZone })));
   }
   if (rep.task?.length > 1) {
     const ol = el('ol', { class: 'tasks' });
     rep.task.forEach((v, k) => { const c = PALETTE[k % PALETTE.length]; const t = (req.tasks || [])[k] || {};
       ol.append(el('li', {}, el('span', { class: 'sw', style: `background:rgb(${c.join(',')})` }),
-        `${v.targetLayer}${t.material ? ' → ' + t.material : ''}: ${v.insideMask.changed ? 'đã đổi ✓' : 'gần như không đổi ✗'}` +
-        (v.bien ? ` · biên ${v.bien.setEdge ? '✓' : '✗'}` : ''))); });
+        `${v.targetLayer}${t.material ? ' → ' + t.material : ''}: ${v.insideMask.changed ? tx('ui.da-doi') : tx('ui.gan-nhu-khong-doi')}` +
+        (v.bien ? tx('ui.bien-2', { 0: v.bien.setEdge ? '✓' : '✗' }) : ''))); });
     box.append(ol);
   }
-  if (r.design) box.append(el('p', { class: 'st accepted' }, `Đã ghi vào thiết kế: rev ${r.design.rev} (${r.design.scope})` +
-    (r.design.skip ? ` · bỏ qua: ${r.design.skip.join('; ')}` : '')));
+  if (r.design) box.append(el('p', { class: 'st accepted' }, tx('ui.da-ghi-vao-thiet-ke-rev', { 0: r.design.rev, 1: r.design.scope }) +
+    (r.design.skip ? tx('ui.bo-qua', { 0: r.design.skip.join('; ') }) : '')));
   const row = el('div', { class: 'row' });
   const act = (label, path, body, after) => row.append(el('button', { type: 'button', textContent: label, onclick: () => run(label, async () => {
     const res = await api(`/api/image-jobs/${j.id}/${path}`, 'POST', body || {}); if (path === 'regenerate') S.job = res.id;
@@ -356,57 +356,57 @@ function showJob(j) {
   }) }));
   const reloadDesign = async (res) => { if (res.result?.design) window.dispatchEvent(new CustomEvent('design-reload-request', { detail: { id: S.id } })); };
   if (j.status === 'awaiting-send') {
-    box.append(el('p', { class: 'st awaiting-send' }, `Chưa gửi: kiểm tra mask và chỉ dẫn (Xem JSON) rồi bấm Gửi.`));
-    act(`Gửi ${j.backend}`, 'send');
+    box.append(el('p', { class: 'st awaiting-send' }, tx('ui.chua-gui-kiem-tra-mask-va-chi')));
+    act(tx('ui.gui', { 0: j.backend }), 'send');
   }
   if (j.status === 'needs-review') {
-    act(j.mode === 'design' ? 'Chấp nhận & ghi thiết kế' : 'Chấp nhận', 'accept', {}, async (res) => { await reloadDesign(res); await load(); });
-    if (j.mode === 'quick' && (req.material || (req.tasks || []).some((t) => t.material))) act('Chấp nhận & áp vào thiết kế', 'accept', { applyToDesign: true }, async (res) => { await reloadDesign(res); await load(); });
+    act(j.mode === 'design' ? tx('ui.chap-nhan-ghi-thiet-ke') : tx('ui.chap-nhan'), 'accept', {}, async (res) => { await reloadDesign(res); await load(); });
+    if (j.mode === 'quick' && (req.material || (req.tasks || []).some((t) => t.material))) act(tx('ui.chap-nhan-ap-vao-thiet-ke'), 'accept', { applyToDesign: true }, async (res) => { await reloadDesign(res); await load(); });
   }
-  if (!['accepted', 'rejected'].includes(j.status)) act(j.status === 'awaiting-send' ? 'Hủy' : 'Từ chối', 'reject');
-  if (!['running', 'awaiting-send'].includes(j.status)) act('Sinh lại', 'regenerate');
+  if (!['accepted', 'rejected'].includes(j.status)) act(j.status === 'awaiting-send' ? tx('ui.huy') : tx('ui.tu-choi'), 'reject');
+  if (!['running', 'awaiting-send'].includes(j.status)) act(tx('ui.sinh-lai'), 'regenerate');
   const canImport = j.status === 'awaiting-result' || j.status.startsWith('error') || j.status === 'needs-review';
   if (canImport) {
     const inp = el('input', { type: 'file', accept: 'image/*', hidden: true });
-    inp.addEventListener('change', () => run('nộp ảnh', async () => {
+    inp.addEventListener('change', () => run(tx('ui.nop-anh'), async () => {
       const f = inp.files[0]; if (!f) return;
       const b64 = await new Promise((ok, err) => { const fr = new FileReader(); fr.onload = () => ok(fr.result); fr.onerror = err; fr.readAsDataURL(f); });
       await api(`/api/image-jobs/${j.id}/result`, 'POST', { imageBase64: b64 }); await loadJobs();
     }));
-    const importButton = el('button', { type: 'button', textContent: 'Nhập ảnh kết quả từ AI', onclick: () => inp.click() });
+    const importButton = el('button', { type: 'button', textContent: tx('ui.nhap-anh-ket-qua-tu-ai'), onclick: () => inp.click() });
     row.append(importButton, inp);
   }
   box.append(row);
   // gửi AI: bản đã lọc (xem), thân Gemini API (ảnh inline_data, Gemini tự giải mã), hoặc Gemini web (đính kèm ảnh + dán chỉ dẫn)
   const n = (req.tasks || []).length;
-  const send = el('div', { class: 'sendai' }, el('b', {}, `Gửi AI${n > 1 ? ` (${n} việc)` : ''}: `),
-    el('a', { href: '#', textContent: 'Xem JSON (rút gọn / đầy đủ)', onclick: (ev) => { ev.preventDefault();
-      run('mở request', () => window.kitchenJson.showJsonUrl(`Request gửi AI · ${j.id}`, `/api/image-jobs/${j.id}/request`, `${j.id}-request.json`, jobVariants(j.id, j.status === 'awaiting-send'))); } }),
+  const send = el('div', { class: 'sendai' }, el('b', {}, tx('ui.gui-ai', { 0: n > 1 ? tx('ui.viec', { 0: n }) : '' })),
+    el('a', { href: '#', textContent: tx('ui.xem-json-rut-gon-day-du'), onclick: (ev) => { ev.preventDefault();
+      run(tx('ui.mo-request'), () => window.kitchenJson.showJsonUrl(tx('ui.request-gui-ai', { 0: j.id }), `/api/image-jobs/${j.id}/request`, `${j.id}-request.json`, jobVariants(j.id, j.status === 'awaiting-send'))); } }),
     ' · ', el('a', { href: `/api/image-jobs/${j.id}/request?format=gemini`, download: `${j.id}-gemini-request.json`, textContent: 'JSON cho Gemini API' }));
-  const web = el('div', { class: 'sendai' }, el('b', {}, 'ChatGPT / Claude / Gemini thủ công: '),
-    el('a', { href: '#', textContent: 'Chép chỉ dẫn', onclick: (ev) => { ev.preventDefault(); run('chép chỉ dẫn', async () => {
+  const web = el('div', { class: 'sendai' }, el('b', {}, tx('ui.chatgpt-claude-gemini-thu-cong')),
+    el('a', { href: '#', textContent: tx('ui.chep-chi-dan'), onclick: (ev) => { ev.preventDefault(); run(tx('ui.chep-chi-dan-2'), async () => {
       const r = await (await fetch(`/api/image-jobs/${j.id}/request`)).json();
-      await navigator.clipboard.writeText(r.instruction); status('Đã chép chỉ dẫn — đính kèm ảnh tham chiếu rồi dán vào công cụ AI', 'ok'); }); } }));
+      await navigator.clipboard.writeText(r.instruction); status(tx('ui.da-chep-chi-dan-dinh-kem-anh'), 'ok'); }); } }));
   for (const [k, u] of Object.entries(j.files || {}).filter(([k]) => /^image-\d-/.test(k)).sort()) {
-    web.append(' · ', el('a', { href: u, download: `${j.id}-${k}`, textContent: `Ảnh ${k.split('-')[1]}: ${k.replace(/^image-\d-|\.png$/g, '')}` }));
+    web.append(' · ', el('a', { href: u, download: `${j.id}-${k}`, textContent: tx('ui.anh', { 0: k.split('-')[1], 1: k.replace(/^image-\d-|\.png$/g, '') }) }));
   }
   web.append(el('div', { class: 'warnbox', textContent: canImport
-    ? 'Đính kèm ảnh tham chiếu ở trên vào ChatGPT, Claude hoặc Gemini, dán chỉ dẫn đã chép và tạo ảnh. Sau đó bấm “Nhập ảnh kết quả từ AI” để đưa ảnh về đây; ảnh sẽ được kiểm tra và chờ bạn duyệt.'
+    ? tx('ui.dinh-kem-anh-tham-chieu-o-tren')
     : j.status === 'awaiting-send'
-      ? `Nút “Nhập ảnh kết quả từ AI” chỉ hiện khi job ở trạng thái chờ kết quả. Job này đang chờ gửi (backend ${j.backend}): để làm thủ công với ChatGPT, Claude hoặc Gemini, hãy dùng job backend job-package rồi bấm Gửi — job chuyển sang “chờ kết quả” và nút sẽ hiện.`
-      : 'Nút “Nhập ảnh kết quả từ AI” không hiện ở trạng thái này của job.' }));
-  const kt = el('div', { class: 'sendai kiemtra', textContent: 'Kiểm tra request: đang kiểm tra…' });
+      ? tx('ui.nut-nhap-anh-ket-qua-tu-ai', { 0: j.backend })
+      : tx('ui.nut-nhap-anh-ket-qua-tu-ai-2') }));
+  const kt = el('div', { class: 'sendai kiemtra', textContent: tx('ui.kiem-tra-request-dang-kiem-tra') });
   {
-    fetch(`/api/image-jobs/${j.id}/request`).then((r) => r.json()).then((r) => showCheck(kt, r.validation, 'Kiểm tra request'))
-      .catch((e) => { kt.textContent = `Kiểm tra request: lỗi ${e.message}`; });
+    fetch(`/api/image-jobs/${j.id}/request`).then((r) => r.json()).then((r) => showCheck(kt, r.validation, tx('ui.kiem-tra-request')))
+      .catch((e) => { kt.textContent = tx('ui.kiem-tra-request-loi', { 0: e.message }); });
   }
   const chk = el('input', { type: 'file', accept: '.json,application/json,text/plain' });
-  chk.addEventListener('change', () => run('kiểm tra file', async () => {
+  chk.addEventListener('change', () => run(tx('ui.kiem-tra-file'), async () => {
     const f = chk.files[0]; if (!f) return;
     const r = await api('/api/check-request', 'POST', { text: await f.text() });
-    showCheck(kt, r, `Kiểm tra file ${f.name}`, true); chk.value = '';
+    showCheck(kt, r, tx('ui.kiem-tra-file-2', { 0: f.name }), true); chk.value = '';
   }));
-  web.append(el('label', { class: 'file', textContent: 'Kiểm tra một file request…', title: 'Nạp file request.json / gemini-request.json để phát hiện file bị cắt, thiếu ảnh, base64 hỏng' }, chk));
+  web.append(el('label', { class: 'file', textContent: tx('ui.kiem-tra-mot-file-request'), title: tx('ui.nap-file-request-json-gemini-request-json') }, chk));
   box.append(send, web, kt);
   if (j.files) {
     const links = el('p', { class: 'muted' }, 'File: ');
@@ -418,9 +418,9 @@ function showJob(j) {
 
 function showCheck(box, kt, title, file = false) {
   // kết quả kiểm tra request: đạt / lỗi (chặn gửi) / cảnh báo
-  if (!kt) { box.textContent = `${title}: không có dữ liệu`; return; }
-  box.replaceChildren(el('b', { class: kt.ok ? 'ok' : 'bad', textContent: `${title}: ${kt.ok ? '✓ đạt' : (file ? '✗ file lỗi — đừng gửi file này' : '✗ CHƯA ĐẠT — chưa gửi được')}` }));
-  const imgs = (kt.image || []).map((a) => `ảnh ${a.order}${a.role ? ` (${a.role})` : ''} ${a.ok ? `✓${a.dimensions ? ` ${a.dimensions.join('×')}` : ''}` : '✗'}`);
+  if (!kt) { box.textContent = tx('ui.khong-co-du-lieu', { 0: title }); return; }
+  box.replaceChildren(el('b', { class: kt.ok ? 'ok' : 'bad', textContent: `${title}: ${kt.ok ? tx('ui.dat') : (file ? tx('ui.file-loi-dung-gui-file-nay') : tx('ui.chua-dat-chua-gui-duoc'))}` }));
+  const imgs = (kt.image || []).map((a) => tx('ui.anh-2', { 0: a.order, 1: a.role ? ` (${a.role})` : '', 2: a.ok ? `✓${a.dimensions ? ` ${a.dimensions.join('×')}` : ''}` : '✗' }));
   if (imgs.length) box.append(el('div', { class: 'muted', textContent: imgs.join(' · ') }));
   const ul = el('ul');
   for (const x of kt.errors || []) ul.append(el('li', { class: 'bad', textContent: x }));
@@ -447,7 +447,7 @@ window.addEventListener('image-edit-request', async (ev) => { try {
   // detail: { layer, alts?, module?, material?, instruction?, mode? ('quick'|'design'), preview? (bool) } — prefilled, never submitted from here
   const { module, material, instruction, mode, preview, alts } = ev.detail || {}; let { layer } = ev.detail || {}; const id = $('designSelect').value;
   if (!id || !layer) return;
-  status('Tìm góc nhìn thấy rõ module…');
+  status(tx('ui.tim-goc-nhin-thay-ro-module'));
   const best = await bestView(id, layer, alts || []);
   $('viewSelect').value = best.view;
   showTab(true, true);
@@ -458,26 +458,26 @@ window.addEventListener('image-edit-request', async (ev) => { try {
   if (typeof instruction === 'string') $('jInstr').value = instruction;
   if (mode === 'quick' || mode === 'design') $('jMode').value = mode;
   if (typeof preview === 'boolean') $('jPreview').checked = preview;
-  if (best.px < MIN_VISIBLE_PX) status(`${module || layer} gần như không thấy ở góc nhìn nào (${Math.max(best.px, 0)} px): job có thể bị từ chối vì vùng quá nhỏ`, 'warn');
-  else status(`${module || layer}: góc nhìn ${best.view} (${best.px} px). Chọn chế độ, backend rồi tạo job ở khung bên phải`, 'ok');
+  if (best.px < MIN_VISIBLE_PX) status(tx('ui.gan-nhu-khong-thay-o-goc-nhin', { 0: module || layer, 1: Math.max(best.px, 0) }), 'warn');
+  else status(tx('ui.goc-nhin-px-chon-che-do-backend', { 0: module || layer, 1: best.view, 2: best.px }), 'ok');
 } catch (e) { console.error(e); status(e.message, 'warn'); } });
-window.addEventListener('design-opened', () => { if (active()) run('mở ảnh', load); });
-window.addEventListener('view-changed', () => { if (active()) run('mở ảnh', load); });
+window.addEventListener('design-opened', () => { if (active()) run(tx('ui.mo-anh'), load); });
+window.addEventListener('view-changed', () => { if (active()) run(tx('ui.mo-anh'), load); });
 $('designSelect').addEventListener('change', () => { S.layer = null; S.sel = []; S.job = null; S.tasks = []; renderTasks(); });
 loadBackends().catch((e) => status(e.message, 'warn'));
 
 // ---------------- import an AI-generated image as the base image for the selected view
 $('baseImport').addEventListener('click', () => {
-  if (!S.id || !S.view) { status('Chọn thiết kế và góc nhìn trước', 'warn'); return; }
+  if (!S.id || !S.view) { status(tx('ui.chon-thiet-ke-va-goc-nhin-truoc'), 'warn'); return; }
   $('baseFile').click();
 });
-$('baseFile').addEventListener('change', () => run('nhập ảnh nền', async () => {
+$('baseFile').addEventListener('change', () => run(tx('ui.nhap-anh-nen'), async () => {
   const f = $('baseFile').files[0]; $('baseFile').value = ''; if (!f) return;
   const b64 = await new Promise((ok, err) => { const fr = new FileReader(); fr.onload = () => ok(fr.result); fr.onerror = err; fr.readAsDataURL(f); });
   await api(`/api/designs/${S.id}/base-image`, 'POST', { view: S.view, rev: S.data?.rev, imageBase64: b64, fit: $('baseFit').value });
   await load();
 }));
-$('baseClear').addEventListener('click', () => run('dùng lại ảnh mặc định', async () => {
+$('baseClear').addEventListener('click', () => run(tx('ui.dung-lai-anh-mac-dinh'), async () => {
   await api(`/api/designs/${S.id}/base-image`, 'POST', { view: S.view, rev: S.data?.rev, remove: true });
   await load();
 }));

@@ -8,43 +8,44 @@
 <body>
   <header>
     <h1>Kitchen Editor</h1>
-    <select id="designSelect" aria-label="Thiết kế"></select>
+    <select id="designSelect" aria-label="Thiết kế" data-i18n-attr="aria-label:ui.thiet-ke"></select>
     <span id="revInfo" class="muted"></span>
-    <label class="muted">Tiêu chuẩn <select id="qgSelect" aria-label="Quốc gia áp tiêu chuẩn"><option value="">theo thiết kế</option></select></label>
+    <label class="muted"><span data-i18n="ui.tieu-chuan">Tiêu chuẩn</span> <select id="qgSelect" aria-label="Quốc gia áp tiêu chuẩn" data-i18n-attr="aria-label:ui.quoc-gia-ap-tieu-chuan"><option value="" data-i18n="ui.theo-thiet-ke">theo thiết kế</option></select></label>
     <span class="spacer"></span>
-    <a id="openCatalog" href="catalog.html" target="_blank" title="Danh mục dữ liệu: thiết bị, vật liệu, phong cách…">📚 Danh mục</a>
-    <a id="openRender" href="render.html" target="_blank" title="Render ảnh từ JSON three.js trong trình duyệt">🖼 Render ảnh</a>
-    <button id="undo" title="Quay về rev trước">↶ Hoàn tác</button>
+    <a id="openCatalog" href="catalog.html" target="_blank" title="Danh mục dữ liệu: thiết bị, vật liệu, phong cách…" data-i18n-attr="title:ui.danh-muc-du-lieu-thiet-bi-vat"><span data-i18n="ui.danh-muc">📚 Danh mục</span></a>
+    <a id="openRender" href="render.html" target="_blank" title="Render ảnh từ JSON three.js trong trình duyệt" data-i18n-attr="title:ui.render-anh-tu-json-three-js-trong"><span data-i18n="ui.render-anh">🖼 Render ảnh</span></a>
+    <button id="undo" title="Quay về rev trước" data-i18n-attr="title:ui.quay-ve-rev-truoc"><span data-i18n="ui.hoan-tac-2">↶ Hoàn tác</span></button>
+    <span id="langSlot"></span>
     <span id="status" class="status"></span>
   </header>
   <main>
     <aside class="panel" id="left">
       <section>
-        <h2>Tạo thiết kế</h2>
-        <textarea id="prompt" rows="3" placeholder="Ví dụ: Bếp chữ L cạnh dài 2,8m và 3,2m, có tủ lạnh, mặt đá trắng"></textarea>
-        <button id="fromPrompt">Tạo từ mô tả</button>
+        <h2><span data-i18n="ui.tao-thiet-ke">Tạo thiết kế</span></h2>
+        <textarea id="prompt" rows="3" placeholder="Ví dụ: Bếp chữ L cạnh dài 2,8m và 3,2m, có tủ lạnh, mặt đá trắng" data-i18n-attr="placeholder:ui.vi-du-bep-chu-l-canh-dai"></textarea>
+        <button id="fromPrompt"><span data-i18n="ui.tao-tu-mo-ta-2">Tạo từ mô tả</span></button>
         <div id="promptResult" class="interp" hidden></div>
         <details>
-          <summary>Tạo từ mẫu</summary>
+          <summary><span data-i18n="ui.tao-tu-mau-2">Tạo từ mẫu</span></summary>
           <div class="grid2">
-            <label>Hình<select id="mShape"><option>I</option><option>L</option><option>U</option></select></label>
-            <label>Tường sau (mm)<input id="mBack" type="number" value="3000" step="10"></label>
-            <label>Tường phải (mm)<input id="mRight" type="number" value="2400" step="10"></label>
-            <label>Tường trái (mm)<input id="mLeft" type="number" value="2400" step="10"></label>
-            <label>Đỉnh tủ (mm)<input id="mTop" type="number" value="2200" step="10"></label>
-            <label>Ốp đá<select id="mBacksplash"><option value="standard">Cao vừa đủ (600 mm)</option><option value="to-upper">Lên sát tủ trên</option><option value="to-ceiling">Tới trần</option></select></label>
-            <label><input id="mFridge" type="checkbox"> Tủ lạnh</label>
-            <label><input id="mLoft" type="checkbox"> Tủ nóc</label>
-            <label><input id="mIsland" type="checkbox"> Đảo bếp</label>
-            <label><input id="mPeninsula" type="checkbox"> Bán đảo</label>
-            <label><input id="mOpenShelf" type="checkbox"> Kệ mở</label>
-            <label>Phong cách<select id="mStyle"><option>Modern</option><option>Classic</option><option>Neoclassical</option><option>Minimalist</option></select></label>
+            <label><span data-i18n="ui.hinh">Hình</span><select id="mShape"><option>I</option><option>L</option><option>U</option></select></label>
+            <label><span data-i18n="ui.tuong-sau-mm">Tường sau (mm)</span><input id="mBack" type="number" value="3000" step="10"></label>
+            <label><span data-i18n="ui.tuong-phai-mm">Tường phải (mm)</span><input id="mRight" type="number" value="2400" step="10"></label>
+            <label><span data-i18n="ui.tuong-trai-mm">Tường trái (mm)</span><input id="mLeft" type="number" value="2400" step="10"></label>
+            <label><span data-i18n="ui.dinh-tu-mm">Đỉnh tủ (mm)</span><input id="mTop" type="number" value="2200" step="10"></label>
+            <label><span data-i18n="ui.op-da">Ốp đá</span><select id="mBacksplash"><option value="standard" data-i18n="ui.cao-vua-du-600-mm">Cao vừa đủ (600 mm)</option><option value="to-upper" data-i18n="ui.len-sat-tu-tren">Lên sát tủ trên</option><option value="to-ceiling" data-i18n="ui.toi-tran">Tới trần</option></select></label>
+            <label><input id="mFridge" type="checkbox"> <span data-i18n="ui.tu-lanh">Tủ lạnh</span></label>
+            <label><input id="mLoft" type="checkbox"> <span data-i18n="ui.tu-noc">Tủ nóc</span></label>
+            <label><input id="mIsland" type="checkbox"> <span data-i18n="ui.dao-bep">Đảo bếp</span></label>
+            <label><input id="mPeninsula" type="checkbox"> <span data-i18n="ui.ban-dao">Bán đảo</span></label>
+            <label><input id="mOpenShelf" type="checkbox"> <span data-i18n="ui.ke-mo">Kệ mở</span></label>
+            <label><span data-i18n="ui.phong-cach">Phong cách</span><select id="mStyle"><option>Modern</option><option>Classic</option><option>Neoclassical</option><option>Minimalist</option></select></label>
           </div>
-          <button id="fromTemplate">Tạo từ mẫu</button>
+          <button id="fromTemplate"><span data-i18n="ui.tao-tu-mau-2">Tạo từ mẫu</span></button>
         </details>
-        <label class="file">Nhập spec JSON<input id="importFile" type="file" accept=".json,application/json"></label>
-        <button id="exportSpec">Tải spec JSON</button>
-        <button id="exportThree" title="JSON theo Complete Kitchen Three.js Scene Schema">Tải JSON three.js</button>
+        <label class="file"><span data-i18n="ui.nhap-spec-json">Nhập spec JSON</span><input id="importFile" type="file" accept=".json,application/json"></label>
+        <button id="exportSpec"><span data-i18n="ui.tai-spec-json">Tải spec JSON</span></button>
+        <button id="exportThree" title="JSON theo Complete Kitchen Three.js Scene Schema"><span data-i18n="ui.tai-json-three-js">Tải JSON three.js</span></button>
       </section>
       <section>
         <h2>Floorplan import</h2>
@@ -63,60 +64,60 @@
         </div>
       </section>
       <section id="aiExport">
-        <h2>Xuất cho AI tạo ảnh</h2>
-        <p id="aiInfo" class="muted small">Chưa có thiết kế</p>
-        <label class="wide"><span><input id="aiAuto" type="checkbox" checked> Tự xuất JSON sau mỗi lần tạo / sửa</span></label>
-        <label>Ánh sáng ảnh<select id="aiLight" title="Câu lệnh luôn kèm yêu cầu ảnh thật: máy ảnh kiến trúc, vật liệu, bóng tiếp xúc, khe cánh…"><option value="daylight">Ban ngày, sáng tự nhiên</option><option value="late-afternoon">Nắng chiều ấm</option><option value="dim-evening">Buổi tối, đèn ấm</option></select></label>
+        <h2><span data-i18n="ui.xuat-cho-ai-tao-anh">Xuất cho AI tạo ảnh</span></h2>
+        <p id="aiInfo" class="muted small"><span data-i18n="ui.chua-co-thiet-ke-2">Chưa có thiết kế</span></p>
+        <label class="wide"><span><input id="aiAuto" type="checkbox" checked> <span data-i18n="ui.tu-xuat-json-sau-moi-lan-tao">Tự xuất JSON sau mỗi lần tạo / sửa</span></span></label>
+        <label><span data-i18n="ui.anh-sang-anh">Ánh sáng ảnh</span><select id="aiLight" title="Câu lệnh luôn kèm yêu cầu ảnh thật: máy ảnh kiến trúc, vật liệu, bóng tiếp xúc, khe cánh…" data-i18n-attr="title:ui.cau-lenh-luon-kem-yeu-cau-anh"><option value="daylight" data-i18n="ui.ban-ngay-sang-tu-nhien">Ban ngày, sáng tự nhiên</option><option value="late-afternoon" data-i18n="ui.nang-chieu-am">Nắng chiều ấm</option><option value="dim-evening" data-i18n="ui.buoi-toi-den-am">Buổi tối, đèn ấm</option></select></label>
         <div class="row">
-          <a id="aiJson" class="btn" href="#" download title="JSON gửi AI đã lọc: chỉ dẫn + ảnh đính kèm từng góc">Tải JSON gửi AI</a>
-          <button id="aiZip" type="button" title="Render ảnh còn thiếu, đóng gói JSON + ảnh nét/depth/render">Xuất gói kèm ảnh (.zip)</button>
-          <button id="aiView" type="button" title="Xem file JSON cuối cùng ngay trên trang">Xem JSON</button>
+          <a id="aiJson" class="btn" href="#" download title="JSON gửi AI đã lọc: chỉ dẫn + ảnh đính kèm từng góc" data-i18n-attr="title:ui.json-gui-ai-da-loc-chi-dan"><span data-i18n="ui.tai-json-gui-ai">Tải JSON gửi AI</span></a>
+          <button id="aiZip" type="button" title="Render ảnh còn thiếu, đóng gói JSON + ảnh nét/depth/render" data-i18n-attr="title:ui.render-anh-con-thieu-dong-goi-json"><span data-i18n="ui.xuat-goi-kem-anh-zip">Xuất gói kèm ảnh (.zip)</span></button>
+          <button id="aiView" type="button" title="Xem file JSON cuối cùng ngay trên trang" data-i18n-attr="title:ui.xem-file-json-cuoi-cung-ngay-tren">Xem JSON</button>
         </div>
         <div id="aiLinks" class="muted small"></div>
       </section>
       <section>
-        <h2>Phong cách &amp; phào</h2>
+        <h2><span data-i18n="ui.phong-cach-phao">Phong cách &amp; phào</span></h2>
         <div class="grid2">
-          <label>Phong cách<select id="pStyle"><option>Modern</option><option>Classic</option><option>Neoclassical</option><option>Transitional</option><option>Minimalist</option></select></label>
+          <label><span data-i18n="ui.phong-cach">Phong cách</span><select id="pStyle"><option>Modern</option><option>Classic</option><option>Neoclassical</option><option>Transitional</option><option>Minimalist</option></select></label>
           <span></span>
-          <label><input id="pCrown" type="checkbox"> Phào nóc</label>
-          <label>Mặt cắt<select id="pCrownProf"></select></label>
-          <label><input id="pBase" type="checkbox"> Phào chân</label>
-          <label>Mặt cắt<select id="pBaseProf"></select></label>
-          <label>Đầu hở<select id="pEnd"><option value="return-to-wall">quay về tường</option><option value="flat-cut">cắt phẳng</option></select></label>
-          <canvas id="pPreview" width="120" height="80" title="Xem trước mặt cắt phào nóc"></canvas>
+          <label><input id="pCrown" type="checkbox"> <span data-i18n="ui.phao-noc">Phào nóc</span></label>
+          <label><span data-i18n="ui.mat-cat">Mặt cắt</span><select id="pCrownProf"></select></label>
+          <label><input id="pBase" type="checkbox"> <span data-i18n="ui.phao-chan">Phào chân</span></label>
+          <label><span data-i18n="ui.mat-cat">Mặt cắt</span><select id="pBaseProf"></select></label>
+          <label><span data-i18n="ui.dau-ho">Đầu hở</span><select id="pEnd"><option value="return-to-wall" data-i18n="ui.quay-ve-tuong">quay về tường</option><option value="flat-cut" data-i18n="ui.cat-phang">cắt phẳng</option></select></label>
+          <canvas id="pPreview" width="120" height="80" title="Xem trước mặt cắt phào nóc" data-i18n-attr="title:ui.xem-truoc-mat-cat-phao-noc"></canvas>
         </div>
-        <button id="pApply">Áp dụng phào</button>
+        <button id="pApply"><span data-i18n="ui.ap-dung-phao-2">Áp dụng phào</span></button>
       </section>
       <section>
-        <h2>Lệnh tự do &amp; nhận diện ảnh</h2>
-        <div class="row"><input id="cmdText" type="text" placeholder="vd: xóa TD3, đổi cánh TD1 sang kính, thêm tủ rộng 600 sau TD2" aria-label="Câu lệnh"><button id="cmdGo" type="button">Xem trước</button></div>
-        <label class="small"><input id="cmdLlm" type="checkbox"> Hỏi LLM khi luật không hiểu (cần DEEPSEEK_API_KEY)</label>
-        <div class="row"><select id="recKind" aria-label="Loại ảnh"><option value="photo">Ảnh chụp bếp</option><option value="drawing">Bản vẽ</option></select><input id="recFile" type="file" accept="image/png,image/jpeg,image/webp" aria-label="Ảnh để nhận diện"><button id="recGo" type="button">Nhận diện</button></div>
-        <p class="muted small">Cả hai chỉ cho bản xem trước; bấm Áp dụng mới lưu. Đang chọn một module thì lệnh chỉ nhắm vào module đó.</p>
+        <h2><span data-i18n="ui.lenh-tu-do-nhan-dien-anh">Lệnh tự do &amp; nhận diện ảnh</span></h2>
+        <div class="row"><input id="cmdText" type="text" placeholder="vd: xóa TD3, đổi cánh TD1 sang kính, thêm tủ rộng 600 sau TD2" aria-label="Câu lệnh" data-i18n-attr="placeholder:ui.vd-xoa-td3-doi-canh-td1-sang;aria-label:ui.cau-lenh"><button id="cmdGo" type="button"><span data-i18n="ui.xem-truoc">Xem trước</span></button></div>
+        <label class="small"><input id="cmdLlm" type="checkbox"> <span data-i18n="ui.hoi-llm-khi-luat-khong-hieu-can">Hỏi LLM khi luật không hiểu (cần DEEPSEEK_API_KEY)</span></label>
+        <div class="row"><select id="recKind" aria-label="Loại ảnh" data-i18n-attr="aria-label:ui.loai-anh"><option value="photo" data-i18n="ui.anh-chup-bep">Ảnh chụp bếp</option><option value="drawing" data-i18n="ui.ban-ve">Bản vẽ</option></select><input id="recFile" type="file" accept="image/png,image/jpeg,image/webp" aria-label="Ảnh để nhận diện" data-i18n-attr="aria-label:ui.anh-de-nhan-dien"><button id="recGo" type="button"><span data-i18n="ui.nhan-dien">Nhận diện</span></button></div>
+        <p class="muted small"><span data-i18n="ui.ca-hai-chi-cho-ban-xem-truoc">Cả hai chỉ cho bản xem trước; bấm Áp dụng mới lưu. Đang chọn một module thì lệnh chỉ nhắm vào module đó.</span></p>
         <div id="assistResult" class="interp"></div>
       </section>
       <section>
-        <h2>Kiểm tra quy tắc</h2>
+        <h2><span data-i18n="ui.kiem-tra-quy-tac">Kiểm tra quy tắc</span></h2>
         <ul id="issues" class="issues"></ul>
       </section>
     </aside>
     <section class="center">
       <div class="tabs" role="tablist">
-        <button id="tab3d" class="tab on" role="tab" aria-selected="true">Mô hình 3D</button>
-        <button id="tabImg" class="tab" role="tab" aria-selected="false">Sửa ảnh theo lớp</button>
+        <button id="tab3d" class="tab on" role="tab" aria-selected="true"><span data-i18n="ui.mo-hinh-3d">Mô hình 3D</span></button>
+        <button id="tabImg" class="tab" role="tab" aria-selected="false"><span data-i18n="ui.sua-anh-theo-lop">Sửa ảnh theo lớp</span></button>
       </div>
       <div class="viewbar">
-        <label>Góc nhìn <select id="viewSelect"></select></label>
+        <label><span data-i18n="ui.goc-nhin">Góc nhìn</span> <select id="viewSelect"></select></label>
         <ul id="viewSync" class="muted small"></ul>
         <button id="regenStale" hidden title="Prepare review jobs that re-apply the changed materials onto the approved images">Prepare images for out-of-date views</button>
         <span id="bar3d">
-          <button id="renderOne">Render góc này</button>
-          <button id="renderAll">Render tất cả góc</button>
-          <small class="muted">Kéo để xoay · cuộn để zoom · bấm vào tủ để chọn</small>
+          <button id="renderOne"><span data-i18n="ui.render-goc-nay">Render góc này</span></button>
+          <button id="renderAll"><span data-i18n="ui.render-tat-ca-goc-2">Render tất cả góc</span></button>
+          <small class="muted"><span data-i18n="ui.keo-de-xoay-cuon-de-zoom-bam">Kéo để xoay · cuộn để zoom · bấm vào tủ để chọn</span></small>
         </span>
         <span id="barImg" hidden>
-          <label><input id="showMask" type="checkbox" checked> Hiện mask</label>
+          <label><input id="showMask" type="checkbox" checked> <span data-i18n="ui.hien-mask">Hiện mask</span></label>
           <small id="imgInfo" class="muted"></small>
         </span>
       </div>
@@ -127,16 +128,16 @@
       <div id="paneImg" class="pane" hidden>
         <div class="imgedit">
           <div class="stagewrap">
-            <div id="stage" class="stage" title="Bấm vào ảnh để chọn chi tiết">
-              <img id="imgBase" alt="Ảnh gốc">
-              <img id="imgAfter" alt="Ảnh sau khi sửa" hidden>
+            <div id="stage" class="stage" title="Bấm vào ảnh để chọn chi tiết" data-i18n-attr="title:ui.bam-vao-anh-de-chon-chi-tiet">
+              <img id="imgBase" alt="Ảnh gốc" data-i18n-attr="alt:ui.anh-goc">
+              <img id="imgAfter" alt="Ảnh sau khi sửa" hidden data-i18n-attr="alt:ui.anh-sau-khi-sua">
               <canvas id="maskOverlay"></canvas>
             </div>
-            <label id="cmpWrap" class="cmp" hidden>Trước ◀ ▶ Sau <input id="cmpSlider" type="range" min="0" max="100" value="50"></label>
+            <label id="cmpWrap" class="cmp" hidden><span data-i18n="ui.truoc-sau">Trước ◀ ▶ Sau</span> <input id="cmpSlider" type="range" min="0" max="100" value="50"></label>
             <div class="baserow">
-              <button id="baseImport" type="button" title="Thay ảnh gốc của góc nhìn này bằng ảnh được tạo bằng AI. Các job sửa sau đó sẽ dùng ảnh này làm ảnh gốc.">Nhập ảnh kết quả từ AI → thay ảnh nền</button>
-              <button id="baseClear" type="button" class="ghost" hidden title="Bỏ ảnh đã nhập, quay về ảnh đã duyệt / render">Dùng lại ảnh mặc định</button>
-              <select id="baseFit" aria-label="Khi ảnh khác tỉ lệ" title="Nếu ảnh được tạo không cùng tỉ lệ với ảnh render"><option value="reject">Đúng tỉ lệ ảnh render</option><option value="crop">Khác tỉ lệ: cắt giữa</option><option value="pad">Khác tỉ lệ: thêm viền</option></select>
+              <button id="baseImport" type="button" title="Thay ảnh gốc của góc nhìn này bằng ảnh được tạo bằng AI. Các job sửa sau đó sẽ dùng ảnh này làm ảnh gốc." data-i18n-attr="title:ui.thay-anh-goc-cua-goc-nhin-nay"><span data-i18n="ui.nhap-anh-ket-qua-tu-ai-thay">Nhập ảnh kết quả từ AI → thay ảnh nền</span></button>
+              <button id="baseClear" type="button" class="ghost" hidden title="Bỏ ảnh đã nhập, quay về ảnh đã duyệt / render" data-i18n-attr="title:ui.bo-anh-da-nhap-quay-ve-anh"><span data-i18n="ui.dung-lai-anh-mac-dinh-2">Dùng lại ảnh mặc định</span></button>
+              <select id="baseFit" aria-label="Khi ảnh khác tỉ lệ" title="Nếu ảnh được tạo không cùng tỉ lệ với ảnh render" data-i18n-attr="aria-label:ui.khi-anh-khac-ti-le;title:ui.neu-anh-duoc-tao-khong-cung-ti"><option value="reject" data-i18n="ui.dung-ti-le-anh-render">Đúng tỉ lệ ảnh render</option><option value="crop" data-i18n="ui.khac-ti-le-cat-giua">Khác tỉ lệ: cắt giữa</option><option value="pad" data-i18n="ui.khac-ti-le-them-vien">Khác tỉ lệ: thêm viền</option></select>
               <input id="baseFile" type="file" accept="image/*" hidden>
             </div>
           </div>
@@ -145,43 +146,43 @@
             <select id="layerSelect" aria-label="Layer"></select>
             <div id="layerAlt" class="chips"></div>
             <div id="selList" class="chips sel" hidden></div>
-            <p class="muted small">Bấm: chọn một chi tiết · <b>Ctrl</b>+bấm: thêm/bớt chi tiết cùng loại (cánh ↔ tay nắm của nó) · <b>Shift</b>+bấm: cả nhóm cùng vai trò trong tầng (vd mọi tay nắm tủ dưới)</p>
+            <p class="muted small"><span data-i18n="ui.bam-chon-mot-chi-tiet">Bấm: chọn một chi tiết ·</span> <b>Ctrl</b><span data-i18n="ui.bam-them-bot-chi-tiet-cung-loai">+bấm: thêm/bớt chi tiết cùng loại (cánh ↔ tay nắm của nó) ·</span> <b>Shift</b><span data-i18n="ui.bam-ca-nhom-cung-vai-tro-trong">+bấm: cả nhóm cùng vai trò trong tầng (vd mọi tay nắm tủ dưới)</span></p>
             <p id="layerInfo" class="muted small"></p>
             <div class="grid2">
-              <label>Chế độ<select id="jMode"><option value="quick">Thử nhanh (chỉ ảnh)</option><option value="design">Sửa thiết kế</option></select></label>
+              <label><span data-i18n="ui.che-do">Chế độ</span><select id="jMode"><option value="quick" data-i18n="ui.thu-nhanh-chi-anh">Thử nhanh (chỉ ảnh)</option><option value="design" data-i18n="ui.sua-thiet-ke">Sửa thiết kế</option></select></label>
               <label>Backend<select id="jBackend"></select></label>
-              <label class="span2">Vật liệu mới<input id="jItem" type="text" placeholder="vd Laminate xanh rêu mờ"></label>
-              <label class="span2">Yêu cầu thêm<input id="jInstr" type="text" placeholder="vd matte sage green, fine wood grain"></label>
-              <label>Ảnh gốc<select id="jRef"><option value="auto">Ảnh đã duyệt gần nhất</option><option value="beauty">Render three.js</option><option value="imported">Ảnh nhập từ AI</option><option value="albedo">Albedo (render)</option></select></label>
-              <label class="span2">Ánh sáng ảnh đầy đủ (gen-0)<select id="jLight" title="Sửa vùng luôn bám ánh sáng ảnh gốc"><option value="daylight">Ban ngày, sáng tự nhiên</option><option value="late-afternoon">Nắng chiều ấm</option><option value="dim-evening">Buổi tối, đèn ấm</option></select></label>
-              <label class="span2">Phong cách theo góc khác (styleFrom)<select id="jStyleFrom" title="Lấy phong cách (vật liệu, ánh sáng) từ ảnh đã duyệt của góc khác để các góc đồng nhất"></select></label>
-              <label class="span2">Thao tác<select id="jOperation" title="Chọn loại chỉnh sửa theo việc cần làm"></select></label>
+              <label class="span2"><span data-i18n="ui.vat-lieu-moi">Vật liệu mới</span><input id="jItem" type="text" placeholder="vd Laminate xanh rêu mờ" data-i18n-attr="placeholder:ui.vd-laminate-xanh-reu-mo"></label>
+              <label class="span2"><span data-i18n="ui.yeu-cau-them">Yêu cầu thêm</span><input id="jInstr" type="text" placeholder="vd matte sage green, fine wood grain"></label>
+              <label><span data-i18n="ui.anh-goc">Ảnh gốc</span><select id="jRef"><option value="auto" data-i18n="ui.anh-da-duyet-gan-nhat">Ảnh đã duyệt gần nhất</option><option value="beauty">Render three.js</option><option value="imported" data-i18n="ui.anh-nhap-tu-ai-2">Ảnh nhập từ AI</option><option value="albedo">Albedo (render)</option></select></label>
+              <label class="span2"><span data-i18n="ui.anh-sang-anh-day-du-gen-0">Ánh sáng ảnh đầy đủ (gen-0)</span><select id="jLight" title="Sửa vùng luôn bám ánh sáng ảnh gốc" data-i18n-attr="title:ui.sua-vung-luon-bam-anh-sang-anh"><option value="daylight" data-i18n="ui.ban-ngay-sang-tu-nhien">Ban ngày, sáng tự nhiên</option><option value="late-afternoon" data-i18n="ui.nang-chieu-am">Nắng chiều ấm</option><option value="dim-evening" data-i18n="ui.buoi-toi-den-am">Buổi tối, đèn ấm</option></select></label>
+              <label class="span2"><span data-i18n="ui.phong-cach-theo-goc-khac-stylefrom">Phong cách theo góc khác (styleFrom)</span><select id="jStyleFrom" title="Lấy phong cách (vật liệu, ánh sáng) từ ảnh đã duyệt của góc khác để các góc đồng nhất" data-i18n-attr="title:ui.lay-phong-cach-vat-lieu-anh-sang"></select></label>
+              <label class="span2"><span data-i18n="ui.thao-tac-2">Thao tác</span><select id="jOperation" title="Chọn loại chỉnh sửa theo việc cần làm" data-i18n-attr="title:ui.chon-loai-chinh-sua-theo-viec-can"></select></label>
             </div>
-            <button id="tAdd" type="button" title="Thêm layer đang chọn + vật liệu/yêu cầu vào danh sách việc">＋ Thêm vào danh sách việc</button>
+            <button id="tAdd" type="button" title="Thêm layer đang chọn + vật liệu/yêu cầu vào danh sách việc" data-i18n-attr="title:ui.them-layer-dang-chon-vat-lieu-yeu"><span data-i18n="ui.them-vao-danh-sach-viec">＋ Thêm vào danh sách việc</span></button>
             <ol id="taskList" class="tasks"></ol>
-            <label class="wide"><span><input id="jPreview" type="checkbox" checked> Xem trước khi gửi (kiểm tra mask + chỉ dẫn rồi mới gửi AI)</span></label>
-            <button id="jCreate">Tạo job sửa</button>
-            <button id="jGen0" title="Sinh ảnh đầy đủ đầu tiên từ nét + depth">Gen-0</button>
-            <button id="tClear" type="button" class="ghost" hidden>Xóa danh sách</button>
+            <label class="wide"><span><input id="jPreview" type="checkbox" checked> <span data-i18n="ui.xem-truoc-khi-gui-kiem-tra-mask">Xem trước khi gửi (kiểm tra mask + chỉ dẫn rồi mới gửi AI)</span></span></label>
+            <button id="jCreate"><span data-i18n="ui.tao-job-sua">Tạo job sửa</span></button>
+            <button id="jGen0" title="Sinh ảnh đầy đủ đầu tiên từ nét + depth" data-i18n-attr="title:ui.sinh-anh-day-du-dau-tien-tu">Gen-0</button>
+            <button id="tClear" type="button" class="ghost" hidden><span data-i18n="ui.xoa-danh-sach">Xóa danh sách</span></button>
             <details id="geometryBox" class="hinhbox">
-              <summary>Sửa hình: xóa / thêm / thay vật</summary>
-              <p class="muted small">Áp thao tác lên bản sao thiết kế, render lại cùng camera, AI chỉ vẽ lại vùng thay đổi theo nét của thiết kế mới. Chấp nhận ảnh = ghi rev mới.</p>
+              <summary><span data-i18n="ui.sua-hinh-xoa-them-thay-vat">Sửa hình: xóa / thêm / thay vật</span></summary>
+              <p class="muted small"><span data-i18n="ui.ap-thao-tac-len-ban-sao-thiet">Áp thao tác lên bản sao thiết kế, render lại cùng camera, AI chỉ vẽ lại vùng thay đổi theo nét của thiết kế mới. Chấp nhận ảnh = ghi rev mới.</span></p>
               <div class="grid2">
-                <label>Thao tác<select id="hType">
-                  <option value="remove-module">Xóa module</option>
-                  <option value="door-style">Đổi kiểu cánh</option>
-                  <option value="handle">Đổi kiểu tay nắm (mọi tủ)</option>
-                  <option value="add-module">Thêm module (JSON)</option>
-                  <option value="op">Thao tác thiết kế (JSON, nâng cao)</option>
+                <label><span data-i18n="ui.thao-tac-2">Thao tác</span><select id="hType">
+                  <option value="remove-module" data-i18n="ui.xoa-module">Xóa module</option>
+                  <option value="door-style" data-i18n="ui.doi-kieu-canh">Đổi kiểu cánh</option>
+                  <option value="handle" data-i18n="ui.doi-kieu-tay-nam-moi-tu">Đổi kiểu tay nắm (mọi tủ)</option>
+                  <option value="add-module" data-i18n="ui.them-module-json">Thêm module (JSON)</option>
+                  <option value="op" data-i18n="ui.thao-tac-thiet-ke-json-nang-cao">Thao tác thiết kế (JSON, nâng cao)</option>
                 </select></label>
                 <label id="hIdWrap">Module<select id="hId"></select></label>
-                <label id="hStyleWrap">Kiểu<select id="hStyle"></select></label>
-                <label id="hCloseGapWrap" class="wide"><span><input id="hCloseGap" type="checkbox"> Dồn các tủ phía sau lấp chỗ trống</span></label>
+                <label id="hStyleWrap"><span data-i18n="ui.kieu">Kiểu</span><select id="hStyle"></select></label>
+                <label id="hCloseGapWrap" class="wide"><span><input id="hCloseGap" type="checkbox"> <span data-i18n="ui.don-cac-tu-phia-sau-lap-cho">Dồn các tủ phía sau lấp chỗ trống</span></span></label>
                 <label id="hJsonWrap" class="span2" hidden>JSON<textarea id="hJson" rows="4" placeholder='{"module": {...}, "sauModule": "TD3"}'></textarea></label>
               </div>
-              <button id="hAdd" type="button" class="ghost">＋ Thêm thao tác</button>
+              <button id="hAdd" type="button" class="ghost"><span data-i18n="ui.them-thao-tac-2">＋ Thêm thao tác</span></button>
               <ol id="hList" class="tasks"></ol>
-              <button id="hCreate" type="button">Tạo job sửa hình</button>
+              <button id="hCreate" type="button"><span data-i18n="ui.tao-job-sua-hinh">Tạo job sửa hình</span></button>
             </details>
             <h3>Job</h3>
             <ul id="jobList" class="jobs"></ul>
@@ -196,13 +197,13 @@
       <form id="moduleForm" hidden>
         <h3 id="formTitle"></h3>
         <div class="grid2" id="formFields"></div>
-        <label class="wide">Cánh (mm, cách nhau dấu phẩy)<input name="doors" type="text"></label>
-        <label class="wide"><input name="closeGap" type="checkbox" checked> Dồn dãy khi đổi kích thước</label>
+        <label class="wide"><span data-i18n="ui.canh-mm-cach-nhau-dau-phay">Cánh (mm, cách nhau dấu phẩy)</span><input name="doors" type="text"></label>
+        <label class="wide"><input name="closeGap" type="checkbox" checked> <span data-i18n="ui.don-day-khi-doi-kich-thuoc">Dồn dãy khi đổi kích thước</span></label>
         <div class="row">
-          <button type="submit">Áp dụng</button>
-          <button type="button" id="addAfter">+ Thêm tủ phía sau</button>
-          <button type="button" id="removeModule" class="danger">Xóa</button>
-          <button type="button" id="moduleActions" class="ghost" title="Chuột phải vào module trong khung 3D cũng mở menu này">Hành động…</button>
+          <button type="submit"><span data-i18n="ui.ap-dung">Áp dụng</span></button>
+          <button type="button" id="addAfter"><span data-i18n="ui.them-tu-phia-sau">+ Thêm tủ phía sau</span></button>
+          <button type="button" id="removeModule" class="danger"><span data-i18n="ui.xoa-5">Xóa</span></button>
+          <button type="button" id="moduleActions" class="ghost" title="Chuột phải vào module trong khung 3D cũng mở menu này" data-i18n-attr="title:ui.chuot-phai-vao-module-trong-khung-3d"><span data-i18n="ui.hanh-dong">Hành động…</span></button>
         </div>
       </form>
     </aside>
@@ -211,11 +212,11 @@
   <dialog id="jsonView" class="jv">
     <div class="jv-bar">
       <b id="jvTitle">JSON</b><small id="jvMeta" class="muted"></small>
-      <span id="jvVariants" class="jv-variants" role="group" aria-label="Chọn bản JSON" hidden></span><span class="spacer"></span>
-      <button id="jvMode" type="button" class="ghost">Xem dạng chữ</button>
-      <button id="jvCopy" type="button" class="ghost">Chép</button>
-      <button id="jvDownload" type="button">Tải về</button>
-      <button id="jvClose" type="button" class="ghost" aria-label="Đóng">✕</button>
+      <span id="jvVariants" class="jv-variants" role="group" aria-label="Chọn bản JSON" hidden data-i18n-attr="aria-label:ui.chon-ban-json"></span><span class="spacer"></span>
+      <button id="jvMode" type="button" class="ghost"><span data-i18n="ui.xem-dang-chu">Xem dạng chữ</span></button>
+      <button id="jvCopy" type="button" class="ghost"><span data-i18n="ui.chep">Chép</span></button>
+      <button id="jvDownload" type="button"><span data-i18n="ui.tai-ve">Tải về</span></button>
+      <button id="jvClose" type="button" class="ghost" aria-label="Đóng" data-i18n-attr="aria-label:ui.dong">✕</button>
     </div>
     <div id="jvTree" class="jv-tree"></div>
     <pre id="jvRaw" class="jv-raw" hidden></pre>

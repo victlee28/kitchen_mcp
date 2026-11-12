@@ -1,10 +1,11 @@
+import { tx } from './i18n.js';
 // Pure helpers for multi-selection in the "image editing by layers" tab. No DOM: used by imgedit.js and tested with node.
 // A selection is an ordered list of part IDs. Catalogue entries come from GET /api/designs/<id>/layers (variant: part | group).
 
 export const TIER_OF = { base: 'base', upper: 'upper', loft: 'upper', tall: 'tall', corner: 'corner' };  // loft shares the upper tier
 const FRONT = ['door', 'glass-door', 'drawer'];
-const ROLE_VI = { handle: 'tay nắm', door: 'cánh tủ', 'glass-door': 'cánh kính', drawer: 'mặt ngăn kéo', carcass: 'thân tủ',
-  'side-panel': 'tấm hông', shelf: 'kệ', plinth: 'len chân', countertop: 'mặt đá', molding: 'phào' };
+const ROLE_VI = { handle: tx('ui.tay-nam'), door: tx('ui.canh-tu'), 'glass-door': tx('ui.canh-kinh-2'), drawer: tx('ui.mat-ngan-keo'), carcass: tx('ui.than-tu'),
+  'side-panel': tx('ui.tam-hong'), shelf: tx('ui.ke'), plinth: tx('ui.len-chan'), countertop: tx('ui.mat-da'), molding: tx('ui.phao') };
 
 export const roleName = (type) => ROLE_VI[type] || type;
 export const partIndex = (layers) => new Map(layers.filter((l) => l.variant === 'part').map((l) => [l.id, l]));
@@ -29,13 +30,13 @@ export function ctrlIds(selType, part, layers) {
   const parts = layers.filter((l) => l.variant === 'part');
   if (selType === 'handle' && FRONT.includes(part.type)) {
     const ids = parts.filter((l) => l.type === 'handle' && l.parent === part.id).map((l) => l.id);
-    return ids.length ? { ids } : { error: 'Cánh/ngăn kéo này không có tay nắm (tay âm hoặc nhấn mở)' };
+    return ids.length ? { ids } : { error: tx('ui.canh-ngan-keo-nay-khong-co-tay') };
   }
   if (FRONT.includes(selType) && part.type === 'handle') {
     const host = parts.find((l) => l.id === part.parent);
-    return host && host.type === selType ? { ids: [host.id] } : { error: `Tay nắm này không gắn với ${roleName(selType)}` };
+    return host && host.type === selType ? { ids: [host.id] } : { error: tx('ui.tay-nam-nay-khong-gan-voi', { 0: roleName(selType) }) };
   }
-  return { error: `Ctrl+bấm chỉ thêm chi tiết cùng loại (đang chọn: ${roleName(selType)})` };
+  return { error: tx('ui.ctrl-bam-chi-them-chi-tiet-cung', { 0: roleName(selType) }) };
 }
 
 /** Add the IDs, or remove them when all are already selected. */
