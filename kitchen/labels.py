@@ -1,19 +1,15 @@
-"""Vietnamese labels the core writes into designs (cabinet and appliance names shown to the user): a constant table, data zone like
-the catalog (``data/``) (rule R12: Vietnamese text lives in the interface / dictionary layer, keys are ASCII)."""
+"""Default names the core writes into designs (cabinet names, view names): worded from ``name.*`` keys of ``data/i18n`` (``words.say``);
+the shell words them again in the reader's language (``i18n.Names``)."""
 from __future__ import annotations
+from .words import say
 
-NAMES: dict[str, str] = {
-    "tv-console": "Kệ tivi",
-    "tv-column": "Cột tủ tivi",
-    "tv-side-tall": "Tủ cao vách tivi",
-    "tv-upper": "Tủ trên hốc tivi",
-    "tv-shelf-over": "Kệ treo trên tivi",
-    "tv-shelf-side": "Kệ treo cạnh tivi",
-    "upper-hood": "Tủ trên hút mùi",
-}
+NAMES: dict[str, str] = {k: say(f"name.cabinet.{k}") for k in ("tv-console", "tv-column", "tv-side-tall", "tv-upper", "tv-shelf-over",
+                                                                  "tv-shelf-side", "upper-hood")}
 
 
 DEFAULT_FRONT = "Laminate vân gỗ sồi sáng"   # the design's default base / tall front finish (threejs_export._materials uses the same name)
 
 
-OBLIQUE_VIEW = "{name} (chéo)"     # the name of a run's oblique camera view
+def oblique_view(name: str) -> str:
+    """The name of a run's oblique camera view."""
+    return say("name.view.oblique", name=name)

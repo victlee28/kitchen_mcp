@@ -15,6 +15,7 @@ from . import camera_plan, roomctx, runs as runmod, structure_mesh, tv_system
 from .spec import ViewAngle, KitchenSpec, Module, effective_handle, to_data
 from .errors import InvalidInput, require
 from .palette import DISPLAY_COLORS
+from .words import say
 
 COLORS = DISPLAY_COLORS  # màu hiển thị theo loại chi tiết (viewer 3D, mask ngữ nghĩa): catalog kind palette, item display
 
@@ -532,7 +533,8 @@ def cabinet_faces(spec: KitchenSpec, scene: Scene) -> list[camera_plan.Face]:
         lo, hi = min(m.fromCorner for m in mods), max(m.endAt for m in mods)
         faces.append(camera_plan.Face(key, name, center(lo, hi, max(m.depth for m in mods)), normal, hi - lo, max(m.y + m.height for m in mods), owner))
 
-    for wall, name in (("back", "Chính diện tường sau"), ("right", "Chính diện tường phải"), ("left", "Chính diện tường trái")):
+    for wall in ("back", "right", "left"):
+        name = say(f"name.view.{wall}-wall")
         mods = [m for m in spec.module if m.wall == wall]
         seat = runmod.wall_seat(wall, scene.lsau)
         if mods and seat is not None:
@@ -544,9 +546,9 @@ def cabinet_faces(spec: KitchenSpec, scene: Scene) -> list[camera_plan.Face]:
             (ox, oz), (nx, nz) = fr.to_world(0, 0), fr.to_world(0, 1)
             wall = run_wall(fr, scene.lsau)
             if wall is not None and not any(f.key == f"{wall}-wall" for f in faces):     # a run standing against a wall is that wall's front
-                key, name = f"{wall}-wall", {"back": "Chính diện tường sau", "right": "Chính diện tường phải", "left": "Chính diện tường trái"}[wall]
+                key, name = f"{wall}-wall", say(f"name.view.{wall}-wall")
             else:
-                key, name = f"run-{run.id}", f"Chính diện dãy tủ {run.id}"
+                key, name = f"run-{run.id}", say("name.view.run", run=run.id)
             face(key, name, mods, lambda lo, hi, d, fr=fr: fr.to_world((lo + hi) / 2, d), (nx - ox, nz - oz), run.id)
     return faces
 
@@ -590,27 +592,27 @@ def default_views(spec: KitchenSpec, scene: Scene | None = None) -> dict[str, Vi
     w, d = (hi[0] - openings[0]) / 1000, (hi[2] - openings[2]) / 1000
     span = max(w, d, 1.5)
     views = {
-        "perspective": ViewAngle(name="Phối cảnh chéo", position=(cx - span * 0.9, 1.6, cz + span * 0.9), lookAt=(cx, 1.1, cz), verticalFov=55),
-        "overhead": ViewAngle(name="Toàn cảnh từ trên", position=(cx - span * 0.8, 3.8, cz + span * 0.9), lookAt=(cx, 0.6, cz), verticalFov=50),
-        "plan": ViewAngle(name="Mặt bằng", position=(cx, 6.5, cz + 0.001), lookAt=(cx, 0, cz), verticalFov=36),
+        "perspective": ViewAngle(name=say("name.view.perspective"), position=(cx - span * 0.9, 1.6, cz + span * 0.9), lookAt=(cx, 1.1, cz), verticalFov=55),
+        "overhead": ViewAngle(name=say("name.view.overhead"), position=(cx - span * 0.8, 3.8, cz + span * 0.9), lookAt=(cx, 0.6, cz), verticalFov=50),
+        "plan": ViewAngle(name=say("name.view.plan"), position=(cx, 6.5, cz + 0.001), lookAt=(cx, 0, cz), verticalFov=36),
     }
     reach = wall_reach(spec, scene.lsau)
     if "left" in reach:  # chữ U: ba mặt kín, máy ảnh phải đứng ở phía hở (z lớn) mới nhìn thấy cả ba dãy
         zfront = hi[2] / 1000
-        views["perspective"] = ViewAngle(name="Phối cảnh chéo", position=(cx + w * 0.3, 1.6, zfront + span * 0.55), lookAt=(cx, 1.0, cz * 0.8), verticalFov=70)
-        views["overhead"] = ViewAngle(name="Toàn cảnh từ trên", position=(cx, 3.8, zfront + span * 0.35), lookAt=(cx, 0.6, cz * 0.8), verticalFov=70)
+        views["perspective"] = ViewAngle(name=say("name.view.perspective"), position=(cx + w * 0.3, 1.6, zfront + span * 0.55), lookAt=(cx, 1.0, cz * 0.8), verticalFov=70)
+        views["overhead"] = ViewAngle(name=say("name.view.overhead"), position=(cx, 3.8, zfront + span * 0.35), lookAt=(cx, 0.6, cz * 0.8), verticalFov=70)
     if "back" in reach:
         xs = [-reach["back"] / 1000, 0]
         mx = (min(xs) + max(xs)) / 2
-        views["back-wall"] = ViewAngle(name="Chính diện tường sau", position=(mx, camera_plan.EYE / 1000, span * 1.4 + 0.6), lookAt=(mx, 1.25, 0.2), verticalFov=48)
+        views["back-wall"] = ViewAngle(name=say("name.view.back-wall"), position=(mx, camera_plan.EYE / 1000, span * 1.4 + 0.6), lookAt=(mx, 1.25, 0.2), verticalFov=48)
     if "right" in reach:
         zs = [reach["right"] / 1000, 0]
         mz = (min(zs) + max(zs)) / 2
-        views["right-wall"] = ViewAngle(name="Chính diện tường phải", position=(-(span * 1.4 + 0.6), camera_plan.EYE / 1000, mz), lookAt=(0, 1.25, mz), verticalFov=48)
+        views["right-wall"] = ViewAngle(name=say("name.view.right-wall"), position=(-(span * 1.4 + 0.6), camera_plan.EYE / 1000, mz), lookAt=(0, 1.25, mz), verticalFov=48)
     if "left" in reach:
         zs = [reach["left"] / 1000, 0]
         mz = (min(zs) + max(zs)) / 2
-        views["left-wall"] = ViewAngle(name="Chính diện tường trái", position=(-scene.lsau / 1000 + span * 1.4 + 0.6, camera_plan.EYE / 1000, mz), lookAt=(-scene.lsau / 1000, 1.25, mz), verticalFov=48)
+        views["left-wall"] = ViewAngle(name=say("name.view.left-wall"), position=(-scene.lsau / 1000 + span * 1.4 + 0.6, camera_plan.EYE / 1000, mz), lookAt=(-scene.lsau / 1000, 1.25, mz), verticalFov=48)
     room, solids = room_solids(spec, scene)
     faces = cabinet_faces(spec, scene)
     if faces and room is not None:
@@ -618,7 +620,7 @@ def default_views(spec: KitchenSpec, scene: Scene | None = None) -> dict[str, Vi
         views.update({key: ViewAngle(**v) for key, v in planned.items()})
         biggest = max(faces, key=lambda f: f.length)
         if "left" not in reach:  # a U sees all three runs only from the open side: keep its own overview
-            overview: dict[str, Any] = {**planned[f"{biggest.key}-oblique"], "name": "Phối cảnh chéo"}
+            overview: dict[str, Any] = {**planned[f"{biggest.key}-oblique"], "name": say("name.view.perspective")}
             views["perspective"] = ViewAngle(**overview)
     if solids and faces:
         for key in ("overhead", "plan"):

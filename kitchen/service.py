@@ -17,6 +17,7 @@ from . import builtin, catalog as cat, catalog_csv, catalog_files, i18n, words
 from .config import Config
 from .errors import InvalidInput, KitchenError, NotFound
 ROOT = Path(__file__).resolve().parent.parent
+NAMED = ('name', 'description')   # fields that may hold a default name the core wrote (see ``i18n.Names``)
 
 def load_dotenv(path: Path=ROOT / '.env') -> None:
     """Load KEY=VALUE entries without overriding existing environment values."""
@@ -43,6 +44,7 @@ class KitchenService:
         self.store = Store(db_path or self.config.db_path)
         self.builtin = catalog_files.load_builtin(Path(data_dir or self.config.data_dir or Path(__file__).resolve().parent.parent / "data"))
         self._catalog_cache: tuple[int, cat.Catalog] | None = None
+        self._default_names: i18n.Names | None = None
         self.store.snapshot = self._snapshot_json
         self._adopt_knowledge()
         self.recognizers: dict[str, recognition.Recognizer] = {}     # plug-ins; the Gemini reader is wired when a key is available
@@ -144,6 +146,7 @@ class KitchenService:
         m = self.builtin.messages
         if lg == i18n.DEFAULT_LANG:
             return data
+        names = self._names()
 
         def again(t: words.Said) -> str:
             return m.text(t.key, lg, **{k: again(v) if isinstance(v, words.Said) else v for k, v in t.params.items()}) if m.has(t.key) else str(t)
@@ -156,6 +159,10 @@ class KitchenService:
             if not isinstance(o, dict):
                 return o
             out = {k: walk(v) for k, v in o.items()}
+            for field in NAMED:                         # a default name the core wrote ("Tủ chậu", "mặt trước TD1"); a typed name stays
+                v = o.get(field)
+                if isinstance(v, str) and not isinstance(v, words.Said):
+                    out[field] = names.translate(v, i18n.DEFAULT_LANG, lg) or v
             raw = o.get('params')
             params: dict[str, Any] = {str(k): v for k, v in raw.items()} if isinstance(raw, dict) else {}
             params = {k: again(v) if isinstance(v, words.Said) else v for k, v in params.items()}
@@ -163,6 +170,29 @@ class KitchenService:
                 out['content'] = m.text(o['key'], lg, **params)
             if isinstance(o.get('labelKey'), str) and 'label' in o and m.has(o['labelKey']):
                 out['label'] = m.text(o['labelKey'], lg, **params)
+            return out
+        return walk(data)
+
+    def _names(self) -> i18n.Names:
+        if self._default_names is None:
+            self._default_names = i18n.Names(self.builtin.messages)
+        return self._default_names
+
+    def unword_names(self, data: Any) -> Any:
+        """``data`` (a design brought in from outside) with the default names worded in another language back in the default one, so a
+        design exported by a reader of English comes back with the names the core keeps."""
+        names = self._names()
+
+        def walk(o: Any) -> Any:
+            if isinstance(o, list):
+                return [walk(x) for x in o]
+            if not isinstance(o, dict):
+                return o
+            out = {k: walk(v) for k, v in o.items()}
+            for field in NAMED:
+                v = o.get(field)
+                if isinstance(v, str):
+                    out[field] = next((t for lg in i18n.LANGS if (t := names.translate(v, lg, i18n.DEFAULT_LANG))), v)
             return out
         return walk(data)
 
@@ -300,7 +330,7 @@ class KitchenService:
         source = legacy.pop('source', source)
         if legacy:
             raise TypeError(f"Unexpected options: {', '.join(legacy)}")
-        spec = spec_data if isinstance(spec_data, KitchenSpec) else load_spec(spec_data)
+        spec = spec_data if isinstance(spec_data, KitchenSpec) else load_spec(self.unword_names(spec_data))
         record = self.store.create_design(spec, source)
         return self._summary(record['id'], 1, spec)
 
@@ -350,7 +380,7 @@ class KitchenService:
         after = KitchenSpec.model_validate(data)
         return spec if rows_to_runs.equivalent(spec, after) else after
 
-    def create_from_template(self, template: dict | KitchenTemplate, name: str='Kitchen design', **legacy: Any) -> dict:
+    def create_from_template(self, template: dict | KitchenTemplate, name: str='', **legacy: Any) -> dict:
         """Generate and persist a design from a structured template."""
         name = legacy.pop('name', name)
         if legacy:

@@ -570,3 +570,40 @@ class TestSummaryWording(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestDefaultNames(unittest.TestCase):
+    """Stage 3.4: default names the core writes into designs are worded from ``name.*`` keys; the shell recognises them by their wording
+    and words them again in the reader's language, a name the user typed stays as it is."""
+
+    def test_every_template_round_trips(self):
+        from kitchen import builtin
+        names = i18n.Names(builtin.MESSAGES)
+        sample = {"module": "TD1", "run": "R2", "system": "S1", "n": 3, "walls": "back, right", "part": builtin.MESSAGES.text("part.door", "vi"),
+                  "tier": builtin.MESSAGES.text("tier.upper", "vi"), "name": builtin.MESSAGES.text("name.cabinet.base-sink", "vi")}
+        for key in builtin.MESSAGES.table("vi"):
+            if not key.startswith(i18n.NAME_PREFIX):
+                continue
+            vi = builtin.MESSAGES.text(key, "vi", **sample)
+            en = names.translate(vi, "vi", "en")
+            self.assertIsNotNone(en, key)
+            self.assertEqual(names.translate(str(en), "en", "vi"), vi, key)
+        self.assertIsNone(names.translate("Tủ của mẹ", "vi", "en"))
+        self.assertIsNone(names.translate("mọi thứ", "vi", "en"))
+        self.assertEqual(names.translate("Chính diện dãy tủ R1 (chéo)", "vi", "en"), "Run R1, straight on (angled)")
+
+    def test_design_reworded_and_brought_back(self):
+        tmp = Path(tempfile.mkdtemp())
+        try:
+            from kitchen.service import KitchenService
+            s = KitchenService(db_path=tmp / "k.db", render_dir=tmp / "r")
+            spec = s.get(s.create_from_template({}, "")["id"])["spec"]
+            self.assertEqual(spec["name"], "Thiết kế tủ bếp")
+            spec["module"][0]["name"] = "Tủ của mẹ"
+            en = s.reword(spec, "en")
+            self.assertEqual(en["name"], "Kitchen cabinet design")
+            self.assertEqual(en["module"][0]["name"], "Tủ của mẹ")
+            self.assertIn("Sink base cabinet", [m["name"] for m in en["module"]])
+            self.assertEqual(s.unword_names(en), spec)
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)

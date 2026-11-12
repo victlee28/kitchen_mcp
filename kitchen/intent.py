@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field, ValidationError
 from . import builtin, defaults, lexicon, regions
 from .catalog import Catalog
 from .spec import Appliance, Common, FrontSection, Handle, KitchenSpec, Module, Room, Wall
+from .words import say
 
 WallSide = Literal["back", "right", "left"]
 
@@ -253,7 +254,7 @@ def _merge_notes(items: list[dict], notes: list[dict]) -> list[dict]:
     return out
 
 
-def from_template(color: KitchenTemplate, name: str = "Thiết kế tủ bếp", rows: list[dict] | None = None,
+def from_template(color: KitchenTemplate, name: str = "", rows: list[dict] | None = None,
                   catalog: Catalog = builtin.CATALOG) -> KitchenSpec:
     """Sinh spec từ mẫu. Kích thước không được chỉ định lấy theo tiêu chuẩn ưu tiên của mau.quocGia/khuVuc; các kích thước chung còn lại
     (dày cánh, khe, mặt đá, đỉnh tủ trên khi câu không nói) lấy từ danh mục ``defaults`` của xưởng."""
@@ -300,23 +301,23 @@ def from_template(color: KitchenTemplate, name: str = "Thiết kế tủ bếp",
         nonlocal tb
         s = start
         if color.fridge and wall == "back":
-            mods.append(Module(id=id("TC"), type="tall-fridge", name="Tủ cao tủ lạnh", wall=wall, fromCorner=start + length - 700,
+            mods.append(Module(id=id("TC"), type="tall-fridge", name=say("name.cabinet.tall-fridge"), wall=wall, fromCorner=start + length - 700,
                                width=700, y=0, height=c.cabinetTop, depth=640, doors=[350, 350], niche=1650))
-            tb.append(Appliance(id=f"TB{len(tb)+1}", type="fridge", name="Tủ lạnh", dimensions="600 × 1600 × 620", module=mods[-1].id))
+            tb.append(Appliance(id=f"TB{len(tb)+1}", type="fridge", name=say("name.appliance.fridge"), dimensions="600 × 1600 × 620", module=mods[-1].id))
             length -= 700
         near_fridge = color.fridge and wall == "back"
         plan = _layout(length, appliance, front, toward_end=near_fridge)      # với tủ lạnh: chậu (cuối danh sách) sát tủ lạnh
         for w, type in plan:
             doors = [w / 2, w / 2] if w >= 600 else [w]
-            m = Module(id=id("TD"), type=type, name={"base-sink": "Tủ chậu", "base-cooktop": "Tủ dưới bếp"}.get(type, "Tủ dưới"),
+            m = Module(id=id("TD"), type=type, name=say(f"name.cabinet.{type if type in ('base-sink', 'base-cooktop') else 'base'}"),
                        wall=wall, fromCorner=s, width=w, y=0, height=c.baseTop, depth=c.baseDepth, doors=doors,
                        frontSections=_DRAWERS() if type == "base-cooktop" else [])
             mods.append(m)
             if type == "base-sink":
-                tb.append(Appliance(id=f"TB{len(tb)+1}", type="sink", name="Chậu rửa", dimensions=f"{min(780, w - 40):g} × 430", wall=wall, center=s + w / 2))
-                tb.append(Appliance(id=f"TB{len(tb)+1}", type="faucet", name="Vòi rửa", dimensions="cao 300", wall=wall, center=s + w / 2))
+                tb.append(Appliance(id=f"TB{len(tb)+1}", type="sink", name=say("name.appliance.sink"), dimensions=f"{min(780, w - 40):g} × 430", wall=wall, center=s + w / 2))
+                tb.append(Appliance(id=f"TB{len(tb)+1}", type="faucet", name=say("name.appliance.faucet"), dimensions="cao 300", wall=wall, center=s + w / 2))
             if type == "base-cooktop":
-                tb.append(Appliance(id=f"TB{len(tb)+1}", type="cooktop", name="Bếp âm", dimensions=f"{min(730, w - 10):g} × 430", wall=wall, center=s + w / 2))
+                tb.append(Appliance(id=f"TB{len(tb)+1}", type="cooktop", name=say("name.appliance.cooktop"), dimensions=f"{min(730, w - 10):g} × 430", wall=wall, center=s + w / 2))
             s += w
 
     def upper(wall: WallSide, start: float, end: float):
@@ -335,15 +336,15 @@ def from_template(color: KitchenTemplate, name: str = "Thiết kế tủ bếp",
             w = b - a
             type = "upper-hood" if any(a <= t < b for t in cooktop_centers) else "upper"
             y = max(c.upperBottom + 150, y_hood) if type == "upper-hood" else c.upperBottom
-            mods.append(Module(id=id("TT"), type=type, name="Tủ trên hút mùi" if type == "upper-hood" else "Tủ trên", wall=wall,
+            mods.append(Module(id=id("TT"), type=type, name=say("name.cabinet.upper-hood" if type == "upper-hood" else "name.cabinet.upper"), wall=wall,
                                fromCorner=a, width=w, y=y, height=c.upperTierSplit - y, depth=upper_depth, doors=[w / 2, w / 2] if w >= 600 else [w]))
             if type == "upper-hood":
-                tb.append(Appliance(id=f"TB{len(tb)+1}", type="hood", name="Máy hút mùi âm tủ", dimensions=f"{min(w - 40, 730):g} × 165", module=mods[-1].id))
+                tb.append(Appliance(id=f"TB{len(tb)+1}", type="hood", name=say("name.appliance.hood"), dimensions=f"{min(w - 40, 730):g} × 165", module=mods[-1].id))
             if color.loft:
                 # có phào nóc: cánh nóc mở ngang thay vì lật lên để không chạm phào (MOLDING-CANH-LAT-001)
                 hinge: list[Literal["left", "right", "upper", "base"]] = ["left", "right"] if (h_loft and w >= 600) else ["left"] if h_loft else []
                 loft_door = [w / 2, w / 2] if (h_loft and w >= 600) else [w]
-                mods.append(Module(id=id("TN"), type="upper-loft", name="Tủ nóc", wall=wall, fromCorner=a, width=w, y=c.upperTierSplit,
+                mods.append(Module(id=id("TN"), type="upper-loft", name=say("name.cabinet.top"), wall=wall, fromCorner=a, width=w, y=c.upperTierSplit,
                                    height=c.cabinetTop - c.upperTierSplit, depth=upper_depth, doors=loft_door, hingeSides=hinge))
 
     notes_built: list[dict] = []
@@ -361,14 +362,14 @@ def from_template(color: KitchenTemplate, name: str = "Thiết kế tủ bếp",
         W = max(color.backWallLength, 2 * g + 900)  # bề rộng trong lòng chữ U; dãy tường sau còn tối thiểu 900 giữa hai tủ góc
         R = color.rightWallLength or W
         Lf = color.leftWallLength or R
-        mods.append(Module(id=id("TD"), type="base-corner-sink", name="Tủ góc khuất", wall="right", fromCorner=0, width=g + 450, y=0,
+        mods.append(Module(id=id("TD"), type="base-corner-sink", name=say("name.cabinet.blind-corner"), wall="right", fromCorner=0, width=g + 450, y=0,
                            height=c.baseTop, depth=c.baseDepth, doors=[450], blindCorner=g))
         thickness("right", g + 450, R - g - 450, ["cooktop"] if color.fridge else ["sink"], front=0)   # tủ lạnh ở tường sau: chậu sang đó
-        mods.append(Module(id=id("TD"), type="base", name="Tủ góc khuất", wall="left", fromCorner=0, width=g + 450, y=0,
+        mods.append(Module(id=id("TD"), type="base", name=say("name.cabinet.blind-corner"), wall="left", fromCorner=0, width=g + 450, y=0,
                            height=c.baseTop, depth=c.baseDepth, doors=[450], blindCorner=g))
         thickness("left", g + 450, Lf - g - 450, [], front=0)
         thickness("back", g, W - 2 * g, ["sink"] if color.fridge else ["cooktop"])
-        mods.append(Module(id="KG1", type="corner-shelf", name="Kệ góc mở", wall="corner", backLength=600, rightLength=600, y=c.upperBottom,
+        mods.append(Module(id="KG1", type="corner-shelf", name=say("name.cabinet.corner-shelf"), wall="corner", backLength=600, rightLength=600, y=c.upperBottom,
                            height=c.upperTierSplit - c.upperBottom, depth=upper_depth, shelfCount=3))
         upper("back", 600, W - (g + lr if color.fridge else 0))
         upper("right", 600, R)
@@ -378,11 +379,11 @@ def from_template(color: KitchenTemplate, name: str = "Thiết kế tủ bếp",
         L2 = color.rightWallLength or color.backWallLength
         g = c.baseDepth
         # tường phải: tủ góc khuất đầu dãy + chậu; tường sau: bếp (+ tủ lạnh cuối dãy)
-        mods.append(Module(id=id("TD"), type="base-corner-sink", name="Tủ góc khuất", wall="right", fromCorner=0, width=g + 450, y=0,
+        mods.append(Module(id=id("TD"), type="base-corner-sink", name=say("name.cabinet.blind-corner"), wall="right", fromCorner=0, width=g + 450, y=0,
                            height=c.baseTop, depth=c.baseDepth, doors=[450], blindCorner=g))
         thickness("right", g + 450, L2 - g - 450, ["cooktop"] if color.fridge else ["sink"], front=0)  # tủ góc phía trước đã là mặt bàn thao tác
         thickness("back", g, color.backWallLength - g, ["sink"] if color.fridge else ["cooktop"])      # tủ lạnh ở cuối tường sau: chậu sát nó
-        mods.append(Module(id="KG1", type="corner-shelf", name="Kệ góc mở", wall="corner", backLength=600, rightLength=600, y=c.upperBottom,
+        mods.append(Module(id="KG1", type="corner-shelf", name=say("name.cabinet.corner-shelf"), wall="corner", backLength=600, rightLength=600, y=c.upperBottom,
                            height=c.upperTierSplit - c.upperBottom, depth=upper_depth, shelfCount=3))
         upper("back", 600, color.backWallLength - lr)
         upper("right", 600, L2)
@@ -434,7 +435,7 @@ def from_template(color: KitchenTemplate, name: str = "Thiết kế tủ bếp",
         ups = [m for m in mods if m.type == "upper"]
         pick = next((m for m in ups if sink and m.wall == sink.wall and sink.center is not None and m.fromCorner <= sink.center < m.endAt), None) or (ups[-1] if ups else None)
         if pick:
-            pick.type, pick.doors, pick.shelfCount, pick.name = "upper-open", [], 3, "Kệ mở"
+            pick.type, pick.doors, pick.shelfCount, pick.name = "upper-open", [], 3, say("name.cabinet.open-shelf")
             notes_built.append({"term": "kệ mở", "canonical": "openShelf", "scope": ["upper"], "target": pick.id, "status": "built",
                                 "message": f"Tủ trên {pick.id} (rộng {pick.width:g} mm) đổi thành kệ mở 3 tầng."})
         else:
@@ -445,7 +446,7 @@ def from_template(color: KitchenTemplate, name: str = "Thiết kế tủ bếp",
         ds = color.doorStyle.get(tier.get(m.storey, ""))
         if ds and m.doors and m.type not in ("upper-hood", "corner-shelf"):
             m.doorStyle = ds
-    spec = KitchenSpec(name=name, common=c, module=mods, room=room, appliances=tb, country=color.country, region=color.region, style=color.style,
+    spec = KitchenSpec(name=name or say("name.design"), common=c, module=mods, room=room, appliances=tb, country=color.country, region=color.region, style=color.style,
                        styleTags=color.styleTags or None, aiHints=list(dict.fromkeys(color.aiHints)) or None,
                        renderPreferences=list(dict.fromkeys(color.renderPreferences)),
                        promptInterpretation=_merge_notes(color.promptInterpretation, notes_built) or None,

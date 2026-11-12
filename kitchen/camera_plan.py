@@ -14,7 +14,7 @@ from typing import Any
 
 from . import builtin
 from .floorplan.geom import point_in_poly
-from .labels import OBLIQUE_VIEW
+from .labels import oblique_view
 from .numeric import round_half_away
 
 Pt = tuple[float, float]
@@ -197,7 +197,7 @@ def plan_views(faces: list[Face], room: list[Pt] | None, obstacles: list[Obstacl
         views[face.key] = _view(face.name, pos, look, fov, hide)
         sides = [(nx * math.cos(s * OBLIQUE) - nz * math.sin(s * OBLIQUE), nx * math.sin(s * OBLIQUE) + nz * math.cos(s * OBLIQUE)) for s in (-1, 1)]
         pos, fov, hide = _best(face, sides, 0.85, room_of, obstacles, bodies)
-        views[f"{face.key}-oblique"] = _view(OBLIQUE_VIEW.format(name=face.name), pos, look, fov, hide)
+        views[f"{face.key}-oblique"] = _view(oblique_view(face.name), pos, look, fov, hide)
     return views
 
 

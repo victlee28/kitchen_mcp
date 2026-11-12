@@ -15,16 +15,13 @@ from PIL import Image
 from . import edit, geometry, handles, imaging, layers, vocab
 from .spec import KitchenSpec
 from .errors import InvalidInput
+from .words import say
 
 # ------------------------------------------------------------------ bảng thao tác
 # Default prompt intent by operation. Provider-specific options are not stored here.
-OPERATIONS = {
-    "change-material": {"name": "Đổi vật liệu / màu", "kind": "edit", "description": "Giữ biên, cho đổi màu và chất liệu"},
-    "replace-item": {"name": "Thay kiểu vật (giữ chỗ)", "kind": "geometry_edit", "description": "Nét mới bám chặt để ra đúng hình mới"},
-    "remove-item": {"name": "Xóa vật", "kind": "geometry_edit", "description": "Vẽ phần nền sau vật (tường, sàn, hông tủ bên cạnh)"},
-    "add-item": {"name": "Thêm vật", "kind": "geometry_edit", "description": "Vẽ vật mới theo nét của thiết kế mới"},
-    "change-style": {"name": "Đổi phong cách toàn ảnh", "kind": "gen0", "description": "Giữ bố cục, cho đổi vật liệu/trang trí nhiều"},
-}
+OPERATIONS = {op: {"name": say(f"name.operation.{op}"), "kind": kind, "description": say(f"name.operation-note.{op}")}
+              for op, kind in (("change-material", "edit"), ("replace-item", "geometry_edit"), ("remove-item", "geometry_edit"),
+                               ("add-item", "geometry_edit"), ("change-style", "gen0"))}
 
 _TYPE_EN = {"base": "base cabinet", "base-sink": "sink base cabinet", "base-corner-sink": "corner sink base cabinet",
             "base-cooktop": "cooktop base cabinet", "base-oven": "oven base cabinet", "base-end": "end base cabinet",

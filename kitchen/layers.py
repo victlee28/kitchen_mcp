@@ -16,6 +16,7 @@ from .geometry import Scene
 from .spec import KitchenSpec
 from . import handles
 from .errors import InvalidInput, NotFound, require
+from .words import say
 
 FRONT_SECTIONS = ("door", "glass-door", "drawer")
 
@@ -24,15 +25,13 @@ SEMANTIC = {"carcass": "cabinet_body", "side-panel": "cabinet_body", "shelf": "c
             "countertop": "countertop", "molding": "decorations", "handle": "hardware", "wall": "room", "floor": "room",
             "fridge": "appliances", "sink": "appliances", "faucet": "appliances", "cooktop": "appliances", "hood": "appliances", "oven": "appliances"}
 
-ROLES = {  # vai trò chi tiết -> (tiếng Việt, tiếng Anh cho prompt)
-    "door": ("cánh tủ", "cabinet door front"), "glass-door": ("cánh kính", "glass cabinet door"),
-    "drawer": ("mặt ngăn kéo", "drawer front"), "carcass": ("thân tủ", "cabinet carcass side"),
-    "side-panel": ("tấm hông", "cabinet side panel"), "shelf": ("kệ", "open shelf"), "plinth": ("len chân tủ", "toe kick plinth"),
-    "countertop": ("mặt đá", "kitchen countertop"), "molding": ("phào", "decorative molding"), "wall": ("tường", "wall"),
-    "floor": ("sàn", "floor"), "fridge": ("tủ lạnh", "refrigerator"), "sink": ("chậu rửa", "kitchen sink"),
-    "faucet": ("vòi nước", "kitchen faucet"), "cooktop": ("bếp", "cooktop"), "hood": ("máy hút mùi", "range hood"),
-    "oven": ("lò", "built-in oven"), "handle": ("tay nắm", "cabinet handle"),
+_PROMPT_ROLES = {  # part kind -> the words of the image prompt (English); the name shown to people is the ``part.<kind>`` key of data/i18n
+    "door": "cabinet door front", "glass-door": "glass cabinet door", "drawer": "drawer front", "carcass": "cabinet carcass side",
+    "side-panel": "cabinet side panel", "shelf": "open shelf", "plinth": "toe kick plinth", "countertop": "kitchen countertop",
+    "molding": "decorative molding", "wall": "wall", "floor": "floor", "fridge": "refrigerator", "sink": "kitchen sink",
+    "faucet": "kitchen faucet", "cooktop": "cooktop", "hood": "range hood", "oven": "built-in oven", "handle": "cabinet handle",
 }
+ROLES = {k: (say(f"part.{k}"), en) for k, en in _PROMPT_ROLES.items()}   # part kind -> (name shown to people, prompt words)
 
 _DEFAULTS = {"base": "Laminate vân gỗ sồi sáng", "upper": "Trắng mờ", "carcass": "Melamine trắng", "countertop": "Đá nhân tạo trắng",
              "wall": "Sơn tường trắng ngà", "floor": "Gạch lát nền 800×800", "plinth": "Chân tủ nhựa xám đậm"}
@@ -119,7 +118,7 @@ def catalogue(spec: KitchenSpec, scene: Scene) -> list[dict[str, Any]]:
         key, name = material_slot(spec, p.module, p.type)
         vt = ROLES.get(p.type, (p.type, p.type))
         out.append({"id": p.id, "variant": "part", "module": p.module, "type": p.type, "semanticClass": SEMANTIC.get(p.type, "structure" if p.type.startswith("structure-") else "custom"),
-                    "name": f"{vt[0]} {p.module or ''}".strip(), "material": name, "materialLocked": key,
+                    "name": say("name.layer.part", part=vt[0], module=p.module) if p.module else say("name.layer.part-alone", part=vt[0]), "material": name, "materialLocked": key,
                     "storey": storey_of.get(p.module or ""), "parent": getattr(p, "parent", None),
                     "cabinetSystemId": system_of.get(p.module or "") or run_system.get(getattr(p, "run", None) or ""),
                     "selectable": True, "allowAppearanceChange": not p.type.startswith("structure-"),
@@ -131,29 +130,29 @@ def catalogue(spec: KitchenSpec, scene: Scene) -> list[dict[str, Any]]:
         if fronts:
             first = by_id[fronts[0]]
             groups.append({"id": f"frontSections:{m.id}", "variant": "group", "module": m.id, "type": "door", "semanticClass": "cabinet_front",
-                           "name": f"mặt trước {m.id}", "material": first["material"], "materialLocked": first["materialLocked"], "component": fronts})
+                           "name": say("name.layer.fronts", module=m.id), "material": first["material"], "materialLocked": first["materialLocked"], "component": fronts})
         hs: list[str] = [x["id"] for x in out if x["module"] == m.id and x["type"] == "handle"]
         if hs:
             groups.append({"id": f"handle:{m.id}", "variant": "group", "module": m.id, "type": "handle", "semanticClass": "hardware",
-                           "name": f"tay nắm {m.id}", "material": by_id[hs[0]]["material"], "materialLocked": "common:handle",
+                           "name": say("name.layer.handles", module=m.id), "material": by_id[hs[0]]["material"], "materialLocked": "common:handle",
                            "component": hs})
         allp: list[str] = [x["id"] for x in out if x["module"] == m.id]
         if allp:
             groups.append({"id": f"module:{m.id}", "variant": "group", "module": m.id, "type": "module", "semanticClass": "cabinet",
-                           "name": f"module {m.id}", "material": None, "materialLocked": "", "component": allp})
+                           "name": say("name.layer.cabinet", module=m.id), "material": None, "materialLocked": "", "component": allp})
     for mol in spec.moldings:
         ids: list[str] = [x["id"] for x in out if x["module"] == mol.id and x["type"] == "molding"]
         if ids:
             first = by_id[ids[0]]
             groups.append({"id": f"module:{mol.id}", "variant": "group", "module": mol.id, "type": "molding", "semanticClass": "decorations",
-                           "name": f"phào {mol.id}", "material": first["material"], "materialLocked": first["materialLocked"], "component": ids})
+                           "name": say("name.layer.molding", module=mol.id), "material": first["material"], "materialLocked": first["materialLocked"], "component": ids})
     for type in dict.fromkeys(str(x["type"]) for x in out):
         ids = [str(x["id"]) for x in out if x["type"] == type]
         if len(ids) > 1:
             first = by_id[ids[0]]
             same = len({by_id[i]["materialLocked"] for i in ids}) == 1
             groups.append({"id": f"type:{type}", "variant": "group", "module": None, "type": type, "semanticClass": SEMANTIC.get(type, "custom"),
-                           "name": f"mọi {ROLES.get(type, (type,))[0]}", "material": first["material"] if same else None,
+                           "name": say("name.layer.every", part=ROLES.get(type, (type,))[0]), "material": first["material"] if same else None,
                            "materialLocked": "common:handle" if type == "handle" else (first["materialLocked"] if same else ""), "component": ids})
     groups.extend(_tier_groups(out))
     for g in groups:
@@ -162,7 +161,7 @@ def catalogue(spec: KitchenSpec, scene: Scene) -> list[dict[str, Any]]:
     return out + groups
 
 
-TIER_NAME = {"base": "tủ dưới", "upper": "tủ trên", "tall": "tủ cao", "corner": "kệ góc"}
+TIER_NAME = {t: say(f"tier.{t}") for t in ("base", "upper", "tall", "corner")}
 TIER_OF = {"base": "base", "upper": "upper", "loft": "upper", "tall": "tall", "corner": "corner"}  # storey -> material tier (loft shares upper)
 
 
@@ -175,20 +174,21 @@ def _tier_groups(parts: list[dict[str, Any]]) -> list[dict[str, Any]]:
     systems = sorted({x["cabinetSystemId"] for x in parts if x.get("storey") and x.get("cabinetSystemId")})
     if len(systems) > 1:
         for system in systems:
-            out += _role_groups([x for x in parts if x.get("cabinetSystemId") == system], f"sys:{system}:tier", f" · hệ {system}", system)
+            out += _role_groups([x for x in parts if x.get("cabinetSystemId") == system], f"sys:{system}:tier", system, system)
     return out
 
 
-def _role_groups(parts: list[dict[str, Any]], prefix: str, suffix: str, system: str | None = None) -> list[dict[str, Any]]:
+def _role_groups(parts: list[dict[str, Any]], prefix: str, in_system: str, system: str | None = None) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     for tier, tname in TIER_NAME.items():
         members = [x for x in parts if x.get("storey") and TIER_OF[x["storey"]] == tier]
         doors = [x for x in members if x["type"] in ("door", "glass-door")]
         drawers = [x for x in members if x["type"] == "drawer"]
         hs = [x for x in members if x["type"] == "handle"]
-        roles = [("handle", "handle", f"tay nắm {tname}", hs), ("door", "door", f"cánh {tname}", doors),
-                 ("drawer", "drawer", f"mặt ngăn kéo {tname}", drawers), ("front", "door", f"mặt trước {tname}", doors + drawers),
-                 ("all", "module", f"{tname}: mặt trước và tay nắm", doors + drawers + hs)]
+        roles = [("handle", "handle", say("name.layer.tier-handles", tier=tname), hs), ("door", "door", say("name.layer.tier-doors", tier=tname), doors),
+                 ("drawer", "drawer", say("name.layer.tier-drawers", tier=tname), drawers),
+                 ("front", "door", say("name.layer.tier-fronts", tier=tname), doors + drawers),
+                 ("all", "module", say("name.layer.tier-all", tier=tname), doors + drawers + hs)]
         seen: list[frozenset[str]] = []
         for role, type, name, xs in roles:
             ids: list[str] = [x["id"] for x in xs]
@@ -197,7 +197,7 @@ def _role_groups(parts: list[dict[str, Any]], prefix: str, suffix: str, system: 
             seen.append(frozenset(ids))
             keys, mats = {x["materialLocked"] for x in xs}, {x["material"] for x in xs}
             out.append({"id": f"{prefix}:{tier}:{role}", "variant": "group", "module": None, "type": type, "semanticClass": SEMANTIC.get(type, "cabinet"),
-                        "name": name + suffix, "material": mats.pop() if len(mats) == 1 else None, **({"cabinetSystemId": system} if system else {}),
+                        "name": say("name.layer.in-system", name=name, system=in_system) if in_system else name, "material": mats.pop() if len(mats) == 1 else None, **({"cabinetSystemId": system} if system else {}),
                         "materialLocked": "common:handle" if type == "handle" else (keys.pop() if len(keys) == 1 and type != "module" else ""),
                         "component": ids})
     return out
@@ -245,7 +245,7 @@ def _adhoc(cat: list[dict[str, Any]], layer_id: str) -> tuple[dict[str, Any], li
     first = by_id[ids[0]]
     keys, mats = {by_id[i]["materialLocked"] for i in ids}, {by_id[i]["material"] for i in ids}
     layer = {"id": layer_id, "variant": "group", "module": None, "type": first["type"], "semanticClass": first["semanticClass"],
-             "name": f"{len(ids)} × {ROLES.get(first['type'], (first['type'],))[0]}", "material": mats.pop() if len(mats) == 1 else None,
+             "name": say("name.layer.count", n=len(ids), part=ROLES.get(first['type'], (first['type'],))[0]), "material": mats.pop() if len(mats) == 1 else None,
              "materialLocked": "common:handle" if first["type"] == "handle" else (keys.pop() if len(keys) == 1 else ""),
              "component": ids, "selectable": True, "allowAppearanceChange": True, "allowGeometryChange": False, "allowPositionChange": False}
     return layer, ids

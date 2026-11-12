@@ -25,6 +25,7 @@ from .errors import InvalidInput, require
 from .jsonview import as_dict, as_list
 from .palette import SEGMENT_COLORS, module_color as _module_color
 from .spec import Handle, KitchenSpec, Module, effective_handle
+from .words import say
 
 ROT = {"back": 0.0, "right": -90.0, "left": 90.0, "corner": 0.0, "island": 180.0}
 TIER = {"base": "base", "upper": "wall", "loft": "top", "tall": "tall", "corner": "corner"}
@@ -493,7 +494,7 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
                 efr = Frame.for_part(extra, wall)
                 lo, hi2 = efr.part_box(extra)
                 appliances.append({**a, "id": f"APP-{tb.id}-{i}", "dimensions": _dims(hi2[0] - lo[0], hi2[1] - lo[1], hi2[2] - lo[2]),
-                                   "transform": _tf(efr.pos, efr.rot), "name": f"{a['name']} (ống khói)"})
+                                   "transform": _tf(efr.pos, efr.rot), "name": say("name.appliance.chimney", name=a['name'])})
         elif tb.type in ("sink", "faucet"):
             accessories.append({"id": f"ACC-{tb.id}", "type": ("Sink_Double" if cat.get("box", {}).get("basins") == 2 else "Sink_Single") if tb.type == "sink" else "Faucet_Classic", **look,
                                 "assetId": "ASSET-SINK" if tb.type == "sink" else "ASSET-FAUCET",
@@ -568,7 +569,7 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
             mid = mats["upper"] if mol.variant == "crown" else mats["base"]
         decorations.append({
             "id": f"MOLD-{mol.id}-{i + 1}", "type": "Crown_Molding" if mol.variant == "crown" else "Base_Molding",
-            "name": f"{'Phào nóc' if mol.variant == 'crown' else 'Phào chân'} ({', '.join(run.wall)})", "assetId": aid,
+            "name": say("name.molding.crown" if mol.variant == "crown" else "name.molding.base", walls=", ".join(run.wall)), "assetId": aid,
             "dimensions": _dims(run.length, prof.height, max(us) - min(us)), "transform": _tf((0, 0, 0)), "materialId": mid,
             "path": {"type": "polyline", "points": [_v(x, run.y, z) for x, z in run.points], "joints": "miter", "ends": "flush",
                      "normalRule": "pháp tuyến phía phòng n = (t.z, 0, -t.x), t = hướng đi của đoạn"},

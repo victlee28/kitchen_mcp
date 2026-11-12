@@ -10,7 +10,7 @@ import math
 from typing import Any
 
 from . import builtin, defaults
-from .words import Said, said
+from .words import Said, said, say
 from .catalog import Catalog
 from .edit import combine_ops, next_run_id
 from .errors import InvalidInput
@@ -175,7 +175,7 @@ def plan_corner(spec: KitchenSpec, run_a: str, run_b: str, width: float = 900.0,
     if b_min is not None and b_start < b_min - 1:
         notes.append(said("summary.run-start-clear", run=run_b, start=b_start, min=b_min))
     ops: list[dict[str, Any]] = [{"op": "add-run", "run": run},
-                                 {"op": "add", "closeGap": False, "module": {"type": module_type, "name": "Corner cabinet", "wall": "island", "run": run["id"], "fromCorner": 0.0,
+                                 {"op": "add", "closeGap": False, "module": {"type": module_type, "name": say("name.cabinet.corner"), "wall": "island", "run": run["id"], "fromCorner": 0.0,
                                                                               "width": float(width), "y": 0, "height": float(spec.common.baseTop), "depth": depth, "doors": [float(width)]}}]
     return {"operation": combine_ops(ops), "run": run, "angle": float(round_half_away(math.degrees(phi), 1)),
             "clearance": {"aMaxEnd": a_max, "bMinStart": b_min},

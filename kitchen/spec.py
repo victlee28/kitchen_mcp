@@ -17,6 +17,7 @@ from typing import Any, Literal, TypedDict, TypeVar, cast
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from .errors import NotFound
+from .words import say
 
 WALLS = ("back", "right", "left")
 STOREYS = ("base", "upper", "loft", "tall", "corner")
@@ -357,7 +358,7 @@ class ViewAngle(_Base):
 
 class KitchenSpec(_Base):
     schemaVersion: int = 2
-    name: str = "Thiết kế tủ bếp"
+    name: str = say("name.design")
     style: Literal["Modern", "Classic", "Neoclassical", "Transitional", "Industrial", "Minimalist"] = "Modern"
     unit: Literal["mm"] = "mm"
     country: str | None = Field(default=None, description="Mã ISO alpha-2 nơi lắp đặt (VN, US, AU...) — quyết định tiêu chuẩn ưu tiên khi kiểm tra")

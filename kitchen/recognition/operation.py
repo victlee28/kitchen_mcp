@@ -5,6 +5,7 @@ from typing import Any
 
 from ..numeric import round_half_away
 from .draft import Draft, DraftModule
+from ..words import say
 
 PREFIX = {"base": "TD", "upper": "TT", "tall": "TC"}
 
@@ -41,7 +42,7 @@ def fridge_bay(m: DraftModule, height: float, depth: float) -> tuple[dict[str, A
     """The extra fields of a ``tall-fridge`` cabinet and the fridge standing in it: ``({"niche", "depth"}, appliance)``."""
     niche = min(m.niche or FRIDGE_NICHE, height - 200.0)
     width = round_half_away(min(max(m.width - FRIDGE_SIDE_GAP, 500.0), FRIDGE_MAX_WIDTH), -1)
-    appliance = {"type": "fridge", "name": "Tủ lạnh", "dimensions": f"{width:g} × {min(FRIDGE_HEIGHT, niche - 50.0):g} × {FRIDGE_DEPTH:g}"}
+    appliance = {"type": "fridge", "name": say("name.appliance.fridge"), "dimensions": f"{width:g} × {min(FRIDGE_HEIGHT, niche - 50.0):g} × {FRIDGE_DEPTH:g}"}
     return {"niche": niche, "depth": max(depth, FRIDGE_MODULE_DEPTH)}, appliance
 
 

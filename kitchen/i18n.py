@@ -64,3 +64,87 @@ class Messages:
         """Keys each language lacks compared with all the keys any language has."""
         keys = {k for t in self.tables.values() for k in t}
         return {lang: sorted(keys - set(self.tables.get(lang) or {})) for lang in LANGS}
+
+
+NAME_PREFIX = "name."
+WORD_FIELDS = {"part": "part.", "tier": "tier."}   # a field of a default name that is itself a word of the table
+NAME_FIELDS = ("name",)                             # a field that is itself a default name
+ID = r"[\w.-]+"
+FREE_FIELDS = {"walls": ".+?"}                      # any other field is an id or a number (TD1, R2, 3)
+
+
+class Names:
+    """Default names the core writes into designs and views ("Tủ chậu", "Chính diện dãy tủ R1", "mặt trước TD1"): the text, not a key, is
+    what designs keep, so a name is recognised by its wording (every ``name.*`` template of ``messages``) and worded again in another language.
+    A name nobody wrote from a template (one the user typed) is not recognised and stays as it is."""
+
+    def __init__(self, messages: Messages) -> None:
+        self.messages = messages
+        self._cache: dict[str, tuple[dict[str, str], list[tuple[Any, str, list[str]]]]] = {}
+
+    def _table(self, lang: str) -> tuple[dict[str, str], list[tuple[Any, str, list[str]]]]:
+        if lang in self._cache:
+            return self._cache[lang]
+        import re
+        table = self.messages.table(lang)
+        fixed: dict[str, str] = {}
+        patterns: list[tuple[int, Any, str, list[str]]] = []
+        for key, template in table.items():
+            if not key.startswith(NAME_PREFIX):
+                continue
+            parts = list(Formatter().parse(template))
+            fields = [f for _, f, _, _ in parts if f]
+            if not fields:
+                fixed.setdefault(template, key)
+                continue
+            rx, literal = "", 0
+            for text, field, _, _ in parts:
+                rx += re.escape(text)
+                literal += len(text)
+                if not field:
+                    continue
+                if field in WORD_FIELDS:
+                    words = sorted((t for k, t in table.items() if k.startswith(WORD_FIELDS[field])), key=len, reverse=True)
+                    rx += f"(?P<{field}>{'|'.join(re.escape(w) for w in words)})"
+                    literal += 100                      # a closed list of words: tried before a free field
+                else:
+                    free = ".+" if field in NAME_FIELDS else FREE_FIELDS.get(field, ID)
+                    rx += f"(?P<{field}>{free})"
+            patterns.append((literal, re.compile(rx), key, fields))
+        patterns.sort(key=lambda p: -p[0])
+        out = (fixed, [(rx, key, fields) for _, rx, key, fields in patterns])
+        self._cache[lang] = out
+        return out
+
+    def _word(self, text: str, prefix: str, src: str, dst: str) -> str | None:
+        for key, t in self.messages.table(src).items():
+            if key.startswith(prefix) and t == text:
+                return self.messages.text(key, dst)
+        return None
+
+    def translate(self, text: str, src: str, dst: str) -> str | None:
+        """``text`` worded in ``dst`` when it is a default name in ``src``, else None."""
+        if src == dst or not text:
+            return None
+        fixed, patterns = self._table(src)
+        if text in fixed:
+            return self.messages.text(fixed[text], dst)
+        for rx, key, fields in patterns:
+            hit = rx.fullmatch(text)
+            if hit is None:
+                continue
+            params: dict[str, str] = {}
+            for field in fields:
+                value = hit.group(field)
+                if field in WORD_FIELDS:
+                    word = self._word(value, WORD_FIELDS[field], src, dst)
+                elif field in NAME_FIELDS:
+                    word = self.translate(value, src, dst)
+                else:
+                    word = value
+                if word is None:
+                    break
+                params[field] = word
+            else:
+                return self.messages.text(key, dst, **params)
+        return None

@@ -196,7 +196,7 @@ class Handler(BaseHTTPRequestHandler):
                 if not str(b["prompt"]).strip():
                     raise ApiError(400, "prompt rỗng")
                 return self._json(201, s.create_from_prompt(str(b["prompt"])))
-            return self._json(201, s.create_from_template(b.get("color") or {}, b.get("name") or "Thiết kế tủ bếp"))
+            return self._json(201, s.create_from_template(b.get("color") or {}, b.get("name") or ""))
         if p == "/api/design" and method == "POST":  # tương thích bản cũ
             b = self._body()
             prompt = str(b.get("customer_prompt", "")).strip()
