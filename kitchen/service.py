@@ -555,7 +555,7 @@ class KitchenService:
             color, notes = intent.parse_prompt(prompt, self.catalog())
             if not color.country and country:
                 color = color.model_copy(update={'country': country})
-            planner = lambda outline, click, system: self._plan_described(spec, color, notes, outline, click, system)
+            planner = lambda outline, click, system: self._plan_described(spec, color, notes, outline, click, system, self.catalog())
         else:
             planner = lambda outline, click, system: cabinet_run.plan_i_run(spec, outline, click, system=system, catalog=self.catalog())
         struct, plan = self._plan_at_object(spec, str(template.get('structureId')), point, planner)
@@ -696,7 +696,7 @@ class KitchenService:
                     color, _ = described
                     if not color.country and country:
                         color = color.model_copy(update={'country': country})
-                    built = run_template.run_from_template(color if i == 0 else color.model_copy(update={'fridge': False}), length)
+                    built = run_template.run_from_template(color if i == 0 else color.model_copy(update={'fridge': False}), length, self.catalog())
                     modules = built['modules'] if i == 0 else system_replace.plain_cabinets(built['modules'], self.catalog())
                     if i == 0 and built['common']:
                         changes = dict(built['common'])
@@ -740,7 +740,7 @@ class KitchenService:
             if slot.length < 600:
                 continue
             c = color if i == 0 else color.model_copy(update={'fridge': False})
-            built = run_template.run_from_template(c, slot.length // 10 * 10)
+            built = run_template.run_from_template(c, slot.length // 10 * 10, catalog)
             laid[slot.run] = built['modules'] if i == 0 else system_replace.plain_cabinets(built['modules'], catalog)   # sink, hob, fridge: the main run only
             if i == 0:
                 fronts = {k: built['common'][k] for k in ('material', 'handle') if k in built['common']}
@@ -782,18 +782,20 @@ class KitchenService:
                 'summary': [words.said('summary.relayout-tv', system=system, layout=words.said(f'tv-layout.{style}')), *summary]}
 
     @staticmethod
-    def _plan_described(spec: KitchenSpec, color: KitchenTemplate, notes: list[str], outline: list, click: tuple, system: str | None = None) -> dict:
+    def _plan_described(spec: KitchenSpec, color: KitchenTemplate, notes: list[str], outline: list, click: tuple, system: str | None = None,
+                        catalog: cat.Catalog = builtin.CATALOG) -> dict:
         """The cabinets a sentence describes, in a run along the edge of the object nearest to ``click`` (kitchen frame). The run is as long as
         the edge unless the sentence gives a length; what the sentence says about materials and handles joins the design's own."""
-        return KitchenService._plan_described_line(spec, color, notes, run_line.edge_line(outline, click), system)
+        return KitchenService._plan_described_line(spec, color, notes, run_line.edge_line(outline, click), system, catalog)
 
     @staticmethod
-    def _plan_described_line(spec: KitchenSpec, color: KitchenTemplate, notes: list[str], line: Any, system: str | None = None) -> dict:
+    def _plan_described_line(spec: KitchenSpec, color: KitchenTemplate, notes: list[str], line: Any, system: str | None = None,
+                             catalog: cat.Catalog = builtin.CATALOG) -> dict:
         """The cabinets a sentence describes, in a run on ``line`` (kitchen frame)."""
         length = float(color.backWallLength) if 'backWallLength' in color.model_fields_set else run_line.run_frame(line)['length'] // 10 * 10
         if length < 600:
             raise InvalidInput(f'The edge is only {length:g} mm long; a run needs at least 600 mm', code='edge-too-short', params={'length': f'{length:g}'})
-        built = run_template.run_from_template(color, length)
+        built = run_template.run_from_template(color, length, catalog)
         changes = dict(built['common'])
         if 'material' in changes:
             changes['material'] = {**spec.common.material, **changes['material']}
@@ -878,7 +880,7 @@ class KitchenService:
                 color, notes = described
                 if not color.country and country:
                     color = color.model_copy(update={'country': country})
-                plan = self._plan_described_line(spec, color, notes, line)
+                plan = self._plan_described_line(spec, color, notes, line, catalog=self.catalog())
             else:
                 plan = run_line.plan_on_line(spec, line, run_line.base_cabinets(run_line.run_frame(line)['length'], to_data(spec)['common'], self.catalog()))
             return {**plan, 'summary': [*plan['summary'], *note]}

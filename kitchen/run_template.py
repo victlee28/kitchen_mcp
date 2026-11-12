@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from . import builtin
+from .catalog import Catalog
 from .intent import KitchenTemplate, from_template
 from .spec import Module
 
@@ -40,14 +42,14 @@ def _module(m: Module, length: float) -> dict[str, Any]:
     return entry
 
 
-def run_from_template(color: KitchenTemplate, length: float) -> dict[str, Any]:
+def run_from_template(color: KitchenTemplate, length: float, catalog: Catalog = builtin.CATALOG) -> dict[str, Any]:
     """``{"modules": [...], "common": {...}, "length"}`` for a straight run ``length`` mm long.
 
     Each module is ``{type, width, s, y, height, depth, name?, doors?, frontSections?, niche?, appliances?, ...}`` (``s`` from the run's start).
     ``common`` holds only what the sentence itself asked for (materials, handle, backsplash), to be merged into the design's own.
     """
     t = color.model_copy(update={"geometry_edit": "I", "island": False, "peninsula": False, "backWallLength": float(length)})
-    spec = from_template(t)
+    spec = from_template(t, catalog=catalog)
     back = [m for m in spec.module if m.wall == "back"]
     entries = {m.id: _module(m, length) for m in back}
     for tb in spec.appliances:
