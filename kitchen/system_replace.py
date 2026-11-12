@@ -57,7 +57,7 @@ def members(spec: KitchenSpec, system: str) -> list[Module]:
     by_module = runs.systems(spec)
     mods = [m for m in spec.module if by_module.get(m.id) == system]
     if not mods:
-        raise InvalidInput(f"No cabinet belongs to system {system}", code="system-not-found")
+        raise InvalidInput(f"No cabinet belongs to system {system}", code="system-not-found", params={"system": system})
     return mods
 
 
@@ -77,7 +77,7 @@ def pick_style(spec: KitchenSpec, mods: list[Module], wanted: str | None, catalo
     by_id = {s.id: s for s in all_styles}
     if wanted and wanted != AUTO:
         if wanted not in by_id:
-            raise InvalidInput(f"Unknown style {wanted}; use one of {', '.join(by_id)}", code="bad-style")
+            raise InvalidInput(f"Unknown style {wanted}; use one of {', '.join(by_id)}", code="bad-style", params={"style": wanted, "allowed": ', '.join(by_id)})
         return by_id[wanted]
     if not all_styles:
         raise InvalidInput("The catalog has no style preset", code="bad-style")

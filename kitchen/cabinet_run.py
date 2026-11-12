@@ -75,7 +75,8 @@ def split_widths(length: float, catalog: Catalog = builtin.CATALOG) -> list[floa
     d = defaults.of(catalog)
     length = float(round_half_away(min(length, d.max_run), 0))
     if length < d.min_width:
-        raise InvalidInput(f"The run would be {length:g} mm; the narrowest cabinet is {d.min_width:g} mm", code="run-too-short")
+        raise InvalidInput(f"The run would be {length:g} mm; the narrowest cabinet is {d.min_width:g} mm", code="run-too-short",
+                           params={"length": f"{length:g}", "min": f"{d.min_width:g}"})
     n = int(length // d.module_width)
     rest = length - n * d.module_width
     if n == 0:
@@ -131,7 +132,8 @@ def plan_corner(spec: KitchenSpec, run_a: str, run_b: str, width: float = 900.0,
         raise InvalidInput("Both runs must exist", code="run-not-found")
     d = defaults.of(catalog)
     if not d.min_width <= width <= d.corner_max_width:
-        raise InvalidInput(f"The corner cabinet width must be {d.min_width:g}-{d.corner_max_width:g} mm", code="bad-corner-width")
+        raise InvalidInput(f"The corner cabinet width must be {d.min_width:g}-{d.corner_max_width:g} mm", code="bad-corner-width",
+                           params={"min": f"{d.min_width:g}", "max": f"{d.corner_max_width:g}"})
     fa, fb = frames[run_a], frames[run_b]
     px, pz = _meet(fa, fb)
     ax, az = fa.to_world(1.0, 0.0)

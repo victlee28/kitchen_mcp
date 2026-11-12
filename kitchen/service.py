@@ -169,10 +169,10 @@ class KitchenService:
         info = self._kind(kind)
         cat.check_write(info, role)
         if not isinstance(id, str) or not self.ID_PATTERN.match(id):
-            raise InvalidInput(f"Item id {id!r}: letters, digits and _ . : - only, 1-64 characters", code="catalog-bad-id")
+            raise InvalidInput(f"Item id {id!r}: letters, digits and _ . : - only, 1-64 characters", code="catalog-bad-id", params={"id": str(id)})
         if info.closed and id not in {e.id for e in self.builtin.entries if e.kind == kind}:
-            raise InvalidInput(f"{kind} items stand for code: {id!r} cannot be added, only the builtin ones edited or hidden",
-                               code="catalog-closed-kind")
+            raise InvalidInput(f"{kind} items stand for code: {id!r} cannot be added, only the builtin ones edited or hidden", code="catalog-closed-kind",
+                               params={"kind": kind, "id": id})
         if not disabled:
             errors_found = catalog_files.schema_errors(self.builtin.schemas[kind], data)
             if errors_found:
@@ -435,8 +435,7 @@ class KitchenService:
         prompt = template.get('prompt')
         element = str(template.get('structureId') or '').removeprefix('STRUCT-')
         if isinstance(spec.floorplan, dict) and element in roomctx.replaced(spec.floorplan):
-            raise InvalidInput(f"{element} has already been replaced by cabinets (system {element}); change them with \"thay cả hệ tủ …\"",
-                               code='element-replaced')
+            raise InvalidInput(f"{element} has already been replaced by cabinets (system {element})", code='element-replaced', params={'id': element})
         if self._structure_kind(spec, str(template.get('structureId'))) == 'furniture':     # a piece of furniture is replaced, never stood beside
             back = template.get('backEdge')
             if back is not None and (isinstance(back, bool) or not isinstance(back, int)):
@@ -501,7 +500,7 @@ class KitchenService:
         ``model``: the operation (``update-appliance``) and its preview, with what changes (size, fit, energy supply) in the summary."""
         app = next((a for a in spec.appliances if a.id == str(template.get('id') or '')), None)
         if app is None:
-            raise NotFound(f"No appliance {template.get('id')!r}", code='appliance-not-found')
+            raise NotFound(f"No appliance {template.get('id')!r}", code='appliance-not-found', params={'id': str(template.get('id'))})
         raw_prompt = template.get('prompt')
         prompt = raw_prompt if isinstance(raw_prompt, str) else ''
         now = appliance_models.model_id(app, self.catalog())
@@ -659,7 +658,7 @@ class KitchenService:
         ``columns``; the longest run gets the TV, the others only a console. Its runs are marked as TV units."""
         slots = [s for s in system_replace.run_slots(spec, mods) if s.length >= 600]
         if not slots:
-            raise InvalidInput(f"System {system} has no run long enough for a TV unit (600 mm)", code='run-too-short')
+            raise InvalidInput(f"System {system} has no run long enough for a TV unit (600 mm)", code='tv-run-too-short', params={'system': system})
         style = tv_system.explicit_style(prompt) or tv_system.layout_of(spec, slots[0].run) or 'columns'
         common = to_data(spec)['common']
         laid: dict[str, list[LaidModule]] = {}
@@ -687,7 +686,7 @@ class KitchenService:
         """The cabinets a sentence describes, in a run on ``line`` (kitchen frame)."""
         length = float(color.backWallLength) if 'backWallLength' in color.model_fields_set else run_line.run_frame(line)['length'] // 10 * 10
         if length < 600:
-            raise InvalidInput(f'The edge is only {length:g} mm long; a run needs at least 600 mm', code='edge-too-short')
+            raise InvalidInput(f'The edge is only {length:g} mm long; a run needs at least 600 mm', code='edge-too-short', params={'length': f'{length:g}'})
         built = run_template.run_from_template(color, length)
         changes = dict(built['common'])
         if 'material' in changes:
@@ -824,7 +823,7 @@ class KitchenService:
             return {**out, 'status': 'unavailable', 'message': 'No recognizer is configured'}
         name = recognition.choose_recognizer(list(self.recognizers), recognizer, self.config.default_recognizer, self.catalog())
         if name is None or name not in self.recognizers:
-            raise InvalidInput(f"recognizer must be one of: {', '.join(self.recognizers)}", code='unknown-recognizer')
+            raise InvalidInput(f"recognizer must be one of: {', '.join(self.recognizers)}", code='unknown-recognizer', params={'allowed': ', '.join(self.recognizers)})
         inp = recognition.RecognitionInput(kind=kind, data=data, name=str(source.get('name') or ''), media_type=str(source.get('mediaType') or ''),
                                       note=recognition.recognizer_wire.clean_note(source.get('note')))
         anchor, mode = self._check_anchor(anchor, mode)

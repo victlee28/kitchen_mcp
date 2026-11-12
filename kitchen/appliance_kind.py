@@ -33,7 +33,7 @@ def plan(spec: KitchenSpec, app: Appliance, model: dict[str, Any], catalog: Cata
     h = appliance_models.host(spec, app)
     reasons = appliance_models.changes_cabinets(spec, app, model, h, catalog)
     if reasons is None or h is None:
-        raise InvalidInput(f"{app.id}: the cabinet it stands in was not found", code="appliance-no-host")
+        raise InvalidInput(f"{app.id}: the cabinet it stands in was not found", code="appliance-no-host", params={"id": app.id})
     bad = [r for r in reasons if r.startswith("Cannot")]
     if bad:
         raise InvalidInput(bad[0].removeprefix("Cannot: "), code="model-kind-blocked")

@@ -146,7 +146,7 @@ def set_run_tv(spec: KitchenSpec, id: str, layout: Any) -> KitchenSpec:
     s = _clone(spec)
     run = _run(s, id)
     if layout is not None and layout not in tv_system.STYLES:
-        raise InvalidInput(f"layout must be one of {', '.join(tv_system.STYLES)} or null", code="bad-tv-layout")
+        raise InvalidInput(f"layout must be one of {', '.join(tv_system.STYLES)} or null", code="bad-tv-layout", params={"allowed": ', '.join(tv_system.STYLES)})
     data = {k: v for k, v in to_data(run).items() if k not in ("purpose", "tvLayout")}
     if layout is not None:
         data.update(tv_system.run_fields(layout))
@@ -165,16 +165,17 @@ def update_appliance(spec: KitchenSpec, id: str, model: Any = None, changes: dic
     s = _clone(spec)
     hit = next((a for a in s.appliances if a.id == id), None)
     if hit is None:
-        raise NotFound(f"No appliance {id!r}", code="appliance-not-found")
+        raise NotFound(f"No appliance {id!r}", code="appliance-not-found", params={"id": id})
     upd: dict[str, Any] = {}
     if model is not None:
         m = model_of(str(model), catalog)
         if m["type"] != hit.type:
-            raise InvalidInput(f"{m['name']} is a {m['type']}, {id} is a {hit.type}", code="model-wrong-type")
+            raise InvalidInput(f"{m['name']} is a {m['type']}, {id} is a {hit.type}", code="model-wrong-type", params={"model": m["name"], "id": id})
         upd.update(changes_for(m))
     bad = [k for k in (changes or {}) if k not in APPLIANCE_FIELDS]
     if bad:
-        raise InvalidInput(f"update-appliance cannot change {bad}; only {', '.join(APPLIANCE_FIELDS)}", code="bad-appliance-field")
+        raise InvalidInput(f"update-appliance cannot change {bad}; only {', '.join(APPLIANCE_FIELDS)}", code="bad-appliance-field",
+                           params={"fields": ', '.join(sorted(bad)), "allowed": ', '.join(APPLIANCE_FIELDS)})
     upd.update(changes or {})
     if "module" in upd and not any(m.id == upd["module"] for m in s.module):
         raise NotFound(f"No module {upd['module']!r}", code="module-not-found")
@@ -191,7 +192,7 @@ def replace_element(spec: KitchenSpec, element: str, replaced: Any = True) -> Ki
         raise InvalidInput("This design has no imported floorplan", code="no-floorplan")
     ids = {str(e.get("id")) for e in (as_dict(x) for x in as_list(fp.get("elements")) or []) if e is not None}
     if element not in ids:
-        raise NotFound(f"No floorplan element {element!r}", code="element-not-found")
+        raise NotFound(f"No floorplan element {element!r}", code="element-not-found", params={"id": element})
     if not isinstance(replaced, bool):
         raise InvalidInput("replaced must be true or false", code="bad-replaced")
     data = to_data(spec)

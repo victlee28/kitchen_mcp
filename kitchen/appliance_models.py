@@ -34,7 +34,7 @@ def models(catalog: Catalog = builtin.CATALOG) -> dict[str, dict[str, Any]]:
 def model(model_id: str, catalog: Catalog = builtin.CATALOG) -> dict[str, Any]:
     found = models(catalog).get(model_id)
     if found is None:
-        raise InvalidInput(f"No appliance model {model_id!r}", code="model-not-found")
+        raise InvalidInput(f"No appliance model {model_id!r}", code="model-not-found", params={"id": model_id})
     return found
 
 

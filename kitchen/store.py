@@ -173,7 +173,7 @@ class Store:
         with self._conn() as connection:
             row = connection.execute('SELECT source_json FROM floorplans WHERE ref=?', (ref,)).fetchone()
         if not row:
-            raise NotFound(f"Floorplan '{ref}' was not found", code="floorplan-not-found")
+            raise NotFound(f"Floorplan '{ref}' was not found", code="floorplan-not-found", params={"id": ref})
         return json.loads(row['source_json'])
 
     def get(self, design_id: str, rev: int | None=None) -> tuple[KitchenSpec, int]:
@@ -195,7 +195,7 @@ class Store:
             row = connection.execute('SELECT MAX(rev) FROM revisions WHERE design_id=?', (design_id,)).fetchone()
             latest = row[0]
             if latest is None:
-                raise NotFound(f"Design '{design_id}' was not found", code="design-not-found")
+                raise NotFound(f"Design '{design_id}' was not found", code="design-not-found", params={"id": design_id})
             if base_rev is not None and base_rev != latest:
                 raise ConflictError(f'base_rev={base_rev}, but the latest revision is {latest}; reload before editing')
             connection.execute('INSERT INTO revisions(design_id, rev, spec_json, operation, source, catalog_json) VALUES(?,?,?,?,?,?)', (design_id, latest + 1, json.dumps(dump_spec(spec), ensure_ascii=False), json.dumps(op, ensure_ascii=False), source, catalog_json))
