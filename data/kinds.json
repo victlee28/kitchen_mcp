@@ -197,5 +197,15 @@
    "workshop"
   ],
   "closed": true
+ },
+ "lexicon": {
+  "label": {
+   "vi": "Từ điển câu lệnh",
+   "en": "Command dictionary"
+  },
+  "writers": [
+   "workshop"
+  ],
+  "closed": true
  }
 }

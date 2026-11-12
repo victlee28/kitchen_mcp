@@ -19,6 +19,7 @@ from .i18n import pick
 from .jsonview import as_dict
 from .runs import row_of, spot
 from .spec import Appliance, KitchenSpec, Module
+from . import lexicon
 
 SIDE = defaults.BUILTIN.side                  # mm: cabinet side panel; a hole must fit between the two (catalog kind defaults)
 WORKTOP_EDGE = defaults.BUILTIN.worktop_edge  # mm: worktop left in front of and behind a hole
@@ -235,17 +236,17 @@ def needed_width(m: dict[str, Any], catalog: Catalog = builtin.CATALOG) -> float
     return float(-(-need // 10) * 10)
 
 
-WISHES: tuple[tuple[str, Callable[[dict[str, Any]], bool]], ...] = (       # words of the sentence (lower case, WITH diacritics: "đổi" is not "đôi", "tủ" is not "từ") -> what the model must have
-    (r"(?<!\w)từ(?!\w)|induction", lambda m: m.get("energy") == "induction"),
-    (r"(?<!\w)gas(?!\w)|(?<!\w)ga(?!\w)", lambda m: m.get("energy") in ("gas", "mixed")),
-    (r"hỗn hợp|từ \+ gas|từ và gas|mixed|hybrid", lambda m: m.get("energy") == "mixed"),
-    (r"(?<!\w)đôi(?!\w)|double", lambda m: m.get("box", {}).get("basins") == 2 or m.get("box", {}).get("zones") == 2 or m.get("box", {}).get("doors") == 2),
-    (r"(?<!\w)đơn(?!\w)|single|1 cánh|một cánh", lambda m: m.get("box", {}).get("basins") == 1 or m.get("box", {}).get("doors") == 1),
-    (r"granite|(?<!\w)đá(?!\w)", lambda m: "granite" in m["visual"].get("finish", "")),
-    (r"(?<!\w)đen(?!\w)|black", lambda m: "black" in m["visual"].get("finish", "")),
-    (r"rút dây|pull", lambda m: "pull" in m["prompt"]),
-    (r"side|sbs", lambda m: m.get("box", {}).get("doors") == "sbs"),
-    (r"vi sóng|microwave", lambda m: m.get("box", {}).get("kind") == "microwave"),
+WISHES: tuple[tuple[str, Callable[[dict[str, Any]], bool]], ...] = (       # dictionary entry ``wish.<id>`` (the words, lower case WITH diacritics) -> what the model must have
+    ("induction", lambda m: m.get("energy") == "induction"),
+    ("gas", lambda m: m.get("energy") in ("gas", "mixed")),
+    ("mixed", lambda m: m.get("energy") == "mixed"),
+    ("double", lambda m: m.get("box", {}).get("basins") == 2 or m.get("box", {}).get("zones") == 2 or m.get("box", {}).get("doors") == 2),
+    ("single", lambda m: m.get("box", {}).get("basins") == 1 or m.get("box", {}).get("doors") == 1),
+    ("granite", lambda m: "granite" in m["visual"].get("finish", "")),
+    ("black", lambda m: "black" in m["visual"].get("finish", "")),
+    ("pull", lambda m: "pull" in m["prompt"]),
+    ("side-by-side", lambda m: m.get("box", {}).get("doors") == "sbs"),
+    ("microwave", lambda m: m.get("box", {}).get("kind") == "microwave"),
 )
 
 
@@ -254,7 +255,7 @@ def candidates(spec: KitchenSpec, app: Appliance, text: str = "", catalog: Catal
     đôi / đơn, đen, granite, rút dây, side-by-side, vi sóng); its current model is left out. Each: ``{id, name, size, cutout, mount, energy,
     status, reasons}``, models that fit first. A sentence that filters everything out gives every model of the type."""
     said = unicodedata.normalize("NFC", (text or "").lower())
-    wanted = [test for pattern, test in WISHES if re.search(pattern, said)]
+    wanted = [test for wish, test in WISHES if lexicon.pattern(f"wish.{wish}", catalog).search(said)]
     now = model_id(app, catalog)
     same = [m for m in models(catalog).values() if m["type"] == app.type and m["id"] != now]
     picked = [m for m in same if all(w(m) for w in wanted)] or same

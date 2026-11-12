@@ -1,0 +1,187 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "lexicon",
+ "type": "object",
+ "required": [
+  "group"
+ ],
+ "additionalProperties": false,
+ "properties": {
+  "group": {
+   "type": "string",
+   "enum": [
+    "bsheight",
+    "construction",
+    "detail",
+    "door",
+    "edit-door",
+    "edit-handle",
+    "edit-slot",
+    "edit-split",
+    "edit-storey",
+    "edit-type",
+    "edit-verb",
+    "feature",
+    "finish",
+    "fridge",
+    "handlevar",
+    "layout",
+    "loft",
+    "metal",
+    "pattern",
+    "photo",
+    "regex",
+    "scope",
+    "stone",
+    "style",
+    "tile",
+    "wood"
+   ],
+   "x-label": {
+    "vi": "Nhóm",
+    "en": "Group"
+   }
+  },
+  "aliases": {
+   "type": "object",
+   "properties": {
+    "vi": {
+     "type": "array",
+     "items": {
+      "type": "string",
+      "minLength": 1
+     }
+    },
+    "en": {
+     "type": "array",
+     "items": {
+      "type": "string",
+      "minLength": 1
+     }
+    }
+   },
+   "additionalProperties": false,
+   "x-label": {
+    "vi": "Cách gọi (mỗi ngôn ngữ một danh sách)",
+    "en": "Ways to say it (a list per language)"
+   }
+  },
+  "label": {
+   "type": "string",
+   "x-label": {
+    "vi": "Tên ghi vào thiết kế",
+    "en": "Name written into the design"
+   }
+  },
+  "value": {
+   "x-label": {
+    "vi": "Giá trị (lập trình viên đặt)",
+    "en": "Value (set by developers)"
+   }
+  },
+  "slot": {
+   "type": "string",
+   "enum": [
+    "base",
+    "upper",
+    "tall",
+    "fronts",
+    "countertop",
+    "wallTile",
+    "handle",
+    "floor",
+    "wall"
+   ],
+   "x-label": {
+    "vi": "Vùng mặc định",
+    "en": "Default area"
+   }
+  },
+  "status": {
+   "type": "string",
+   "enum": [
+    "built",
+    "exported",
+    "ai-only",
+    "unsupported",
+    "ambiguous"
+   ],
+   "x-label": {
+    "vi": "Mức hỗ trợ",
+    "en": "Support"
+   }
+  },
+  "message": {
+   "type": "string",
+   "x-label": {
+    "vi": "Ghi chú cho người dùng",
+    "en": "Note for the user"
+   }
+  },
+  "ai": {
+   "type": "string",
+   "x-label": {
+    "vi": "Cụm tiếng Anh cho ảnh AI",
+    "en": "English phrase for the AI image"
+   }
+  },
+  "weak": {
+   "type": "boolean",
+   "x-label": {
+    "vi": "Từ ngắn dễ nhầm (chỉ nhận đúng dấu hoặc không dấu hẳn)",
+    "en": "Short word easy to confuse (exact accents or none)"
+   }
+  },
+  "needs": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   },
+   "x-label": {
+    "vi": "Chỉ áp khi câu nêu vùng",
+    "en": "Applies only with these areas named"
+   }
+  },
+  "forbid": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   },
+   "x-label": {
+    "vi": "Không áp khi câu nêu vùng",
+    "en": "Does not apply with these areas named"
+   }
+  },
+  "woodPlain": {
+   "type": "string",
+   "x-label": {
+    "vi": "Tên gỗ khi đi kèm cách hoàn thiện",
+    "en": "Wood name next to a construction"
+   }
+  },
+  "patterns": {
+   "type": "object",
+   "properties": {
+    "vi": {
+     "type": "array",
+     "items": {
+      "type": "string",
+      "minLength": 1
+     }
+    },
+    "en": {
+     "type": "array",
+     "items": {
+      "type": "string",
+      "minLength": 1
+     }
+    }
+   },
+   "additionalProperties": false,
+   "x-label": {
+    "vi": "Mẫu khớp (biểu thức chính quy, mỗi ngôn ngữ một danh sách)",
+    "en": "Patterns (regular expressions, a list per language)"
+   }
+  }
+ }
+}

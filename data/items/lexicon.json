@@ -1,0 +1,2436 @@
+[
+ {
+  "id": "scope.base",
+  "group": "scope",
+  "aliases": {
+   "vi": [
+    "tủ dưới",
+    "tủ bếp dưới",
+    "tủ thấp"
+   ],
+   "en": [
+    "base cabinets",
+    "base cabinet",
+    "lower cabinets",
+    "lower cabinet",
+    "base units"
+   ]
+  },
+  "value": [
+   "base"
+  ]
+ },
+ {
+  "id": "scope.upper",
+  "group": "scope",
+  "aliases": {
+   "vi": [
+    "tủ trên",
+    "tủ treo",
+    "tủ tường"
+   ],
+   "en": [
+    "wall cabinets",
+    "wall cabinet",
+    "upper cabinets",
+    "upper cabinet",
+    "hanging cabinets"
+   ]
+  },
+  "value": [
+   "upper"
+  ]
+ },
+ {
+  "id": "scope.tall",
+  "group": "scope",
+  "aliases": {
+   "vi": [
+    "tủ cao"
+   ],
+   "en": [
+    "tall cabinets",
+    "tall cabinet",
+    "tall units"
+   ]
+  },
+  "value": [
+   "tall"
+  ]
+ },
+ {
+  "id": "scope.fronts",
+  "group": "scope",
+  "aliases": {
+   "vi": [
+    "cánh tủ",
+    "mặt tủ",
+    "tủ bếp"
+   ],
+   "en": [
+    "cabinet doors",
+    "cabinet door",
+    "cabinet fronts",
+    "cabinetry",
+    "kitchen cabinets",
+    "kitchen cabinet"
+   ]
+  },
+  "value": [
+   "base",
+   "upper"
+  ]
+ },
+ {
+  "id": "scope.countertop",
+  "group": "scope",
+  "aliases": {
+   "vi": [
+    "mặt bàn",
+    "mặt đá",
+    "mặt bếp"
+   ],
+   "en": [
+    "countertops",
+    "countertop",
+    "worktop",
+    "benchtop",
+    "counter top",
+    "kitchen counter"
+   ]
+  },
+  "value": [
+   "countertop"
+  ]
+ },
+ {
+  "id": "scope.wallTile",
+  "group": "scope",
+  "aliases": {
+   "vi": [
+    "ốp tường",
+    "ốp bếp",
+    "ốp đá",
+    "ốp gạch",
+    "mảng tường giữa tủ trên và tủ dưới",
+    "mảng tường"
+   ],
+   "en": [
+    "backsplash",
+    "back splash",
+    "splashback"
+   ]
+  },
+  "value": [
+   "wallTile"
+  ]
+ },
+ {
+  "id": "scope.wallTile.bare",
+  "group": "scope",
+  "aliases": {
+   "vi": [
+    "ốp"
+   ],
+   "en": []
+  },
+  "value": [
+   "wallTile"
+  ],
+  "weak": true
+ },
+ {
+  "id": "scope.handle",
+  "group": "scope",
+  "aliases": {
+   "vi": [
+    "tay nắm",
+    "phụ kiện"
+   ],
+   "en": [
+    "handles",
+    "handle",
+    "hardware",
+    "knobs",
+    "knob",
+    "pulls"
+   ]
+  },
+  "value": [
+   "handle"
+  ]
+ },
+ {
+  "id": "scope.floor",
+  "group": "scope",
+  "aliases": {
+   "vi": [
+    "sàn nhà",
+    "sàn"
+   ],
+   "en": [
+    "flooring",
+    "floor"
+   ]
+  },
+  "value": [
+   "floor"
+  ]
+ },
+ {
+  "id": "scope.wall",
+  "group": "scope",
+  "aliases": {
+   "vi": [
+    "tường bếp",
+    "tường"
+   ],
+   "en": [
+    "wall paint"
+   ]
+  },
+  "value": [
+   "wall"
+  ]
+ },
+ {
+  "id": "style.modern",
+  "group": "style",
+  "aliases": {
+   "vi": [
+    "hiện đại"
+   ],
+   "en": [
+    "modern"
+   ]
+  },
+  "value": [
+   "Modern",
+   null
+  ],
+  "ai": "modern"
+ },
+ {
+  "id": "style.minimalist",
+  "group": "style",
+  "aliases": {
+   "vi": [
+    "tối giản"
+   ],
+   "en": [
+    "minimalist",
+    "minimal"
+   ]
+  },
+  "value": [
+   "Minimalist",
+   null
+  ],
+  "ai": "minimalist"
+ },
+ {
+  "id": "style.scandinavian",
+  "group": "style",
+  "aliases": {
+   "vi": [
+    "bắc âu"
+   ],
+   "en": [
+    "scandinavian",
+    "scandi"
+   ]
+  },
+  "value": [
+   "Minimalist",
+   "Scandinavian"
+  ],
+  "ai": "Scandinavian style: pale woods, soft white surfaces, simple clean lines, light airy feel"
+ },
+ {
+  "id": "style.japandi",
+  "group": "style",
+  "aliases": {
+   "vi": [
+    "nhật kết hợp bắc âu"
+   ],
+   "en": [
+    "japandi",
+    "wabi sabi"
+   ]
+  },
+  "value": [
+   "Minimalist",
+   "Japandi"
+  ],
+  "ai": "Japandi style: calm natural wood, muted warm neutrals, minimal clean lines, handcrafted details"
+ },
+ {
+  "id": "style.industrial",
+  "group": "style",
+  "aliases": {
+   "vi": [
+    "công nghiệp"
+   ],
+   "en": [
+    "industrial"
+   ]
+  },
+  "value": [
+   "Industrial",
+   null
+  ],
+  "ai": "industrial"
+ },
+ {
+  "id": "style.farmhouse",
+  "group": "style",
+  "aliases": {
+   "vi": [
+    "phong cách nông trại",
+    "nông trại",
+    "nông thôn kiểu mỹ"
+   ],
+   "en": [
+    "farmhouse",
+    "farm house"
+   ]
+  },
+  "value": [
+   null,
+   "Farmhouse"
+  ],
+  "ai": "farmhouse style: warm, homely, shaker-type doors, natural textures"
+ },
+ {
+  "id": "style.country",
+  "group": "style",
+  "aliases": {
+   "vi": [
+    "phong cách đồng quê",
+    "đồng quê"
+   ],
+   "en": [
+    "country style",
+    "country kitchen",
+    "country"
+   ]
+  },
+  "value": [
+   null,
+   "Country"
+  ],
+  "ai": "country style: cosy, rustic, warm wood tones"
+ },
+ {
+  "id": "style.classic",
+  "group": "style",
+  "aliases": {
+   "vi": [
+    "cổ điển"
+   ],
+   "en": [
+    "classic"
+   ]
+  },
+  "value": [
+   "Classic",
+   null
+  ],
+  "ai": "classic"
+ },
+ {
+  "id": "style.neoclassical",
+  "group": "style",
+  "aliases": {
+   "vi": [
+    "tân cổ điển"
+   ],
+   "en": [
+    "neoclassical",
+    "neo classic",
+    "neoclassic"
+   ]
+  },
+  "value": [
+   "Neoclassical",
+   null
+  ],
+  "ai": "neoclassical"
+ },
+ {
+  "id": "style.transitional",
+  "group": "style",
+  "aliases": {
+   "vi": [
+    "giao thoa cổ điển và hiện đại",
+    "giao thoa"
+   ],
+   "en": [
+    "transitional"
+   ]
+  },
+  "value": [
+   "Transitional",
+   null
+  ],
+  "ai": "transitional"
+ },
+ {
+  "id": "style.midcentury",
+  "group": "style",
+  "aliases": {
+   "vi": [
+    "phong cách giữa thế kỷ",
+    "giữa thế kỷ"
+   ],
+   "en": [
+    "mid century modern",
+    "mid century"
+   ]
+  },
+  "value": [
+   "Modern",
+   "Mid-Century Modern"
+  ],
+  "ai": "mid-century modern style: warm walnut tones, tapered details, simple geometric forms"
+ },
+ {
+  "id": "style.luxury",
+  "group": "style",
+  "aliases": {
+   "vi": [
+    "sang trọng",
+    "cao cấp"
+   ],
+   "en": [
+    "luxury",
+    "high end"
+   ]
+  },
+  "value": [
+   null,
+   "Luxury"
+  ],
+  "ai": "luxury high-end finish: premium materials, refined detailing"
+ },
+ {
+  "id": "layout.I",
+  "group": "layout",
+  "aliases": {
+   "vi": [
+    "chữ i",
+    "bếp thẳng",
+    "một dãy",
+    "một vách"
+   ],
+   "en": [
+    "straight kitchen",
+    "i shaped",
+    "i shape",
+    "single wall"
+   ]
+  },
+  "value": "I"
+ },
+ {
+  "id": "layout.L",
+  "group": "layout",
+  "aliases": {
+   "vi": [
+    "chữ l",
+    "bếp góc",
+    "hình l"
+   ],
+   "en": [
+    "l shaped kitchen",
+    "l shaped",
+    "l shape"
+   ]
+  },
+  "value": "L"
+ },
+ {
+  "id": "layout.U",
+  "group": "layout",
+  "aliases": {
+   "vi": [
+    "chữ u",
+    "hình u",
+    "ba vách",
+    "ba dãy"
+   ],
+   "en": [
+    "u shaped kitchen",
+    "u shaped",
+    "u shape"
+   ]
+  },
+  "value": "U"
+ },
+ {
+  "id": "feat.island",
+  "group": "feature",
+  "aliases": {
+   "vi": [
+    "đảo thác đá",
+    "đá chảy xuống cạnh đảo"
+   ],
+   "en": [
+    "waterfall island",
+    "waterfall edge",
+    "waterfall"
+   ]
+  },
+  "value": "island",
+  "message": "Đã dựng đảo bếp; cạnh đá thác chỉ truyền cho ảnh AI.",
+  "ai": "waterfall countertop edge running down the island sides"
+ },
+ {
+  "id": "feat.island2",
+  "group": "feature",
+  "aliases": {
+   "vi": [
+    "đảo bếp",
+    "trên đảo"
+   ],
+   "en": [
+    "kitchen island",
+    "over the island",
+    "above the island",
+    "island"
+   ]
+  },
+  "value": "island"
+ },
+ {
+  "id": "feat.peninsula",
+  "group": "feature",
+  "aliases": {
+   "vi": [
+    "bán đảo",
+    "đảo nối liền với dãy tủ"
+   ],
+   "en": [
+    "peninsula"
+   ]
+  },
+  "value": "peninsula",
+  "message": "Bán đảo gắn vào cuối dãy tường phải (cần bếp chữ L hoặc U)."
+ },
+ {
+  "id": "struct.loft",
+  "group": "loft",
+  "aliases": {
+   "vi": [
+    "tủ kịch trần",
+    "kịch trần",
+    "tủ đụng trần",
+    "đụng trần",
+    "tủ nóc"
+   ],
+   "en": [
+    "floor to ceiling cabinets",
+    "floor to ceiling cabinet",
+    "full height cabinets",
+    "full height cabinet"
+   ]
+  },
+  "value": true,
+  "forbid": [
+   "wallTile"
+  ]
+ },
+ {
+  "id": "struct.openshelf",
+  "group": "feature",
+  "aliases": {
+   "vi": [
+    "kệ mở",
+    "kệ không cánh",
+    "đợt không cánh"
+   ],
+   "en": [
+    "open shelving",
+    "open shelves",
+    "open shelf"
+   ]
+  },
+  "value": "openShelf",
+  "message": "Thay tủ trên ngay trên chậu (hoặc tủ trên cuối dãy) bằng kệ mở."
+ },
+ {
+  "id": "door.shaker",
+  "group": "door",
+  "aliases": {
+   "vi": [
+    "cánh shaker",
+    "cánh pano huỳnh",
+    "pano huỳnh",
+    "cánh khung"
+   ],
+   "en": [
+    "shaker style",
+    "shaker"
+   ]
+  },
+  "value": "frame",
+  "slot": "fronts",
+  "ai": "Shaker-style framed doors with a recessed centre panel"
+ },
+ {
+  "id": "door.flat",
+  "group": "door",
+  "aliases": {
+   "vi": [
+    "cánh phẳng",
+    "cánh slab"
+   ],
+   "en": [
+    "flat panel",
+    "slab"
+   ]
+  },
+  "value": "flat",
+  "slot": "fronts",
+  "ai": "flat slab doors without frames"
+ },
+ {
+  "id": "door.fluted",
+  "group": "door",
+  "aliases": {
+   "vi": [
+    "kính sọc",
+    "kính gợn sóng"
+   ],
+   "en": [
+    "fluted glass",
+    "reeded glass"
+   ]
+  },
+  "value": "glass",
+  "slot": "upper",
+  "message": "Dựng cánh kính; kiểu sọc/gợn sóng chỉ truyền cho ảnh AI.",
+  "ai": "fluted (reeded) glass in the cabinet doors"
+ },
+ {
+  "id": "door.glass",
+  "group": "door",
+  "aliases": {
+   "vi": [
+    "cánh kính",
+    "tủ kính",
+    "kính trong"
+   ],
+   "en": [
+    "glass front"
+   ]
+  },
+  "value": "glass",
+  "slot": "upper",
+  "ai": "glass-front cabinet doors"
+ },
+ {
+  "id": "handle.none",
+  "group": "handlevar",
+  "aliases": {
+   "vi": [
+    "không tay nắm",
+    "không có tay nắm"
+   ],
+   "en": [
+    "handleless",
+    "push to open"
+   ]
+  },
+  "value": "none",
+  "ai": "handleless push-to-open fronts"
+ },
+ {
+  "id": "handle.concealed",
+  "group": "handlevar",
+  "aliases": {
+   "vi": [
+    "rãnh âm",
+    "cắm vát",
+    "tay nắm âm",
+    "tay âm"
+   ],
+   "en": [
+    "finger pull"
+   ]
+  },
+  "value": "concealed",
+  "ai": "integrated finger-pull grooves instead of handles"
+ },
+ {
+  "id": "mat.veneer",
+  "group": "construction",
+  "aliases": {
+   "vi": [
+    "gỗ lạng",
+    "veneer gỗ"
+   ],
+   "en": [
+    "wood veneer",
+    "veneer"
+   ]
+  },
+  "label": "Veneer",
+  "slot": "base"
+ },
+ {
+  "id": "mat.acrylic",
+  "group": "construction",
+  "aliases": {
+   "vi": [
+    "cánh acrylic"
+   ],
+   "en": [
+    "acrylic"
+   ]
+  },
+  "label": "Acrylic",
+  "slot": "base"
+ },
+ {
+  "id": "mat.lacquermatte",
+  "group": "construction",
+  "aliases": {
+   "vi": [
+    "sơn lacquer mờ",
+    "lacquer mờ",
+    "sơn mờ"
+   ],
+   "en": [
+    "matte lacquer"
+   ]
+  },
+  "label": "Sơn lacquer mờ",
+  "slot": "base"
+ },
+ {
+  "id": "mat.lacquer",
+  "group": "construction",
+  "aliases": {
+   "vi": [
+    "sơn lacquer"
+   ],
+   "en": [
+    "lacquer"
+   ]
+  },
+  "label": "Sơn lacquer",
+  "slot": "base"
+ },
+ {
+  "id": "mat.paintgloss",
+  "group": "construction",
+  "aliases": {
+   "vi": [
+    "sơn bóng"
+   ],
+   "en": []
+  },
+  "label": "Sơn bóng",
+  "slot": "base"
+ },
+ {
+  "id": "mat.laminate",
+  "group": "construction",
+  "aliases": {
+   "vi": [],
+   "en": [
+    "laminate"
+   ]
+  },
+  "label": "Laminate",
+  "slot": "base"
+ },
+ {
+  "id": "mat.melamine",
+  "group": "construction",
+  "aliases": {
+   "vi": [],
+   "en": [
+    "melamine"
+   ]
+  },
+  "label": "Melamine",
+  "slot": "base"
+ },
+ {
+  "id": "wood.naturaloak",
+  "group": "wood",
+  "aliases": {
+   "vi": [
+    "sồi tự nhiên"
+   ],
+   "en": [
+    "natural oak"
+   ]
+  },
+  "label": "Sồi tự nhiên",
+  "slot": "base",
+  "woodPlain": "sồi tự nhiên"
+ },
+ {
+  "id": "wood.oak",
+  "group": "wood",
+  "aliases": {
+   "vi": [
+    "sồi"
+   ],
+   "en": [
+    "oak"
+   ]
+  },
+  "label": "Laminate vân gỗ sồi sáng",
+  "slot": "base",
+  "woodPlain": "sồi"
+ },
+ {
+  "id": "wood.walnut",
+  "group": "wood",
+  "aliases": {
+   "vi": [
+    "óc chó"
+   ],
+   "en": [
+    "walnut"
+   ]
+  },
+  "label": "Gỗ óc chó",
+  "slot": "base",
+  "woodPlain": "óc chó"
+ },
+ {
+  "id": "wood.teak",
+  "group": "wood",
+  "aliases": {
+   "vi": [
+    "gỗ giá tỵ",
+    "giá tỵ"
+   ],
+   "en": [
+    "teak"
+   ]
+  },
+  "label": "Gỗ teak",
+  "slot": "base",
+  "woodPlain": "teak"
+ },
+ {
+  "id": "wood.ash",
+  "group": "wood",
+  "aliases": {
+   "vi": [
+    "tần bì"
+   ],
+   "en": [
+    "ash"
+   ]
+  },
+  "label": "Gỗ tần bì",
+  "slot": "base",
+  "woodPlain": "tần bì"
+ },
+ {
+  "id": "wood.cherry",
+  "group": "wood",
+  "aliases": {
+   "vi": [
+    "xoan đào"
+   ],
+   "en": [
+    "cherry"
+   ]
+  },
+  "label": "Gỗ xoan đào",
+  "slot": "base",
+  "woodPlain": "xoan đào"
+ },
+ {
+  "id": "wood.generic",
+  "group": "wood",
+  "aliases": {
+   "vi": [
+    "gỗ"
+   ],
+   "en": [
+    "wood"
+   ]
+  },
+  "label": "Gỗ",
+  "slot": "base",
+  "woodPlain": "gỗ"
+ },
+ {
+  "id": "stone.marble",
+  "group": "stone",
+  "aliases": {
+   "vi": [
+    "đá marble",
+    "đá cẩm thạch",
+    "cẩm thạch"
+   ],
+   "en": [
+    "marble"
+   ]
+  },
+  "label": "Đá marble",
+  "slot": "countertop"
+ },
+ {
+  "id": "stone.quartz",
+  "group": "stone",
+  "aliases": {
+   "vi": [
+    "đá quartz",
+    "đá thạch anh",
+    "thạch anh"
+   ],
+   "en": [
+    "quartz"
+   ]
+  },
+  "label": "Quartz",
+  "slot": "countertop"
+ },
+ {
+  "id": "stone.terrazzo",
+  "group": "stone",
+  "aliases": {
+   "vi": [
+    "đá terrazzo",
+    "đá hạt"
+   ],
+   "en": [
+    "terrazzo"
+   ]
+  },
+  "label": "Terrazzo",
+  "slot": "countertop"
+ },
+ {
+  "id": "stone.granite",
+  "group": "stone",
+  "aliases": {
+   "vi": [
+    "đá granite"
+   ],
+   "en": [
+    "granite"
+   ]
+  },
+  "label": "Đá granite",
+  "slot": "countertop"
+ },
+ {
+  "id": "stone.generic",
+  "group": "stone",
+  "aliases": {
+   "vi": [
+    "đá"
+   ],
+   "en": [
+    "stone"
+   ]
+  },
+  "label": "Đá nhân tạo",
+  "slot": "countertop",
+  "weak": true
+ },
+ {
+  "id": "tile.zellige",
+  "group": "tile",
+  "aliases": {
+   "vi": [
+    "gạch zellige",
+    "gạch gốm thủ công"
+   ],
+   "en": [
+    "zellige"
+   ]
+  },
+  "label": "Gạch Zellige",
+  "slot": "wallTile"
+ },
+ {
+  "id": "tile.subway",
+  "group": "tile",
+  "aliases": {
+   "vi": [
+    "gạch subway",
+    "gạch thẻ"
+   ],
+   "en": [
+    "subway tile",
+    "subway"
+   ]
+  },
+  "label": "Gạch thẻ",
+  "slot": "wallTile"
+ },
+ {
+  "id": "tile.generic",
+  "group": "tile",
+  "aliases": {
+   "vi": [
+    "gạch"
+   ],
+   "en": [
+    "tile"
+   ]
+  },
+  "label": "Gạch",
+  "slot": "wallTile"
+ },
+ {
+  "id": "metal.brass",
+  "group": "metal",
+  "aliases": {
+   "vi": [
+    "đồng thau xước",
+    "đồng xước",
+    "đồng thau"
+   ],
+   "en": [
+    "brushed brass",
+    "brass"
+   ]
+  },
+  "label": "Đồng thau xước"
+ },
+ {
+  "id": "metal.steel",
+  "group": "metal",
+  "aliases": {
+   "vi": [
+    "inox"
+   ],
+   "en": [
+    "stainless steel",
+    "stainless"
+   ]
+  },
+  "label": "Inox"
+ },
+ {
+  "id": "metal.blackhw",
+  "group": "metal",
+  "aliases": {
+   "vi": [
+    "phụ kiện đen mờ",
+    "tay nắm đen mờ"
+   ],
+   "en": [
+    "matte black hardware"
+   ]
+  },
+  "label": "Đen mờ",
+  "slot": "handle"
+ },
+ {
+  "id": "metal.black",
+  "group": "metal",
+  "aliases": {
+   "vi": [],
+   "en": [
+    "matte black"
+   ]
+  },
+  "label": "Đen mờ"
+ },
+ {
+  "id": "finish.mirror",
+  "group": "finish",
+  "aliases": {
+   "vi": [
+    "bóng gương"
+   ],
+   "en": [
+    "mirror finish",
+    "high gloss"
+   ]
+  },
+  "label": "bóng gương"
+ },
+ {
+  "id": "finish.gloss",
+  "group": "finish",
+  "aliases": {
+   "vi": [
+    "bóng"
+   ],
+   "en": [
+    "glossy finish",
+    "glossy",
+    "gloss"
+   ]
+  },
+  "label": "bóng"
+ },
+ {
+  "id": "finish.matte",
+  "group": "finish",
+  "aliases": {
+   "vi": [
+    "mờ"
+   ],
+   "en": [
+    "matte finish",
+    "matte"
+   ]
+  },
+  "label": "mờ",
+  "weak": true
+ },
+ {
+  "id": "detail.cloud",
+  "group": "detail",
+  "aliases": {
+   "vi": [
+    "vân mây"
+   ],
+   "en": [
+    "cloudy veining"
+   ]
+  },
+  "label": "vân mây"
+ },
+ {
+  "id": "pattern.herringbone",
+  "group": "pattern",
+  "aliases": {
+   "vi": [
+    "gạch xếp xương cá",
+    "xếp xương cá",
+    "xương cá"
+   ],
+   "en": [
+    "herringbone"
+   ]
+  },
+  "value": "herringbone",
+  "status": "exported",
+  "message": "Kiểu xếp xương cá ghi vào thiết kế/file 3D và prompt ảnh; mô hình 3D chưa vẽ từng viên gạch.",
+  "ai": "wall tiles laid in a herringbone pattern"
+ },
+ {
+  "id": "pattern.runningbond",
+  "group": "pattern",
+  "aliases": {
+   "vi": [
+    "xếp so le",
+    "gạch xếp so le"
+   ],
+   "en": [
+    "running bond"
+   ]
+  },
+  "value": "running-bond",
+  "status": "exported",
+  "message": "Kiểu xếp so le ghi vào thiết kế/file 3D và prompt ảnh; mô hình 3D chưa vẽ từng viên gạch.",
+  "ai": "wall tiles laid in a staggered running-bond pattern"
+ },
+ {
+  "id": "bs.toupper",
+  "group": "bsheight",
+  "aliases": {
+   "vi": [
+    "ốp lên sát tủ trên",
+    "lên sát tủ trên",
+    "sát tủ trên",
+    "tới tủ trên"
+   ],
+   "en": [
+    "to the upper cabinets",
+    "to the wall cabinets",
+    "up to the wall cabinets",
+    "up to the upper cabinets"
+   ]
+  },
+  "value": "to-upper",
+  "needs": [
+   "wallTile"
+  ]
+ },
+ {
+  "id": "bs.toceiling",
+  "group": "bsheight",
+  "aliases": {
+   "vi": [
+    "ốp tới trần",
+    "ốp lên trần",
+    "tới trần",
+    "lên trần",
+    "kịch trần"
+   ],
+   "en": [
+    "to the ceiling",
+    "full height backsplash",
+    "full height"
+   ]
+  },
+  "value": "to-ceiling",
+  "needs": [
+   "wallTile"
+  ]
+ },
+ {
+  "id": "photo.digest",
+  "group": "photo",
+  "aliases": {
+   "vi": [
+    "ảnh nội thất kiểu tạp chí kiến trúc",
+    "ảnh tạp chí kiến trúc"
+   ],
+   "en": [
+    "architectural digest photography",
+    "architectural digest"
+   ]
+  },
+  "status": "ai-only",
+  "message": "Phong cách chụp: chỉ cho ảnh AI.",
+  "ai": "editorial architectural interior photography"
+ },
+ {
+  "id": "photo.wide",
+  "group": "photo",
+  "aliases": {
+   "vi": [
+    "góc chụp rộng",
+    "góc rộng"
+   ],
+   "en": [
+    "wide angle shot",
+    "wide angle"
+   ]
+  },
+  "status": "ai-only",
+  "message": "Góc máy: chỉ cho ảnh AI; góc nhìn 3D chọn ở mục camera.",
+  "ai": "wide-angle architectural view"
+ },
+ {
+  "id": "photo.eye",
+  "group": "photo",
+  "aliases": {
+   "vi": [
+    "ngang tầm mắt"
+   ],
+   "en": [
+    "eye level shot",
+    "eye level"
+   ]
+  },
+  "status": "ai-only",
+  "message": "Góc máy: chỉ cho ảnh AI; góc nhìn 3D chọn ở mục camera.",
+  "ai": "eye-level camera angle"
+ },
+ {
+  "id": "photo.8k",
+  "group": "photo",
+  "aliases": {
+   "vi": [
+    "độ chi tiết cao"
+   ],
+   "en": [
+    "8k resolution",
+    "8k"
+   ]
+  },
+  "status": "ai-only",
+  "message": "Hiểu là yêu cầu mức chi tiết; không đổi kích thước ảnh đầu ra.",
+  "ai": "high-resolution fine material detail"
+ },
+ {
+  "id": "photo.engine",
+  "group": "photo",
+  "aliases": {
+   "vi": [],
+   "en": [
+    "unreal engine 5 render",
+    "unreal engine 5",
+    "unreal engine",
+    "octane render",
+    "octane"
+   ]
+  },
+  "status": "ai-only",
+  "message": "Hiểu là yêu cầu chất lượng ánh sáng/vật liệu; ảnh không thật sự được render bằng engine đó.",
+  "ai": "high-quality physically based lighting and materials"
+ },
+ {
+  "id": "photo.daylight",
+  "group": "photo",
+  "aliases": {
+   "vi": [
+    "nắng tự nhiên chiếu qua cửa sổ"
+   ],
+   "en": [
+    "natural daylight streaming through windows",
+    "natural daylight"
+   ]
+  },
+  "status": "ai-only",
+  "message": "Ánh sáng: chỉ cho ảnh AI.",
+  "ai": "natural daylight streaming through windows"
+ },
+ {
+  "id": "photo.real",
+  "group": "photo",
+  "aliases": {
+   "vi": [
+    "ảnh chân thực"
+   ],
+   "en": [
+    "photorealistic",
+    "ultra realistic"
+   ]
+  },
+  "status": "ai-only",
+  "message": "Ảnh AI vốn luôn yêu cầu ảnh chân thực.",
+  "ai": "photorealistic interior photography"
+ },
+ {
+  "id": "photo.led",
+  "group": "photo",
+  "aliases": {
+   "vi": [
+    "led dây giấu dưới tủ",
+    "led dây dưới tủ treo",
+    "led dây dưới tủ",
+    "đèn led dưới tủ",
+    "đèn led hắt backsplash",
+    "đèn led hắt"
+   ],
+   "en": [
+    "under cabinet led strip",
+    "under cabinet led"
+   ]
+  },
+  "status": "ai-only",
+  "message": "Chỉ mô tả cho ảnh AI; chưa có trong mô hình 3D và file Three.js.",
+  "ai": "under-cabinet LED strip lighting"
+ },
+ {
+  "id": "photo.pendant",
+  "group": "photo",
+  "aliases": {
+   "vi": [
+    "đèn thả trần",
+    "đèn thả"
+   ],
+   "en": [
+    "pendant lights",
+    "pendant light"
+   ]
+  },
+  "status": "ai-only",
+  "message": "Chỉ mô tả cho ảnh AI; chưa có trong mô hình 3D và file Three.js.",
+  "ai": "pendant lights"
+ },
+ {
+  "id": "photo.recessed",
+  "group": "photo",
+  "aliases": {
+   "vi": [
+    "spotlight âm trần",
+    "đèn âm trần"
+   ],
+   "en": [
+    "recessed spotlights",
+    "recessed spotlight",
+    "recessed lights"
+   ]
+  },
+  "status": "ai-only",
+  "message": "Chỉ mô tả cho ảnh AI; chưa có trong mô hình 3D và file Three.js.",
+  "ai": "recessed ceiling spotlights"
+ },
+ {
+  "id": "photo.track",
+  "group": "photo",
+  "aliases": {
+   "vi": [
+    "đèn rọi ray",
+    "đèn ray"
+   ],
+   "en": [
+    "track lighting"
+   ]
+  },
+  "status": "ai-only",
+  "message": "Chỉ mô tả cho ảnh AI; chưa có trong mô hình 3D và file Three.js.",
+  "ai": "track lighting"
+ },
+ {
+  "id": "photo.warm",
+  "group": "photo",
+  "aliases": {
+   "vi": [
+    "ánh sáng vàng ấm",
+    "ánh sáng nền ấm"
+   ],
+   "en": [
+    "warm ambient lighting"
+   ]
+  },
+  "status": "ai-only",
+  "message": "Tông ánh sáng: chỉ cho ảnh AI; ánh sáng mặc định chọn ở bước tạo ảnh.",
+  "ai": "warm ambient lighting"
+ },
+ {
+  "id": "photo.hood",
+  "group": "photo",
+  "aliases": {
+   "vi": [
+    "máy hút mùi âm tủ",
+    "máy hút mùi giấu kín"
+   ],
+   "en": [
+    "integrated range hood"
+   ]
+  },
+  "status": "ai-only",
+  "message": "Kiểu lắp đặt âm tủ chưa được lưu trong thiết kế; chỉ mô tả cho ảnh AI.",
+  "ai": "integrated concealed range hood"
+ },
+ {
+  "id": "photo.builtin",
+  "group": "photo",
+  "aliases": {
+   "vi": [
+    "thiết bị âm tủ",
+    "lò nướng âm tủ",
+    "lò vi sóng âm tủ"
+   ],
+   "en": [
+    "built in appliances",
+    "built in appliance"
+   ]
+  },
+  "status": "ai-only",
+  "message": "Kiểu lắp đặt âm tủ chưa được lưu trong thiết kế; chỉ mô tả cho ảnh AI.",
+  "ai": "built-in integrated appliances"
+ },
+ {
+  "id": "photo.seamless",
+  "group": "photo",
+  "aliases": {
+   "vi": [
+    "thiết bị liền mạch"
+   ],
+   "en": [
+    "seamless integration"
+   ]
+  },
+  "status": "ai-only",
+  "message": "Chỉ mô tả cho ảnh AI.",
+  "ai": "seamlessly integrated appliances"
+ },
+ {
+  "id": "fridge.builtin",
+  "group": "fridge",
+  "aliases": {
+   "vi": [
+    "tủ lạnh âm tủ"
+   ],
+   "en": [
+    "built in fridge",
+    "integrated refrigerator"
+   ]
+  },
+  "value": true,
+  "message": "Tủ lạnh có trong thiết kế; kiểu lắp âm tủ chưa được lưu riêng, chỉ mô tả cho ảnh AI.",
+  "ai": "built-in integrated refrigerator"
+ },
+ {
+  "id": "fridge.plain",
+  "group": "fridge",
+  "aliases": {
+   "vi": [],
+   "en": [
+    "refrigerator",
+    "fridge"
+   ]
+  },
+  "value": true
+ },
+ {
+  "id": "edit.verb.add",
+  "group": "edit-verb",
+  "aliases": {
+   "vi": [
+    "thêm",
+    "bổ sung",
+    "chèn"
+   ],
+   "en": [
+    "add",
+    "insert"
+   ]
+  },
+  "value": "add"
+ },
+ {
+  "id": "edit.verb.remove",
+  "group": "edit-verb",
+  "aliases": {
+   "vi": [
+    "xóa",
+    "bỏ",
+    "gỡ",
+    "loại"
+   ],
+   "en": [
+    "remove",
+    "delete"
+   ]
+  },
+  "value": "remove"
+ },
+ {
+  "id": "edit.verb.handle",
+  "group": "edit-verb",
+  "aliases": {
+   "vi": [
+    "tay nắm"
+   ],
+   "en": [
+    "handle",
+    "handles"
+   ]
+  },
+  "value": "handle"
+ },
+ {
+  "id": "edit.verb.door",
+  "group": "edit-verb",
+  "aliases": {
+   "vi": [
+    "cánh"
+   ],
+   "en": [
+    "door",
+    "doors"
+   ]
+  },
+  "value": "door"
+ },
+ {
+  "id": "edit.verb.width",
+  "group": "edit-verb",
+  "aliases": {
+   "vi": [
+    "rộng",
+    "ngang"
+   ],
+   "en": [
+    "width",
+    "wide"
+   ]
+  },
+  "value": "width"
+ },
+ {
+  "id": "edit.verb.length",
+  "group": "edit-verb",
+  "aliases": {
+   "vi": [
+    "dài"
+   ],
+   "en": [
+    "length",
+    "long"
+   ]
+  },
+  "value": "length"
+ },
+ {
+  "id": "edit.split",
+  "group": "edit-split",
+  "aliases": {
+   "vi": [
+    "và",
+    "rồi",
+    "đồng thời"
+   ],
+   "en": [
+    "and",
+    "then"
+   ]
+  },
+  "value": "split"
+ },
+ {
+  "id": "edit.type.drawers",
+  "group": "edit-type",
+  "aliases": {
+   "vi": [
+    "ngăn kéo"
+   ],
+   "en": [
+    "drawers",
+    "drawer"
+   ]
+  },
+  "value": "base-drawers"
+ },
+ {
+  "id": "edit.type.sink",
+  "group": "edit-type",
+  "aliases": {
+   "vi": [
+    "chậu rửa",
+    "tủ chậu"
+   ],
+   "en": [
+    "sink"
+   ]
+  },
+  "value": "base-sink"
+ },
+ {
+  "id": "edit.type.cooktop",
+  "group": "edit-type",
+  "aliases": {
+   "vi": [
+    "bếp từ",
+    "bếp ga",
+    "bếp"
+   ],
+   "en": [
+    "cooktop",
+    "hob"
+   ]
+  },
+  "value": "base-cooktop"
+ },
+ {
+  "id": "edit.type.oven",
+  "group": "edit-type",
+  "aliases": {
+   "vi": [
+    "lò nướng"
+   ],
+   "en": [
+    "oven"
+   ]
+  },
+  "value": "base-oven"
+ },
+ {
+  "id": "edit.type.fridge",
+  "group": "edit-type",
+  "aliases": {
+   "vi": [
+    "tủ lạnh"
+   ],
+   "en": [
+    "fridge",
+    "refrigerator"
+   ]
+  },
+  "value": "tall-fridge"
+ },
+ {
+  "id": "edit.type.tall",
+  "group": "edit-type",
+  "aliases": {
+   "vi": [
+    "tủ cao"
+   ],
+   "en": [
+    "tall cabinet"
+   ]
+  },
+  "value": "tall"
+ },
+ {
+  "id": "edit.type.upper",
+  "group": "edit-type",
+  "aliases": {
+   "vi": [
+    "tủ treo",
+    "tủ trên"
+   ],
+   "en": [
+    "upper cabinet",
+    "wall cabinet"
+   ]
+  },
+  "value": "upper"
+ },
+ {
+  "id": "edit.type.glass",
+  "group": "edit-type",
+  "aliases": {
+   "vi": [
+    "tủ kính"
+   ],
+   "en": [
+    "glass cabinet"
+   ]
+  },
+  "value": "upper-glass"
+ },
+ {
+  "id": "edit.type.base",
+  "group": "edit-type",
+  "aliases": {
+   "vi": [
+    "tủ dưới",
+    "tủ thường"
+   ],
+   "en": [
+    "base cabinet"
+   ]
+  },
+  "value": "base"
+ },
+ {
+  "id": "edit.door.glass",
+  "group": "edit-door",
+  "aliases": {
+   "vi": [
+    "kính"
+   ],
+   "en": [
+    "glass"
+   ]
+  },
+  "value": "glass"
+ },
+ {
+  "id": "edit.door.frame",
+  "group": "edit-door",
+  "aliases": {
+   "vi": [
+    "khung"
+   ],
+   "en": [
+    "shaker",
+    "framed"
+   ]
+  },
+  "value": "frame"
+ },
+ {
+  "id": "edit.door.flat",
+  "group": "edit-door",
+  "aliases": {
+   "vi": [
+    "phẳng",
+    "trơn"
+   ],
+   "en": [
+    "slab",
+    "flat"
+   ]
+  },
+  "value": "flat"
+ },
+ {
+  "id": "edit.handle.none",
+  "group": "edit-handle",
+  "aliases": {
+   "vi": [
+    "không tay",
+    "không có tay",
+    "nhấn mở"
+   ],
+   "en": [
+    "handleless",
+    "push to open",
+    "no handles"
+   ]
+  },
+  "value": "none"
+ },
+ {
+  "id": "edit.handle.concealed",
+  "group": "edit-handle",
+  "aliases": {
+   "vi": [
+    "âm"
+   ],
+   "en": [
+    "concealed",
+    "finger pull"
+   ]
+  },
+  "value": "concealed"
+ },
+ {
+  "id": "edit.handle.knob",
+  "group": "edit-handle",
+  "aliases": {
+   "vi": [
+    "nút",
+    "núm"
+   ],
+   "en": [
+    "knob",
+    "knobs"
+   ]
+  },
+  "value": "knob"
+ },
+ {
+  "id": "edit.handle.bar",
+  "group": "edit-handle",
+  "aliases": {
+   "vi": [
+    "thanh"
+   ],
+   "en": [
+    "bar"
+   ]
+  },
+  "value": "bar"
+ },
+ {
+  "id": "edit.storey.upper",
+  "group": "edit-storey",
+  "aliases": {
+   "vi": [
+    "tủ treo",
+    "tủ trên"
+   ],
+   "en": [
+    "upper",
+    "wall cabinets"
+   ]
+  },
+  "value": [
+   "upper",
+   "loft"
+  ]
+ },
+ {
+  "id": "edit.storey.base",
+  "group": "edit-storey",
+  "aliases": {
+   "vi": [
+    "tủ dưới"
+   ],
+   "en": [
+    "base",
+    "lower cabinets"
+   ]
+  },
+  "value": [
+   "base"
+  ]
+ },
+ {
+  "id": "edit.storey.tall",
+  "group": "edit-storey",
+  "aliases": {
+   "vi": [
+    "tủ cao"
+   ],
+   "en": [
+    "tall cabinets"
+   ]
+  },
+  "value": [
+   "tall"
+  ]
+ },
+ {
+  "id": "edit.slot.countertop",
+  "group": "edit-slot",
+  "aliases": {
+   "vi": [
+    "mặt bàn"
+   ],
+   "en": [
+    "countertop"
+   ]
+  },
+  "value": "countertop"
+ },
+ {
+  "id": "edit.slot.wall",
+  "group": "edit-slot",
+  "aliases": {
+   "vi": [
+    "tường"
+   ],
+   "en": [
+    "wall"
+   ]
+  },
+  "value": "wall"
+ },
+ {
+  "id": "edit.slot.floor",
+  "group": "edit-slot",
+  "aliases": {
+   "vi": [
+    "sàn"
+   ],
+   "en": [
+    "floor"
+   ]
+  },
+  "value": "floor"
+ },
+ {
+  "id": "tv.word",
+  "group": "regex",
+  "patterns": {
+   "vi": [
+    "\\b(?:ti\\s*vi|tivi)\\b"
+   ],
+   "en": [
+    "\\btv\\b",
+    "\\btelevision\\b"
+   ]
+  },
+  "message": "Câu nói về tủ tivi (chữ đã bỏ dấu)"
+ },
+ {
+  "id": "tv.full",
+  "group": "regex",
+  "patterns": {
+   "vi": [
+    "\\bkin\\s+(?:ca\\s+|het\\s+)?(?:vach|tuong)\\b",
+    "\\btu\\s+kin\\b",
+    "\\bkin\\s+tu\\s+san\\b",
+    "\\bfull\\s+(?:vach|tuong)\\b"
+   ],
+   "en": [
+    "\\bfull\\s+wall\\b",
+    "\\bwall\\s+to\\s+wall\\b"
+   ]
+  },
+  "message": "Tủ tivi kín cả vách (chữ đã bỏ dấu)"
+ },
+ {
+  "id": "tv.shelves",
+  "group": "regex",
+  "patterns": {
+   "vi": [
+    "\\bke\\s+(?:treo|ho)\\b",
+    "\\bkhong\\s+(?:co\\s+|can\\s+|lam\\s+)?cot\\b",
+    "\\bbo\\s+cot\\b"
+   ],
+   "en": [
+    "\\bfloating\\s+shelves\\b",
+    "\\bopen\\s+shelves\\b",
+    "\\bno\\s+columns?\\b"
+   ]
+  },
+  "message": "Tủ tivi kệ treo (chữ đã bỏ dấu)"
+ },
+ {
+  "id": "tv.columns",
+  "group": "regex",
+  "patterns": {
+   "vi": [
+    "\\b(?:2|hai)\\s+cot\\b",
+    "\\bcot\\s+tu\\b",
+    "\\bhoc\\s+tivi\\b"
+   ],
+   "en": [
+    "\\b(?:2|two)\\s+columns\\b",
+    "\\bcolumns?\\b",
+    "\\bniche\\b"
+   ]
+  },
+  "message": "Tủ tivi hai cột (chữ đã bỏ dấu)"
+ },
+ {
+  "id": "tv.no-panel",
+  "group": "regex",
+  "patterns": {
+   "vi": [
+    "\\b(?:khong|bo|bot)\\s+(?:can\\s+|co\\s+)?(?:tam\\s+|vach\\s+)?op\\b"
+   ],
+   "en": [
+    "\\bno\\s+(?:back\\s+)?panel\\b",
+    "\\bwithout\\s+(?:a\\s+)?panel\\b"
+   ]
+  },
+  "message": "Không làm tấm ốp sau tivi (chữ đã bỏ dấu)"
+ },
+ {
+  "id": "appliance.cooktop",
+  "group": "regex",
+  "patterns": {
+   "vi": [
+    "bếp\\s*(?:từ|gas|ga|nấu|điện|hồng\\s*ngoại|đôi|đơn)"
+   ],
+   "en": [
+    "(?<!\\w)hob(?!\\w)",
+    "(?<!\\w)cooktop(?!\\w)"
+   ]
+  }
+ },
+ {
+  "id": "appliance.sink",
+  "group": "regex",
+  "patterns": {
+   "vi": [
+    "chậu"
+   ],
+   "en": [
+    "(?<!\\w)sink(?!\\w)"
+   ]
+  }
+ },
+ {
+  "id": "appliance.hood",
+  "group": "regex",
+  "patterns": {
+   "vi": [
+    "hút\\s*mùi"
+   ],
+   "en": [
+    "(?<!\\w)(?:range\\s*)?hood(?!\\w)"
+   ]
+  }
+ },
+ {
+  "id": "appliance.fridge",
+  "group": "regex",
+  "patterns": {
+   "vi": [
+    "tủ\\s*lạnh"
+   ],
+   "en": [
+    "(?<!\\w)(?:fridge|refrigerator)(?!\\w)"
+   ]
+  }
+ },
+ {
+  "id": "appliance.oven",
+  "group": "regex",
+  "patterns": {
+   "vi": [
+    "(?<!\\w)lò(?!\\w)"
+   ],
+   "en": [
+    "(?<!\\w)oven(?!\\w)"
+   ]
+  }
+ },
+ {
+  "id": "appliance.faucet",
+  "group": "regex",
+  "patterns": {
+   "vi": [
+    "(?<!\\w)vòi(?!\\w)"
+   ],
+   "en": [
+    "(?<!\\w)(?:faucet|tap)(?!\\w)"
+   ]
+  }
+ },
+ {
+  "id": "appliance.tv",
+  "group": "regex",
+  "patterns": {
+   "vi": [
+    "ti\\s*vi"
+   ],
+   "en": [
+    "(?<!\\w)tv(?!\\w)"
+   ]
+  }
+ },
+ {
+  "id": "wish.induction",
+  "group": "regex",
+  "patterns": {
+   "vi": [
+    "(?<!\\w)từ(?!\\w)"
+   ],
+   "en": [
+    "induction"
+   ]
+  }
+ },
+ {
+  "id": "wish.gas",
+  "group": "regex",
+  "patterns": {
+   "vi": [
+    "(?<!\\w)ga(?!\\w)"
+   ],
+   "en": [
+    "(?<!\\w)gas(?!\\w)"
+   ]
+  }
+ },
+ {
+  "id": "wish.mixed",
+  "group": "regex",
+  "patterns": {
+   "vi": [
+    "hỗn hợp",
+    "từ \\+ gas",
+    "từ và gas"
+   ],
+   "en": [
+    "mixed",
+    "hybrid"
+   ]
+  }
+ },
+ {
+  "id": "wish.double",
+  "group": "regex",
+  "patterns": {
+   "vi": [
+    "(?<!\\w)đôi(?!\\w)"
+   ],
+   "en": [
+    "double"
+   ]
+  }
+ },
+ {
+  "id": "wish.single",
+  "group": "regex",
+  "patterns": {
+   "vi": [
+    "(?<!\\w)đơn(?!\\w)",
+    "1 cánh",
+    "một cánh"
+   ],
+   "en": [
+    "single"
+   ]
+  }
+ },
+ {
+  "id": "wish.granite",
+  "group": "regex",
+  "patterns": {
+   "vi": [
+    "(?<!\\w)đá(?!\\w)"
+   ],
+   "en": [
+    "granite"
+   ]
+  }
+ },
+ {
+  "id": "wish.black",
+  "group": "regex",
+  "patterns": {
+   "vi": [
+    "(?<!\\w)đen(?!\\w)"
+   ],
+   "en": [
+    "black"
+   ]
+  }
+ },
+ {
+  "id": "wish.pull",
+  "group": "regex",
+  "patterns": {
+   "vi": [
+    "rút dây"
+   ],
+   "en": [
+    "pull"
+   ]
+  }
+ },
+ {
+  "id": "wish.side-by-side",
+  "group": "regex",
+  "patterns": {
+   "vi": [],
+   "en": [
+    "side",
+    "sbs"
+   ]
+  }
+ },
+ {
+  "id": "wish.microwave",
+  "group": "regex",
+  "patterns": {
+   "vi": [
+    "vi sóng"
+   ],
+   "en": [
+    "microwave"
+   ]
+  }
+ },
+ {
+  "id": "place.before",
+  "group": "regex",
+  "patterns": {
+   "vi": [
+    "chuẩn",
+    "tiêu chuẩn",
+    "tại",
+    "ở",
+    "thị trường",
+    "theo",
+    "kiểu",
+    "cho",
+    "sang",
+    "nước",
+    "khách",
+    "nhà"
+   ],
+   "en": [
+    "standard",
+    "standards",
+    "in",
+    "for",
+    "market"
+   ]
+  },
+  "message": "Từ đứng trước tên nước / khu vực"
+ },
+ {
+  "id": "place.y-word",
+  "group": "regex",
+  "patterns": {
+   "vi": [
+    "tưởng",
+    "kiến",
+    "nghĩa",
+    "muốn",
+    "định",
+    "thích",
+    "thức",
+    "chí",
+    "niệm"
+   ],
+   "en": []
+  },
+  "message": "\"ý\" là âm đầu của một từ (ý tưởng…), không phải nước Ý"
+ },
+ {
+  "id": "ask.kitchen",
+  "group": "regex",
+  "patterns": {
+   "vi": [
+    "tủ\\s*bếp",
+    "chậu",
+    "bếp\\s*(?:từ|gas|nấu)",
+    "tủ\\s*lạnh",
+    "mặt\\s*đá"
+   ],
+   "en": [
+    "kitchen",
+    "(?<!\\w)sink(?!\\w)",
+    "cooktop",
+    "fridge",
+    "countertop"
+   ]
+  }
+ },
+ {
+  "id": "refuse",
+  "group": "regex",
+  "patterns": {
+   "vi": [
+    "(?:bỏ|bớt|không\\s*(?:có|cần|làm)?|xóa|xoá)\\s*(?:hết\\s*|các\\s*|cả\\s*)?"
+   ],
+   "en": [
+    "(?:no|without|remove|drop)\\s+(?:the\\s+|all\\s+)?"
+   ]
+  },
+  "message": "Từ chối (đứng trước tên phần bị bỏ)"
+ },
+ {
+  "id": "part.upper",
+  "group": "regex",
+  "patterns": {
+   "vi": [
+    "tủ\\s*(?:trên|treo)"
+   ],
+   "en": [
+    "(?:upper|wall)\\s*cabinets?"
+   ]
+  }
+ },
+ {
+  "id": "part.loft",
+  "group": "regex",
+  "patterns": {
+   "vi": [
+    "tủ\\s*nóc"
+   ],
+   "en": [
+    "top\\s*cabinets?"
+   ]
+  }
+ },
+ {
+  "id": "dim.length",
+  "group": "regex",
+  "patterns": {
+   "vi": [
+    "dài",
+    "rộng",
+    "cạnh"
+   ],
+   "en": [
+    "width",
+    "length",
+    "long",
+    "wide"
+   ]
+  }
+ },
+ {
+  "id": "dim.and",
+  "group": "regex",
+  "patterns": {
+   "vi": [
+    "và",
+    "x",
+    "×"
+   ],
+   "en": [
+    "by"
+   ]
+  }
+ },
+ {
+  "id": "dim.depth",
+  "group": "regex",
+  "patterns": {
+   "vi": [
+    "sâu"
+   ],
+   "en": [
+    "depth",
+    "deep"
+   ]
+  }
+ },
+ {
+  "id": "dim.height",
+  "group": "regex",
+  "patterns": {
+   "vi": [
+    "cao(?!\\s*cấp)"
+   ],
+   "en": [
+    "height",
+    "high",
+    "tall"
+   ]
+  }
+ },
+ {
+  "id": "dim.ceiling",
+  "group": "regex",
+  "patterns": {
+   "vi": [
+    "trần"
+   ],
+   "en": [
+    "ceiling"
+   ]
+  }
+ },
+ {
+  "id": "word.fridge",
+  "group": "regex",
+  "patterns": {
+   "vi": [
+    "tủ\\s*lạnh"
+   ],
+   "en": [
+    "fridge",
+    "refrigerator"
+   ]
+  }
+ },
+ {
+  "id": "fridge.where",
+  "group": "regex",
+  "patterns": {
+   "vi": [
+    "sang",
+    "bên",
+    "phía",
+    "ở",
+    "về",
+    "đặt"
+   ],
+   "en": [
+    "on\\s+the",
+    "at\\s+the",
+    "to\\s+the"
+   ]
+  }
+ },
+ {
+  "id": "side.right",
+  "group": "regex",
+  "patterns": {
+   "vi": [
+    "phải"
+   ],
+   "en": [
+    "right"
+   ]
+  }
+ },
+ {
+  "id": "side.left",
+  "group": "regex",
+  "patterns": {
+   "vi": [
+    "trái"
+   ],
+   "en": [
+    "left"
+   ]
+  }
+ },
+ {
+  "id": "molding.none",
+  "group": "regex",
+  "patterns": {
+   "vi": [
+    "(?:không|bỏ)\\s*(?:có\\s*)?phào"
+   ],
+   "en": [
+    "no\\s+moldings?",
+    "without\\s+moldings?"
+   ]
+  }
+ },
+ {
+  "id": "molding.crown",
+  "group": "regex",
+  "patterns": {
+   "vi": [
+    "phào\\s*(?:nóc|trần|đỉnh)"
+   ],
+   "en": [
+    "crown\\s+moldings?"
+   ]
+  }
+ },
+ {
+  "id": "molding.base",
+  "group": "regex",
+  "patterns": {
+   "vi": [
+    "phào\\s*(?:chân|chân\\s*tủ)"
+   ],
+   "en": [
+    "base\\s+moldings?"
+   ]
+  }
+ }
+]

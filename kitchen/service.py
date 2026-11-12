@@ -13,7 +13,7 @@ from .intent import KitchenTemplate as KitchenTemplate
 from .spec import Common, KitchenSpec, LaidModule, Room, Wall, dump_spec, load_spec, to_data
 from .store import ConflictError, Store
 from . import legacy as legacy_schema
-from . import builtin, catalog as cat, catalog_csv, catalog_files, i18n, words
+from . import builtin, catalog as cat, catalog_csv, catalog_files, i18n, lexicon, words
 from .config import Config
 from .errors import InvalidInput, KitchenError, NotFound
 ROOT = Path(__file__).resolve().parent.parent
@@ -399,10 +399,10 @@ class KitchenService:
         notes: list[str] = []
         parser_source = 'deepseek'
         if template is None:
-            template, notes = intent.parse_prompt(prompt)
+            template, notes = intent.parse_prompt(prompt, self.catalog())
             parser_source = 'regex'
         else:  # DeepSeek không biết các trường mới (phong cách, kiểu cánh, tay nắm, ốp): bổ sung từ bảng thuật ngữ
-            template, notes = intent.merge_lexicon(template, prompt)
+            template, notes = intent.merge_lexicon(template, prompt, self.catalog())
         spec = self._by_runs(intent.from_template(template, name or prompt[:60], self.store.rule_rows(), self.catalog()))
         record = self.store.create_design(spec, f'prompt:{parser_source}')
         return self._summary(record['id'], 1, spec, color=template.model_dump(), analysis={'source': parser_source, 'note': notes, 'interpretation': template.promptInterpretation, 'deepseek': llm_result})
@@ -448,7 +448,7 @@ class KitchenService:
         spec, current = self.store.get(design_id)
         if base_revision is not None and base_revision != current:
             raise ConflictError(f'base_rev={base_revision}, but the latest revision is {current}; reload before editing', params={'base': base_revision, 'latest': current})
-        result = edit_intent.interpret_edit(spec, text, scope)
+        result = edit_intent.interpret_edit(spec, text, scope, self.catalog())
         if result['status'] == 'unsupported' and use_llm:
             guess, status = llm.edit_operation_llm(text, spec, self.config)
             result = edit_intent.check_operation(guess) if guess else {**result, 'llm': status}
@@ -509,7 +509,7 @@ class KitchenService:
             return {'id': design_id, 'baseRev': current, 'status': 'ok', 'structureId': struct['id'], 'facing': None, 'replaces': plan['element'],
                     'length': plan['length'], 'summary': plan['summary'], 'operation': plan['operation'], 'proposal': preview}
         if isinstance(prompt, str) and prompt.strip():      # a described kitchen: fridge, loft row, worktop colour, door colours...
-            color, notes = intent.parse_prompt(prompt)
+            color, notes = intent.parse_prompt(prompt, self.catalog())
             if not color.country and country:
                 color = color.model_copy(update={'country': country})
             planner = lambda outline, click, system: self._plan_described(spec, color, notes, outline, click, system)
@@ -630,7 +630,7 @@ class KitchenService:
             raise NotFound(f"No such object: {structure_id}", code='structure-not-found')
         element = runs.system_id(struct.get('sourceElement') or str(struct['id']).removeprefix('STRUCT-'))
         tv = tv_system.asks_tv(prompt)           # "tạo hệ tủ tivi": a TV unit, not kitchen cabinets
-        described = intent.parse_prompt(prompt) if prompt and prompt.strip() and not tv else None
+        described = intent.parse_prompt(prompt, self.catalog()) if prompt and prompt.strip() and not tv else None
 
         def planner(place: Any) -> dict:
             walls = self._walls(ctx, place)
@@ -662,7 +662,7 @@ class KitchenService:
                         after = [{'op': 'common', 'changes': changes}]
                 laid.append(cabinet_run.fit_depth(modules, round(p.depth)))
             plan = cabinet_run.plan_replace(spec, element, placed, laid, after, run_fields=tv_system.run_fields(tv_system.style_of(prompt)) if tv else None)
-            notes = [n for n in (described[1] if described else []) if 'chiều dài' not in n]
+            notes = [n for n in (described[1] if described else []) if words.key_of(n) != intent.NO_LENGTH]
             return {**plan, 'element': element, 'summary': [*plan['summary'], *notes]}
 
         plan = self._settle(spec, planner, ctx.placement if ctx.placement is not None else IDENTITY)
@@ -683,11 +683,11 @@ class KitchenService:
         tv_runs = tv_system.tv_runs(spec)
         own_runs = sorted({m.run for m in mods if m.run})
         was_tv = bool(own_runs) and all(r in tv_runs for r in own_runs)
-        kitchen_asked = bool(re.search(r"tủ\s*bếp|chậu|bếp\s*(?:từ|gas|nấu)|tủ\s*lạnh|mặt\s*đá", prompt.lower()))
+        kitchen_asked = bool(lexicon.pattern("ask.kitchen", catalog).search(prompt.lower()))
         if tv_system.asks_tv(prompt) or (was_tv and not kitchen_asked):
             return KitchenService._relayout_tv(spec, system, mods, prompt, catalog)
         undo_tv = [{'op': 'set-run-tv', 'id': r, 'layout': None} for r in own_runs if r in tv_runs]     # a TV unit made a kitchen again
-        color, notes = intent.parse_prompt(prompt)
+        color, notes = intent.parse_prompt(prompt, catalog)
         if not color.country and country:
             color = color.model_copy(update={'country': country})
         slots = system_replace.run_slots(spec, mods)
@@ -702,17 +702,18 @@ class KitchenService:
             if i == 0:
                 fronts = {k: built['common'][k] for k in ('material', 'handle') if k in built['common']}
         said = prompt.lower()
-        no = r"(?:bỏ|bớt|không\s*(?:có|cần|làm)?|xóa|xoá)\s*(?:hết\s*|các\s*|cả\s*)?"
-        refused = {s for s, word in (('upper', r"tủ\s*(?:trên|treo)"), ('loft', r"tủ\s*nóc")) if re.search(no + word, said)}
+        no = lexicon.source("refuse", catalog)
+        upper_word = lexicon.source("part.upper", catalog)
+        refused = {s for s, word in (('upper', upper_word), ('loft', lexicon.source("part.loft", catalog))) if re.search(no + word, said)}
         if 'upper' in refused:
             refused.add('loft')                                      # a loft row stands on wall cabinets
         asked = {'upper', 'loft'} if color.loft and 'loft' not in refused else set()
-        if re.search(r"tủ\s*(?:trên|treo)", re.sub(no + r"tủ\s*(?:trên|treo)", "", said)):
+        if re.search(upper_word, re.sub(no + upper_word, "", said)):
             asked.add('upper')
         ops, summary = system_replace.relayout_ops(spec, mods, laid, fronts, frozenset(asked - refused), frozenset(refused),
                                                    system_replace.kept_models(spec, mods, prompt, catalog), catalog=catalog)
         ops = [*undo_tv, *ops]
-        kept = [n for n in notes if 'chiều dài' not in n]          # the run keeps its length: the "no length given" note does not apply
+        kept = [n for n in notes if words.key_of(n) != intent.NO_LENGTH]          # the run keeps its length: the "no length given" note does not apply
         return {'operation': edit.combine_ops(ops), 'system': system, 'mode': 'relayout', 'summary': [words.said('summary.relayout', system=system), *summary, *kept]}
 
     @staticmethod
@@ -757,7 +758,7 @@ class KitchenService:
         plan = run_line.plan_on_line(spec, line, built['modules'], after=after, system=system)
         made = sorted({m['type'] for m in built['modules']})
         explicit = 'backWallLength' in color.model_fields_set
-        kept = [n for n in notes if explicit or 'chiều dài' not in n]          # the "no length given, 3000 mm" note does not apply: the edge sets it
+        kept = [n for n in notes if explicit or words.key_of(n) != intent.NO_LENGTH]          # the "no length given, 3000 mm" note does not apply: the edge sets it
         plan['summary'] = [*plan['summary'], words.said('summary.from-description', types=', '.join(made)), *kept]
         plan['facing'] = None
         return plan
@@ -813,7 +814,7 @@ class KitchenService:
             pts[key] = (float(p['x']), float(p['z']))
         prompt = template.get('prompt')
         tv = isinstance(prompt, str) and tv_system.asks_tv(prompt)
-        described = intent.parse_prompt(prompt) if isinstance(prompt, str) and prompt.strip() and not tv else None
+        described = intent.parse_prompt(prompt, self.catalog()) if isinstance(prompt, str) and prompt.strip() and not tv else None
 
         scene = geometry.compile_spec(spec)
         ctx = roomctx.for_spec(spec, scene.lsau, scene.lphai)

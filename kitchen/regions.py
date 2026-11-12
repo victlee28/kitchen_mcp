@@ -18,6 +18,7 @@ from .jsonview import as_list
 from .words import said
 
 import unicodedata
+from . import lexicon
 
 @dataclass(frozen=True)
 class Tables:
@@ -67,8 +68,6 @@ def normalize(country: str | None = None, region: str | None = None, catalog: Ca
     return qg, kv
 
 
-_PREFIX = r"(?:chuẩn|tiêu chuẩn|tại|ở|thị trường|theo|kiểu|cho|sang|nước|khách|nhà)"
-_Y_WORDS = r"\s+(?:tưởng|kiến|nghĩa|muốn|định|thích|thức|chí|niệm)(?![a-zà-ỹ])"   # "ý" as the first syllable of a word, not Italy
 
 
 def from_description(text: str, catalog: Catalog = builtin.CATALOG) -> tuple[str | None, str | None]:
@@ -78,8 +77,10 @@ def from_description(text: str, catalog: Catalog = builtin.CATALOG) -> tuple[str
     t = unicodedata.normalize("NFC", text).lower()
     t_ = tables(catalog)
     kws = "|".join(re.escape(k) for k in sorted(t_.keywords, key=len, reverse=True))
-    m = next((x for x in re.finditer(_PREFIX + r"\s+(" + kws + r")(?![a-zà-ỹ])", t)
-              if not (x.group(1) == "ý" and re.match(_Y_WORDS, t[x.end():]))), None)   # "kiểu ý tưởng" is an idea, not Italy
+    before = r"(?<![a-zà-ỹ])" + lexicon.source("place.before", catalog)       # "chuẩn Úc", "tại Việt Nam", "for Australia"
+    y_word = r"\s+" + lexicon.source("place.y-word", catalog) + r"(?![a-zà-ỹ])"   # "ý" as the first syllable of a word, not Italy
+    m = next((x for x in re.finditer(before + r"\s+(" + kws + r")(?![a-zà-ỹ])", t)
+              if not (x.group(1) == "ý" and re.match(y_word, t[x.end():]))), None)   # "kiểu ý tưởng" is an idea, not Italy
     if not m:
         return None, None
     code = t_.keywords[m.group(1)]

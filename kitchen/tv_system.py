@@ -17,6 +17,7 @@ from .errors import InvalidInput
 from .labels import DEFAULT_FRONT, NAMES
 from .numeric import round_int
 from .spec import KitchenSpec, LaidModule, Run, from_data, to_data
+from . import lexicon
 
 PURPOSE = "tv"
 CONSOLE_HEIGHT_MM = 450.0     # low media console, plinth included (mm)
@@ -31,7 +32,6 @@ PANEL_THICKNESS_MM = 18.0
 STYLES = ("columns", "shelves", "full")
 TV_DEPTH_MM = 30.0
 
-_WORD = re.compile(r"\b(?:ti\s*vi|tv|tivi)\b")
 
 
 def _plain(text: str) -> str:
@@ -41,7 +41,7 @@ def _plain(text: str) -> str:
 
 def asks_tv(text: str | None) -> bool:
     """Does the sentence ask for a TV unit ("tạo hệ tủ tivi", "kệ tivi", "tủ TV")?"""
-    return bool(text) and bool(_WORD.search(_plain(str(text))))
+    return bool(text) and bool(lexicon.pattern("tv.word").search(_plain(str(text))))
 
 
 def tv_for(niche: float, catalog: Catalog = builtin.CATALOG) -> dict[str, Any]:
@@ -68,9 +68,9 @@ def style_of(text: str | None) -> str:
     """Which layout a sentence asks for: ``full`` ("kín cả vách", "tủ kín", "full tường"), ``shelves`` ("kệ treo", "không có cột") or ``columns``
     (the default: low console + niche + two columns)."""
     t = _plain(str(text or ""))
-    if re.search(r"\bkin\s+(?:ca\s+|het\s+)?(?:vach|tuong)\b|\btu\s+kin\b|\bkin\s+tu\s+san\b|\bfull\s+(?:vach|tuong)\b", t):
+    if lexicon.pattern("tv.full").search(t):
         return "full"
-    if re.search(r"\bke\s+(?:treo|ho)\b|\bkhong\s+(?:co\s+|can\s+|lam\s+)?cot\b|\bbo\s+cot\b", t):
+    if lexicon.pattern("tv.shelves").search(t):
         return "shelves"
     return "columns"
 
@@ -80,12 +80,12 @@ def explicit_style(text: str | None) -> str | None:
     style = style_of(text)
     if style != "columns":
         return style
-    return "columns" if re.search(r"\b(?:2|hai)\s+cot\b|\bcot\s+tu\b|\bhoc\s+tivi\b", _plain(str(text or ""))) else None
+    return "columns" if lexicon.pattern("tv.columns").search(_plain(str(text or ""))) else None
 
 
 def wants_panel(text: str | None) -> bool:
     """A panel behind the TV unless the sentence refuses it ("không ốp", "bỏ tấm ốp", "không vách ốp")."""
-    return not re.search(r"\b(?:khong|bo|bot)\s+(?:can\s+|co\s+)?(?:tam\s+|vach\s+)?op\b", _plain(str(text or "")))
+    return not lexicon.pattern("tv.no-panel").search(_plain(str(text or "")))
 
 
 def run_fields(style: str) -> dict[str, Any]:

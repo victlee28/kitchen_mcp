@@ -261,3 +261,42 @@ class TestRenderPreferences(unittest.TestCase):
     def test_plain_has_none(self):
         spec = intent.from_template(intent.KitchenTemplate())
         self.assertNotIn("renderPreferences", threejs_export.export(spec, "d", 1)["metadata"])
+
+
+class TestDictionaryIsData(unittest.TestCase):
+    """Stage 4: the command dictionary is the catalog kind ``lexicon``: English commands work, the workshop adds a synonym."""
+
+    def test_english_edit_commands(self):
+        from kitchen import edit_intent
+        from kitchen.spec import KitchenSpec
+        spec = KitchenSpec.model_validate(json.loads((ROOT / "fixtures" / "l-shaped-kitchen.json").read_text(encoding="utf-8")))
+        cases = {"remove TD3": {"op": "remove", "id": "TD3"}, "TD2 width 800": {"op": "update", "id": "TD2", "changes": {"width": 800.0}},
+                 "add a sink cabinet 600 wide after TD1": {"op": "add", "module": {"type": "base-sink", "width": 600.0}, "afterModule": "TD1"}}
+        for text, op in cases.items():
+            self.assertEqual(edit_intent.interpret_edit(spec, text)["operation"], op, text)
+        made = edit_intent.interpret_edit(spec, "make base cabinets sage green")["operation"]
+        self.assertEqual(made["changes"]["material"]["base"], "Xanh rêu")
+        self.assertEqual(edit_intent.interpret_edit(spec, "xóa TD3")["summary"], ["Xóa TD3"])
+
+    def test_workshop_adds_a_synonym(self):
+        import shutil
+        import tempfile
+        from kitchen.service import KitchenService
+        tmp = Path(tempfile.mkdtemp())
+        try:
+            s = KitchenService(db_path=tmp / "k.db", render_dir=tmp / "r")
+            design = s.create_from_template({}, "")["id"]
+            self.assertEqual(s.interpret(design, "vứt TD3")["status"], "unsupported")
+            row = next(i for i in s.catalog_list("lexicon", "workshop")["items"] if i["id"] == "edit.verb.remove")
+            data = {**row["data"], "aliases": {**row["data"]["aliases"], "vi": [*row["data"]["aliases"]["vi"], "vứt"]}}
+            s.catalog_put("lexicon", "edit.verb.remove", data, "workshop")
+            self.assertEqual(s.interpret(design, "vứt TD3")["operation"], {"op": "remove", "id": "TD3"})
+            with self.assertRaises(Exception):
+                s.catalog_put("lexicon", "edit.verb.new", data, "workshop")     # closed kind: the code knows every entry
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    def test_patterns_are_data(self):
+        from kitchen import lexicon
+        self.assertTrue(lexicon.pattern("wish.gas").search("bếp ga đôi"))
+        self.assertIsNone(lexicon.pattern("no.such.entry").search("anything"))

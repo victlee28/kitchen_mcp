@@ -19,7 +19,10 @@ from typing import Any
 
 from .edit import combine_ops
 from .jsonview import as_dict, as_list
+from . import builtin, lexicon
+from .catalog import Catalog
 from .lexicon import fold
+from .words import Said, said, say
 from .numeric import round_half_away
 from .spec import KitchenSpec, Module, to_data
 from . import vocab
@@ -27,26 +30,29 @@ from . import vocab
 ALLOWED_OPS = ("add", "remove", "update", "common", "lower-top", "multi")
 MAX_CHOICES = 12
 
-_TYPES: tuple[tuple[str, str], ...] = (      # folded keyword -> module type (longest first)
-    ("ngan keo", "base-drawers"), ("chau rua", "base-sink"), ("bep tu", "base-cooktop"), ("bep ga", "base-cooktop"), ("bep", "base-cooktop"),
-    ("lo nuong", "base-oven"), ("tu lanh", "tall-fridge"), ("tu cao", "tall"), ("tu treo", "upper"), ("tu tren", "upper"),
-    ("tu kinh", "upper-glass"), ("tu duoi", "base"), ("tu thuong", "base"),
-)
-_DOOR_STYLES: tuple[tuple[str, str], ...] = (("kinh", "glass"), ("glass", "glass"), ("khung", "frame"), ("shaker", "frame"),
-                                             ("phang", "flat"), ("tron", "flat"), ("slab", "flat"), ("flat", "flat"))
-_HANDLES: tuple[tuple[str, str], ...] = (("khong tay", "none"), ("khong co tay", "none"), ("nhan mo", "none"), ("am", "concealed"),
-                                         ("concealed", "concealed"), ("nut", "knob"), ("num", "knob"), ("knob", "knob"), ("thanh", "bar"), ("bar", "bar"))
-_STOREYS: tuple[tuple[str, tuple[str, ...]], ...] = (("tu treo", ("upper", "loft")), ("tu tren", ("upper", "loft")), ("upper", ("upper", "loft")),
-                                                     ("tu duoi", ("base",)), ("tu cao", ("tall",)), ("base", ("base",)))
-_MATERIAL_SLOT: tuple[tuple[str, str], ...] = (("mat ban", "countertop"), ("countertop", "countertop"), ("tuong", "wall"), ("san", "floor"))
+
+
+def _words(group: str, catalog: Catalog) -> tuple[tuple[str, Any], ...]:
+    """``(folded phrase, value)`` of a command group of the dictionary (catalog kind ``lexicon``, groups ``edit-*``), in the order tried."""
+    return lexicon.phrases(group, catalog)
+
+
+def _first(f: str, group: str, catalog: Catalog) -> Any:
+    """The value of the first phrase of ``group`` the text holds, None when it holds none."""
+    return next((v for w, v in _words(group, catalog) if _has(f, w)), None)
+
+
+def _says(f: str, verb: str, catalog: Catalog) -> bool:
+    """Whether the text holds a word of the command verb ``verb`` (add, remove, handle, door, width, length)."""
+    return any(_has(f, w) for w, v in _words("edit-verb", catalog) if v == verb)
+
+
+def _verb_words(verb: str, catalog: Catalog) -> tuple[str, ...]:
+    return tuple(w for w, v in _words("edit-verb", catalog) if v == verb)
 
 
 def _has(f: str, word: str) -> bool:
     return re.search(rf"(?<![a-z0-9]){re.escape(word)}(?![a-z0-9])", f) is not None
-
-
-def _any(f: str, *words: str) -> bool:
-    return any(_has(f, w) for w in words)
 
 
 def _ids_in(spec: KitchenSpec, f: str) -> list[str]:
@@ -62,13 +68,13 @@ def _ids_in(spec: KitchenSpec, f: str) -> list[str]:
 def _mm(f: str, after: tuple[str, ...] = ()) -> float | None:
     """First length in the text as mm. 'cm' x10, 'm' x1000, bare numbers are mm. ``after``: take the number that follows one of these words."""
     pat = r"(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?(?![a-z0-9])"
-    scope = f
+    scopes = [f]
     for w in after:
         k = re.search(rf"(?<![a-z0-9]){re.escape(w)}", f)
         if k:
-            scope = f[k.end():]
+            scopes = [f[k.end():], f[:k.start()]]     # the number after the word ("rộng 600"), else the one before it ("600 wide")
             break
-    for found in re.finditer(pat, scope):
+    for found in (x for sc in scopes for x in re.finditer(pat, sc)):
         value = float(found.group(1).replace(",", "."))
         unit = found.group(2)
         if unit == "cm":
@@ -81,19 +87,18 @@ def _mm(f: str, after: tuple[str, ...] = ()) -> float | None:
     return None
 
 
-def _color(f: str) -> str | None:
-    table = sorted([(v, True) for v, *_ in vocab.woods()] + [(v, False) for v, *_ in vocab.colors()], key=lambda t: -len(t[0]))
-    for name, wood in table:
-        if _has(f, fold(name)):
-            return ("Gỗ " + name) if wood else (name[:1].upper() + name[1:])
+def _color(f: str, catalog: Catalog) -> str | None:
+    """The colour or wood the text names (by its Vietnamese word or its English one), as the material name designs keep (Vietnamese)."""
+    rows = [(v, v, True) for v, _hx, *_ in vocab.woods(catalog)] + [(v, v, False) for v, _hx, *_ in vocab.colors(catalog)]
+    rows += [(r[2], r[0], True) for r in vocab.woods(catalog) if len(r) > 2 and r[2]] + [(r[2], r[0], False) for r in vocab.colors(catalog) if len(r) > 2 and r[2]]
+    for word, name, wood in sorted(rows, key=lambda t: -len(t[0])):
+        if _has(f, fold(word)):
+            return say("material.wood-named", wood=name) if wood else (name[:1].upper() + name[1:])
     return None
 
 
-def _storeys_in(f: str) -> tuple[str, ...] | None:
-    for word, storeys in _STOREYS:
-        if _has(f, word):
-            return storeys
-    return None
+def _storeys_in(f: str, catalog: Catalog) -> tuple[str, ...] | None:
+    return _first(f, "edit-storey", catalog)
 
 
 def _pick(spec: KitchenSpec, ids: list[str], storeys: tuple[str, ...] | None) -> list[str]:
@@ -102,39 +107,39 @@ def _pick(spec: KitchenSpec, ids: list[str], storeys: tuple[str, ...] | None) ->
     return [m.id for m in spec.module if storeys is None or m.storey in storeys]
 
 
-def _clarify(question: str, choices: list[str] | None = None) -> dict[str, Any]:
+def _clarify(question: str, choices: list[str] | None = None) -> dict[str, Any]:   # question: a words.Said, worded again per reader
     return {"status": "clarify", "question": question, "choices": (choices or [])[:MAX_CHOICES]}
 
 
-def _add(spec: KitchenSpec, f: str, ids: list[str]) -> dict[str, Any] | tuple[dict[str, Any], str]:
-    mtype = next((t for w, t in _TYPES if _has(f, w)), "base")
-    width = _mm(f, ("rong", "ngang", "width"))
+def _add(spec: KitchenSpec, f: str, ids: list[str], catalog: Catalog) -> dict[str, Any] | tuple[dict[str, Any], Said]:
+    mtype = _first(f, "edit-type", catalog) or "base"
+    width = _mm(f, _verb_words("width", catalog))
     if width is None:
-        return _clarify("Tủ mới rộng bao nhiêu mm?")
+        return _clarify(said("edit.ask.width-new"))
     if not ids:
-        return _clarify("Thêm sau tủ nào?", [m.id for m in spec.module])
+        return _clarify(said("edit.ask.after"), [m.id for m in spec.module])
     ref = spec.find(ids[0])
     new_storey = "tall" if mtype.startswith("tall") else "upper" if mtype.startswith("upper") else "base"
     if ref.storey not in (new_storey, "loft" if new_storey == "upper" else new_storey):
-        return _clarify(f"{ref.id} nằm ở tầng khác với loại tủ mới; thêm sau tủ nào cùng tầng?", [m.id for m in spec.module if m.storey == new_storey])
+        return _clarify(said("edit.ask.same-storey", id=ref.id), [m.id for m in spec.module if m.storey == new_storey])
     op: dict[str, Any] = {"op": "add", "module": {"type": mtype, "width": width}, "afterModule": ref.id}
-    return op, f"Thêm tủ {mtype} rộng {width:g} mm sau {ref.id}"
+    return op, said("summary.edit.add", type=mtype, width=width, id=ref.id)
 
 
-def _clause(spec: KitchenSpec, f: str, ids: list[str]) -> dict[str, Any] | tuple[dict[str, Any], str]:
+def _clause(spec: KitchenSpec, f: str, ids: list[str], catalog: Catalog) -> dict[str, Any] | tuple[dict[str, Any], Said]:
     """One clause -> (operation, summary) | a clarify result | an unsupported result. ``ids``: targets (mentioned or selected)."""
-    storeys = _storeys_in(f)
-    if _any(f, "them", "bo sung", "add", "chen"):
-        return _add(spec, f, ids)
-    if _any(f, "xoa", "bo", "go", "loai", "remove", "delete") and not _any(f, "tay nam"):
+    storeys = _storeys_in(f, catalog)
+    if _says(f, "add", catalog):
+        return _add(spec, f, ids, catalog)
+    if _says(f, "remove", catalog) and not _says(f, "handle", catalog):
         if not ids:
-            return _clarify("Xóa tủ nào?", [m.id for m in spec.module])
+            return _clarify(said("edit.ask.remove"), [m.id for m in spec.module])
         ops = [{"op": "remove", "id": i} for i in ids]
-        return combine_ops(ops), "Xóa " + ", ".join(ids)
-    if _any(f, "tay nam", "handle"):
-        variant = next((v for w, v in _HANDLES if _has(f, w)), None)
-        color = _color(f)
-        length = _mm(f, ("dai", "length"))
+        return combine_ops(ops), said("summary.edit.remove", ids=", ".join(ids))
+    if _says(f, "handle", catalog):
+        variant = _first(f, "edit-handle", catalog)
+        color = _color(f, catalog)
+        length = _mm(f, _verb_words("length", catalog))
         change: dict[str, Any] = {}
         if variant:
             change["variant"] = variant
@@ -143,50 +148,52 @@ def _clause(spec: KitchenSpec, f: str, ids: list[str]) -> dict[str, Any] | tuple
         if length is not None and variant != "none":
             change["length"] = length
         if not change:
-            return _clarify("Tay nắm muốn đổi thành kiểu nào?", ["thanh", "núm", "âm", "không tay"])
+            return _clarify(said("edit.ask.handle"), [say(f"edit.choice.handle.{k}") for k in ("bar", "knob", "concealed", "none")])
         if ids or storeys:
             targets = _pick(spec, ids, storeys)
-            return combine_ops([{"op": "update", "id": i, "changes": {"handle": change}} for i in targets]), f"Tay nắm {change} cho {', '.join(targets)}"
+            return combine_ops([{"op": "update", "id": i, "changes": {"handle": change}} for i in targets]), said("summary.edit.handle", change=change, ids=", ".join(targets))
         handle = {**to_data(spec)["common"]["handle"], **change}
-        return {"op": "common", "changes": {"handle": handle}}, f"Tay nắm chung: {change}"
-    style = next((s for w, s in _DOOR_STYLES if _has(f, w)), None)
-    if style and _any(f, "canh", "door"):
+        return {"op": "common", "changes": {"handle": handle}}, said("summary.edit.handle-common", change=change)
+    style = _first(f, "edit-door", catalog)
+    if style and _says(f, "door", catalog):
         targets = _pick(spec, ids, storeys)
         if not targets:
-            return _clarify("Đổi cánh của tủ nào?", [m.id for m in spec.module])
-        return combine_ops([{"op": "update", "id": i, "changes": {"doorStyle": style}} for i in targets]), f"Cánh {style} cho {', '.join(targets)}"
-    if _any(f, "rong", "ngang", "width"):
+            return _clarify(said("edit.ask.door"), [m.id for m in spec.module])
+        return (combine_ops([{"op": "update", "id": i, "changes": {"doorStyle": style}} for i in targets]),
+                said("summary.edit.door", style=style, ids=", ".join(targets)))
+    if _says(f, "width", catalog):
         width = _mm(f)
         if width is None:
-            return _clarify("Muốn rộng bao nhiêu mm?")
+            return _clarify(said("edit.ask.width"))
         if not ids:
-            return _clarify("Đổi độ rộng của tủ nào?", [m.id for m in spec.module])
-        return combine_ops([{"op": "update", "id": i, "changes": {"width": width}} for i in ids]), f"Rộng {width:g} mm cho {', '.join(ids)}"
-    color = _color(f)
+            return _clarify(said("edit.ask.width-which"), [m.id for m in spec.module])
+        return combine_ops([{"op": "update", "id": i, "changes": {"width": width}} for i in ids]), said("summary.edit.width", width=width, ids=", ".join(ids))
+    color = _color(f, catalog)
     if color:
-        slot = next((s for w, s in _MATERIAL_SLOT if _has(f, w)), None)
+        slot = _first(f, "edit-slot", catalog)
         if slot is None and storeys:
             slot = "tall" if storeys == ("tall",) else "upper" if "upper" in storeys else "base"
         if slot is None:
-            return _clarify("Đổi màu cho phần nào?", ["tủ dưới", "tủ trên", "tủ cao", "mặt bàn", "tường", "sàn"])
-        value = f"Đá {color.lower()}" if slot == "countertop" else color
+            return _clarify(said("edit.ask.color-where"), [say(f"edit.choice.part.{k}") for k in ("base", "upper", "tall", "countertop", "wall", "floor")])
+        value = say("material.stone-named", stone=color.lower()) if slot == "countertop" else color
         material = {**to_data(spec)["common"]["material"], slot: value}
-        return {"op": "common", "changes": {"material": material}}, f"Vật liệu {slot}: {value}"
-    return {"status": "unsupported", "message": "Chưa hiểu câu lệnh này; thử: 'xóa TD3', 'TD2 rộng 800', 'cánh kính cho tủ trên', 'tay nắm âm'."}
+        return {"op": "common", "changes": {"material": material}}, said("summary.edit.material", slot=slot, value=value)
+    return {"status": "unsupported", "message": said("edit.not-understood")}
 
 
-def interpret_edit(spec: KitchenSpec, text: str, scope: list[str] | None = None) -> dict[str, Any]:
+def interpret_edit(spec: KitchenSpec, text: str, scope: list[str] | None = None, catalog: Catalog = builtin.CATALOG) -> dict[str, Any]:
     """Parse one sentence (clauses split on , ; 'và' 'rồi') against ``spec``. ``scope``: modules the user selected, used when the text names none."""
     f = fold(text)
     if not f.strip():
-        return {"status": "unsupported", "message": "Câu lệnh trống."}
+        return {"status": "unsupported", "message": said("edit.empty")}
     named = _ids_in(spec, f)
     selected = [i for i in (scope or []) if any(m.id == i for m in spec.module)]
     ops: list[dict[str, Any]] = []
-    lines: list[str] = []
-    for part in [p for p in re.split(r"[,;]| va | roi | dong thoi ", f) if p.strip()]:
+    lines: list[Said] = []
+    joins = "|".join(re.escape(f" {w} ") for w, _ in _words("edit-split", catalog))
+    for part in [p for p in re.split(r"[,;]" + (f"|{joins}" if joins else ""), f) if p.strip()]:
         ids = _ids_in(spec, part) or named or selected
-        got = _clause(spec, part, ids)
+        got = _clause(spec, part, ids, catalog)
         if isinstance(got, dict):
             return got
         ops.append(got[0])
@@ -201,11 +208,11 @@ def check_operation(op: Any) -> dict[str, Any]:
     obj = as_dict(op)
     kind = obj.get("op") if obj is not None else None
     if obj is None or kind not in ALLOWED_OPS:
-        return {"status": "unsupported", "message": f"Thao tác {kind!r} không được phép từ câu lệnh tự do."}
+        return {"status": "unsupported", "message": said("edit.op-not-allowed", op=repr(kind))}
     subs = [as_dict(o) for o in as_list(obj.get("ops")) or []]
     if kind == "multi" and not all(o is not None and o.get("op") in ALLOWED_OPS and o.get("op") != "multi" for o in subs):
-        return {"status": "unsupported", "message": "Danh sách thao tác không hợp lệ."}
-    return {"status": "ok", "operation": op, "summary": ["Đề xuất từ mô hình ngôn ngữ"], "targets": []}
+        return {"status": "unsupported", "message": said("edit.bad-op-list")}
+    return {"status": "ok", "operation": op, "summary": [said("summary.edit.from-model")], "targets": []}
 
 
 def module_choices(modules: list[Module]) -> list[str]:

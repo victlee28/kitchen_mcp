@@ -18,6 +18,7 @@ from . import builtin, defaults, lexicon, regions
 from .catalog import Catalog
 from .spec import Appliance, Common, FrontSection, Handle, KitchenSpec, Module, Room, Wall
 from .words import say
+from .words import said
 
 WallSide = Literal["back", "right", "left"]
 
@@ -79,69 +80,73 @@ def _mm(value: str, unit: str | None) -> float:
     return v
 
 
-def parse_prompt(prompt: str) -> tuple[KitchenTemplate, list[str]]:
+NO_LENGTH = "note.no-length"   # the note of a sentence that gives no length (a relayout keeps the run's length: callers drop it)
+
+
+def parse_prompt(prompt: str, catalog: Catalog = builtin.CATALOG) -> tuple[KitchenTemplate, list[str]]:
     """Regex có ranh giới từ, chuẩn hóa NFC. Trả (mẫu, ghi chú những gì đã hiểu/đoán)."""
-    lex = lexicon.interpret(prompt)
+    lex = lexicon.interpret(prompt, catalog)
     t = lex.mask(prompt)  # đoạn đã dùng cho chiều cao ốp bị che để regex số đo không hiểu nhầm là chiều cao tủ
     notes: list[str] = lexicon.notes(lex.items)
     data: dict = {}
     if lex.updates.get("geometry_edit"):
         data["geometry_edit"] = lex.updates["geometry_edit"]
-    lens = [_mm(v, u) for v, u in re.findall(_KW + r"(?:dài|rộng|cạnh|width)[^0-9]{0,12}" + _NUM, t)]
-    lens += [_mm(v, u) for v, u in re.findall(r"(?:và|x|×)\s*" + _NUM, t)]
+    word = lambda id: lexicon.source(id, catalog)      # the words of a dictionary entry (``regex`` group) as a regular expression
+    lens = [_mm(v, u) for v, u in re.findall(_KW + word("dim.length") + r"[^0-9]{0,12}" + _NUM, t)]
+    lens += [_mm(v, u) for v, u in re.findall(word("dim.and") + r"\s*" + _NUM, t)]
     if lens:
         data["backWallLength"] = lens[0]
         if data.get("geometry_edit") in ("L", "U"):
             data["rightWallLength"] = lens[1] if len(lens) > 1 else lens[0]
         if data.get("geometry_edit") == "U":
             data["leftWallLength"] = lens[2] if len(lens) > 2 else data["rightWallLength"]
-    depth = re.search(_KW + r"(?:sâu|depth)[^0-9]{0,12}" + _NUM, t)
+    depth = re.search(_KW + word("dim.depth") + r"[^0-9]{0,12}" + _NUM, t)
     if depth:
         data["baseDepth"] = _mm(*depth.groups())
-    height = re.search(_KW + r"(?:cao|height)(?!\s*cấp)[^0-9]{0,12}" + _NUM, t)
+    height = re.search(_KW + word("dim.height") + r"[^0-9]{0,12}" + _NUM, t)
     if height:
         data["cabinetTop"] = _mm(*height.groups())
-    ceiling = re.search(_KW + r"trần[^0-9]{0,12}" + _NUM, t)
+    ceiling = re.search(_KW + word("dim.ceiling") + r"[^0-9]{0,12}" + _NUM, t)
     if ceiling:
         data["ceiling"] = _mm(*ceiling.groups())
-    data["fridge"] = bool(re.search(_KW + r"tủ\s*lạnh", t)) or bool(lex.updates.get("fridge"))
-    side = re.search(r"tủ\s*lạnh[^,.;]{0,24}?\b(?:sang|bên|phía|ở|về|đặt)\s+(?:bên\s+|phía\s+)?(phải|trái)", t)
+    data["fridge"] = bool(re.search(_KW + word("word.fridge"), t)) or bool(lex.updates.get("fridge"))
+    side = re.search(word("word.fridge") + r"[^,.;]{0,24}?\b" + word("fridge.where") + r"\s+(?:bên\s+|phía\s+)?(" + word("side.right") + "|" + word("side.left") + ")", t)
     if side:
-        data["fridgeSide"] = "right" if side.group(1) == "phải" else "left"
-        notes.append(f"Tủ lạnh ở đầu {side.group(1)} của dãy (nhìn từ phía trước)")
+        data["fridgeSide"] = "right" if re.fullmatch(word("side.right"), side.group(1)) else "left"
+        notes.append(said("note.fridge-side", side=said(f"side.{data['fridgeSide']}")))
     for key, value in lex.updates.items():  # phong cách, vật liệu theo phạm vi, tay nắm, kiểu cánh, ốp tường, tủ kịch trần…
         if key != "geometry_edit":
             data[key] = value
     data["promptInterpretation"] = lex.items
-    if re.search(r"(không|bỏ)\s*(có\s*)?phào", t):
+    if re.search(word("molding.none"), t):
         data["crownMolding"] = data["baseMolding"] = False
     else:
-        if re.search(r"phào\s*(nóc|trần|đỉnh)", t):
+        if re.search(word("molding.crown"), t):
             data["crownMolding"] = True
-        if re.search(r"phào\s*(chân|chân\s*tủ)", t):
+        if re.search(word("molding.base"), t):
             data["baseMolding"] = True
-    qg, kv = regions.from_description(prompt)
+    qg, kv = regions.from_description(prompt, catalog)
     if qg or kv:
         data["country"], data["region"] = qg, kv
-        notes.append(f"Áp tiêu chuẩn ưu tiên cho {regions.COUNTRIES[qg][0] if qg else regions.REGIONS[kv or '']}")
+        notes.append(said("note.standard-for", place=regions.COUNTRIES[qg][0] if qg else regions.REGIONS[kv or '']))
     try:
         color = KitchenTemplate.model_validate(data)
     except ValidationError as e:
-        notes.append(f"Bỏ qua số đo ngoài phạm vi: {e.errors()[0]['msg']}")
+        notes.append(said("note.size-out-of-range", detail=e.errors()[0]['msg']))
         color = KitchenTemplate.model_validate({k: v for k, v in data.items() if k in ("geometry_edit", "fridge", "fridgeSide", "loft", "material", "country", "region", "leftWallLength", "island", "peninsula", "openShelf", "islandLength",
                                                                             "style", "crownMolding", "baseMolding", "styleTags", "aiHints", "renderPreferences", "handleVariant",
                                                                             "handleMaterial", "doorStyle", "wallTilePattern", "promptInterpretation")})
     if not lens:
-        notes.append("Không thấy chiều dài trong mô tả, dùng mặc định 3000 mm")
+        notes.append(said(NO_LENGTH))
     return color, notes
 
 
 _LEX_FIELDS = ("styleTags", "aiHints", "renderPreferences", "handleVariant", "handleMaterial", "doorStyle", "wallTilePattern", "backsplashHeightMm")
 
 
-def merge_lexicon(template: KitchenTemplate, prompt: str) -> tuple[KitchenTemplate, list[str]]:
+def merge_lexicon(template: KitchenTemplate, prompt: str, catalog: Catalog = builtin.CATALOG) -> tuple[KitchenTemplate, list[str]]:
     """Bổ sung vào mẫu do DeepSeek trả những trường chỉ bảng thuật ngữ biết; giá trị DeepSeek đã nêu được giữ nguyên."""
-    lex = lexicon.interpret(prompt)
+    lex = lexicon.interpret(prompt, catalog)
     cur = template.model_dump()
     upd = {k: lex.updates[k] for k in _LEX_FIELDS if k in lex.updates and not cur.get(k)}
     if lex.updates.get("backsplashHeight") and cur.get("backsplashHeight") == "standard":

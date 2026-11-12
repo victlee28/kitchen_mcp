@@ -18,13 +18,10 @@ ROUND_BASELINE: dict[str, int] = {}
 # gains one, and when a count went down without being lowered here.
 VIETNAMESE_BASELINE: dict[str, int] = {
     # Data-driven stage 4 (command dictionary: words and patterns that read what people type)
-    "kitchen/lexicon.py": 159,
-    "kitchen/intent.py": 62,
-    "kitchen/edit_intent.py": 34,
+    "kitchen/lexicon.py": 30,
+    "kitchen/intent.py": 47,
     "kitchen/regions.py": 4,
-    "kitchen/system_replace.py": 6,
-    "kitchen/appliance_models.py": 9,
-    "kitchen/service.py": 9,
+    "kitchen/appliance_models.py": 1,
     "kitchen/floorplan/structures.py": 2,
     "kitchen/floorplan/document.py": 1,
     "kitchen/prompts/photo.py": 19,

@@ -24,6 +24,7 @@ from .jsonview import as_dict, as_list
 from .numeric import EPS_MM
 from .i18n import pick
 from .spec import KitchenSpec, LaidModule, Module, to_data
+from . import lexicon
 
 FRONTLESS = ("corner-shelf", "upper-open")            # no doors or drawer fronts: no front material, door style or handle
 OWN_DOOR = ("upper-glass",)                           # the door style is the cabinet's own (glass): left as it is
@@ -185,10 +186,7 @@ def _inherited(spec: KitchenSpec, mods: list[Module]) -> dict[str, dict[str, Any
     return out
 
 
-APPLIANCE_WORDS = {      # a sentence that names the appliance asks for a new one: its old model is not kept (lower case, with diacritics)
-    "cooktop": r"bếp\s*(?:từ|gas|ga|nấu|điện|hồng\s*ngoại|đôi|đơn)|(?<!\w)hob(?!\w)", "sink": r"chậu", "hood": r"hút\s*mùi",
-    "fridge": r"tủ\s*lạnh", "oven": r"(?<!\w)lò(?!\w)", "faucet": r"(?<!\w)vòi(?!\w)", "tv": r"ti\s*vi|(?<!\w)tv(?!\w)",
-}
+APPLIANCE_TYPES = ("cooktop", "sink", "hood", "fridge", "oven", "faucet", "tv")   # a sentence naming one (dictionary ``appliance.<type>``) asks for a new one
 
 
 def kept_models(spec: KitchenSpec, mods: list[Module], said: str = "", catalog: Catalog = builtin.CATALOG) -> dict[str, dict[str, Any]]:
@@ -201,7 +199,7 @@ def kept_models(spec: KitchenSpec, mods: list[Module], said: str = "", catalog: 
     for a in spec.appliances:
         mid = getattr(a, "model", None)
         if a.module in ids and isinstance(mid, str) and mid in by_id and a.type not in out \
-                and not re.search(APPLIANCE_WORDS.get(a.type, r"(?!x)x"), text):
+                and not (a.type in APPLIANCE_TYPES and lexicon.pattern(f"appliance.{a.type}", catalog).search(text)):
             out[a.type] = by_id[mid]
     return out
 
