@@ -155,3 +155,19 @@ class TestCatalogUpdates(unittest.TestCase):
             self.assertGreater(len(s.scene(design)["parts"]), before)
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
+
+
+class TestCatalogListing(unittest.TestCase):
+    def test_an_overridden_item_carries_its_builtin_data(self):
+        tmp = Path(tempfile.mkdtemp())
+        try:
+            from kitchen.service import KitchenService
+            s = KitchenService(db_path=tmp / "k.db", render_dir=tmp / "r")
+            row = s.catalog_list("style", "workshop")["items"][0]
+            self.assertNotIn("builtinData", row)
+            s.catalog_put("style", row["id"], {**row["data"], "front": "Xám"}, "workshop")
+            again = next(i for i in s.catalog_list("style", "workshop")["items"] if i["id"] == row["id"])
+            self.assertEqual(again["builtinData"], row["data"])
+            self.assertEqual(again["data"]["front"], "Xám")
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)

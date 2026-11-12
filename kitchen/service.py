@@ -236,11 +236,14 @@ class KitchenService:
         info = self._kind(kind)
         scope = cat.scope_for(role, self.USER)
         mine = {(r['id']) for r in self.store.catalog_rows([scope]) if r['kind'] == kind}
-        builtin_ids = {e.id for e in self.builtin.entries if e.kind == kind}
+        builtin_data = {e.id: e.data for e in self.builtin.entries if e.kind == kind}
+        builtin_ids = set(builtin_data)
         hidden = [r['id'] for r in self.store.catalog_rows([cat.WORKSHOP, cat.user_scope(self.USER)]) if r['kind'] == kind and r['disabled']]
         return {'kind': kind, 'label': i18n.pick(info.label, i18n.lang_of(lang)), 'writable': not info.locked and role in info.writers,
                 'scope': scope, 'schema': self.builtin.schemas[kind], 'hidden': hidden,
-                'items': [{**i.to_data(), 'mine': i.id in mine, 'builtin': i.id in builtin_ids} for i in self.catalog().all(kind)]}
+                'items': [{**i.to_data(), 'mine': i.id in mine, 'builtin': i.id in builtin_ids,
+                           **({'builtinData': builtin_data[i.id]} if i.id in builtin_ids and i.source != 'builtin' else {})}
+                          for i in self.catalog().all(kind)]}
 
     def _trial(self, kind: str, id: str, scope: str, data: dict | None, disabled: bool) -> cat.Catalog:
         """The catalog as it would be with this write."""

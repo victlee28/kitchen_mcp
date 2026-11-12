@@ -7,6 +7,7 @@ import { $, el } from './dom.js';
 import { openTypeEditor } from './cabinet-type-editor.js';
 import { openLayoutEditor } from './layout-template-editor.js';
 import { copyId } from './cabinet-type-logic.js';
+import { diffFields, show } from './catalog-logic.js';
 let current = null;      // kind shown
 let listing = null;      // its listing from the server
 
@@ -72,6 +73,8 @@ async function showKind(kind) {
       if (!it.mine || it.builtin) actions.append(el('button', { textContent: t('catalog.hide'), onclick: () => guard(() => hide(it.id)) }));
       actions.append(el('button', { textContent: '↶', title: t('catalog.undo'), onclick: () => guard(() => undo(it.id)) }));
     }
+    actions.append(el('button', { textContent: t('catalog.history'), onclick: () => guard(() => showHistory(it)) }));
+    if (it.builtinData) actions.append(el('button', { textContent: t('catalog.compare'), onclick: () => showCompare(it) }));
     return el('tr', {}, el('td', { textContent: it.id }), el('td', {}, summary(it.data)), el('td', {}, sourceTag(it.source)),
       el('td', { textContent: String(it.version) }), el('td', {}, actions));
   });
@@ -152,6 +155,31 @@ function edit(item) {
   }); };
   $('editor').replaceChildren(form);
   form.scrollIntoView({ behavior: 'smooth' });
+}
+
+/** A table of field changes: path, before, after. */
+function diffTable(changes) {
+  if (!changes.length) return el('p', { className: 'muted', textContent: t('catalog.noDiff') });
+  return el('table', {}, el('tr', {}, ...['catalog.field', 'catalog.before', 'catalog.after'].map((k) => el('th', { textContent: t(k) }))),
+    ...changes.map((c) => el('tr', {}, el('td', { textContent: c.path }), el('td', { className: 'warn', textContent: show(c.before) }),
+      el('td', { className: 'ok', textContent: show(c.after) }))));
+}
+
+/** The item next to the builtin one it overrides, field by field. */
+function showCompare(item) {
+  $('editor').replaceChildren(el('div', { className: 'item' }, el('h3', { textContent: t('catalog.compareTitle', { id: item.id }) }),
+    diffTable(diffFields(item.builtinData, item.data))));
+}
+
+/** Every edit of the item in the layers (newest first): when, who, which layer, and what each one changed. */
+async function showHistory(item) {
+  const entries = await catalog.history(current, item.id);
+  const blocks = [...entries].reverse().map((h) => el('div', {},
+    el('p', { className: 'row' }, el('b', { textContent: `#${h.seq}` }), `${h.at} · ${t('role.' + h.by)} · ${h.scope}`,
+      h.after?.disabled ? el('span', { className: 'warn', textContent: t('catalog.hide') }) : ''),
+    diffTable(diffFields(h.before?.data ?? (h.before ? {} : item.builtinData ?? {}), h.after?.data ?? {}))));
+  $('editor').replaceChildren(el('div', { className: 'item' }, el('h3', { textContent: t('catalog.historyTitle', { id: item.id }) }),
+    ...(blocks.length ? blocks : [el('p', { className: 'muted', textContent: t('catalog.noHistory') })])));
 }
 
 async function reset(id) { await catalog.remove(current, id); say(t('catalog.deleted', { kind: listing.label, id }), 'ok'); await showKind(current); }
