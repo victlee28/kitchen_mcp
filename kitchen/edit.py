@@ -104,7 +104,7 @@ def add_run(spec: KitchenSpec, run: dict[str, Any]) -> KitchenSpec:
     if not data.get("id"):
         data["id"] = new_id(s, "R")
     if any(r.id == data["id"] for r in s.runs):
-        raise InvalidInput(f"Dãy '{data['id']}' đã có", code="run-exists")
+        raise InvalidInput(f"Run {data['id']!r} already exists", code="run-exists", params={"id": data["id"]})
     s.runs.append(from_data(Run, data))
     return from_data(KitchenSpec, to_data(s))
 
@@ -112,7 +112,7 @@ def add_run(spec: KitchenSpec, run: dict[str, Any]) -> KitchenSpec:
 def _run(s: KitchenSpec, id: str) -> Run:
     run = next((r for r in s.runs if r.id == id), None)
     if run is None:
-        raise NotFound(f"Không có dãy '{id}'", code="run-not-found")
+        raise NotFound(f"No run {id!r}", code="run-not-found", params={"id": id})
     return run
 
 
@@ -122,10 +122,10 @@ def move_run(spec: KitchenSpec, id: str, changes: dict[str, Any]) -> KitchenSpec
     run = _run(s, id)
     extra = sorted(set(changes) - {"x", "z", "yaw"})
     if extra or not changes:
-        raise InvalidInput(f"move-run đổi được x, z, yaw; không đổi được {', '.join(extra) or '(trống)'}", code="bad-run-change")
+        raise InvalidInput(f"move-run changes x, z, yaw only, not {', '.join(extra) or '(nothing)'}", code="bad-run-change", params={"fields": ', '.join(extra) or '-'})
     for key, value in changes.items():
         if isinstance(value, bool) or not isinstance(value, (int, float)):
-            raise InvalidInput(f"{key} phải là số", code="bad-run-change")
+            raise InvalidInput(f"{key} must be a number", code="bad-run-number", params={"field": key})
         setattr(run, key, float(value))
     return from_data(KitchenSpec, to_data(s))
 
@@ -135,7 +135,7 @@ def set_run_system(spec: KitchenSpec, id: str, system: Any) -> KitchenSpec:
     s = _clone(spec)
     run = _run(s, id)
     if system not in (None, "") and not isinstance(system, str):
-        raise InvalidInput("system phải là chuỗi hoặc null", code="bad-run-system")
+        raise InvalidInput("system must be a string or null", code="bad-run-system")
     data = {**to_data(run), "system": system or None}
     s.runs = [from_data(Run, data) if r.id == id else r for r in s.runs]
     return from_data(KitchenSpec, to_data(s))
@@ -224,15 +224,15 @@ def stretch_run(spec: KitchenSpec, id: str, end: str, delta: float, catalog: Cat
     other cabinet keeps its place in the room. Refused when a cabinet would leave ``STRETCH_MIN``-``STRETCH_MAX``."""
     from . import runs as runmod
     if end not in ("start", "end"):
-        raise InvalidInput("end phải là 'start' hoặc 'end'", code="bad-run-end")
+        raise InvalidInput("end must be 'start' or 'end'", code="bad-run-end")
     if isinstance(delta, bool) or not isinstance(delta, (int, float)) or not delta:   # pyright: ignore[reportUnnecessaryIsInstance] (JSON input)
-        raise InvalidInput("delta phải là số khác 0 (mm)", code="bad-run-delta")
+        raise InvalidInput("delta must be a non-zero number (mm)", code="bad-run-delta")
     w_lo, w_hi = defaults.of(catalog).stretch_min, defaults.of(catalog).stretch_max
     s = _clone(spec)
     run = _run(s, id)
     mods = [m for m in s.module if m.run == id]
     if not mods:
-        raise InvalidInput(f"Dãy '{id}' không có tủ", code="empty-run")
+        raise InvalidInput(f"Run {id!r} has no cabinet", code="empty-run", params={"id": id})
     lo, hi = min(m.fromCorner for m in mods), max(m.endAt for m in mods)
     group = {"base": "floor", "tall": "floor", "upper": "upper", "loft": "loft"}
     targets: dict[str, Module] = {}
@@ -247,7 +247,8 @@ def stretch_run(spec: KitchenSpec, id: str, end: str, delta: float, catalog: Cat
     for m in targets.values():
         width = m.width + delta
         if not w_lo <= width - m.blindCorner - m.endPanel or width > w_hi:
-            raise InvalidInput(f"{m.id} sẽ rộng {width:g} mm (cho phép {w_lo:g}-{w_hi:g}); thêm hoặc bớt một tủ thay vì kéo", code="stretch-limit")
+            raise InvalidInput(f"{m.id} would be {width:g} mm wide (allowed {w_lo:g}-{w_hi:g}); add or remove a cabinet instead", code="stretch-limit",
+                               params={"id": m.id, "width": f"{width:g}", "min": f"{w_lo:g}", "max": f"{w_hi:g}"})
     hit = {m.id for m in targets.values()}
     for m in mods:
         if m.id in hit:
@@ -292,7 +293,7 @@ def update_module(spec: KitchenSpec, id: str, changes: dict[str, Any], close_gap
     s = _clone(spec)
     old = s.find(id)
     if "id" in changes and changes["id"] != id:
-        raise InvalidInput("Không đổi mã module bằng update; hãy xóa rồi thêm")
+        raise InvalidInput("update cannot change a module's id; remove it and add it again", code="module-id-change")
     merged = {**to_data(old), **changes}
     if "width" in changes and "door" not in changes and old.doors:  # giữ tỉ lệ cánh khi đổi rộng
         free_old = old.width - old.blindCorner - old.endPanel
@@ -370,7 +371,7 @@ def apply_op(spec: KitchenSpec, op: dict[str, Any], catalog: Catalog = builtin.C
         data = to_data(spec)
         hit = [m for m in data["moldings"] if m["id"] == op["id"]]
         if not hit:
-            raise NotFound(f"Không có phào '{op['id']}'", code="molding-not-found")
+            raise NotFound(f"No molding {op['id']!r}", code="molding-not-found", params={"id": op["id"]})
         hit[0].update(op.get("changes", {}))
         return from_data(KitchenSpec, data)
     if kind == "set-moldings":  # thay toàn bộ phào (+ mặt cắt riêng) và phong cách
@@ -394,8 +395,8 @@ def apply_op(spec: KitchenSpec, op: dict[str, Any], catalog: Catalog = builtin.C
     if kind == "multi":
         ops = [as_dict(o) or {} for o in as_list(op.get("ops")) or []]
         if not ops or any(o.get("op") == "multi" for o in ops):
-            raise InvalidInput("op 'nhieu' cần danh sách ops (không lồng 'nhieu')")
+            raise InvalidInput("op 'multi' needs a list of ops (no nested 'multi')", code="bad-multi")
         for o in ops:
             spec = apply_op(spec, o, catalog)
         return spec
-    raise InvalidInput(f"op không hợp lệ: {kind!r}")
+    raise InvalidInput(f"Unknown op: {kind!r}", code="bad-op", params={"op": str(kind)})

@@ -409,6 +409,15 @@ class Handler(BaseHTTPRequestHandler):
             j = {**j, "url": u, "files": {f: u + f for f in files}}
         return j
 
+    def _words(self, e: "errors.KitchenError") -> str:
+        """The error in the reader's language: ?lang=, else the X-Lang header the web sends, else Accept-Language (service.error_words)."""
+        q = parse_qs(urlparse(self.path).query)
+        wanted = (q.get("lang") or [""])[0] or self.headers.get("X-Lang") or (self.headers.get("Accept-Language") or "")[:2]
+        try:
+            return errors.require(SVC, "kitchen service").error_words(e, wanted.lower())
+        except Exception:  # noqa: BLE001 — wording must never hide the error itself
+            return str(e)
+
     def _handle(self, method: str):
         t = time.perf_counter()
         try:
@@ -418,7 +427,8 @@ class Handler(BaseHTTPRequestHandler):
         except ApiError as e:
             self._json(e.status, {"error": str(e)})
         except errors.KitchenError as e:             # one mapping: kind -> status; the stable code is added for clients
-            self._json(errors.http_status(e) or 500, {"error": str(e), "code": e.code})
+            self._json(errors.http_status(e) or 500, {"error": self._words(e), "code": e.code, **({"params": e.params} if e.params else {}),
+                                                     "detail": str(e)})
         except FileNotFoundError as e:
             self._json(404, {"error": str(e)})
         except ValidationError as e:

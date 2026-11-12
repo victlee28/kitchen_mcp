@@ -27,17 +27,17 @@ class RequestBuilder(Component):
     def norm_tasks(tasks: list[dict[str, Any]] | None, target: str | None, material: str | None, instruction: str) -> list[TaskInput]:
         if not tasks:
             if not target:
-                raise InvalidInput("Cần targetLayer hoặc danh sách tasks")
+                raise InvalidInput("targetLayer or a list of tasks is needed", code="no-task")
             tasks = [{"targetLayer": target, "material": material, "instruction": instruction}]
         if not isinstance(tasks, list) or len(tasks) > MAX_TASKS:
-            raise InvalidInput(f"tasks phải là danh sách tối đa {MAX_TASKS} việc")
+            raise InvalidInput(f"tasks must be a list of at most {MAX_TASKS}", code="too-many-tasks", params={"max": MAX_TASKS})
         out: list[TaskInput] = []
         for i, t in enumerate(tasks, 1):
             if not isinstance(t, dict):
-                raise InvalidInput(f"Việc {i} không hợp lệ")
+                raise InvalidInput(f"Task {i} is not valid", code="bad-task", params={"n": i})
             tl = t.get("targetLayer") or t.get("target") or t.get("target_layer")
             if not tl:
-                raise InvalidInput(f"Việc {i} thiếu targetLayer")
+                raise InvalidInput(f"Task {i} has no targetLayer", code="task-no-layer", params={"n": i})
             out.append({"targetLayer": str(tl), "material": (t.get("material") or t.get("material") or None),
                         "instruction": str(t.get("instruction") or "").strip()})
         return out
@@ -70,33 +70,36 @@ class RequestBuilder(Component):
             for i, t in enumerate(tasks, 1):
                 layer, ids = layers.resolve(cat, t["targetLayer"])
                 if not layer.get("allowAppearanceChange"):
-                    raise InvalidInput(f"Việc {i}: layer '{t['targetLayer']}' bị khóa")
+                    raise InvalidInput(f"Task {i}: layer {t['targetLayer']!r} is locked", code="layer-locked", params={"n": i, "layer": t["targetLayer"]})
                 rec: Task = {"targetLayer": t["targetLayer"], "material": t["material"], "instruction": t["instruction"]}
                 if mode == "design":
                     if not t["material"]:
-                        raise InvalidInput(f"Việc {i} ({t['targetLayer']}): chế độ design cần material (vd 'Laminate xanh rêu mờ')")
+                        raise InvalidInput(f"Task {i} ({t['targetLayer']}): design mode needs a material", code="task-no-material", params={"n": i, "layer": t["targetLayer"]})
                     op = layers.design_op(cur, layers.resolve(layers.catalogue(cur, scene), t["targetLayer"])[0], t["material"], scene)
                     if op is None:
-                        raise InvalidInput(f"Việc {i}: '{layer['name']}' chưa sửa được trong thiết kế; dùng chế độ quick")
+                        raise InvalidInput(f"Task {i}: {layer['name']!r} cannot be changed in the design yet; use quick mode", code="layer-not-editable",
+                                   params={"n": i, "name": layer["name"]})
                     nxt = edit.apply_op(cur, op[0], self.env.catalog())
                     if render.scene_hash(geometry.compile_spec(nxt)) != render.scene_hash(scene):
-                        raise InvalidInput(f"Việc {i}: thao tác làm đổi hình học; sửa ảnh chỉ nhận thay đổi vật liệu")
+                        raise InvalidInput(f"Task {i}: the change alters the geometry; an image edit only takes material changes", code="task-changes-geometry", params={"n": i})
                     selected = list(ids)
                     ids = layers.changed_parts(cur, nxt, scene)
                     if set(ids) != set(selected):  # the spec can only express a wider or different scope: say so instead of hiding it
                         rec["scopeNote"] = f"Thiết kế đổi {len(ids)} chi tiết, vùng chọn có {len(selected)}"
                     if not ids:
-                        raise InvalidInput(f"Việc {i}: vật liệu mới trùng vật liệu hiện tại")
+                        raise InvalidInput(f"Task {i}: the new material is the current one", code="same-material", params={"n": i})
                     rec["pendingOp"] = op[0]
                     rec["scope"] = op[1]
                     cur = nxt
                 clash = sorted({owner[p] for p in ids if p in owner})
                 if clash:
                     both = [p for p in ids if p in owner]
-                    raise InvalidInput(f"Việc {i} và việc {clash[0]} cùng sửa chi tiết {', '.join(both[:4])}; tách layer hoặc gộp thành một việc")
+                    raise InvalidInput(f"Tasks {i} and {clash[0]} change the same parts {', '.join(both[:4])}", code="tasks-overlap",
+                                   params={"n": i, "other": clash[0], "parts": ', '.join(both[:4])})
                 tmask = imaging.mask_of(d, ids)
                 if not tmask.any():
-                    raise InvalidInput(f"Việc {i}: layer '{t['targetLayer']}' không nhìn thấy ở góc '{view}'")
+                    raise InvalidInput(f"Task {i}: layer {t['targetLayer']!r} is not seen from view {view!r}", code="layer-not-visible",
+                                   params={"n": i, "layer": t["targetLayer"], "view": view})
                 for p in ids:
                     owner[p] = i
                 union |= tmask
@@ -208,9 +211,9 @@ class RequestBuilder(Component):
             if any(x.get("doorStyle") == "frame" for x in desc):
                 lines_new = geometry_edit.shaker_lines(lines_new, doors)
         if not m.any():
-            raise InvalidInput(f"Thao tác không làm đổi gì nhìn thấy ở góc '{view}'")
+            raise InvalidInput(f"The change alters nothing seen from view {view!r}", code="change-not-visible", params={"view": view})
         if m.mean() > 0.85:
-            raise InvalidInput("Thao tác đổi gần như toàn ảnh (camera/khung hình đổi?); dùng gen-0 cho thiết kế mới")
+            raise InvalidInput("The change alters almost the whole image (did the camera or framing change?); use gen-0", code="change-too-large")
         imaging.save_mask(m, jdir / "target_1.png")
         imaging.save_mask(m, jdir / "target.png")
         region = imaging.grow(m, GROW_PX)

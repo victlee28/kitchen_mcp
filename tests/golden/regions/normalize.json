@@ -38,7 +38,7 @@
    },
    "error": {
     "kind": "validation",
-    "code": "invalid-input"
+    "code": "bad-region"
    }
   }
  ]

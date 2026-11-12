@@ -52,12 +52,12 @@ def build_ops(spec: KitchenSpec, items: list[dict]) -> tuple[list[dict], list[di
       {"type": "op", "op": {...}}      # thao tác thiết kế bất kỳ (xem edit.apply_op)
     Mô tả: {"vi", "en", "operation", "required": [mã module có vùng bắt buộc vẽ lại dù hình học không đổi]}."""
     if not items:
-        raise InvalidInput("Cần ít nhất một thao tác hình học")
+        raise InvalidInput("At least one geometry change is needed", code="no-geometry-change")
     ops, desc = [], []
     cur = spec
     for i, it in enumerate(items, 1):
         if not isinstance(it, dict):
-            raise InvalidInput(f"Thao tác {i} không hợp lệ")
+            raise InvalidInput(f"Change {i} is not valid", code="bad-geometry-change", params={"n": i})
         k = it.get("type")
         extra_ops: list[dict] = []
         if k == "remove-module":
@@ -77,7 +77,7 @@ def build_ops(spec: KitchenSpec, items: list[dict]) -> tuple[list[dict], list[di
         elif k == "door-style":
             variant = it.get("variant")
             if variant not in _DOOR_EN:
-                raise InvalidInput(f"Thao tác {i}: kieu phải là {', '.join(_DOOR_EN)}")
+                raise InvalidInput(f"Change {i}: the door style must be one of {', '.join(_DOOR_EN)}", code="bad-door-style", params={"n": i, "allowed": ', '.join(_DOOR_EN)})
             mas = [m.id for m in cur.module if m.doors or m.frontSections] if it.get("id") in (None, "", "*") else [cur.find(it["id"]).id]
             sub = [{"op": "update", "id": id, "changes": {"doorStyle": variant}} for id in mas]
             op = sub[0] if len(sub) == 1 else {"op": "multi", "ops": sub}
@@ -87,7 +87,7 @@ def build_ops(spec: KitchenSpec, items: list[dict]) -> tuple[list[dict], list[di
         elif k == "handle":
             variant = it.get("variant")
             if variant not in _HANDLE_EN:
-                raise InvalidInput(f"Thao tác {i}: kieu tay nắm phải là {', '.join(_HANDLE_EN)}")
+                raise InvalidInput(f"Change {i}: the handle must be one of {', '.join(_HANDLE_EN)}", code="bad-handle-variant", params={"n": i, "allowed": ', '.join(_HANDLE_EN)})
             tn = {**cur.common.handle.model_dump(mode="json"), "variant": variant, **({"length": float(it["length"])} if it.get("length") else {})}
             common_changes, extra_ops = handles.clear_overrides(cur, ("variant", "length"))  # "all cabinets" must also reset overrides
             op = {"op": "common", "changes": {"handle": tn, **common_changes}}
@@ -97,11 +97,11 @@ def build_ops(spec: KitchenSpec, items: list[dict]) -> tuple[list[dict], list[di
         elif k == "op":
             op = it.get("op")
             if not isinstance(op, dict) or op.get("op") in (None, "replace"):
-                raise InvalidInput(f"Thao tác {i}: cần 'op' hợp lệ (không nhận replace)")
+                raise InvalidInput(f"Change {i}: needs a valid 'op' (not replace)", code="bad-geometry-op", params={"n": i})
             d = {"vi": str(it.get("description") or op.get("op")), "en": str(it.get("descriptionEn") or "apply the design change shown in image 3"),
                  "operation": it.get("operation") or "replace-item"}
         else:
-            raise InvalidInput(f"Thao tác {i}: type phải là remove-module | add-module | door-style | handle | op")
+            raise InvalidInput(f"Change {i}: type must be remove-module | add-module | door-style | handle | op", code="bad-geometry-type", params={"n": i})
         cur = edit.apply_op(cur, op)
         ops.append(op)
         for extra in extra_ops:

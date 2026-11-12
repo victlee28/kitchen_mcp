@@ -403,7 +403,7 @@ class KitchenSpec(_Base):
         for m in self.module:
             if m.id == id:
                 return m
-        raise NotFound(f"Không có module '{id}'", code="module-not-found")
+        raise NotFound(f"No module {id!r}", code="module-not-found", params={"id": id})
 
     def walls_with_modules(self) -> list[str]:
         return [t for t in WALLS if any(m.wall == t for m in self.module)]

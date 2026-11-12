@@ -327,7 +327,7 @@ class TestMultiTask(_Base):
         with self.assertRaises(ValueError) as e:
             im.create(self.did, VIEW, tasks=[{"targetLayer": "TD1-door-1", "material": "xanh rêu"},
                                              {"targetLayer": "frontSections:TD1", "material": "kem"}])
-        self.assertIn("cùng sửa chi tiết", str(e.exception))
+        self.assertEqual(getattr(e.exception, "code", None), "tasks-overlap")
         with self.assertRaises(ValueError):
             im.create(self.did, VIEW, tasks=[{"targetLayer": "TD1-door-1"}] * 9)
         with self.assertRaises(ValueError):
@@ -739,7 +739,7 @@ class TestGeminiAdapter(_Base):
         self.svc.apply(self.did, {"op": "update", "id": "TD1", "changes": {"height": 700}}, None, "test")
         with self.assertRaises(ValueError) as e:
             im.send(k["id"])
-        self.assertIn("đổi hình học", str(e.exception))
+        self.assertEqual(getattr(e.exception, "code", None), "job-stale")
 
     def test_errors(self):
         _FakeGemini.mode = "429"

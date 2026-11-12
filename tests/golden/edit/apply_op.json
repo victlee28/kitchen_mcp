@@ -830,7 +830,7 @@
    },
    "error": {
     "kind": "validation",
-    "code": "invalid-input"
+    "code": "bad-op"
    }
   },
   {
@@ -851,7 +851,7 @@
    },
    "error": {
     "kind": "validation",
-    "code": "invalid-input"
+    "code": "bad-multi"
    }
   }
  ]

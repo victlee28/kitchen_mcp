@@ -111,27 +111,28 @@ class ImageJobs:
         reference, base_rev, kind, seed, params = new.reference, new.base_rev, new.kind, new.seed, new.params
         tasks, preview, geometry_items, operation, lighting = new.tasks, new.preview, new.geometry_items, new.operation, new.lighting
         if kind not in KINDS:
-            raise InvalidInput("kind phải là edit, gen0 hoặc geometry_edit")
+            raise InvalidInput("kind must be edit, gen0 or geometry_edit", code="bad-job-kind")
         if lighting not in (None, "", *prompts.LIGHTING):
-            raise InvalidInput(f"anhSang phải là một trong: {', '.join(prompts.LIGHTING)}")
+            raise InvalidInput(f"lighting must be one of {', '.join(prompts.LIGHTING)}", code="bad-lighting", params={"allowed": ', '.join(prompts.LIGHTING)})
         if operation is not None:
             if operation not in geometry_edit.OPERATIONS:
-                raise InvalidInput(f"thaoTac phải là một trong: {', '.join(geometry_edit.OPERATIONS)}")
+                raise InvalidInput(f"operation must be one of {', '.join(geometry_edit.OPERATIONS)}", code="bad-operation", params={"allowed": ', '.join(geometry_edit.OPERATIONS)})
             pre = geometry_edit.OPERATIONS[operation]
             if pre["kind"] != kind:
-                raise InvalidInput(f"thaoTac '{operation}' dùng cho kind={pre['kind']} (đang là {kind})")
+                raise InvalidInput(f"operation {operation!r} is for kind={pre['kind']} (not {kind})", code="operation-wrong-kind",
+                                   params={"operation": operation, "for": pre["kind"], "kind": kind})
             params = params or {}
         if kind == "geometry_edit":
             if not geometry_items:
-                raise InvalidInput("kind=hinh cần danh sách thao tác hình học (hinh)")
+                raise InvalidInput("kind=geometry_edit needs a list of geometry changes", code="no-geometry-change")
             mode = "design"  # sửa hình: chấp nhận ảnh = ghi thao tác vào thiết kế
         offered = backends.table(self.env.catalog())
         if backend not in offered:
-            raise InvalidInput(f"backend phải là một trong: {', '.join(offered)}")
+            raise InvalidInput(f"backend must be one of {', '.join(offered)}", code="bad-backend", params={"allowed": ', '.join(offered)})
         if kind not in offered[backend]["kind"]:
-            raise InvalidInput(f"backend '{backend}' không hỗ trợ {kind}")
+            raise InvalidInput(f"backend {backend!r} does not do {kind}", code="backend-wrong-kind", params={"backend": backend, "kind": kind})
         if mode not in MODES:
-            raise InvalidInput("mode phải là quick hoặc design")
+            raise InvalidInput("mode must be quick or design", code="bad-mode")
         task_list: list[TaskInput]
         if kind == "geometry_edit":
             task_list = []
@@ -141,7 +142,7 @@ class ImageJobs:
             task_list = self.builder.norm_tasks(tasks, None, None, "") if kind == "edit" else []
         latest = self.store.get(did)[1]
         if base_rev is not None and base_rev != latest:
-            raise ConflictError(f"baseRev={base_rev} nhưng bản mới nhất là {latest}; hãy tải lại")
+            raise ConflictError(f"baseRev={base_rev} but the latest revision is {latest}; reload", code="revision-conflict", params={"base": base_rev, "latest": latest})
         spec, rev, scene, d, man = self.base.ensure_render(did, latest, view)
         jid = f"job-{self.runtime.new_id()}"
         jdir = d / "jobs" / jid
@@ -170,17 +171,18 @@ class ImageJobs:
         """Gửi job đang chờ (đã xem trước) sang backend. Thiết kế đổi hình học/camera sau khi tạo thì từ chối."""
         job = self.store.get_job(jid)
         if job["status"] != "awaiting-send":
-            raise InvalidInput(f"Chỉ gửi được job đang chờ gửi (hiện: {job['status']})")
+            raise InvalidInput(f"Only a job waiting to be sent can be sent (now: {job['status']})", code="job-not-waiting", params={"status": job["status"]})
         spec, rev = self.store.get(job["design_id"])
         views = geometry.views_of(spec)
         if job["view"] in views:
             W, H = job["request"]["size"]
             if render.render_key(geometry.compile_spec(spec), views[job["view"]], W, H) != job["render_key"]:
-                raise InvalidInput("Thiết kế đã đổi hình học/góc nhìn sau khi tạo job; mask không còn khớp — hãy tạo job mới")
+                raise InvalidInput("The design's geometry or view changed after the job was made; its masks no longer fit", code="job-stale")
         if job["backend"] in ("gemini", "job-package"):  # model nhận chỉ dẫn: request phải đủ ảnh, đúng kích thước
             kt = json.loads(self.packages.export_request(jid).read_text(encoding="utf-8")).get("validation") or {}
             if not kt.get("ok", True):
-                raise InvalidInput("Request chưa đạt kiểm tra, chưa gửi: " + "; ".join(kt.get("errors", [])))
+                raise InvalidInput("The request failed its check, not sent: " + "; ".join(kt.get("errors", [])), code="request-check-failed",
+                               params={"errors": "; ".join(kt.get("errors", []))})
         job = self.store.update_job(jid, "running")
         return self.runners.dispatch(job)
 

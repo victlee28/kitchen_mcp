@@ -24,6 +24,7 @@ import numpy as np
 from PIL import Image
 
 from . import runs
+from .errors import InvalidInput
 from .geometry import Scene, compile_spec, views_of
 from .palette import SEGMENT_COLORS, module_color as _module_color
 from .spec import ViewAngle, KitchenSpec
@@ -380,7 +381,7 @@ def render_views(spec: KitchenSpec, out_root: Path, views: list[str] | None = No
     chosen = views or list(all_views)
     unknown = [v for v in chosen if v not in all_views]
     if unknown:
-        raise ValueError(f"Không có góc nhìn: {unknown}. Có: {list(all_views)}")
+        raise InvalidInput(f"No view {unknown}; there are {list(all_views)}", code="view-not-found", params={"view": ", ".join(unknown), "views": ", ".join(all_views)})
     out_root.mkdir(parents=True, exist_ok=True)
     legend = {"seg": {k: list(v) for k, v in SEGMENT_COLORS.items()},
               "seg_structure": {k: list(v) for k, v in SEGMENT_COLORS.items() if k.startswith("structure-")},

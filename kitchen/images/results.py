@@ -26,13 +26,13 @@ class Results(Component):
     def submit_result(self, jid: str, image: bytes) -> dict:
         job = self.store.get_job(jid)
         if job["status"] in ("accepted", "rejected", "running"):
-            raise InvalidInput(f"Job đang ở trạng thái {job['status']}, không nhận ảnh")
+            raise InvalidInput(f"The job is {job['status']}; it takes no image", code="job-takes-no-image", params={"status": job["status"]})
         jdir = Path(job["result"]["dir"])
         import io
         try:
             im = Image.open(io.BytesIO(image)).convert("RGB")
         except (OSError, ValueError) as e:
-            raise InvalidInput("Ảnh nộp không đọc được (cần PNG/JPEG)") from e
+            raise InvalidInput("The image cannot be read (PNG/JPEG needed)", code="bad-image") from e
         im.save(jdir / "raw.png")
         return self.finish(jid, {"backend": {"name": job["backend"], "submitManual": True}})
 
@@ -91,7 +91,7 @@ class Results(Component):
     def accept(self, jid: str, apply_to_design: bool = False, base_rev: int | None = None) -> dict:
         job = self.store.get_job(jid)
         if job["status"] != "needs-review":
-            raise InvalidInput(f"Chỉ chấp nhận job đang cần duyệt (hiện: {job['status']})")
+            raise InvalidInput(f"Only a job waiting for review can be accepted (now: {job['status']})", code="job-not-in-review", params={"status": job["status"]})
         req = job["request"]
         design = None
         if job["kind"] == "geometry_edit":  # sửa hình: ảnh chỉ đúng khi thiết kế đổi theo -> luôn ghi rev
@@ -99,7 +99,7 @@ class Results(Component):
             W, H = req["size"]
             _, _, _, _, man = self.base.ensure_render(job["design_id"], res["rev"], job["view"], W, H)
             if man["renderKey"] != req["newRenderKey"]:
-                raise InvalidInput("Render của rev mới lệch hình mẫu của job (renderKey khác) — báo lỗi cho nhà phát triển")
+                raise InvalidInput("The new revision renders differently from the job's sample (renderKey differs)", code="render-key-mismatch")
             design = {"rev": res["rev"], "op": req["designOp"], "scope": req.get("scope")}
         elif job["mode"] == "design" or apply_to_design:
             tasks = req.get("tasks") or [{"targetLayer": job["target"], "material": req.get("material"),
@@ -123,7 +123,7 @@ class Results(Component):
                 ops.append(op)
                 scope.append(pv)
             if not ops:
-                raise InvalidInput("Không có việc nào áp được vào thiết kế (" + "; ".join(skip) + ")")
+                raise InvalidInput("No task could be applied to the design (" + "; ".join(skip) + ")", code="nothing-applied", params={"reasons": "; ".join(skip)})
             op = edit.combine_ops(ops)
             res = self.env.apply(job["design_id"], op, base_rev if base_rev is not None else job["rev"], f"image-job:{jid}")
             design = {"rev": res["rev"], "op": op, "scope": "; ".join(scope), **({"skip": skip} if skip else {})}
@@ -144,7 +144,7 @@ class Results(Component):
     def reject(self, jid: str) -> dict:
         job = self.store.get_job(jid)
         if job["status"] == "accepted":
-            raise InvalidInput("Job đã chấp nhận")
+            raise InvalidInput("The job was already accepted", code="job-already-accepted")
         return self.store.update_job(jid, "rejected")
 
     def regenerate(self, jid: str, seed: int | None = None) -> dict[str, Any]:

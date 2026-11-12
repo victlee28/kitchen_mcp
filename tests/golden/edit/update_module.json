@@ -128,7 +128,7 @@
    },
    "error": {
     "kind": "validation",
-    "code": "invalid-input"
+    "code": "module-id-change"
    }
   }
  ]

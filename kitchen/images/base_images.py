@@ -17,7 +17,7 @@ class BaseImages(Component):
         spec, r = self.store.get(did, rev)
         views = geometry.views_of(spec)
         if view not in views:
-            raise InvalidInput(f"Không có góc nhìn '{view}'. Có: {', '.join(views)}")
+            raise InvalidInput(f"No view {view!r}; there are: {', '.join(views)}", code="view-not-found", params={"view": view, "views": ', '.join(views)})
         d = self.view_dir(did, r, view)
         man = d / "manifest.json"
         scene = geometry.compile_spec(spec)
@@ -28,7 +28,7 @@ class BaseImages(Component):
                 return spec, r, scene, d, m
         w, h = width or VIEW_COLORS[0], height or VIEW_COLORS[1]
         if not (256 <= w <= 4096 and 256 <= h <= 4096):
-            raise InvalidInput("width/height phải trong 256–4096")
+            raise InvalidInput("width/height must be 256-4096", code="bad-image-size")
         render.render_views(spec, d.parent, [view], w, h, meta={"designId": did, "rev": r})
         return spec, r, scene, d, json.loads(man.read_text(encoding="utf-8"))
 
@@ -88,19 +88,20 @@ class BaseImages(Component):
         image and fills the border with its edge colour. Crop/pad change the scale, so the line check may report a mismatch.
         """
         if fit not in ("reject", "crop", "pad"):
-            raise InvalidInput("fit phải là reject, crop hoặc pad")
+            raise InvalidInput("fit must be reject, crop or pad", code="bad-fit")
         import io
         try:
             with Image.open(io.BytesIO(image)) as f:
                 im = f.convert("RGB")
         except (OSError, ValueError) as e:  # PIL: UnidentifiedImageError, truncated or malformed data
-            raise InvalidInput("Ảnh không đọc được (cần PNG/JPEG)") from e
+            raise InvalidInput("The image cannot be read (PNG/JPEG needed)", code="bad-image") from e
         W, H = man["width"], man["height"]
         if im.size != (W, H):
             iw, ih = im.size
             if abs(iw / ih - W / H) > 0.01:
                 if fit == "reject":
-                    raise InvalidInput(f"Ảnh {iw}×{ih} khác tỉ lệ ảnh điều khiển {W}×{H}; chọn cắt/thêm viền hoặc tạo lại đúng tỉ lệ")
+                    raise InvalidInput(f"Image {iw}x{ih} has another aspect ratio than the control images {W}x{H}", code="bad-image-ratio",
+                                           params={"size": f"{iw}×{ih}", "control": f"{W}×{H}"})
                 if fit == "crop":
                     cw, ch = (round(ih * W / H), ih) if iw / ih > W / H else (iw, round(iw * H / W))
                     left, top = (iw - cw) // 2, (ih - ch) // 2
@@ -176,17 +177,17 @@ class BaseImages(Component):
             return d / "albedo.png", {"type": "albedo"}
         if reference == "imported":
             if self._imported_meta(d) is None:
-                raise InvalidInput("Chưa có ảnh nền nhập từ ngoài cho góc này (dùng nút “Nhập ảnh kết quả từ ChatGPT”)")
+                raise InvalidInput("No imported base image for this view yet", code="no-imported-image")
             return d / "base_imported.png", {"type": "imported"}
         if reference == "beauty":
             if not (d / "beauty.png").exists():
-                raise InvalidInput("Chưa có ảnh render three.js cho góc này (mở trang render.html, chọn thiết kế, bấm Render)")
+                raise InvalidInput("No three.js render for this view yet", code="no-beauty-image")
             return d / "beauty.png", {"type": "beauty"}
         j = self.store.get_job(reference)
         if j["design_id"] != did or j["view"] != view:
-            raise InvalidInput("Ảnh gốc thuộc thiết kế/góc nhìn khác")
+            raise InvalidInput("The reference image belongs to another design or view", code="reference-other-view")
         if self._key_of(j) != key:
-            raise InvalidInput("Ảnh gốc thuộc hình học/camera khác (renderKey lệch); hãy dùng ảnh mới hoặc albedo")
+            raise InvalidInput("The reference image was made from other geometry or camera (renderKey differs)", code="reference-stale")
         if j["status"] not in ("accepted", "needs-review"):
-            raise InvalidInput(f"Job {reference} chưa có ảnh dùng được (trạng thái {j['status']})")
+            raise InvalidInput(f"Job {reference} has no usable image yet (status {j['status']})", code="reference-not-ready", params={"job": reference, "status": j["status"]})
         return Path(j["result"]["dir"]) / "composite.png", {"type": "job", "jobId": j["id"]}

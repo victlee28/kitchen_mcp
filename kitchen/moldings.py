@@ -487,16 +487,17 @@ def lower_top(spec: KitchenSpec, new_top: float) -> KitchenSpec:
     old = spec.common.cabinetTop
     delta = old - new_top
     if delta <= 0:
-        raise InvalidInput("Đỉnh mới phải thấp hơn đỉnh hiện tại")
+        raise InvalidInput("The new top must be lower than the current one", code="top-not-lower")
     for m in data["module"]:
         if abs(m["y"] + m["height"] - old) > 1:
             continue
         new_h = m["height"] - delta
         min_h = 150 if m["type"] == "upper-loft" else 300
         if new_h < min_h:
-            raise InvalidInput(f"{m['id']} còn {new_h:g} mm, thấp hơn mức tối thiểu {min_h}")
+            raise InvalidInput(f"{m['id']} would be {new_h:g} mm, below the minimum {min_h}", code="cabinet-too-low",
+                               params={"id": m["id"], "height": f"{new_h:g}", "min": min_h})
         if m.get("niche") and m["y"] + new_h < m["niche"] + 150:
-            raise InvalidInput(f"{m['id']}: phần trên hốc thiết bị còn quá thấp")
+            raise InvalidInput(f"{m['id']}: the part above the appliance niche would be too low", code="niche-top-too-low", params={"id": m["id"]})
         m["height"] = new_h
     c = data["common"]
     if abs(c["upperTierSplit"] - old) <= 1:

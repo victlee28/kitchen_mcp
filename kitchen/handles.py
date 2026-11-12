@@ -49,7 +49,7 @@ def material_ops(spec: KitchenSpec, scene: Scene, part_ids: list[str], material:
             if p.id in wanted:
                 chosen[mod].add(p.id)
     if not chosen:
-        raise InvalidInput("Không có tay nắm nào trong vùng chọn")
+        raise InvalidInput("No handle in the selection", code="no-handle-selected")
     partial = sorted(m for m, ids in chosen.items() if ids != all_by_module[m])
     if partial:
         raise InvalidInput(f"Thiết kế lưu tay nắm theo module và theo tầng, không theo từng tay: {', '.join(partial)} mới chọn một phần "

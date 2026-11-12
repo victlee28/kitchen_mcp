@@ -58,9 +58,9 @@ def normalize(country: str | None = None, region: str | None = None, catalog: Ca
     qg = (country or "").strip().upper() or None
     kv = (region or "").strip().upper() or None
     if qg and qg not in COUNTRIES:
-        raise InvalidInput(f"Mã quốc gia '{qg}' chưa hỗ trợ; dùng một trong: {', '.join(COUNTRIES)}")
+        raise InvalidInput(f"Country code {qg!r} is not supported; use one of {', '.join(COUNTRIES)}", code="bad-country", params={"code": qg, "allowed": ', '.join(COUNTRIES)})
     if kv and kv not in REGIONS:
-        raise InvalidInput(f"Mã khu vực '{kv}' không hợp lệ; dùng một trong: {', '.join(REGIONS)}")
+        raise InvalidInput(f"Region code {kv!r} is not valid; use one of {', '.join(REGIONS)}", code="bad-region", params={"code": kv, "allowed": ', '.join(REGIONS)})
     if qg and not kv:
         kv = COUNTRIES[qg][1]
     return qg, kv

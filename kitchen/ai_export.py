@@ -15,6 +15,7 @@ from pathlib import Path
 
 from .catalog import Catalog
 from . import appliance_models, backends, builtin, geometry, layers, prompts, vocab
+from .errors import InvalidInput
 
 SCHEMA = "kitchen-ai-image-request/1.0"
 
@@ -94,7 +95,7 @@ def build(svc, did: str, rev: int | None = None, views: list[str] | None = None,
     chosen = views or list(all_views)
     bad = [v for v in chosen if v not in all_views]
     if bad:
-        raise ValueError(f"Không có góc nhìn: {bad}. Có: {list(all_views)}")
+        raise InvalidInput(f"No view {bad}; there are {list(all_views)}", code="view-not-found", params={"view": ", ".join(bad), "views": ", ".join(all_views)})
     catalog = svc.catalog_for_revision(did, r)
     out_dir = svc.render_dir / did / f"rev{r}" / "ai"
     out_dir.mkdir(parents=True, exist_ok=True)

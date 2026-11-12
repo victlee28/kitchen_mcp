@@ -237,11 +237,11 @@ def _adhoc(cat: list[dict[str, Any]], layer_id: str) -> tuple[dict[str, Any], li
     by_id = {x["id"]: x for x in cat if x["variant"] == "part"}
     missing = [i for i in ids if i not in by_id]
     if not ids or missing:
-        raise NotFound(f"Không có chi tiết: {', '.join(missing[:3]) or '(danh sách trống)'}")
+        raise NotFound(f"No part: {', '.join(missing[:3]) or '(empty list)'}", code="part-not-found", params={"ids": ', '.join(missing[:3]) or '-'})
     types = sorted({by_id[i]["type"] for i in ids})
     if len(types) > 1:
-        raise InvalidInput("Một việc chỉ gồm chi tiết cùng loại; đang chọn: " + ", ".join(ROLES.get(t, (t,))[0] for t in types)
-                         + ". Tách thành nhiều việc.")
+        raise InvalidInput("One task holds parts of one kind only; selected: " + ", ".join(sorted(types)) + ". Split it into several tasks.",
+                           code="mixed-part-kinds", params={"kinds": ", ".join(ROLES.get(t, (t,))[0] for t in types)})
     first = by_id[ids[0]]
     keys, mats = {by_id[i]["materialLocked"] for i in ids}, {by_id[i]["material"] for i in ids}
     layer = {"id": layer_id, "variant": "group", "module": None, "type": first["type"], "semanticClass": first["semanticClass"],
@@ -258,4 +258,4 @@ def resolve(cat: list[dict[str, Any]], layer_id: str) -> tuple[dict[str, Any], l
     for x in cat:
         if x["id"] == layer_id:
             return x, x.get("component") or [x["id"]]
-    raise NotFound(f"Không có layer: {layer_id}")
+    raise NotFound(f"No layer: {layer_id}", code="layer-not-found", params={"id": layer_id})

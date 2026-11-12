@@ -87,7 +87,7 @@
    },
    "error": {
     "kind": "validation",
-    "code": "invalid-input"
+    "code": "niche-top-too-low"
    }
   }
  ]

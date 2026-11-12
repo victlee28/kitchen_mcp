@@ -54,7 +54,7 @@
    },
    "error": {
     "kind": "not-found",
-    "code": "not-found"
+    "code": "layer-not-found"
    }
   }
  ]

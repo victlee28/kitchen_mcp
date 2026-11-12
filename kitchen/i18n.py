@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
+from string import Formatter
 from typing import Any
 
 from .jsonview import as_dict
@@ -46,6 +47,18 @@ class Messages:
     def table(self, lang: str) -> dict[str, str]:
         """Every key in ``lang``, the default language filling what it lacks."""
         return {**(self.tables.get(DEFAULT_LANG) or {}), **(self.tables.get(lang) or {})}
+
+    def has(self, key: str) -> bool:
+        return any(key in (t or {}) for t in self.tables.values())
+
+    def error(self, code: str, params: Mapping[str, Any], lang: str, fallback: str) -> str:
+        """The words of an error for a reader of ``lang``: ``error.<code>`` filled with ``params``, else ``fallback`` (the English message)."""
+        key = f"error.{code}"
+        if not self.has(key):
+            return fallback
+        template = (self.tables.get(lang) or {}).get(key) or (self.tables.get(DEFAULT_LANG) or {}).get(key) or ""
+        names = {name for _, name, _, _ in Formatter().parse(template) if name}
+        return self.text(key, lang, **dict(params)) if names <= set(params) else fallback   # a value the template names is missing: say it plainly
 
     def missing(self) -> dict[str, list[str]]:
         """Keys each language lacks compared with all the keys any language has."""

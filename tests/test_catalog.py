@@ -474,5 +474,27 @@ class TestMoldingProfilesFromTheCatalog(unittest.TestCase):
         self.assertEqual(self.s.store.get(rec["id"], done["rev"])[0].moldingProfiles, [])
 
 
+class TestErrorWording(unittest.TestCase):
+    """Stage 3.2: errors carry a code and params; the shell words them in the reader's language (data/i18n error.<code>)."""
+
+    def test_every_key_in_both_languages(self):
+        from kitchen import builtin
+        self.assertEqual(builtin.MESSAGES.missing(), {"vi": [], "en": []})
+
+    def test_words_from_code_and_params(self):
+        from kitchen import builtin, edit
+        from kitchen.spec import KitchenSpec
+        fixture = json.loads((ROOT / "fixtures" / "l-shaped-kitchen.json").read_text(encoding="utf-8"))
+        spec = KitchenSpec.model_validate(fixture)
+        with self.assertRaises(NotFound) as e:
+            edit.apply_op(spec, {"op": "stretch-run", "id": "nope", "end": "end", "delta": 100})
+        err = e.exception
+        m = builtin.MESSAGES
+        self.assertIn("nope", m.error(err.code, err.params, "vi", str(err)))
+        self.assertNotEqual(m.error(err.code, err.params, "vi", str(err)), m.error(err.code, err.params, "en", str(err)))
+        self.assertEqual(m.error("run-exists", {}, "vi", "fallback"), "fallback")              # a value the words need is missing
+        self.assertEqual(m.error("no-such-code", {}, "en", "plain"), "plain")
+
+
 if __name__ == "__main__":
     unittest.main()

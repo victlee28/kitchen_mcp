@@ -1,12 +1,14 @@
 """Typed errors (rule R14). The core raises only these; adapters turn ``kind`` into an HTTP status / MCP error in one place.
 
-Kinds are a closed set, ``code`` is a stable kebab-case string clients may match on, ``message`` is for people.
+Kinds are a closed set, ``code`` is a stable kebab-case string clients may match on, ``message`` is for people (English, for logs and
+tests). ``params`` are the values the message names; the shell words the error in the reader's language from ``code`` + ``params``
+(``data/i18n``: key ``error.<code>``), falling back to ``message`` when there is no such key.
 The classes also derive from the builtin they replaced (``ValueError``, ``KeyError``, ``RuntimeError``) so code that still
 catches the builtin keeps working during the migration; new code should catch the kitchen class.
 """
 from __future__ import annotations
 
-from typing import TypeVar
+from typing import Any, TypeVar
 
 T = TypeVar("T")
 
@@ -24,16 +26,17 @@ class KitchenError(Exception):
     kind = VALIDATION
     default_code = "error"
 
-    def __init__(self, message: str = "", code: str | None = None):
+    def __init__(self, message: str = "", code: str | None = None, params: dict[str, Any] | None = None):
         super().__init__(message)
         self.message = message
         self.code = code or self.default_code
+        self.params: dict[str, Any] = dict(params or {})
 
     def __str__(self) -> str:                  # KeyError would otherwise show repr(message) with quotes
         return self.message
 
-    def to_dict(self) -> dict[str, str]:
-        return {"kind": self.kind, "code": self.code, "message": self.message}
+    def to_dict(self) -> dict[str, Any]:
+        return {"kind": self.kind, "code": self.code, "message": self.message, **({"params": self.params} if self.params else {})}
 
 
 class InvalidInput(KitchenError, ValueError):

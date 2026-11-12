@@ -5,8 +5,10 @@ export class ApiError extends Error {
 }
 
 /** Never throws on HTTP errors: {status, ok, data} (data is {} when the body is not JSON). Use for flows that branch on the status (409 = stale). */
+const readerLang = () => { try { return localStorage.getItem('kitchen.lang') || 'vi'; } catch { return 'vi'; } };   // as i18n.js keeps it
+
 export async function request(path, method = 'GET', body, headers = {}) {
-  const opt = { method, headers: { ...headers } };
+  const opt = { method, headers: { 'X-Lang': readerLang(), ...headers } };   // the server words its errors in this language
   if (body !== undefined) { opt.headers['Content-Type'] = 'application/json'; opt.body = JSON.stringify(body); }
   const r = await fetch(path, opt);
   const data = await r.json().catch(() => ({}));

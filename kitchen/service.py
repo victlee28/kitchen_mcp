@@ -15,7 +15,7 @@ from .store import ConflictError, Store
 from . import legacy as legacy_schema
 from . import builtin, catalog as cat, catalog_csv, catalog_files, i18n
 from .config import Config
-from .errors import InvalidInput, NotFound
+from .errors import InvalidInput, KitchenError, NotFound
 ROOT = Path(__file__).resolve().parent.parent
 
 def load_dotenv(path: Path=ROOT / '.env') -> None:
@@ -130,6 +130,10 @@ class KitchenService:
         if info is None:
             raise NotFound(f"No catalog kind {kind!r}", code="catalog-kind-not-found")
         return info
+
+    def error_words(self, e: KitchenError, lang: str | None) -> str:
+        """An error in the reader's language (``error.<code>`` of data/i18n filled with its params), else its English message."""
+        return self.builtin.messages.error(e.code, e.params, i18n.lang_of(lang), str(e))
 
     def messages(self, lang: str | None) -> dict:
         lg = i18n.lang_of(lang)

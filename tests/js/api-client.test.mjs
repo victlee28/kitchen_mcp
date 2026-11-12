@@ -14,7 +14,7 @@ test('request returns the status and data without throwing; sends JSON only with
   assert.equal(calls[0].opt.method, 'POST'); assert.equal(calls[0].opt.headers['Content-Type'], 'application/json'); assert.equal(calls[0].opt.body, '{"a":1}');
   calls = fakeFetch(200, { v: 1 });
   assert.deepEqual(await request('/y'), { status: 200, ok: true, data: { v: 1 } });
-  assert.equal(calls[0].opt.method, 'GET'); assert.deepEqual(calls[0].opt.headers, {}); assert.equal(calls[0].opt.body, undefined);
+  assert.equal(calls[0].opt.method, 'GET'); assert.deepEqual(calls[0].opt.headers, { 'X-Lang': 'vi' }); assert.equal(calls[0].opt.body, undefined);   // the reader's language, no JSON type
   fakeFetch(502, null, { json: false });
   assert.deepEqual(await request('/z'), { status: 502, ok: false, data: {} });
 });
