@@ -1,0 +1,6 @@
+{"openings": [
+ {"kind": "window", "wall": "back", "corners": {"topLeft": [0.3147, 0.398], "topRight": [0.4667, 0.3918], "bottomRight": [0.4667, 0.5614], "bottomLeft": [0.3148, 0.5578]},
+  "edgesSeen": "hole", "style": "swing", "leaves": 2, "verticals": [[0.3885, 0.4773]], "horizontals": [[0.3885, 0.4498]], "confidence": 0.9},
+ {"kind": "door", "wall": "left", "corners": {"topLeft": [-0.0433, 0.3194], "topRight": [0.0962, 0.3504], "bottomRight": [0.0966, 0.8176], "bottomLeft": [-0.0427, 0.8849]},
+  "edgesSeen": "hole", "style": "swing", "leaves": 1, "verticals": [], "horizontals": [], "confidence": 0.9}
+]}

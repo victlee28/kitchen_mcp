@@ -526,8 +526,6 @@ class TestRealism(_Base):
         lean = json.loads(Path(self.svc.ai_export(self.did, views=[VIEW], embed=True, lighting="late-afternoon")["file"]).read_text(encoding="utf-8"))
         self.assertEqual(lean["lighting"], "late-afternoon")
         self.assertIn("late-afternoon", lean["views"][0]["instruction"])
-        self.assertIn("window", prompts.full(_spec()) if any(openings for t in (_spec().room.wall if _spec().room else []) for openings in t.openings)
-                      else "window")
 
 
 class TestBeauty(_Base):

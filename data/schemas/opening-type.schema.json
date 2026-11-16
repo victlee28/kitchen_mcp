@@ -1,0 +1,301 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "opening-type",
+  "description": "A room door, window or passage type (kitchen-opening/1, ADR 0005): the axis template, the leaves, the frame and the standard hole sizes per country. Sizes are always wall-hole sizes.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "operation",
+    "leaves",
+    "label"
+  ],
+  "properties": {
+    "kind": {
+      "type": "string",
+      "enum": [
+        "door",
+        "window",
+        "passage"
+      ]
+    },
+    "operation": {
+      "type": "string",
+      "enum": [
+        "swing",
+        "top-hung",
+        "bottom-hung",
+        "tilt-turn",
+        "sliding",
+        "folding",
+        "fixed"
+      ],
+      "description": "Main way the type opens (lists and prompts); each leaf has its own"
+    },
+    "axesRatio": {
+      "type": "array",
+      "items": {
+        "type": "number",
+        "exclusiveMinimum": 0,
+        "exclusiveMaximum": 1
+      },
+      "description": "Middle vertical axes as fractions of the hole width from the axis start"
+    },
+    "hAxesFromSill": {
+      "type": "array",
+      "items": {
+        "type": "number",
+        "exclusiveMinimum": 0
+      },
+      "description": "Middle horizontal axes, mm above the sill (dropped when the hole is not 100 mm taller)"
+    },
+    "hAxesRatio": {
+      "type": "array",
+      "items": {
+        "type": "number",
+        "exclusiveMinimum": 0,
+        "exclusiveMaximum": 1
+      },
+      "description": "Middle horizontal axes as fractions of the hole height (used when hAxesFromSill is empty)"
+    },
+    "leaves": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "cols",
+          "rows",
+          "operation"
+        ],
+        "properties": {
+          "cols": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": -20,
+              "maximum": 20
+            },
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": -20,
+              "maximum": 20
+            },
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "operation": {
+            "type": "string",
+            "enum": [
+              "swing",
+              "top-hung",
+              "bottom-hung",
+              "tilt-turn",
+              "sliding",
+              "folding",
+              "fixed"
+            ]
+          },
+          "hinge": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": false,
+            "required": [
+              "axis",
+              "index"
+            ],
+            "properties": {
+              "axis": {
+                "type": "string",
+                "enum": [
+                  "v",
+                  "h"
+                ]
+              },
+              "index": {
+                "type": "integer",
+                "minimum": -20,
+                "maximum": 20
+              }
+            }
+          },
+          "opens": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "in",
+              "out",
+              null
+            ],
+            "description": "Default side, seen from the kitchen"
+          },
+          "active": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "frameFace": {
+      "type": "number",
+      "minimum": 0
+    },
+    "frameDepth": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "casing": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "width": {
+          "type": "number",
+          "minimum": 0
+        },
+        "thickness": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    },
+    "threshold": {
+      "type": "number",
+      "minimum": 0
+    },
+    "stop": {
+      "type": "number",
+      "minimum": 0
+    },
+    "transom": {
+      "type": "number",
+      "minimum": 0
+    },
+    "leafThickness": {
+      "type": "number",
+      "minimum": 0
+    },
+    "gap": {
+      "type": "number",
+      "minimum": 0
+    },
+    "minLeaf": {
+      "type": "number",
+      "minimum": 0
+    },
+    "openingAngle": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "maximum": 180
+    },
+    "minWidth": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Narrowest hole width (mm) of this type; a narrower one is asked about before it is made"
+    },
+    "maxWidth": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Widest hole width (mm) of this type; a wider one is asked about before it is made (the kind's limit when absent)"
+    },
+    "defaultWidth": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Hole width (mm) of a new opening of this type when the command gives none (a saved door keeps its own)"
+    },
+    "defaultHeight": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "maximum": 3000
+    },
+    "defaultSill": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 2500
+    },
+    "sizes": {
+      "type": "object",
+      "description": "Standard wall-hole sizes per country code",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "widths": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            }
+          },
+          "heights": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            }
+          }
+        }
+      }
+    },
+    "label": {
+      "type": "object",
+      "required": [
+        "en"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "en": {
+          "type": "string"
+        },
+        "vi": {
+          "type": "string"
+        }
+      }
+    },
+    "prompt": {
+      "type": "string"
+    },
+    "sources": {
+      "type": "array",
+      "description": "Where the standard sizes come from (one entry per country)",
+      "items": {
+        "type": "object",
+        "required": [
+          "country",
+          "kind"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "country": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "mandatory",
+              "standard",
+              "guideline",
+              "practice"
+            ]
+          },
+          "url": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

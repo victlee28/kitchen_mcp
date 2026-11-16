@@ -14,6 +14,7 @@ from collections.abc import Callable
 from typing import Any, TypeVar
 
 from . import compute, contract, pixels, prompts
+from .contract_openings import OpeningAnswer, parse_openings
 from .errors import RecognizerError
 from .vision import VisionClient
 
@@ -35,8 +36,9 @@ def _ask(client: VisionClient, step: str, prompt: str, images: list[bytes],
 
 
 def recognize(image: bytes, client: VisionClient, *, region: str = "VN",
-              retries: int = 1, debug: dict[str, Any] | None = None) -> dict[str, Any]:
-    """Trả {"spec": ..., "answers": {...}}. `debug` (nếu có) nhận ảnh đánh số và số đo."""
+              retries: int = 1, debug: dict[str, Any] | None = None,
+              openings: list[OpeningAnswer] | None = None) -> dict[str, Any]:
+    """Trả {"spec": ..., "answers": {...}}. `debug` (nếu có) nhận ảnh đánh số và số đo. `openings`: câu trả lời bước cửa (None = không hỏi)."""
     raw: dict[str, Any] = {}
     layout = _ask(client, "layout", prompts.layout_prompt(), [image], contract.parse_layout, retries, raw)
     meas = pixels.measure(image, dict(layout))
@@ -49,7 +51,7 @@ def recognize(image: bytes, client: VisionClient, *, region: str = "VN",
     summary = compute.policy_summary(meas, layout, seg)
     policy = _ask(client, "policy", prompts.policy_prompt(region, summary), [],
                   contract.parse_policy, retries, raw)
-    spec = compute.build_spec(meas, layout, seg, policy, refine)
+    spec = compute.build_spec(meas, layout, seg, policy, refine, openings)
     if debug is not None:
         debug.update({"measure": meas, "annotated_png": annotated, "refine": refine,
                       "policy_summary": summary})
@@ -58,7 +60,7 @@ def recognize(image: bytes, client: VisionClient, *, region: str = "VN",
 
 # ---------------- v0.2: tự chọn nhánh ----------------
 
-NOTE_STEPS = ("scene", "policy")      # gợi ý chỉ đi vào các bước hiểu bố cục và chọn chính sách, không vào các bước đo/chia ô
+NOTE_STEPS = ("scene", "openings", "policy")      # gợi ý chỉ đi vào các bước hiểu bố cục và chọn chính sách, không vào các bước đo/chia ô
 
 
 class _NoteClient:
@@ -72,6 +74,23 @@ class _NoteClient:
         return self.inner.complete(step, prompts.with_note(prompt, self.note) if step in NOTE_STEPS else prompt, images)
 
 
+def _openings(client: VisionClient, image: bytes, walls: list[str], retries: int, log: dict[str, Any],
+              warnings: list[dict[str, Any]], prompt: str | None = None) -> list[OpeningAnswer] | None:
+    """Bước ``openings``: cửa đi / cửa sổ trên các tường có dãy tủ. Một bản ghi phát lại cũ (không có bước này) -> None: kết quả không có
+    ``openings``, như trước khi có bước này. Câu trả lời vẫn sai hợp đồng sau khi hỏi lại không làm hỏng phần tủ: không có cửa, kèm cảnh báo."""
+    try:
+        return _ask(client, "openings", prompt or prompts.openings_prompt(walls), [image],
+                    lambda d: parse_openings(d, tuple(walls)), retries, log)
+    except RecognizerError as e:
+        if e.code.endswith("replay-missing-step"):
+            log.pop("openings", None)
+            return None
+        if e.kind == "validation" and "awaiting-answer" not in e.code:
+            warnings.append({"code": "openings-rejected", "message": e.message})
+            return []
+        raise
+
+
 def recognize_auto(image: bytes, client: VisionClient, *, region: str = "VN",
                    retries: int = 1, debug: dict[str, Any] | None = None, note: str = "") -> dict[str, Any]:
     """Hỏi AI bố cục trước: dãy thẳng chụp chính diện -> nhánh v0.1; còn lại -> nhánh phối cảnh. `note`: gợi ý tùy chọn của người dùng."""
@@ -82,9 +101,22 @@ def recognize_auto(image: bytes, client: VisionClient, *, region: str = "VN",
 
     raw: dict[str, Any] = {}
     scene = _ask(client, "scene", prompts.scene_prompt(), [image], contract_persp.parse_scene, retries, raw)
-    if scene["layout"] == "straight" and scene["view"] == "frontal":
-        res = recognize(image, client, region=region, retries=retries, debug=debug)
-        res["answers"] = {"scene": raw["scene"], **res["answers"]}
+    late: list[dict[str, Any]] = []
+    if scene["layout"] == "none":           # chỉ có tường + cửa: không có tủ làm vật chuẩn, nên chỉ ra loại cửa và tỉ lệ
+        from . import compute_openings
+        seen = _openings(client, image, ["back"], retries, raw, late, prompts.opening_photo_prompt()) or []
+        size = pixels_persp.image_size(image)
+        found = compute_openings.photo(seen, size, late)
+        if not found:
+            raise RecognizerError("validation", "no-cabinets-no-openings", "ảnh không có tủ bếp và không thấy cửa nào")
+        return {"spec": {"schema": "cabinet-recognizer/0.2", "unit": "mm", "layout": "none", "modules": [], "appliances": [],
+                         "photoOpenings": found, "materials": scene["materials"], "warnings": late}, "answers": raw}
+    frontal = scene["layout"] == "straight" and scene["view"] == "frontal"
+    openings = _openings(client, image, ["back"] if frontal else [r["wall"] for r in scene["runs"]], retries, raw, late)
+    if frontal:
+        res = recognize(image, client, region=region, retries=retries, debug=debug, openings=openings)
+        res["answers"] = {"scene": raw["scene"], **({"openings": raw["openings"]} if "openings" in raw else {}), **res["answers"]}
+        res["spec"].setdefault("warnings", []).extend(late)
         return res
     meas = pixels_persp.measure_runs(image, dict(scene))
     runs = []
@@ -103,7 +135,8 @@ def recognize_auto(image: bytes, client: VisionClient, *, region: str = "VN",
     summary = compute_persp.preview_summary(scene, meas, runs)
     policy = _ask(client, "policy", prompts.policy_p_prompt(region, summary), [], contract_persp.parse_policy_p,
                   retries, raw)
-    spec = compute_persp.build_spec_p(scene, meas, runs, policy, hrefs)
+    spec = compute_persp.build_spec_p(scene, meas, runs, policy, hrefs, openings, debug)
+    spec["warnings"].extend(late)
     if debug is not None:
         debug.update({"measure": meas, "annotated_runs": annotated, "policy_summary": summary, "heightRefs": hrefs})
     return {"spec": spec, "answers": raw}

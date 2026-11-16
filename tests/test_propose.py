@@ -25,7 +25,7 @@ class Base(unittest.TestCase):
         self.svc = KitchenService(self.tmp / "k.db", self.tmp / "renders")
         self.did = self.svc.create_from_spec(json.loads(json.dumps(FIX)))["id"]
         self.spec, self.rev = self.svc.store.get(self.did)
-        self.first = next(m for m in self.spec.module if m.storey == "base" and m.wall == "back")
+        self.first = next(m for m in self.spec.module if m.id == "TD1")         # the base cabinet of the back wall (now a run)
 
     def tearDown(self):
         shutil.rmtree(self.tmp, ignore_errors=True)
@@ -52,6 +52,9 @@ class TestPropose(Base):
         self.assertFalse(p["validation"]["introducesErrors"])
 
     def test_removing_with_closed_gap_moves_neighbours_and_reports_them_outside_scope(self):
+        # TD3 on the right wall: base cabinets follow it. (Not the back wall's TD1: the tall fridge after it may not slide under the
+        # wall cabinets that stay, so nothing moves there.)
+        self.first = next(m for m in self.spec.module if m.id == "TD3")
         p = self.svc.propose(self.did, {"op": "remove", "id": self.first.id, "closeGap": True}, self.rev, scope=[self.first.id])
         self.assertEqual(p["diff"]["modules"]["removed"], [self.first.id])
         self.assertEqual(p["moduleCount"], {"before": len(self.spec.module), "after": len(self.spec.module) - 1})

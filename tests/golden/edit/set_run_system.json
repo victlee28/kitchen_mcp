@@ -36,7 +36,8 @@
       "x": -1920.0,
       "z": 0.0,
       "yaw": 0.0,
-      "system": "kitchen-a"
+      "system": "kitchen-a",
+      "anchor": "end"
      },
      {
       "id": "R2",
@@ -88,7 +89,8 @@
       "id": "R1",
       "x": -1920.0,
       "z": 0.0,
-      "yaw": 0.0
+      "yaw": 0.0,
+      "anchor": "end"
      },
      {
       "id": "R2",

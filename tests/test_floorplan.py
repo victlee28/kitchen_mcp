@@ -12,6 +12,8 @@ import jsonschema
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from kitchen import floorplan as fpm, intent, threejs_export  # noqa: E402
+from kitchen.spec import Opening  # noqa: E402
+from kitchen.openings import wall_axes  # noqa: E402
 from kitchen.service import KitchenService  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -164,6 +166,23 @@ class TestOpenings(unittest.TestCase):
         self.assertIsNone(next(e for e in fp["elements"] if e["id"] == "d2")["attached"])
         self.assertTrue(any(w["code"] == "opening-unattached" for w in fp["warnings"]))
 
+    def test_a_design_door_on_a_floorplan_wall_is_exported_on_that_wall(self):
+        spec = intent.from_template(intent.parse_prompt("Bếp thẳng 3m")[0])
+        spec.module, spec.appliances = [], []
+        spec.floorplan = fpm.normalize(plan(ROOM))
+        axes = wall_axes.from_floorplan(spec.floorplan)
+        axis = axes[0]
+        spec.openings = [Opening.model_validate({
+            "id": "OP1", "kind": "door", "openingType": "door-swing-1", "wallAxis": axis.ref().to_data(),
+            "center": axis.length / 2, "width": 748, "height": 2100, "source": "human",
+            "leaves": [{"cols": [0, 1], "rows": [0, 1], "operation": "swing", "hinge": {"axis": "v", "index": 0}, "side": "+", "active": True}],
+        })]
+        doc = threejs_export.export(spec)
+        rendered = next(o for w in doc["room"]["walls"] for o in w["openings"] if o["id"] == "OP1")
+        self.assertEqual((rendered["width"], rendered["height"], rendered["openingType"], rendered["wallAxis"]), (748, 2100, "door-swing-1", axis.id))
+        self.assertTrue(rendered["frame"] and rendered["leaves"])
+        jsonschema.Draft202012Validator(json.loads((ROOT / "schemas" / "kitchen-threejs.schema.json").read_text(encoding="utf-8"))).validate(doc)
+
 
 class TestBackDetection(unittest.TestCase):
     def setUp(self):
@@ -262,6 +281,7 @@ class TestBindingAndExport(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.svc.bind_floorplan(a["id"])  # no cabinets yet
         spec.module = self.spec.module
+        spec.runs = self.spec.runs
         spec.appliances = self.spec.appliances
         rev = self.svc.store.add_revision(a["id"], None, spec, {"op": "test"}, "test")
         res = self.svc.bind_floorplan(a["id"], base_revision=rev)

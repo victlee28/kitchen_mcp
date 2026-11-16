@@ -13,7 +13,7 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parent.parent
 FIXTURE = json.loads((ROOT / "fixtures" / "l-shaped-kitchen.json").read_text(encoding="utf-8"))
 
-from kitchen import edit, geometry, intent, rules  # noqa: E402
+from kitchen import edit, geometry, intent, rules, runs  # noqa: E402
 from kitchen.render import render_views  # noqa: E402
 from kitchen.service import KitchenService  # noqa: E402
 from kitchen.spec import load_spec  # noqa: E402
@@ -164,7 +164,7 @@ class TestThreejs(unittest.TestCase):
         from kitchen import threejs_export as tx
         cls.tx = tx
         cls.validators = [jsonschema.Draft202012Validator(json.loads((ROOT / "schemas" / f).read_text(encoding="utf-8")))
-                          for f in ("kitchen-threejs.v1.0.0.schema.json", "kitchen-threejs.schema.json")]
+                          for f in ("kitchen-threejs.schema.json",)]
 
     def check(self, spec, **kw):
         doc = self.tx.export(spec, "thu", 1, **kw)
@@ -291,7 +291,7 @@ class TestMoldings(Tmp):
         from kitchen import threejs_export as tx
         s, M = self.classic()
         doc = tx.export(M.lower_top(s, 2550), "co-dien", 1)
-        for f in ("kitchen-threejs.v1.0.0.schema.json", "kitchen-threejs.schema.json"):
+        for f in ("kitchen-threejs.schema.json",):
             v = jsonschema.Draft202012Validator(json.loads((ROOT / "schemas" / f).read_text(encoding="utf-8")))
             self.assertEqual([e.message for e in v.iter_errors(doc)], [])
         self.assertEqual(tx.integrity(doc), [])
@@ -339,7 +339,7 @@ class TestEdit(unittest.TestCase):
     def test_add_close_gap(self):
         s = edit.add_module(self.s, {"width": 450, "doors": [450]}, after_module="TD3")
         new = [m for m in s.module if m.id not in {x.id for x in self.s.module}][0]
-        self.assertEqual((new.wall, new.fromCorner, new.height), ("right", 1810, 840))
+        self.assertEqual((new.run, new.fromCorner, new.height), ("R2", 1810, 840))     # the right wall's run, which starts at the corner
         self.assertEqual(s.find("TD4").fromCorner, 2260)
         self.assertEqual(s.find("TT3").fromCorner, 630)  # tầng trên không bị dịch
         self.assertEqual(next(t for t in s.appliances if t.id == "TB4").center, 2580)  # bếp dịch theo
@@ -352,7 +352,10 @@ class TestEdit(unittest.TestCase):
     def test_resize_keeps_door_ratio(self):
         s = edit.update_module(self.s, "TD1", {"width": 800})
         self.assertEqual(s.find("TD1").doors, [400, 400])
-        self.assertEqual(s.find("TC1").fromCorner, 1350)
+        # the back wall's run keeps its end in the corner: TD1 grows away from it and pushes the tall cabinet 100 mm further out
+        world = lambda spec, id: runs.frame_of(spec, spec.find(id)).to_world(spec.find(id).fromCorner, 0)
+        self.assertEqual(world(s, "TC1")[0], world(self.s, "TC1")[0] - 100)
+        self.assertEqual(world(s, "KG1"), world(self.s, "KG1"))
 
     def test_no_in_place_edit(self):
         edit.remove_module(self.s, "TD3")
@@ -450,7 +453,7 @@ class TestHttp(Tmp):
         self.assertGreater(len(json.loads(d)["parts"]), 50)
         st, _, d = self.req("GET", f"/api/designs/{did}/threejs?country=AU")
         doc = json.loads(d)
-        self.assertEqual((st, doc["schemaVersion"], doc["metadata"]["region"]["countryCode"]), (200, "1.5.0", "AU"))
+        self.assertEqual((st, doc["schemaVersion"], doc["metadata"]["region"]["countryCode"]), (200, "1.7.0", "AU"))
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { styleFromOptions, styleFromValue, interpretBody, describeInterpret, confirmBody, checkUpload, recognizeBody, recognizeJobBody, anchorFor, describeRecognition, templateIntent, mentionsReference, recognitionLines } from '../../web/assist-logic.js';
+import { opensOrSaves, replacesWithDoor, joinsRuns, styleFromOptions, styleFromValue, interpretBody, describeInterpret, confirmBody, checkUpload, recognizeBody, recognizeJobBody, anchorFor, describeRecognition, templateIntent, mentionsReference, recognitionLines } from '../../web/assist-logic.js';
 
 const prop = (over = {}) => ({ id: 'd1', baseRev: 4, opHash: 'h', operation: { op: 'remove', id: 'TD1' }, applicable: true, unchanged: false,
   diff: { modules: { added: [], removed: ['TD1'], changed: {} }, other: [] }, validation: { introduced: [], resolved: [] }, ...over });
@@ -95,4 +95,16 @@ test('recognition lines are the draft part only', () => {
   const lines = recognitionLines({ status: 'ok', draft, proposal: prop() });
   assert.equal(lines.length, 1); assert.match(lines[0].text, /base/);
   assert.equal(recognitionLines({ status: 'empty', draft: { modules: [], rejected: [], notes: ['n'] } }).length, 1);
+});
+
+test('door, window and save sentences go to the server first', () => {
+  for (const t of ['tạo cửa đi ở vị trí này', 'thay bằng cửa sổ 1200x1400', 'lưu vào database', 'add a window']) assert.equal(opensOrSaves(t), true, t);
+  for (const t of ['thêm tủ dưới', 'sơn trắng']) assert.equal(opensOrSaves(t), false, t);
+  assert.equal(replacesWithDoor('thay thế vật đang chọn bằng cửa đi'), true);
+  assert.equal(replacesWithDoor('tạo cửa đi ở vị trí này'), false);
+});
+
+test('"nối góc" joins two runs', () => {
+  for (const t of ['nối góc', 'nối dãy này với dãy kia', 'join the runs']) assert.equal(joinsRuns(t), true, t);
+  for (const t of ['nối dài tủ', 'tạo cửa đi']) assert.equal(joinsRuns(t), false, t);
 });

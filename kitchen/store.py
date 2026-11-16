@@ -184,7 +184,7 @@ class Store:
                 row = connection.execute('SELECT rev, spec_json FROM revisions WHERE design_id=? AND rev=?', (design_id, rev)).fetchone()
         if not row:
             raise NotFound(f"Design '{design_id}' was not found" + (f' at revision {rev}' if rev else ''), code="design-not-found")
-        return (KitchenSpec.model_validate_json(row['spec_json']), row['rev'])
+        return (as_runs(KitchenSpec.model_validate_json(row['spec_json'])), row['rev'])
 
     def add_revision(self, design_id: str, base_rev: int | None, spec: KitchenSpec, op: dict, source: str='', catalog_json: str | None=None, **legacy) -> int:
         source = legacy.pop('source', source)
@@ -353,3 +353,13 @@ class Store:
         limit = time.time() - self.STALE_AFTER_S
         with self._conn() as connection:
             return connection.execute("UPDATE image_jobs SET status='error:interrupted', error='Process stopped while the job was running', updated_at=CURRENT_TIMESTAMP WHERE status='running' AND (heartbeat_at IS NULL OR heartbeat_at<?)", (limit,)).rowcount
+
+
+def as_runs(spec: KitchenSpec) -> KitchenSpec:
+    """A stored kitchen as the code reads it: every row of cabinets an explicit run (``rows_to_runs``). Revisions saved while cabinets still
+    followed the walls are read this way; they are not rewritten (``tools/rows_to_runs.py`` writes a new revision when asked)."""
+    from . import rows_to_runs
+    if not rows_to_runs.has_rows(spec):
+        return spec
+    data, _ = rows_to_runs.convert(spec)
+    return KitchenSpec.model_validate(data)

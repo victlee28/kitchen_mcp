@@ -2,8 +2,8 @@
 // The server decides what a change means (POST .../propose previews, POST .../ops saves); nothing here edits data directly.
 import { el } from './dom.js';
 import { request } from './api-client.js';
-import { interpretBody, describeInterpret, templateIntent, systemIntent, mentionsReference, checkUpload, recognizeBody, recognizeJobBody, anchorFor, describeRecognition, recognitionLines } from './assist-logic.js';
-import { actionsFor, buildGroupOp, buildOp, describeProposal, groupActions, layerFor, lineTemplate, menuPosition, DOOR_STYLES, HANDLE_VARIANTS, RUN_ACTIONS, RUN_TURNS, systemTemplate, edgeChoices, modelChoices, applianceLayer, lineAlongWall, wallSegments } from './menu-logic.js';
+import { opensOrSaves, replacesWithDoor, joinsRuns, interpretBody, describeInterpret, templateIntent, systemIntent, mentionsReference, checkUpload, recognizeBody, recognizeJobBody, anchorFor, describeRecognition, recognitionLines } from './assist-logic.js';
+import { actionsFor, buildGroupOp, buildOp, describeProposal, groupActions, layerFor, lineTemplate, menuPosition, DOOR_STYLES, HANDLE_VARIANTS, RUN_ACTIONS, RUN_TURNS, systemTemplate, edgeChoices, modelChoices, applianceLayer, lineAlongWall, wallSegments, openingCommand, cabinetTypeChoices } from './menu-logic.js';
 import { groupLabel, groupLayerIds, manySystems } from './design-logic.js';
 import * as catalog from './catalog-client.js';
 import { applianceName, lang, tx } from './i18n.js';
@@ -56,18 +56,19 @@ export function createModuleMenu(ctx) {
     const { spec } = ctx.getState();
     const partName = { door: tx('ui.canh-2'), drawer: tx('ui.mat-ngan-keo-2'), handle: tx('ui.tay-nam-3'), countertop: tx('ui.mat-ban-2') }[target.part];
     const appl = target.kind === 'appliance' ? spec.appliances?.find((a) => a.id === target.id) : null;
-    const title = appl ? `${applianceName(appl.type)} ${appl.id}${appl.name ? ` · ${appl.name}` : ''}` : target.kind === 'part' ? (target.part === 'countertop' ? tx('ui.mat-ban-2') : `${partName} · ${target.id}`)
+    const faces = target.surface ? ctx.getState().surfaces || [] : [];        // wall faces picked before the right click: the sentence is about them
+    const title = faces.length ? tx('ui.surface.menu-title', { n: faces.length }) : appl ? `${applianceName(appl.type)} ${appl.id}${appl.name ? ` · ${appl.name}` : ''}` : target.kind === 'part' ? (target.part === 'countertop' ? tx('ui.mat-ban-2') : `${partName} · ${target.id}`)
       : target.kind === 'module' ? `Module ${target.id}` : target.kind === 'floor' ? (lineFrom ? tx('ui.san-dang-ve-day-tu') : tx('ui.san-2'))
         : tx('ui.thanh-phan-mat-bang', { 0: target.id.replace(/^STRUCT-/, '') });
     box.onkeydown = null;
-    const cmd = target.kind === 'floor' ? null : commandBox();
+    const cmd = commandBox();
     box.replaceChildren(header(title), ...(cmd ? [cmd] : []), el('ul', { class: 'ctx-list' }, ...actionsFor(target, spec, lineFrom).map((a) =>
       el('li', {}, el('button', { type: 'button', onclick: () => choose(a.id) }, a.label)))));
   }
 
   // A free sentence about THIS module (a floorplan object has no module: the sentence then covers the whole design) ("đổi sang màu trắng", "rộng 800"): the server reads it, the preview shows the result, nothing is saved before Áp dụng.
   function commandBox(text = '', message = '', choices = []) {
-    const input = el('input', { type: 'text', value: text, placeholder: target.kind === 'structure' ? tx('ui.ra-lenh-cho-ca-thiet-ke-enter') : target.kind === 'appliance' ? tx('ui.vd-doi-sang-bep-gas-thay-chau') : tx('ui.ra-lenh-cho-enter', { 0: target.id }), autocomplete: 'off', 'aria-label': tx('ui.cau-lenh-cho-module-nay') });
+    const input = el('input', { type: 'text', value: text, placeholder: target.surface && ctx.getState().surfaces?.length ? tx('ui.surface.placeholder') : target.kind === 'floor' ? tx('ui.opening-command-placeholder') : target.kind === 'structure' ? tx('ui.ra-lenh-cho-ca-thiet-ke-enter') : target.kind === 'appliance' ? tx('ui.vd-doi-sang-bep-gas-thay-chau') : tx('ui.ra-lenh-cho-enter', { 0: target.id }), autocomplete: 'off', 'aria-label': tx('ui.cau-lenh-cho-module-nay') });
     const run = () => (attached ? recognizeImage(attached.file, attached.kind, input.value) : command(input.value));
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); run(); } });
     const kind = el('select', { 'aria-label': tx('ui.loai-anh-tham-chieu'), title: tx('ui.loai-anh-tham-chieu') }, el('option', { value: 'photo' }, tx('ui.anh-chup')), el('option', { value: 'drawing' }, tx('ui.ban-ve')));
@@ -97,6 +98,28 @@ export function createModuleMenu(ctx) {
   async function command(text) {
     if (busy) return; const { id, rev } = ctx.getState();
     if (mentionsReference(text)) return redraw(text, tx('ui.cau-lenh-nhac-toi-anh-tham-chieu'));
+    const onCabinets = ['module', 'part', 'group'].includes(target.kind);
+    if (onCabinets && joinsRuns(text)) return joinOnServer(text);
+    const picked = target.surface ? ctx.getState().surfaces || [] : [];      // selected wall faces: the sentence is about them
+    if (!picked.length && opensOrSaves(text) && !(onCabinets && replacesWithDoor(text))) {
+      const said = await openingOnServer(text);
+      if (said !== 'not-opening') return;
+    }
+    let opening;
+    try { opening = onCabinets ? openingCommand(text, target, ctx.getState().spec, ctx.getState().doc) : null; } catch (e) { return redraw(text, e.message); }
+    if (opening) {
+      busy = true; ctx.setStatus(tx('ui.doc-cau-lenh-2'));
+      try {
+        const scope = target.kind === 'module' || (target.kind === 'part' && target.part !== 'countertop') ? [target.id] : undefined;
+        const { status, data } = await call(`/api/designs/${id}/propose`, { op: opening.operation, baseRev: rev, scope });
+        busy = false;
+        if (status === 409) return stale('cmd');
+        if (!data || data.error) return redraw(text, data?.error || tx('ui.loi', { 0: status }));
+        return showPreview('cmd', data, null, [opening.summary, ...(opening.warning ? [{ kind: 'warn', text: opening.warning }] : [])]);
+      } catch (e) { busy = false; return redraw(text, e.message); }
+    }
+    const faces = target.surface ? ctx.getState().surfaces || [] : [];
+    if (faces.length) { let body; try { body = { ...interpretBody(text, rev), surfaces: faces }; } catch (e) { return ctx.setStatus(e.message, 'warn'); } return interpret(text, body); }
     if (target.kind === 'appliance') return applianceModels(text);
     const wish = target.kind === 'structure' ? null : systemIntent(text, styles);
     if (wish) return replaceSystem(text, wish);
@@ -108,6 +131,49 @@ export function createModuleMenu(ctx) {
     }
     let body;
     try { body = interpretBody(text, rev, { scope: target.kind === 'structure' ? undefined : [target.id] }); } catch (e) { return ctx.setStatus(e.message, 'warn'); }
+    return interpret(text, body);
+  }
+
+  // a door, window or passage at the clicked point, or "lưu vào database" for the clicked door / cabinet system (/opening-command);
+  // 'not-opening' when the server reads the sentence as something else
+  async function openingOnServer(text) {
+    const { id, rev } = ctx.getState();
+    const module = ['module', 'part'].includes(target.kind) ? target.id : target.kind === 'group' ? target.group?.modules?.[0] : undefined;
+    const body = { prompt: text, baseRev: rev, ...(target.point ? { point: target.point } : {}), ...(target.kind === 'structure' ? { structureId: target.id } : {}), ...(module ? { module } : {}) };
+    busy = true; ctx.setStatus(tx('ui.doc-cau-lenh-2'));
+    try {
+      const { status, data } = await call(`/api/designs/${id}/opening-command`, body);
+      busy = false;
+      if (status === 409) { stale('cmd'); return 'stale'; }
+      if (!data || data.error) { redraw(text, data?.error || tx('ui.loi', { 0: status })); return 'error'; }
+      if (data.status === 'not-opening') return 'not-opening';
+      if (data.status === 'ok') { showPreview('cmd', data.proposal, null, data.summary || []); return 'ok'; }
+      if (data.status === 'ask') { redraw(text, data.message, data.choices || []); return 'ask'; }      // e.g. a hole wider than the door type allows
+      const line = (data.summary || [])[0] || data.message || '';
+      if (data.status === 'saved') { ctx.setStatus(line, 'ok'); redraw('', line); return 'saved'; }
+      redraw(text, line);
+      return data.status;
+    } catch (e) { busy = false; redraw(text, e.message); return 'error'; }
+  }
+
+  // "nối góc": the run of the clicked cabinet joined to the run that meets it at a corner, any angle
+  async function joinOnServer(text) {
+    const { id, rev } = ctx.getState();
+    const module = ['module', 'part'].includes(target.kind) ? target.id : target.group?.modules?.[0];
+    busy = true; ctx.setStatus(tx('ui.doc-cau-lenh-2'));
+    try {
+      const { status, data } = await call(`/api/designs/${id}/template`, { baseRev: rev, template: { kind: 'join-runs', module } });
+      busy = false;
+      if (status === 409) return stale('cmd');
+      if (!data || data.error) return redraw(text, data?.error || tx('ui.loi', { 0: status }));
+      if (data.status === 'ok') return showPreview('cmd', data.proposal, null, data.summary || []);
+      return redraw(text, data.message || '');
+    } catch (e) { busy = false; return redraw(text, e.message); }
+  }
+
+  // a sentence the server reads (/interpret): a preview, a question back, or "not understood"
+  async function interpret(text, body) {
+    const { id } = ctx.getState();
     busy = true; ctx.setStatus(tx('ui.doc-cau-lenh-2'));
     try {
       const { status, data } = await call(`/api/designs/${id}/interpret`, body);
@@ -142,6 +208,7 @@ export function createModuleMenu(ctx) {
   }
 
   function warning(data) {
+    if (data.mode === 'opening') return tx('ui.opening.from-photo');
     if (!data.structureId) return tx('ui.ket-qua-nhan-dien-se-thay-toan');
     return data.mode === 'replace' ? tx('ui.cac-tu-hien-co-se-bi-thay')
       : tx('ui.day-tu-nhan-dien-duoc-se-duoc');
@@ -295,8 +362,14 @@ export function createModuleMenu(ctx) {
       f.side = m?.run ? el('select', {}, el('option', { value: 'after' }, tx('ui.ben-phai-nhin-tu-truoc')), el('option', { value: 'before' }, tx('ui.ben-trai-nhin-tu-truoc')))
         : el('select', {}, el('option', { value: 'after' }, tx('ui.phia-sau-xa-goc-hon')), el('option', { value: 'before' }, tx('ui.phia-truoc-gan-goc-hon')));
       f.width = el('input', { type: 'number', min: 200, max: 1200, step: 10, value: m?.width || 600 });
+      f.type = el('select', {}, el('option', { value: m?.type || '' }, m?.type || ''));      // the cabinet types of the same storey (catalog kind "cabinet-type")
+      catalog.list('cabinet-type', lang()).then((d) => {
+        const same = cabinetTypeChoices(d.items, m, lang());
+        if (same.length) f.type.replaceChildren(...same.map((c) => el('option', { value: c.id, ...(c.id === m?.type ? { selected: true } : {}) }, c.label)));
+      }).catch(() => { /* the neighbour's type only */ });
       f.closeGap = el('input', { type: 'checkbox', checked: true });
-      fields.push(el('label', {}, tx('ui.vi-tri'), f.side), el('label', {}, tx('ui.chieu-rong-mm-2'), f.width), el('label', { class: 'inline' }, f.closeGap, tx('ui.day-cac-tu-phia-sau-ra')));
+      fields.push(el('label', {}, tx('ui.vi-tri'), f.side), el('label', {}, tx('ui.loai-tu'), f.type), el('label', {}, tx('ui.chieu-rong-mm-2'), f.width),
+        el('label', { class: 'inline' }, f.closeGap, tx('ui.day-cac-tu-phia-sau-ra')));
     }
     const out = el('div', { class: 'ctx-msg' });
     if (message) out.append(err(message));

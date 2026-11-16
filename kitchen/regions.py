@@ -14,7 +14,7 @@ from . import builtin
 from .catalog import Catalog
 from .errors import InvalidInput
 from .i18n import pick
-from .jsonview import as_list
+from .jsonview import as_dict, as_list
 from .words import said
 
 import unicodedata
@@ -37,6 +37,11 @@ def _build(catalog: Catalog) -> Tables:
     for it in [*catalog.all("country"), *catalog.all("region")]:
         for word in as_list(it.data.get("keywords")) or []:
             keywords.setdefault(str(word).lower(), it.id)
+    for it in catalog.all("country"):                 # its name in every language is a keyword too ("for Germany", "tại Tây Ban Nha")
+        names = as_dict(it.data.get("name")) or {}
+        for name in names.values():
+            if isinstance(name, str) and len(name) > 2:
+                keywords.setdefault(unicodedata.normalize("NFC", name).lower(), it.id)
     rank = {it.id: int(it.data.get("rank", 0)) for it in catalog.all("source-type")}
     severity = {it.id: str(it.data.get("severity", "warning")) for it in catalog.all("source-type")}
     return Tables(regs, countries, keywords, rank, severity)

@@ -1,0 +1,35 @@
+{
+ "function": "openings.ops.remove",
+ "cases": [
+  {
+   "name": "remove opening from spec data",
+   "input": {
+    "spec": {
+     "openings": [
+      {
+       "id": "OP1",
+       "width": 900
+      }
+     ]
+    },
+    "id": "OP1"
+   },
+   "expected": {
+    "openings": []
+   }
+  },
+  {
+   "name": "report a missing opening",
+   "input": {
+    "spec": {
+     "openings": []
+    },
+    "id": "OP404"
+   },
+   "error": {
+    "kind": "not-found",
+    "code": "opening-not-found"
+   }
+  }
+ ]
+}

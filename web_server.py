@@ -21,13 +21,15 @@ API:
   GET  /api/material-preview?text=         cách hiểu một tên vật liệu (tiếng Anh, màu, thông số 3D)
   POST /api/cabinet-type-preview           {"id", "data"}: một loại tủ chưa lưu dựng ra sao (tủ mẫu vài cỡ + cảnh báo)
   POST /api/layout-template-preview        {"id", "data", "options"?}: một mẫu bố trí chưa lưu xếp ra sao (bếp mẫu 3 chiều dài, nhìn từ trên)
+  POST /api/opening-type-preview           {"id", "data", "country"?}: một loại cửa chưa lưu trông ra sao (hình chiếu đứng mỗi khổ chuẩn + thông thủy)
   GET  /api/catalog-csv/<kind>             {csv}; POST {csv}: ghi từng dòng vào lớp của vai trò
   GET  /api/regions                       khu vực, quốc gia, số mục
   GET  /api/designs/<id>/history         lịch sử
+  POST /api/designs/<id>/opening-command {"prompt", "point", "structureId"?, "module"?, "baseRev"?}: câu lệnh về cửa đi / cửa sổ ở điểm bấm chuột phải (xem trước), hoặc "lưu vào database" cửa / hệ tủ vừa bấm
   POST /api/designs/<id>/layout-template {"label"?, "id"?, "system"?, "rev"?, "save"?: true} hệ tủ của thiết kế thành một mẫu bố trí (lưu vào danh mục)
   GET  /api/designs/<id>/catalog-updates[?rev=N]  mục danh mục đã đổi kể từ khi bản lưu được ghi + thao tác cập nhật ({"op": "catalog-refresh"})
   POST /api/designs/<id>/ops             {"baseRev": N, "op": {...}, "expect"?: opHash của /propose: chỉ lưu đúng thao tác đã xem trước}
-  POST /api/designs/<id>/interpret       {"text": "xóa TD3", "baseRev"?: N, "scope"?: ["TD1"], "useLlm"?: false} câu lệnh tự do -> thao tác + bản xem trước (không lưu) hoặc câu hỏi làm rõ
+  POST /api/designs/<id>/interpret       {"text": "xóa TD3", "baseRev"?: N, "scope"?: ["TD1"], "surfaces"?: ["wall_006#inside"], "useLlm"?: false} câu lệnh tự do -> thao tác + bản xem trước (không lưu) hoặc câu hỏi làm rõ
   POST /api/designs/<id>/template        {"template": {"kind": "run-i", "structureId": "STRUCT-..", "point": {"x": mm, "z": mm}, "prompt"?: "tạo tủ bếp có tủ lạnh, mặt đá đen…"}, "baseRev"?: N} tủ chữ I dựa vào cạnh gần điểm bấm nhất của vật thể, cánh quay ra ngoài; xem trước, không lưu
   POST /api/designs/<id>/recognize-job  {"job": "<mã job>", "anchor"?, "mode"?, "baseRev"?}   hỏi lại kết quả của lần nhận diện trả "pending" (recognizer "inbox")
   POST /api/designs/<id>/recognize       {"source": {"kind": "photo"|"drawing", "imageBase64": "...", "note"?: "gợi ý, tối đa 500 ký tự"}, "recognizer"?: "gemini"|"cabinet"|"inbox", "anchor"?: {"structureId", "point": {"x","z"}}, "mode"?: "add"|"replace", "baseRev"?: N} ảnh/bản vẽ -> bản nháp thay TOÀN BỘ tủ + xem trước (không lưu); bộ nhận diện mặc định: KITCHEN_RECOGNIZER, rồi "cabinet" (CABINET_RECOGNIZER_URL), rồi "gemini"; chưa có thì status "unavailable"
@@ -167,6 +169,9 @@ class Handler(BaseHTTPRequestHandler):
         if p == "/api/layout-template-preview" and method == "POST":
             body = self._body()
             return self._json(200, s.layout_template_preview(str(body.get("id") or ""), body.get("data") or {}, self._role(), body.get("options")))
+        if p == "/api/opening-type-preview" and method == "POST":
+            body = self._body()
+            return self._json(200, s.opening_type_preview(str(body.get("id") or ""), body.get("data") or {}, self._role(), body.get("country")))
         if p == "/api/cabinet-type-preview" and method == "POST":
             body = self._body()
             return self._json(200, s.cabinet_type_preview(str(body.get("id") or ""), body.get("data") or {}, self._role()))
@@ -196,6 +201,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(200, s.search_knowledge(q.get("q", ""), kinds, q.get("country"), q.get("region"), q.get("regionOnly") == "1"))
         if p == "/api/molding-profiles" and method == "GET":
             return self._json(200, s.molding_profiles(q.get("design")))
+        if p == "/api/opening-types" and method == "GET":
+            return self._json(200, s.opening_types(q.get("country")))
         if p == "/api/regions" and method == "GET":
             return self._json(200, s.list_regions())
         if p == "/api/designs" and method == "GET":
@@ -271,7 +278,7 @@ class Handler(BaseHTTPRequestHandler):
                 b = self._body()
                 return self._json(201, self._job_out(s.images.regenerate(jid, b.get("seed"))))
             raise ApiError(405, "Phương thức không hỗ trợ")
-        m = re.fullmatch(r"/api/designs/([a-z0-9-]+)(?:/(scene|threejs|validate|history|catalog-updates|ops|revert|render|layers|mask|pick|image-jobs|beauty|base-image|ai-export|floorplan-bind|view-status|regenerate-stale|propose|interpret|recognize|recognize-job|template|layout-template))?", p)
+        m = re.fullmatch(r"/api/designs/([a-z0-9-]+)(?:/(scene|threejs|validate|history|catalog-updates|openings|ops|revert|render|layers|mask|pick|image-jobs|beauty|base-image|ai-export|floorplan-bind|view-status|regenerate-stale|propose|interpret|recognize|recognize-job|template|layout-template|opening-command))?", p)
         if not m:
             raise ApiError(404, "Không có endpoint")
         did, sub = m.groups()
@@ -288,6 +295,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(200, s.history(did))
             if sub == "catalog-updates":
                 return self._json(200, s.catalog_updates(did, rev))
+            if sub == "openings":
+                return self._json(200, s.list_openings(did, rev, q.get("country")))
             if sub == "ai-export":  # tải thẳng JSON cuối cùng (không ghi ảnh)
                 emb = q.get("embedImages") == "1" and q.get("format") != "full"  # day-du = ai-request.json đầy đủ (cảnh three.js…)
                 res = s.ai_export(did, rev, [v for v in (q.get("views") or "").split(",") if v] or None, q.get("country"), False, emb,
@@ -363,6 +372,11 @@ class Handler(BaseHTTPRequestHandler):
             if sub == "layout-template":
                 return self._json(200, s.layout_template_from_design(did, self._role(), str(b.get("label") or ""), str(b.get("id") or ""),
                                                                      b.get("system") or None, b.get("rev"), b.get("save", True) is not False))
+            if sub == "opening-command":
+                if not isinstance(b.get("prompt"), str):
+                    raise ApiError(400, "thiếu prompt")
+                place = {k: b.get(k) for k in ("point", "structureId", "module") if b.get(k) is not None}
+                return self._json(200, s.opening_command(did, b["prompt"], place, self._role(), b.get("baseRev"), b.get("country")))
             if sub == "template":
                 if not isinstance(b.get("template"), dict):
                     raise ApiError(400, "thiếu template")
@@ -381,7 +395,10 @@ class Handler(BaseHTTPRequestHandler):
                 scope = b.get("scope")
                 if scope is not None and not (isinstance(scope, list) and all(isinstance(x, str) for x in scope)):
                     raise ApiError(400, "scope phải là danh sách id module")
-                return self._json(200, s.interpret(did, b["text"], b.get("baseRev"), scope, b.get("country"), bool(b.get("useLlm"))))
+                surfaces = b.get("surfaces")
+                if surfaces is not None and not (isinstance(surfaces, list) and all(isinstance(x, str) for x in surfaces)):
+                    raise ApiError(400, "surfaces phải là danh sách id mặt tường")
+                return self._json(200, s.interpret(did, b["text"], b.get("baseRev"), scope, b.get("country"), bool(b.get("useLlm")), surfaces))
             if sub == "revert":
                 return self._json(200, s.revert(did, int(b["rev"]), b.get("baseRev")))
             if sub == "image-jobs":

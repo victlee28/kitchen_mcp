@@ -52,7 +52,7 @@ def run_from_template(color: KitchenTemplate, length: float, catalog: Catalog = 
     one_wall = templates(catalog).get(color.geometry_edit)
     layout = color.geometry_edit if one_wall is not None and one_wall.walls == ("back",) else "I"    # a one-wall template (a saved run) is kept
     t = color.model_copy(update={"geometry_edit": layout, "island": False, "peninsula": False, "backWallLength": float(length)})
-    spec = from_template(t, catalog=catalog)
+    spec = from_template(t, catalog=catalog, as_rows=True)        # the layout by wall: its back row is the run
     back = [m for m in spec.module if m.wall == "back"]
     entries = {m.id: _module(m, length) for m in back}
     for tb in spec.appliances:

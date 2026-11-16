@@ -18,13 +18,6 @@
      "added": [],
      "removed": [],
      "changed": {
-      "KG1": [
-       {
-        "field": "height",
-        "old": 1080.0,
-        "new": 980.0
-       }
-      ],
       "TT9": [
        {
         "field": "height",
@@ -32,11 +25,11 @@
         "new": 230.0
        }
       ],
-      "TT7": [
+      "TC1": [
        {
         "field": "height",
-        "old": 330.0,
-        "new": 230.0
+        "old": 2610.0,
+        "new": 2510.0
        }
       ],
       "TT8": [
@@ -53,11 +46,18 @@
         "new": 230.0
        }
       ],
-      "TC1": [
+      "TT7": [
        {
         "field": "height",
-        "old": 2610.0,
-        "new": 2510.0
+        "old": 330.0,
+        "new": 230.0
+       }
+      ],
+      "KG1": [
+       {
+        "field": "height",
+        "old": 1080.0,
+        "new": 980.0
        }
       ]
      }

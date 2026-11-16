@@ -662,9 +662,9 @@
    "expected": {
     "valid": false,
     "counts": {
-     "error": 1,
-     "warning": 1,
-     "info": 7
+     "error": 2,
+     "warning": 2,
+     "info": 6
     },
     "country": null,
     "region": null,
@@ -698,10 +698,26 @@
       "GEO-COLLISION",
       "error",
       [
-       "TC1",
+       "TD1",
+       "TD2"
+      ],
+      "TD1 và TD2 chồng lên nhau"
+     ],
+     [
+      "GEO-WALL",
+      "error",
+      [
        "TD1"
       ],
-      "TC1 và TD1 chồng lên nhau"
+      "TD1 vượt ra ngoài phòng 1750 mm (dãy R1)"
+     ],
+     [
+      "GEO-CORNER",
+      "warning",
+      [
+       "KG1"
+      ],
+      "KG1: kệ góc nối dãy R1 với dãy R2, nhưng hai dãy không còn gặp nhau ở góc vuông"
      ],
      [
       "KITCHEN-DEFAULT-001",
@@ -736,15 +752,6 @@
        "TB4"
       ],
       "Mặt bàn trống hai bên bếp TB4: 375 / 335 mm (cần ≥381 một bên, ≥305 bên kia)"
-     ],
-     [
-      "NKBA-14",
-      "info",
-      [
-       "TC1",
-       "TB1"
-      ],
-      "Mặt bàn cạnh tủ lạnh TB1 chỉ 0 mm (cần ≥381)"
      ],
      [
       "AS-NZS-5601-1",
@@ -838,7 +845,7 @@
        "TD2",
        "TD4"
       ],
-      "Khe hở 370 mm giữa TD2 và TD4 (tường right)"
+      "Khe hở 370 mm giữa TD2 và TD4 (dãy R2)"
      ],
      [
       "EN-1116",

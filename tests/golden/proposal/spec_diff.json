@@ -21,18 +21,18 @@
       "TD3"
      ],
      "changed": {
-      "TD5": [
-       {
-        "field": "fromCorner",
-        "old": 2440.0,
-        "new": 2070.0
-       }
-      ],
       "TD4": [
        {
         "field": "fromCorner",
         "old": 1810.0,
         "new": 1440.0
+       }
+      ],
+      "TD5": [
+       {
+        "field": "fromCorner",
+        "old": 2440.0,
+        "new": 2070.0
        }
       ]
      }

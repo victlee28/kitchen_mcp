@@ -108,6 +108,9 @@ def _scale_doors(doors: list[int], width: int) -> list[int]:
 
 
 def to_runs(rec: dict[str, Any]) -> dict[str, Any]:
+    if rec.get("layout") == "none":         # ảnh chỉ có cửa: không có dãy; cửa đi theo tỉ lệ, bên nhận đặt nó ở điểm người dùng bấm
+        return {"schema": SCHEMA, "unit": "mm", "layout": "none", "runs": [], "joints": [], "common": {}, "issues": [],
+                "photoOpenings": list(rec.get("photoOpenings") or [])}
     issues: list[dict[str, Any]] = []
     c = rec["common"]
     common = _common(c)
@@ -203,9 +206,44 @@ def to_runs(rec: dict[str, Any]) -> dict[str, Any]:
         mods.sort(key=lambda n: (n["y"], n["s"]))
     ends = {w: (walls_in.get(w, {}).get("end") or (rec.get("rightEnd") if w == "back" else None) or "open") for w in present}
     joints = [{"a": a, "b": b, "angle": 90} for a, b in (("left", "back"), ("back", "right")) if a in runs and b in runs]
+    openings = _openings(rec, present, length) if "openings" in rec else None
     return {"schema": SCHEMA, "unit": "mm", "layout": rec.get("layout", "straight"),
-            "runs": [{"id": w, "length": length[w], "end": ends[w], "modules": runs[w]} for w in present],
+            "runs": [{"id": w, "length": length[w], "end": ends[w], "modules": runs[w], **({"openings": openings[w]} if openings is not None else {})}
+                     for w in present],
             "joints": joints, "common": common, "issues": issues}
+
+
+HIDDEN_CONFIDENCE = 0.3     # một mép bị che: vẫn có vị trí, nhưng bên nhận đánh dấu cần xem lại
+
+
+def _openings(rec: dict[str, Any], present: list[str], length: dict[str, int]) -> dict[str, list[dict[str, Any]]]:
+    """Cửa của từng dãy theo khung dãy: ``axes`` = mọi trục đứng thấy được (hai mép + trục giữa) theo ``s``, ``hAxes`` theo độ cao từ sàn —
+    đúng dạng ``ai`` của bên nhận (kitchen.openings.normalize), chỉ khác ở chỗ ``s`` là của dãy. Dãy trái lật chiều như tủ."""
+    out: dict[str, list[dict[str, Any]]] = {w: [] for w in present}
+    for o in rec.get("openings") or []:
+        wall = o["wall"]
+        if wall not in out:
+            continue
+        conf = float(o.get("confidence", 0.5))
+        unsure = set(o.get("unsure") or [])
+        x0, x1 = int(o["x"]), int(o["x"]) + int(o["width"])
+        edges = [(x0, min(conf, HIDDEN_CONFIDENCE) if "start" in unsure else conf), (x1, min(conf, HIDDEN_CONFIDENCE) if "end" in unsure else conf)]
+        xs = [*edges, *((int(m), conf) for m in o.get("axes") or [])]
+        mirrored = wall == "left"
+        axes = sorted(({"s": length[wall] - x if mirrored else x, "confidence": c} for x, c in xs), key=lambda a: a["s"])
+        item: dict[str, Any] = {"id": o["id"], "kind": o["kind"], "axes": axes}
+        if "sill" in o:
+            item["sill"] = int(o["sill"])
+        item["head"] = int(o["head"])
+        if o.get("hAxes"):
+            item["hAxes"] = [{"h": int(h), "confidence": conf} for h in o["hAxes"]]
+        item.update(edgesSeen=o.get("edgesSeen", "casing"), style=o.get("style", "swing"), leaves=int(o.get("leaves", 1)), confidence=conf)
+        if "head" in unsure:
+            item["unsure"] = ["head"]
+        if o.get("note"):
+            item["note"] = o["note"]
+        out[wall].append(item)
+    return out
 
 
 def check_runs(doc: dict[str, Any]) -> list[str]:

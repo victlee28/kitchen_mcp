@@ -10,7 +10,12 @@
     "module": "TD1"
    },
    "expected": {
-    "frame": null
+    "frame": {
+     "id": "R1",
+     "x": -1920.0,
+     "z": 0.0,
+     "yaw": 0.0
+    }
    }
   },
   {

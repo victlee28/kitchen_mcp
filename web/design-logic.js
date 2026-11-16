@@ -1,14 +1,13 @@
 import { tx } from './i18n.js';
 // Pure logic of the design panels (no DOM, no fetch): list order, form diff, molding payload, AI export URLs.
-export const FIELDS = [['type', 'text'], ['wall', 'text'], ['fromCorner', 'number'], ['width', 'number'], ['y', 'number'], ['tall', 'number'], ['back', 'number'], ['blindCorner', 'number'], ['endPanel', 'number']];
-const WALL_ORDER = { back: 0, corner: 1, right: 2, left: 3, island: 4 };
-
-/** Modules in list order: by wall, then storey height, then distance from the corner. Unknown walls sort last-ish (NaN compares as equal). */
+export const FIELDS = [['type', 'text'], ['fromCorner', 'number'], ['width', 'number'], ['y', 'number'], ['tall', 'number'], ['back', 'number'], ['blindCorner', 'number'], ['endPanel', 'number']];
+/** Modules in list order: by run (R1, R2 … R10), then storey height, then place along the run. */
 export function moduleOrder(modules) {
-  return [...modules].sort((a, b) => (WALL_ORDER[a.wall] - WALL_ORDER[b.wall]) || (a.y - b.y) || ((a.fromCorner || 0) - (b.fromCorner || 0)));
+  const run = (m) => Number(String(m.run || '').replace(/\D/g, '')) || 0;
+  return [...modules].sort((a, b) => (run(a) - run(b)) || (a.y - b.y) || ((a.fromCorner || 0) - (b.fromCorner || 0)));
 }
 
-export const moduleLabel = (m) => `${m.type} · ${m.wall} · ${m.fromCorner ?? 0}+${m.width ?? m.backLength}`;
+export const moduleLabel = (m) => `${m.type} · ${m.run || '-'} · ${m.fromCorner ?? 0}+${m.width ?? m.backLength}`;
 
 /** What the edit form changed. `values` maps field name -> raw string; `doorsText` is the comma separated doors. */
 export function formChanges(m, values, doorsText) {

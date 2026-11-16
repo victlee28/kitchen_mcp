@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from kitchen import cabinet_run, edit, geometry, rules, runs  # noqa: E402
+from kitchen import cabinet_run, edit, geometry, rows_to_runs, rules, runs  # noqa: E402
 from kitchen.errors import InvalidInput  # noqa: E402
 from kitchen.floorplan.geom import point_in_poly  # noqa: E402
 from kitchen.spec import KitchenSpec, from_data, to_data  # noqa: E402
@@ -19,7 +19,15 @@ DIAMOND = [(-2300.0, 1800.0), (-1805.0, 2295.0), (-2300.0, 2790.0), (-2795.0, 22
 
 
 def _spec() -> KitchenSpec:
-    return from_data(KitchenSpec, json.loads(json.dumps(FIX)))
+    """The sample L kitchen, by runs (R1 along the back wall, R2 along the right wall)."""
+    return rows_to_runs.as_runs(from_data(KitchenSpec, json.loads(json.dumps(FIX))))
+
+
+def _new(before: KitchenSpec, after: KitchenSpec) -> tuple[list, list]:
+    """(runs made by an operation, the cabinets standing in them)."""
+    old = {r.id for r in before.runs}
+    made = [r for r in after.runs if r.id not in old]
+    return made, [m for m in after.module if m.run in {r.id for r in made}]
 
 
 class TestAngledTemplate(unittest.TestCase):
@@ -29,8 +37,8 @@ class TestAngledTemplate(unittest.TestCase):
         self.assertIsNone(plan["facing"])
         self.assertAlmostEqual(plan["length"], 700, delta=1)
         out = edit.apply_op(spec, plan["operation"])
-        self.assertEqual(len(out.runs), 1)
-        mods = [m for m in out.module if m.run]
+        made, mods = _new(spec, out)
+        self.assertEqual(len(made), 1)
         self.assertEqual(sum(m.width for m in mods), plan["length"])
         fr = runs.frame_of(out, mods[0])
         nx, nz = fr.normal()
@@ -49,7 +57,7 @@ class TestAngledTemplate(unittest.TestCase):
             spec = _spec()
             plan = cabinet_run.plan_i_run(spec, DIAMOND, point)
             out = edit.apply_op(spec, plan["operation"])
-            mods = [m for m in out.module if m.run]
+            _, mods = _new(spec, out)
             fr = runs.frame_of(out, mods[0])
             for m in mods:
                 self.assertEqual(runs.penetration(runs.module_footprint(fr, m), DIAMOND) > 0.5, False, (i, m.id))
@@ -60,38 +68,38 @@ class TestAngledTemplate(unittest.TestCase):
 class TestRunOps(unittest.TestCase):
     def _with_run(self):
         spec = edit.apply_op(_spec(), {"op": "add-run", "run": {"x": -1500, "z": 2500, "yaw": 30}})
-        self.assertEqual(spec.runs[0].id, "R1")
-        for w in (600, 600):
-            spec = edit.apply_op(spec, {"op": "add", "closeGap": False, "module": {"type": "base", "wall": "island", "run": "R1", "fromCorner": 0 if not any(m.run for m in spec.module) else 600, "width": w, "y": 0, "height": 840, "depth": 550}})
+        self.assertEqual(spec.runs[-1].id, "R3", "after the back wall's and the right wall's runs")
+        for at in (0, 600):
+            spec = edit.apply_op(spec, {"op": "add", "closeGap": False, "module": {"type": "base", "wall": "island", "run": "R3", "fromCorner": at, "width": 600, "y": 0, "height": 840, "depth": 550}})
         return spec
 
     def test_second_run_gets_the_next_id(self):
         spec = self._with_run()
         spec = edit.apply_op(spec, {"op": "add-run", "run": {"x": 0, "z": 3000, "yaw": 90}})
-        self.assertEqual([r.id for r in spec.runs], ["R1", "R2"])
+        self.assertEqual([r.id for r in spec.runs], ["R1", "R2", "R3", "R4"])
         with self.assertRaises(InvalidInput):
-            edit.apply_op(spec, {"op": "add-run", "run": {"id": "R1", "x": 0, "z": 0, "yaw": 0}})
+            edit.apply_op(spec, {"op": "add-run", "run": {"id": "R3", "x": 0, "z": 0, "yaw": 0}})
 
     def test_add_after_a_module_stays_in_its_run(self):
         spec = self._with_run()
-        last = [m for m in spec.module if m.run][-1]
+        last = [m for m in spec.module if m.run == "R3"][-1]
         spec = edit.apply_op(spec, {"op": "add", "afterModule": last.id, "module": {"type": "base", "width": 450}})
         new = spec.module[-1]
-        self.assertEqual((new.run, new.wall, new.fromCorner), ("R1", "island", last.endAt))
+        self.assertEqual((new.run, new.wall, new.fromCorner), ("R3", "island", last.endAt))
 
     def test_removing_the_last_module_drops_the_run(self):
         spec = self._with_run()
-        for m in [m for m in spec.module if m.run]:
+        for m in [m for m in spec.module if m.run == "R3"]:
             spec = edit.apply_op(spec, {"op": "remove", "id": m.id})
-        self.assertEqual(spec.runs, [])
+        self.assertEqual([r.id for r in spec.runs], ["R1", "R2"])
 
     def test_removing_a_cabinet_closes_the_gap_inside_its_run_only(self):
         spec = self._with_run()
-        first, second = [m for m in spec.module if m.run]
+        first, second = [m for m in spec.module if m.run == "R3"]
         spec2 = edit.apply_op(spec, {"op": "remove", "id": first.id})
         self.assertEqual(spec2.find(second.id).fromCorner, 0)
-        # the wall cabinets did not move
-        self.assertEqual([m.fromCorner for m in spec2.module if not m.run], [m.fromCorner for m in spec.module if not m.run])
+        # the cabinets of the other runs did not move
+        self.assertEqual([m.fromCorner for m in spec2.module if m.run != "R3"], [m.fromCorner for m in spec.module if m.run != "R3"])
 
     def test_ids_are_never_reused(self):
         spec = _spec()
@@ -249,3 +257,23 @@ class TestAngledMoldings(unittest.TestCase):
             for u, v in zip(da, db):
                 self.assertAlmostEqual(u, v, delta=1e-6)
         self.assertEqual(len(moldings.meshes(self._spec(True, yaw=37.0))), len(moldings.compute_runs(self._spec(True, yaw=37.0))))
+
+
+class TestMoldingEndsOnWalls(unittest.TestCase):
+    """Moldings on a run at any angle: a run whose end stands on a wall of the room stops there; its free end returns to the wall."""
+
+    def _spec(self, x, z):
+        from kitchen import moldings
+        mods = [{"id": "TD1", "type": "base", "wall": "island", "run": "R1", "fromCorner": 0, "width": 900, "y": 0, "height": 840, "depth": 600}]
+        return KitchenSpec.model_validate({"runs": [{"id": "R1", "x": x, "z": z, "yaw": -30}], "module": mods,
+                                           "moldings": [to_data(m) for m in moldings.default_moldings(False, True)]})
+
+    def test_an_end_on_the_back_wall_stops_flat_and_the_free_end_returns(self):
+        from kitchen import moldings
+        (on_wall,) = moldings.compute_runs(self._spec(-2000.0, 0.0))
+        (free,) = moldings.compute_runs(self._spec(-2000.0, 500.0))
+        self.assertEqual(len(free.points), len(on_wall.points) + 1, "the free start returns to the back line; on the wall it does not")
+        fr = runs.RunFrame("R1", -2000.0, 0.0, -30.0)
+        s, d = fr.to_local(*on_wall.points[-1])
+        self.assertAlmostEqual(s, 0.0, delta=0.5)
+        self.assertGreater(d, 500.0, "the molding ends on the cabinet front, against the wall")

@@ -1,0 +1,64 @@
+[
+ {
+  "id": "bar-black-160",
+  "label": {
+   "vi": "Tay thanh nhôm đen 160",
+   "en": "Black aluminium bar 160"
+  },
+  "variant": "bar",
+  "length": 160,
+  "holeSpacing": 128,
+  "material": "Nhôm đen mờ",
+  "size": {
+   "width": 160,
+   "height": 12,
+   "depth": 30
+  }
+ },
+ {
+  "id": "bar-steel-320",
+  "label": {
+   "vi": "Tay thanh inox 320",
+   "en": "Stainless bar 320"
+  },
+  "variant": "bar",
+  "length": 320,
+  "holeSpacing": 288,
+  "material": "Inox xước",
+  "size": {
+   "width": 320,
+   "height": 12,
+   "depth": 32
+  }
+ },
+ {
+  "id": "knob-brass",
+  "label": {
+   "vi": "Núm tròn đồng",
+   "en": "Brass round knob"
+  },
+  "variant": "knob",
+  "material": "Đồng",
+  "size": {
+   "width": 30,
+   "height": 30,
+   "depth": 25
+  }
+ },
+ {
+  "id": "recessed",
+  "label": {
+   "vi": "Tay âm khoét cánh",
+   "en": "Recessed grip"
+  },
+  "variant": "concealed"
+ },
+ {
+  "id": "push-open",
+  "label": {
+   "vi": "Không tay (nhấn mở)",
+   "en": "Push to open"
+  },
+  "variant": "none"
+ }
+]

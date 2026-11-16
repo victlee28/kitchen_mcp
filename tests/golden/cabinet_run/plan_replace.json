@@ -57,7 +57,7 @@
       {
        "op": "add-run",
        "run": {
-        "id": "R1",
+        "id": "R3",
         "x": 500.0,
         "z": 0.0,
         "yaw": 0.0,
@@ -70,7 +70,7 @@
        "module": {
         "type": "base",
         "wall": "island",
-        "run": "R1",
+        "run": "R3",
         "fromCorner": 0.0,
         "width": 600.0,
         "y": 0.0,
@@ -84,7 +84,7 @@
        "module": {
         "type": "base-sink",
         "wall": "island",
-        "run": "R1",
+        "run": "R3",
         "fromCorner": 600.0,
         "width": 800.0,
         "y": 0.0,
@@ -104,7 +104,7 @@
     },
     "runs": [
      {
-      "id": "R1",
+      "id": "R3",
       "x": 500.0,
       "z": 0.0,
       "yaw": 0.0,
@@ -115,7 +115,7 @@
     "appliancesRemoved": [],
     "summary": [
      "furniture_003 được thay bằng 1 dãy tủ và không vẽ nữa",
-     "Dãy R1: 2 tủ, dài 2500 mm, sâu 600 mm, lưng tựa cạnh 0 sát tường"
+     "Dãy R3: 2 tủ, dài 2500 mm, sâu 600 mm, lưng tựa cạnh 0 sát tường"
     ],
     "length": 2500.0
    }
@@ -202,7 +202,7 @@
       {
        "op": "add-run",
        "run": {
-        "id": "R1",
+        "id": "R3",
         "x": 0.0,
         "z": 0.0,
         "yaw": 0.0,
@@ -215,7 +215,7 @@
        "module": {
         "type": "base",
         "wall": "island",
-        "run": "R1",
+        "run": "R3",
         "fromCorner": 0.0,
         "width": 600.0,
         "y": 0.0,
@@ -229,7 +229,7 @@
        "module": {
         "type": "base-sink",
         "wall": "island",
-        "run": "R1",
+        "run": "R3",
         "fromCorner": 600.0,
         "width": 800.0,
         "y": 0.0,
@@ -243,7 +243,7 @@
       {
        "op": "add-run",
        "run": {
-        "id": "R2",
+        "id": "R4",
         "x": 0.0,
         "z": 1800.0,
         "yaw": 90.0,
@@ -256,7 +256,7 @@
        "module": {
         "type": "base",
         "wall": "island",
-        "run": "R2",
+        "run": "R4",
         "fromCorner": 0.0,
         "width": 600.0,
         "y": 0.0,
@@ -273,14 +273,14 @@
     },
     "runs": [
      {
-      "id": "R1",
+      "id": "R3",
       "x": 0.0,
       "z": 0.0,
       "yaw": 0.0,
       "system": "furniture_003"
      },
      {
-      "id": "R2",
+      "id": "R4",
       "x": 0.0,
       "z": 1800.0,
       "yaw": 90.0,
@@ -291,8 +291,8 @@
     "appliancesRemoved": [],
     "summary": [
      "furniture_003 được thay bằng 2 dãy tủ và không vẽ nữa",
-     "Dãy R1: 2 tủ, dài 2400 mm, sâu 600 mm, lưng tựa cạnh 0 sát tường",
-     "Dãy R2: 1 tủ, dài 1800 mm, sâu 600 mm, lưng tựa cạnh 5 sát tường"
+     "Dãy R3: 2 tủ, dài 2400 mm, sâu 600 mm, lưng tựa cạnh 0 sát tường",
+     "Dãy R4: 1 tủ, dài 1800 mm, sâu 600 mm, lưng tựa cạnh 5 sát tường"
     ],
     "length": 4200.0
    }

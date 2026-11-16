@@ -30,3 +30,4 @@ export async function importCsv(kind, csv) { cache.clear(); return call(`/api/ca
 export const materialPreview = (text) => call('/api/material-preview?text=' + encodeURIComponent(text));
 export const typePreview = (id, data) => call('/api/cabinet-type-preview', 'POST', { id, data });
 export const layoutPreview = (id, data, options) => call('/api/layout-template-preview', 'POST', { id, data, options });
+export const openingPreview = (id, data, country) => call('/api/opening-type-preview', 'POST', { id, data, country });

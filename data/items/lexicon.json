@@ -2432,5 +2432,306 @@
     "base\\s+moldings?"
    ]
   }
+ },
+ {
+  "id": "edit.surface.finish",
+  "group": "edit-surface",
+  "aliases": {
+   "vi": [
+    "sơn",
+    "ốp",
+    "dán",
+    "lát",
+    "phủ",
+    "vật liệu",
+    "chuyển sang",
+    "đổi sang",
+    "đổi thành",
+    "thành",
+    "bằng"
+   ],
+   "en": [
+    "paint it",
+    "paint them",
+    "paint",
+    "tile it",
+    "tile",
+    "clad",
+    "cover it with",
+    "cover with",
+    "finish"
+   ]
+  },
+  "value": "finish"
+ },
+ {
+  "id": "edit.surface.reset",
+  "group": "edit-surface",
+  "aliases": {
+   "vi": [
+    "bỏ vật liệu",
+    "như tường",
+    "mặc định",
+    "trả lại"
+   ],
+   "en": [
+    "remove finish",
+    "reset",
+    "default",
+    "like the wall"
+   ]
+  },
+  "value": "reset"
+ },
+ {
+  "id": "edit.opening.not",
+  "group": "edit-opening",
+  "aliases": {
+   "vi": [
+    "cửa tủ",
+    "cánh cửa",
+    "cửa kính tủ",
+    "cánh tủ"
+   ],
+   "en": [
+    "cabinet door",
+    "cabinet doors"
+   ]
+  },
+  "value": "not"
+ },
+ {
+  "id": "edit.opening.window",
+  "group": "edit-opening",
+  "aliases": {
+   "vi": [
+    "cửa sổ"
+   ],
+   "en": [
+    "window"
+   ]
+  },
+  "value": "window"
+ },
+ {
+  "id": "edit.opening.passage",
+  "group": "edit-opening",
+  "aliases": {
+   "vi": [
+    "lối đi",
+    "lỗ cửa",
+    "ô chờ cửa"
+   ],
+   "en": [
+    "passage",
+    "doorway"
+   ]
+  },
+  "value": "passage"
+ },
+ {
+  "id": "edit.opening.door",
+  "group": "edit-opening",
+  "aliases": {
+   "vi": [
+    "cửa đi",
+    "cửa ra vào",
+    "cửa chính",
+    "cửa"
+   ],
+   "en": [
+    "entry door",
+    "front door",
+    "door"
+   ]
+  },
+  "value": "door"
+ },
+ {
+  "id": "edit.opening.save",
+  "group": "edit-opening",
+  "aliases": {
+   "vi": [
+    "lưu"
+   ],
+   "en": [
+    "save",
+    "store"
+   ]
+  },
+  "value": "save"
+ },
+ {
+  "id": "edit.opening.store",
+  "group": "edit-opening",
+  "aliases": {
+   "vi": [
+    "database",
+    "data base",
+    "cơ sở dữ liệu",
+    "csdl",
+    "thư viện",
+    "danh mục",
+    "mẫu"
+   ],
+   "en": [
+    "database",
+    "library",
+    "catalog",
+    "template"
+   ]
+  },
+  "value": "store"
+ },
+ {
+  "id": "edit.opening.system",
+  "group": "edit-opening",
+  "aliases": {
+   "vi": [
+    "hệ tủ",
+    "dãy tủ",
+    "tủ bếp"
+   ],
+   "en": [
+    "cabinet system",
+    "cabinet run",
+    "cabinets"
+   ]
+  },
+  "value": "system"
+ },
+ {
+  "id": "edit.opening.replace",
+  "group": "edit-opening",
+  "aliases": {
+   "vi": [
+    "thay thế",
+    "thay bằng",
+    "thay",
+    "đổi thành",
+    "đổi sang",
+    "đổi"
+   ],
+   "en": [
+    "replace",
+    "swap",
+    "change to",
+    "turn into"
+   ]
+  },
+  "value": "replace"
+ },
+ {
+  "id": "edit.opening.make",
+  "group": "edit-opening",
+  "aliases": {
+   "vi": [
+    "tạo",
+    "thêm",
+    "đặt",
+    "lắp",
+    "làm",
+    "mở"
+   ],
+   "en": [
+    "add",
+    "create",
+    "make",
+    "put",
+    "place",
+    "insert"
+   ]
+  },
+  "value": "make"
+ },
+ {
+  "id": "edit.opening.height",
+  "group": "edit-opening",
+  "aliases": {
+   "vi": [
+    "cao"
+   ],
+   "en": [
+    "height",
+    "high",
+    "tall"
+   ]
+  },
+  "value": "height"
+ },
+ {
+  "id": "edit.opening.name",
+  "group": "edit-opening",
+  "aliases": {
+   "vi": [
+    "với tên",
+    "đặt tên là",
+    "đặt tên",
+    "tên là",
+    "tên"
+   ],
+   "en": [
+    "named",
+    "called",
+    "with the name"
+   ]
+  },
+  "value": "name"
+ },
+ {
+  "id": "edit.surface.cabinets",
+  "group": "edit-surface",
+  "aliases": {
+   "vi": [
+    "dãy tủ",
+    "tủ bếp",
+    "tủ dưới",
+    "tủ trên",
+    "tủ cao",
+    "tủ",
+    "kệ"
+   ],
+   "en": [
+    "cabinet run",
+    "cabinets",
+    "cabinet",
+    "base units",
+    "shelves"
+   ]
+  },
+  "value": "cabinets"
+ },
+ {
+  "id": "edit.opening.keep-size",
+  "group": "edit-opening",
+  "aliases": {
+   "vi": [
+    "giữ nguyên khổ",
+    "giữ khổ",
+    "vẫn tạo"
+   ],
+   "en": [
+    "keep the size",
+    "keep it"
+   ]
+  },
+  "value": "keep-size"
+ },
+ {
+  "id": "edit.opening.fit-size",
+  "group": "edit-opening",
+  "aliases": {
+   "vi": [
+    "dùng khổ của mẫu",
+    "khổ tối đa",
+    "khổ tối thiểu"
+   ],
+   "en": [
+    "use the type's size",
+    "largest size",
+    "smallest size"
+   ]
+  },
+  "value": "fit-size"
  }
 ]

@@ -14,7 +14,7 @@ sys.path.insert(0, str(ROOT / "tests"))
 from kitchen import cabinet_run, edit, geometry, roomctx, threejs_export  # noqa: E402
 from kitchen.errors import InvalidInput, NotFound  # noqa: E402
 from kitchen.service import KitchenService  # noqa: E402
-from kitchen.spec import KitchenSpec, from_data  # noqa: E402
+from kitchen.spec import KitchenSpec, from_data, load_spec  # noqa: E402
 from test_floorplan import ROOM, elem, plan, rect  # noqa: E402
 
 FIX = json.loads((ROOT / "fixtures" / "l-shaped-kitchen.json").read_text(encoding="utf-8"))
@@ -23,7 +23,7 @@ BOX = [(-2500.0, 2000.0), (-2100.0, 2000.0), (-2100.0, 2400.0), (-2500.0, 2400.0
 
 
 def _spec() -> KitchenSpec:
-    return from_data(KitchenSpec, json.loads(json.dumps(FIX)))
+    return load_spec(json.loads(json.dumps(FIX)))           # by runs, as every design is
 
 
 def _carcass(spec, new_ids):
@@ -80,7 +80,7 @@ class TestPlan(unittest.TestCase):
             run = ops[0]["run"]
             self.assertTrue(all(o["module"]["run"] == run["id"] for o in ops[1:]))
             applied = edit.apply_op(spec, plan["operation"])
-            self.assertEqual(len(applied.runs), 1)
+            self.assertEqual(len(applied.runs), len(spec.runs) + 1)
             self.assertGreaterEqual(plan["length"], 300)
 
 
@@ -93,6 +93,7 @@ class TestService(unittest.TestCase):
         self.svc.apply(self.did, {"op": "add", "module": {"type": "base", "wall": "back", "fromCorner": 0, "width": 600, "y": 0, "height": 840, "depth": 550}}, 1)
         self.svc.bind_floorplan(self.did)
         spec, self.rev = self.svc.store.get(self.did)
+        self.wall_run = spec.module[0].run          # the cabinet added against the back wall: read back as a run of its own
         sc = geometry.compile_spec(spec)
         self.place = roomctx.for_spec(spec, sc.lsau, sc.lphai).placement
 
@@ -116,9 +117,9 @@ class TestService(unittest.TestCase):
         self.svc.apply(self.did, r["operation"], r["baseRev"], "test", r["proposal"]["opHash"])
         spec, rev = self.svc.store.get(self.did)
         self.assertEqual(rev, self.rev + 1)
-        run = [m for m in spec.module if m.wall == "island"]
-        self.assertEqual([(m.run, m.width) for m in run], [("R1", 400.0)], "always an explicit run now")
-        (r1,) = spec.runs
+        run = [m for m in spec.module if m.wall == "island" and m.run != self.wall_run]
+        self.assertEqual([(m.run, m.width) for m in run], [("R2", 400.0)], "always an explicit run now")
+        (r1,) = [r for r in spec.runs if r.id != self.wall_run]
         self.assertEqual((r1.yaw, r1.system), (180.0, "column_a"), "doors look -z; the run belongs to the column's system (its element id)")
 
     def test_every_run_made_against_one_element_is_in_its_system(self):
@@ -127,9 +128,9 @@ class TestService(unittest.TestCase):
             spec, rev = self.svc.store.get(self.did)
             self.svc.apply(self.did, r["operation"], rev, "test", r["proposal"]["opHash"])
         spec, _ = self.svc.store.get(self.did)
-        self.assertEqual([r.system for r in spec.runs], ["column_a", "column_a"])
+        self.assertEqual([r.system for r in spec.runs if r.id != self.wall_run], ["column_a", "column_a"])
         from kitchen import runs
-        made = {m.id for m in spec.module if m.run}
+        made = {m.id for m in spec.module if m.run and m.run != self.wall_run}
         self.assertEqual({runs.systems(spec)[m] for m in made}, {"column_a"})
         self.assertNotIn("STRUCT-column_a", runs.systems(spec).values())
 
@@ -166,10 +167,10 @@ class TestService(unittest.TestCase):
         self.assertFalse(r["proposal"]["validation"]["introducesErrors"], r["proposal"]["validation"])
         self.svc.apply(did, r["operation"], r["baseRev"], "test", r["proposal"]["opHash"])
         spec, rev2 = self.svc.store.get(did)
-        self.assertEqual((rev2, [x.id for x in spec.runs]), (rev + 1, ["R1"]))
+        self.assertEqual((rev2, [x.id for x in spec.runs]), (rev + 1, ["R1", "R2"]), "the back-wall cabinet's run, then the new one")
         self.assertTrue(any(p.frame is not None for p in geometry.compile_spec(spec).parts))
         doc = threejs_export.export(spec, did, rev2)
-        run = doc["runs"][0]
+        run = next(r for r in doc["runs"] if r["sourceRef"] == "R2")
         modules = [m for m in doc["modules"] if m["placement"].get("runId") == run["id"]]
         self.assertTrue(modules)
         # A bound run group must stay aligned with the world transforms of its child modules.

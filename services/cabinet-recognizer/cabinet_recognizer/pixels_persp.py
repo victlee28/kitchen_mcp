@@ -158,3 +158,8 @@ def annotate_run(image: bytes, meas: dict[str, Any], wall: str, box: dict[str, f
     buf = io.BytesIO()
     canvas.save(buf, format="PNG")
     return buf.getvalue()
+
+
+def image_size(image: bytes) -> tuple[int, int]:
+    with Image.open(io.BytesIO(image)) as im:
+        return im.size

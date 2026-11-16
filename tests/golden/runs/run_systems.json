@@ -9,7 +9,10 @@
     }
    },
    "expected": {
-    "systems": {}
+    "systems": {
+     "R1": "auto-R1",
+     "R2": "auto-R1"
+    }
    }
   },
   {

@@ -14,13 +14,21 @@
       "id": "R1",
       "x": -1920.0,
       "z": 0.0,
-      "yaw": 0.0
+      "yaw": 0.0,
+      "purpose": null,
+      "tvLayout": null,
+      "system": null,
+      "anchor": "end"
      },
      {
       "id": "R2",
       "x": -0.0,
       "z": 0.0,
-      "yaw": -90.0
+      "yaw": -90.0,
+      "purpose": null,
+      "tvLayout": null,
+      "system": null,
+      "anchor": null
      }
     ],
     "modules": [
@@ -160,13 +168,21 @@
       "id": "R1",
       "x": -1920.0,
       "z": 0.0,
-      "yaw": 0.0
+      "yaw": 0.0,
+      "purpose": null,
+      "tvLayout": null,
+      "system": null,
+      "anchor": "end"
      },
      {
       "id": "R2",
       "x": -0.0,
       "z": 0.0,
-      "yaw": -90.0
+      "yaw": -90.0,
+      "purpose": null,
+      "tvLayout": null,
+      "system": null,
+      "anchor": null
      }
     ],
     "modules": [

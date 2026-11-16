@@ -6,11 +6,12 @@ Quy ước (ghi cả trong coordinateSystem.notes):
 - Hệ cục bộ của module: x dọc bề rộng (trái -> phải), y lên, z từ hậu ra mặt trước. Vật thể con (part, cánh, ngăn kéo)
   dùng toạ độ cục bộ của module; tay nắm dùng toạ độ cục bộ của cánh/ngăn kéo.
 - Tường sau: rotationY 0 (mặt tủ nhìn +Z); tường phải: -90 (nhìn -X); tường trái: +90 (nhìn +X).
-File xuất ra hợp lệ với CẢ schema gốc v1.0.0 lẫn bản mở rộng v1.2.0.
+File xuất ra hợp lệ với schema hiện hành (schemas/kitchen-threejs.schema.json). Từ 16/11/2026 mọi thiết kế đều theo dãy (khóa ``runs``),
+nên không còn hợp lệ với schema gốc v1.0.0.
 """
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 import math
@@ -18,15 +19,16 @@ import re
 from collections import defaultdict
 
 from .numeric import round_half_away, round_int
-from . import appliance_models, builtin, runs, floorplan as fpmod, roomctx, hardware, regions, vocab
-from .geometry import Part, backsplash_height, compile_spec, views_of
+from . import appliance_models, builtin, runs, floorplan as fpmod, roomctx, hardware, regions, vocab, openings as opening_logic
+from .geometry import Part, backsplash_height, compile_spec, design_surfaces, views_of, wall_length as geometry_wall_length
 from .catalog import Catalog
 from .errors import InvalidInput, require
 from .jsonview import as_dict, as_list
 from .palette import SEGMENT_COLORS, module_color as _module_color
-from .spec import Handle, KitchenSpec, Module, effective_handle
+from .spec import Handle, KitchenSpec, Module, effective_handle, to_data as spec_to_data
 from .words import say
 from . import cabinet_types, defaults
+from .openings.types import get as opening_type_get
 
 ROT = {"back": 0.0, "right": -90.0, "left": 90.0, "corner": 0.0, "island": 180.0}
 TIER = {"base": "base", "upper": "wall", "loft": "top", "tall": "tall", "corner": "corner"}
@@ -112,19 +114,12 @@ class Frame:
         return Frame(pos, r)
 
 
-def _module_frame(m: Module, lsau: float, fr: "runs.RunFrame | None" = None) -> tuple[Frame, tuple[float, float, float]]:
-    if fr is not None:               # explicit run at any angle: the module frame is the run frame moved to s = fromCorner
-        x, z = fr.to_world(m.fromCorner, 0.0)
-        if m.turnsInto:                  # a corner shelf by runs: as wide as its first leg, as deep as its second leg is long
-            return Frame((x, m.y, z), fr.yaw, (m.fromCorner, m.y, 0.0), fr.id), (m.width, m.height, require(m.rightLength, f"{m.id}.rightLength"))
-        return Frame((x, m.y, z), fr.yaw, (m.fromCorner, m.y, 0.0)), (m.width, m.height, m.depth)
-    if m.type == "corner-shelf":
-        bl, rl = require(m.backLength, f"{m.id}.backLength"), require(m.rightLength, f"{m.id}.rightLength")
-        return Frame((-bl, m.y, 0), 0.0), (bl, m.height, rl)
-    seat = runs.seat_of(m, lsau) or runs.wall_seat("left", lsau)   # anchor = the back-left corner seen from the front, whatever seats the cabinet
-    assert seat is not None
-    x, z = seat.to_world(seat.left_end(m.fromCorner, m.fromCorner + m.width), 0)
-    return Frame((x, m.y, z), seat.yaw), (m.width, m.height, m.depth)
+def _module_frame(m: Module, fr: "runs.RunFrame") -> tuple[Frame, tuple[float, float, float]]:
+    """The module frame: the frame of the run it stands in, moved to s = fromCorner (every cabinet stands in a run)."""
+    x, z = fr.to_world(m.fromCorner, 0.0)
+    if m.turnsInto:                  # a corner shelf by runs: as wide as its first leg, as deep as its second leg is long
+        return Frame((x, m.y, z), fr.yaw, (m.fromCorner, m.y, 0.0), fr.id), (m.width, m.height, require(m.rightLength, f"{m.id}.rightLength"))
+    return Frame((x, m.y, z), fr.yaw, (m.fromCorner, m.y, 0.0)), (m.width, m.height, m.depth)
 
 
 def material_look(text: str, catalog: Catalog = builtin.CATALOG) -> dict[str, Any]:
@@ -156,6 +151,21 @@ def _guess_base(text: str, catalog: Catalog) -> dict[str, Any]:
         if (not any_of or any(w in t for w in any_of)) and all(w in t for w in all_of):
             return dict(as_dict(d.get("look")) or _NO_LOOK)
     return dict(_NO_LOOK)
+
+
+def _surface_materials(surfaces: list[dict[str, Any]], finishes: Mapping[str, str], mats_list: list[dict[str, Any]], catalog: Catalog) -> None:
+    """Single wall faces with a finish of their own (``spec.surfaceMaterials``): one material per finish name (``MAT-SURFACE-n``), set
+    as the face's ``materialId``."""
+    by_name: dict[str, str] = {}
+    for sf in surfaces:
+        name = finishes.get(sf["id"])
+        if not name:
+            continue
+        if name not in by_name:
+            by_name[name] = f"MAT-SURFACE-{len(by_name) + 1}"
+            mats_list.append({"id": by_name[name], "name": name, "threeMaterialType": "MeshStandardMaterial", "roughness": 0.85,
+                              "metalness": 0.0, **_guess(name, catalog), "semanticClass": "wall"})
+        sf["materialId"] = by_name[name]
 
 
 def _materials(spec: KitchenSpec, catalog: Catalog) -> tuple[list[dict[str, Any]], dict[str, str]]:
@@ -278,7 +288,7 @@ def _module_entry(spec: KitchenSpec, m: Module, parts: list[Part], frame: Frame,
         "carcaseMaterialId": mats["cornerShelf"] if storey == "corner" else mats["carcass"], "frontMaterialId": mats[front],
         "frontStyle": {"glass": "glass", "frame": "shaker", "flat": "slab"}.get(m.doorStyle or "", ctype.front_style if ctype else "slab"),
         "sourceRef": m.id, "storey": storey,
-        "placement": {**({} if m.wall == "island" else {"wallId": "WALL-BACK" if m.wall == "corner" else f"WALL-{m.wall.upper()}"}),
+        "placement": {**({"wallId": f"WALL-{w.upper()}"} if (w := runs.wall_of(spec, m, geometry_wall_length(spec)[0])) else {}),
                       "alignment": "floor" if m.y == 0 else "wall", "offset": m.fromCorner, "elevation": m.y},
         "construction": {"panelThickness": c.doorThickness, "backThickness": c.backThickness, "plinthHeight": c.plinthHeight if m.y == 0 else 0,
                          "doorOverlay": "full", "gap": c.doorGap, "grainDirection": "vertical",
@@ -405,12 +415,99 @@ def _run_docs(spec: KitchenSpec, modules: list[dict[str, Any]]) -> list[dict[str
 UNSET_TIME = "1970-01-01T00:00:00+00:00"   # what an export made without a clock says; the service always passes the real time
 
 
+def _export_openings(doc: dict[str, Any], spec: KitchenSpec, catalog: Catalog, lsau: float, lphai: float) -> None:
+    """Put the openings the design places (its own, its overrides of floorplan openings) on the exported wall they sit in, with their
+    frame and leaves as boxes the browser draws: ``x`` along the wall from the opening's ``offset``, ``y`` above the sill, ``z``
+    across the wall from its centreline towards the room. A floorplan opening the design removes is taken off its wall."""
+    if not spec.openings:
+        return
+    data = spec_to_data(spec)
+    axes = opening_logic.wall_axes.for_spec(data, lsau, lphai)
+    removed = {o.sourceElement for o in spec.openings if o.sourceElement}
+    for wall in doc["room"]["walls"]:
+        wall["openings"] = [o for o in wall.get("openings", []) if o.get("sourceElement") not in removed]
+    own = {o.id for o in spec.openings} | removed
+    for opening in opening_logic.effective(data, catalog, axes, spec.country):
+        if opening.id not in own and (opening.source_element or "") not in own:
+            continue
+        axis = opening_logic.wall_axes.find(opening.wall_axis, axes)
+        if axis is None:
+            continue
+        type_data = opening_type_get(catalog, opening.opening_type)
+        sh = opening_logic.shape(opening, axis, type_data)
+        p0, p1 = axis.point(sh["edges"][0]), axis.point(sh["edges"][1])
+        best: tuple[float, dict[str, Any], float, float, float] | None = None
+        for wall in doc["room"]["walls"]:
+            sx, sz, ex, ez = wall["start"]["x"], wall["start"]["z"], wall["end"]["x"], wall["end"]["z"]
+            ln = ((ex - sx) ** 2 + (ez - sz) ** 2) ** 0.5
+            if ln <= 0:
+                continue
+            ux, uz = (ex - sx) / ln, (ez - sz) / ln
+            if abs(ux * axis.dir[0] + uz * axis.dir[1]) < 0.999:
+                continue
+            across = abs((p0[0] - sx) * -uz + (p0[1] - sz) * ux)
+            a0 = (p0[0] - sx) * ux + (p0[1] - sz) * uz
+            a1 = (p1[0] - sx) * ux + (p1[1] - sz) * uz
+            if best is None or across < best[0]:
+                best = (across, wall, a0, a1, 1.0 if ux * axis.dir[0] + uz * axis.dir[1] > 0 else -1.0)
+        if (best is None or best[0] > float(wall_thickness_limit(best[1]))) and axis.frame == "room" and axis.inward == 0:
+            best = (0.0, _host_wall(doc, axis), sh["edges"][0], sh["edges"][1], 1.0)     # a wall of another room: a hidden host of its own
+        if best is None or best[0] > float(wall_thickness_limit(best[1])):
+            raise InvalidInput(f"Opening {opening.id} is not on a wall of the exported room", code="opening-host-not-found", params={"id": opening.id})
+        _, wall, a0, a1, same = best
+        offset = min(a0, a1)
+        interior = wall.get("interiorNormal") or {"x": 0, "z": 1}
+        towards = 1.0 if interior["x"] * axis.normal[0] + interior["z"] * axis.normal[1] > 0 else -1.0
+
+        def local(b: Mapping[str, Any]) -> dict[str, float]:
+            xs = [((float(b["s0"]) - sh["edges"][0]) if same > 0 else (sh["edges"][1] - float(b["s1"]))),
+                  ((float(b["s1"]) - sh["edges"][0]) if same > 0 else (sh["edges"][1] - float(b["s0"])))]
+            zs = sorted((float(b["d0"]) * towards, float(b["d1"]) * towards))
+            return {"x0": round_half_away(xs[0], 1), "x1": round_half_away(xs[1], 1), "y0": round_half_away(float(b["y0"]) - opening.sill, 1),
+                    "y1": round_half_away(float(b["y1"]) - opening.sill, 1), "z0": round_half_away(zs[0], 1), "z1": round_half_away(zs[1], 1)}
+
+        record: dict[str, Any] = {
+            "id": opening.id, "type": "pass_through" if opening.kind == "passage" else opening.kind, "offset": round_half_away(offset, 1),
+            "width": opening.width, "height": opening.height, "sillHeight": opening.sill, "openingType": opening.opening_type,
+            "wallAxis": opening.wall_axis.id, "center": opening.center,
+            "frame": [{"part": str(b["part"]), **local(b)} for b in sh["frame"]],
+            "leaves": [{"operation": lf["operation"], "glass": opening.kind == "window", **local(lf)} for lf in sh["leaves"]],
+            **({"sourceElement": opening.source_element} if opening.source_element else {})}
+        wall["openings"] = [o for o in wall["openings"] if o["id"] != opening.id] + [record]
+
+
+def _host_wall(doc: dict[str, Any], axis: opening_logic.WallAxis) -> dict[str, Any]:
+    """The hidden wall record that carries the openings of a wall axis outside the exported room (a wall of another room of the floorplan,
+    drawn as one of its elements): its face on the ``+`` side of the axis, half the wall's thickness out; made once per axis."""
+    wid = f"WALL-{axis.id}"
+    found = next((w for w in doc["room"]["walls"] if w.get("id") == wid), None)
+    if found is not None:
+        return found
+    t = max(g.thickness for g in axis.segments) if axis.segments else 100.0
+    a, b = axis.point(0.0, t / 2), axis.point(axis.length, t / 2)
+    n = axis.normal
+    height = max((float(w.get("height") or 0.0) for w in doc["room"]["walls"]), default=0.0) or 3000.0
+    no_openings: list[dict[str, Any]] = []
+    wall: dict[str, Any] = {"id": wid, "start": _v(round_half_away(a[0], 1), 0, round_half_away(a[1], 1)), "end": _v(round_half_away(b[0], 1), 0, round_half_away(b[1], 1)),
+            "height": height, "thickness": t, "materialId": doc["room"]["walls"][0]["materialId"] if doc["room"]["walls"] else "wall",
+            "interiorNormal": _v(n[0], 0, n[1]), "visible": False, "openings": no_openings}
+    doc["room"]["walls"].append(wall)
+    return wall
+
+
+def wall_thickness_limit(wall: Mapping[str, Any]) -> float:
+    """How far (mm) an opening's hole edge may lie from an exported wall line and still be in that wall."""
+    return float(wall.get("thickness") or 100) + 50.0
+
+
 def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: list[dict[str, Any]] | None = None,
            country: str | None = None, created_at: str = UNSET_TIME, catalog: Catalog = builtin.CATALOG) -> dict[str, Any]:
     """Scene document for ``spec``. Pure: ``created_at`` (ISO-8601 UTC) comes from the caller's clock, never from the wall clock here."""
     from .rules import default_rows
     from .rules_kb import select
+    from .rows_to_runs import as_runs
 
+    spec = as_runs(spec, catalog)
     scene = compile_spec(spec, catalog)
     c = spec.common
     mats_list, mats = _materials(spec, catalog)
@@ -427,7 +524,7 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
               "materialId": mats["wall"], "interiorNormal": _v(0, 0, 1), "openings": []},
              {"id": "WALL-RIGHT", "start": _v(0, 0, 0), "end": _v(0, 0, lphai), "height": c.ceiling, "thickness": 100,
               "materialId": mats["wall"], "interiorNormal": _v(-1, 0, 0), "openings": []}]
-    if any(m.wall == "left" for m in spec.module):
+    if any(runs.run_wall(fr, lsau) == "left" for fr in runs.frames(spec).values()) or any(o.wallAxis is not None and o.wallAxis.id == "left" for o in spec.openings):
         walls.append({"id": "WALL-LEFT", "start": _v(-lsau, 0, 0), "end": _v(-lsau, 0, lphai), "height": c.ceiling, "thickness": 100,
                       "materialId": mats["wall"], "interiorNormal": _v(1, 0, 0), "openings": []})
     if spec.room:
@@ -435,24 +532,27 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
             wall_entry = next((w for w in walls if w["id"] == f"WALL-{tw.id.upper()}"), None)
             if wall_entry:
                 wall_entry["thickness"] = tw.thickness
-                for i, openings in enumerate(tw.openings):
-                    wall_entry["openings"].append({"id": f"{wall_entry['id']}-LO{i + 1}", "type": "window" if openings.type == "window" else "door",
-                                             "offset": openings.fromCorner, "width": openings.width, "height": openings.height, "sillHeight": openings.sillHeight})
     room: dict[str, Any] = {"dimensions": _dims(lsau, c.ceiling, lphai), "walls": walls, "floor": {"materialId": mats["floor"], "thickness": 0},
             "ceiling": {"height": c.ceiling, "materialId": mats["wall"], "render": False}}
     ctx = roomctx.for_spec(spec, lsau, lphai)   # imported floorplan: its room, real walls and elements replace the default room
     floorplan = ctx.floorplan if ctx else None
     binding = ctx.binding if ctx else None
     if ctx and floorplan is not None:
-        sec = fpmod.room_section(floorplan, binding, mats["wall"], ctx.structures)
+        hidden = {o.sourceElement for o in spec.openings if o.sourceElement}       # floorplan openings the design replaces or removes
+        infill = opening_logic.infill_structures(spec_to_data(spec), catalog, opening_logic.wall_axes.for_spec(spec_to_data(spec), lsau, lphai)) \
+            if any(o.removed for o in spec.openings) else []
+        sec = fpmod.room_section(floorplan, binding, mats["wall"],
+                                 [*(st for st in ctx.structures if str(st.get("sourceElement") or st.get("id")) not in hidden), *infill])
         room.update(walls=sec["walls"], structures=sec["structures"], dimensions=_dims(sec["width"], c.ceiling, sec["depth"]))
         room["floor"]["outline"] = sec["floorOutline"]
+    room["surfaces"] = [s.to_data() for s in design_surfaces(spec, scene, catalog, room["walls"], room.get("structures"))]
+    _surface_materials(room["surfaces"], spec.surfaceMaterials or {}, mats_list, catalog)
 
     # module
     modules: list[dict[str, Any]] = []
     system_of = runs.systems(spec)
     for m in spec.module:
-        frame, size = _module_frame(m, lsau, runs.frame_of(spec, m))
+        frame, size = _module_frame(m, require(runs.frame_of(spec, m), f"{m.id}: run"))
         modules.append(_module_entry(spec, m, by_mod.get(m.id, []), frame, size, mats, has_led, catalog))
         modules[-1]["placement"]["cabinetSystemId"] = system_of[m.id]     # the cabinet system (runs.systems): a floorplan element id, auto-…, or design
 
@@ -467,9 +567,8 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
         if not ps:
             continue
         p = ps[0]
-        host = spec.find(tb.module) if tb.module else next((mm for mm in spec.module if mm.wall == tb.wall and mm.storey == "base"
-                                                          and tb.center is not None and mm.fromCorner <= tb.center < mm.endAt), None)
-        wall = host.orient if host and host.wall != "corner" else (tb.wall or "back")
+        host = spec.find(tb.module) if tb.module else None
+        wall = host.orient if host else (tb.wall or "back")
         fr = Frame.for_part(p, wall)
         openings, hi = fr.part_box(p)
         dims = _dims(hi[0] - openings[0], hi[1] - openings[1], hi[2] - openings[2])
@@ -514,9 +613,8 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
         cutouts: list[dict[str, Any]] = []
         for tgt in cut_targets:
             src = next(pp for pp in scene.parts if pp.module == tgt["sourceRef"])
-            inside = (src.run == p.run and src.lmin is not None and src.lmax is not None and p.lmin is not None and p.lmax is not None and
-                      all(p.lmin[k] - 1 <= src.lmin[k] and src.lmax[k] <= p.lmax[k] + 1 for k in (0, 2))) if p.frame is not None else \
-                (src.wall == p.wall and src.frame is None and all(p.min[k] - 1 <= src.min[k] and src.max[k] <= p.max[k] + 1 for k in (0, 2)))
+            inside = (p.frame is not None and src.run == p.run and src.lmin is not None and src.lmax is not None and p.lmin is not None
+                      and p.lmax is not None and all(p.lmin[k] - 1 <= src.lmin[k] and src.lmax[k] <= p.lmax[k] + 1 for k in (0, 2)))
             if inside:
                 llo, lhi = fr.part_box(src)
                 own = next((a.cutout for a in spec.appliances if a.id == tgt["sourceRef"] and a.cutout), None)
@@ -622,10 +720,11 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
     palette.update({f"module:{m.id}": _hex(_module_color(m.id)) for m in spec.module})
 
     doc: dict[str, Any] = {
-        "schemaVersion": "1.5.0",
+        "schemaVersion": "1.7.0",
         "metadata": {"designId": re.sub(r"[^A-Za-z0-9_.:-]", "-", design_id) or "design", "projectName": spec.name,
                      "description": spec.source or "", "style": spec.style, "revision": max(1, rev), "author": "kitchen-design-mcp",
                      "createdAt": created_at,
+                     "level": {"name": spec.level.name, "elevation": spec.level.elevation} if spec.level is not None else {"name": "1", "elevation": 0},
                      "region": {"countryCode": qg, "regionCode": kv, "appliedRules": {t: v["code"] for t, v in sel.items()}},
                      "source": {"generator": "kitchen.threejs_export", "specSchemaVersion": spec.schemaVersion, "specRevision": rev},
                      **({"styleTags": list(spec.styleTags)} if spec.styleTags else {}),
@@ -649,6 +748,7 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
     }
     if isinstance(floorplan, dict):
         doc = fpmod.finish_document(doc, floorplan, binding)
+    _export_openings(doc, spec, catalog, lsau, lphai)
     return doc
 
 
@@ -674,6 +774,7 @@ def integrity(doc: dict[str, Any]) -> list[str]:
     walk(doc, "$")
     for sect in ("modules", "appliances", "accessories", "decorations", "cameras", "lighting", "materials", "assets"):
         ids += [x["id"] for x in doc.get(sect, [])]
+    ids += [opening["id"] for wall in doc["room"]["walls"] for opening in wall.get("openings", [])]
     for m in doc["modules"]:
         ids += [x["id"] for x in m["parts"] + m["doors"] + m["drawers"]]
     dup = {i for i in ids if ids.count(i) > 1}

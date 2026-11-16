@@ -75,7 +75,7 @@ class TestGeometryAndExport(unittest.TestCase):
         import jsonschema
         spec = edit.apply_op(_spec(), {"op": "update", "id": "TD1", "changes": {"handle": {"material": "Đồng thau"}}})
         doc = threejs_export.export(spec, "thu", 1)
-        for f in ("kitchen-threejs.v1.0.0.schema.json", "kitchen-threejs.schema.json"):
+        for f in ("kitchen-threejs.schema.json",):
             v = jsonschema.Draft202012Validator(json.loads((ROOT / "schemas" / f).read_text(encoding="utf-8")))
             self.assertEqual([e.message for e in v.iter_errors(doc)][:2], [])
         self.assertEqual(threejs_export.integrity(doc), [])

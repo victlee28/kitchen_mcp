@@ -74,6 +74,7 @@ class Handle(_Base):
     variant: Literal["bar", "knob", "concealed", "none"] = "bar"  # tay thanh, núm, âm (khoét), không tay (nhấn mở)
     length: float = Field(default=160, ge=0, description="Chiều dài tay thanh (mm)")
     material: str = "Nhôm đen mờ"
+    item: str | None = Field(default=None, description="The catalog handle (kind ``handle``) these settings came from, if any")
 
 
 class HandleOverride(_Base):
@@ -81,10 +82,11 @@ class HandleOverride(_Base):
     variant: Literal["bar", "knob", "concealed", "none"] | None = None
     length: float | None = Field(default=None, ge=0)
     material: str | None = None
+    item: str | None = None
 
 
 class WallOpening(_Base):
-    """Lỗ mở trên tường: cửa sổ / cửa đi."""
+    """Legacy room-wall opening shape; retained only as unvalidated extra data."""
     type: Literal["window", "entrance"] = "window"
     fromCorner: float = Field(ge=0, description="Khoảng cách từ góc dọc theo tường (mm)")
     width: float = Field(gt=0)
@@ -92,11 +94,77 @@ class WallOpening(_Base):
     sillHeight: float = Field(default=0, ge=0, description="Cao độ đáy lỗ mở (bậu cửa sổ), cửa đi = 0")
 
 
+class OpeningAxis(_Base):
+    """The wall axis an opening sits on (kitchen.openings.wall_axes): its id and, for a floorplan axis, the fingerprint it had when
+    the opening was placed (room frame, mm)."""
+    model_config = ConfigDict(extra="forbid")
+    id: str = Field(min_length=1)
+    start: list[float] | None = Field(default=None, min_length=2, max_length=2)
+    dir: list[float] | None = Field(default=None, min_length=2, max_length=2)
+    length: float | None = None
+
+
+class OpeningHinge(_Base):
+    model_config = ConfigDict(extra="forbid")
+    axis: Literal["v", "h"]
+    index: int = Field(ge=0)
+
+
+class OpeningLeaf(_Base):
+    model_config = ConfigDict(extra="forbid")
+    cols: list[int] = Field(min_length=2, max_length=2)
+    rows: list[int] = Field(min_length=2, max_length=2)
+    operation: Literal["swing", "top-hung", "bottom-hung", "tilt-turn", "sliding", "folding", "fixed"]
+    hinge: OpeningHinge | None = None
+    side: Literal["+", "-"] | None = None
+    active: bool = False
+
+
+class Opening(_Base):
+    """A room door, window or passage (contract kitchen-opening/1, ADR 0005): on a wall axis, by its own axes. Checked fully by
+    kitchen.openings.normalize; records saved in the first, axis-less form (host + offset) are still read and upgraded there."""
+    id: str = Field(pattern=r"^OP[1-9][0-9]*$")
+    kind: Literal["door", "window", "passage"]
+    openingType: str | None = Field(default=None, pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+    wallAxis: OpeningAxis | None = None
+    center: float | None = Field(default=None, description="mm along the wall axis from its start to the opening's centre")
+    width: float | None = Field(default=None, gt=0, le=12000, description="The hole in the wall, mm")
+    axes: list[float] | None = Field(default=None, description="Middle vertical axes, mm from the centre; null = as the type")
+    hAxes: list[float] | None = Field(default=None, description="Middle horizontal axes, mm above the sill; null = as the type")
+    leaves: list[OpeningLeaf] = Field(default_factory=list)
+    sill: float = Field(default=0, ge=0, description="mm above the finished floor of the level")
+    height: float | None = Field(default=None, gt=0, le=3000)
+    clearWidth: float | None = Field(default=None, gt=0, le=12000)
+    source: Literal["drawn", "ai", "human"] = "human"
+    unsure: list[str] = Field(default_factory=list)
+    sourceElement: str | None = None
+    removed: bool = False
+    oversize: bool = False      # the user kept a width outside its type's range (minWidth..maxWidth) after being asked
+
+    @model_validator(mode="after")
+    def _placed(self):
+        if self.removed:
+            if not self.sourceElement:
+                raise ValueError("only a floorplan opening (sourceElement) can be removed by a record")
+            return self
+        legacy = getattr(self, "model_extra", None) or {}
+        if self.wallAxis is None and "host" not in legacy:
+            raise ValueError("an opening needs wallAxis and center")
+        if self.wallAxis is not None and (self.center is None or self.width is None):
+            raise ValueError("an opening needs center and width")
+        return self
+
+
+class Level(_Base):
+    """The building level the kitchen is on: every height in the design is above its finished floor (absolute = elevation + it)."""
+    name: str = Field(default="1", min_length=1)
+    elevation: float = Field(default=0, description="mm, the level's finished floor above the building's zero")
+
+
 class Wall(_Base):
     id: Literal["back", "right", "left"]
     length: float = Field(gt=0, description="Chiều dài tường (mm)")
     thickness: float = Field(default=100, gt=0, description="Độ dày tường (mm)")
-    openings: list[WallOpening] = Field(default_factory=list)
 
 
 class Room(_Base):
@@ -121,6 +189,9 @@ class Run(_Base):
     system: str | None = Field(default=None, pattern=r"^[A-Za-z0-9_.-]+$", max_length=80,
                                description="Cabinet system the run belongs to: the id of the floorplan element (elements[].id, e.g. furniture_003) it was made "
                                            "against. Unset: the system is worked out from which runs touch (runs.systems)")
+    anchor: Literal["start", "end"] | None = Field(default=None, description="Which end of the run stays put when a cabinet in it is added, "
+                                                   "removed or resized (closing the gap): start (unset) or end — a run whose end stands in a corner "
+                                                   "(the back wall of an L) grows away from it")
 
 
 class BackPanel(_Base):
@@ -362,6 +433,9 @@ class KitchenSpec(_Base):
     renderPreferences: list[str] = Field(default_factory=list, description="Photography / lighting / quality phrases from the creation prompt; read by kitchen.realism")
     aiHints: list[str] | None = Field(default=None, description="English phrases for the image prompt only (e.g. fluted glass, herringbone tile)")
     floorplan: dict[str, Any] | None = Field(default=None, description="Derived room geometry imported from an audited floorplan (mm); the source document is stored once, referenced by floorplan.ref")
+    openings: list[Opening] = Field(default_factory=list, description="Manual, recognized or explicitly overridden room openings; floorplan openings remain in floorplan data")
+    level: Level | None = Field(default=None, description="Building level of the kitchen; unset = level 1 at elevation 0")
+    surfaceMaterials: dict[str, str] | None = Field(default=None, description="Finish of single wall faces: surface id (kitchen.wall_surfaces, '<wall>#<face>') -> material name; unset faces keep the wall's")
     promptInterpretation: list[dict[str, Any]] | None = Field(default=None, description="How each term of the creation prompt was understood: term, canonical, scope, target, status, message")
     common: Common = Field(default_factory=lambda: Common())
     room: Room | None = None
@@ -391,6 +465,9 @@ class KitchenSpec(_Base):
             raise ValueError("Trùng mã phào")
         if set(mol) & seen:
             raise ValueError("Mã phào trùng mã module")
+        opening_ids = [x.id for x in self.openings]
+        if len(opening_ids) != len(set(opening_ids)):
+            raise ValueError("Duplicate opening id")
         return self
 
     def find(self, id: str) -> Module:
@@ -413,9 +490,11 @@ def effective_handle(common: Common, module: Module) -> Handle:
 
 
 def load_spec(data: dict | str) -> KitchenSpec:
+    """A kitchen read from a file or a request: cabinets given by wall are read as runs (``rows_to_runs``)."""
+    from .rows_to_runs import as_runs
     if isinstance(data, str):
-        return KitchenSpec.model_validate_json(data)
-    return KitchenSpec.model_validate(data)
+        return as_runs(KitchenSpec.model_validate_json(data))
+    return as_runs(KitchenSpec.model_validate(data))
 
 
 def dump_spec(spec: KitchenSpec) -> dict[str, Any]:

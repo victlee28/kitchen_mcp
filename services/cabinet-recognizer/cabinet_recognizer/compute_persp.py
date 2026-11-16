@@ -15,6 +15,8 @@ import math
 from typing import Any
 
 from .contract import Line
+from .compute_openings import place as place_openings
+from .contract_openings import OpeningAnswer
 from .contract_persp import PolicyP, RunSegmentation, Scene
 from .errors import RecognizerError, invalid
 from .labels_vi import APPLIANCE_NAMES, module_name
@@ -215,7 +217,9 @@ def _camera(scene: Scene, meas: dict[str, Any], runs: list[RunSegmentation], pol
 
 
 def build_spec_p(scene: Scene, meas: dict[str, Any], runs: list[RunSegmentation], policy: PolicyP,
-                 height_refs_px: list[dict[str, Any]]) -> dict[str, Any]:
+                 height_refs_px: list[dict[str, Any]], openings: list[OpeningAnswer] | None = None,
+                 probe: dict[str, Any] | None = None) -> dict[str, Any]:
+    """``probe`` (kiểm thử, gỡ lỗi): nhận ``wallPoint(wall, x_mm, h_mm) -> (u, v)`` px, phép ngược của cách đo cửa."""
     warnings: list[dict[str, Any]] = []
     cam, cam_info = _camera(scene, meas, runs, policy, warnings)
     geo = Geometry(cam, meas, scene, policy)
@@ -462,6 +466,21 @@ def build_spec_p(scene: Scene, meas: dict[str, Any], runs: list[RunSegmentation]
     for m in modules:
         m.pop("_src", None)
 
+    # cửa: điểm ảnh trên mặt tường -> dọc tường (cùng gốc với x của module) và độ cao
+    def on_wall(wall: str, u: float, v: float) -> tuple[float, float]:
+        p = geo.cam.on_plane(u, v, "z" if wall == "back" else "x", geo.wall_pos(wall))
+        return geo.along(wall, p) * geo.scale - (back_origin if wall == "back" else 0.0), geo.height_mm(p, kv)
+    def wall_point(wall: str, x_mm: float, h_mm: float) -> tuple[float, float]:
+        y = h_mm / (geo.scale * kv) - 1.0
+        if wall == "back":
+            x = (x_mm + back_origin) / geo.scale + (geo.wall_pos("left") if "left" in geo.walls else 0.0)
+            return geo.cam.project((x, y, geo.wall_pos("back")))
+        return geo.cam.project((geo.wall_pos(wall), y, x_mm / geo.scale + geo.wall_pos("back")))
+    if probe is not None:
+        probe["wallPoint"] = wall_point
+    size = meas["imageSize"]
+    placed_openings = None if openings is None else place_openings(openings, on_wall, (size[0], size[1]), warnings)
+
     common: dict[str, Any] = {
         "plinthHeight": plinth, "worktopTop": worktop, "worktopThickness": thick,
         "baseDepth": policy["baseDepthMm"], "upperBottom": upper_bottom, "upperTop": upper_top,
@@ -480,6 +499,7 @@ def build_spec_p(scene: Scene, meas: dict[str, Any], runs: list[RunSegmentation]
         "common": common,
         "modules": modules,
         "appliances": appliances,
+        **({"openings": placed_openings} if placed_openings is not None else {}),
         "evidence": {
             "region": policy["region"], "camera": cam_info,
             "cameraHeightMm": round_int(geo.scale * kv), "mmPerUnit": round_half_away(geo.scale, 0.1),

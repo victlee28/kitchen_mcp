@@ -68,11 +68,16 @@ class TestSeat(unittest.TestCase):
                 self.assertTrue(mn[0] <= hmn[0] <= hmx[0] <= mx[0] or mn[2] <= hmn[2] <= hmx[2] <= mx[2], "and within the door's width")
 
     def test_exporter_anchor_is_the_back_left_corner_seen_from_the_front(self):
+        """A cabinet given by wall (or a legacy free run) is read into a run; the exporter's anchor stays where it was."""
+        from kitchen import rows_to_runs
         for (wall, facing), (x, z, yaw) in OLD_FRAME.items():
             with self.subTest(seat=(wall, facing)):
                 m = Module(id="M1", type="base", wall=wall, fromCorner=S0, width=S1 - S0, y=0, height=840, depth=DEPTH, offset=POS, facing=facing)
-                frame, size = threejs_export._module_frame(m, LSAU)
-                self.assertEqual(repr((frame.pos[0], frame.pos[2], frame.rot)), repr((x, z, yaw)))
+                spec = rows_to_runs.as_runs(KitchenSpec(module=[m], room={"wall": [{"id": "back", "length": LSAU}, {"id": "right", "length": 4000}]}))
+                one = spec.module[0]
+                frame, size = threejs_export._module_frame(one, runs.frame_of(spec, one))
+                self.assertEqual((round(frame.pos[0], 6) + 0.0, round(frame.pos[2], 6) + 0.0, (frame.rot + 180) % 360 - 180),
+                                 (float(x), float(z), (yaw + 180) % 360 - 180))
                 self.assertEqual(size, (S1 - S0, 840, DEPTH))
 
     def test_only_explicit_runs_have_no_seat(self):

@@ -8,13 +8,13 @@ import jsonschema
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from kitchen import geometry, intent, rules, threejs_export  # noqa: E402
+from kitchen import geometry, intent, rows_to_runs, rules, threejs_export  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def build(prompt):
-    return intent.from_template(intent.parse_prompt(prompt)[0])
+    return intent.from_template(intent.parse_prompt(prompt)[0], as_rows=True)     # the layout by wall; geometry, file and rules read it as runs
 
 
 def island(spec):
@@ -36,7 +36,8 @@ class TestIsland(unittest.TestCase):
         z0 = island(s)[0].offset
         fronts = [p for p in sc.parts if p.wall == "island" and p.type == "drawer"]
         self.assertTrue(fronts and all(p.max[2] <= z0 + s.common.doorThickness + 1 for p in fronts))
-        top = [p for p in sc.parts if p.type == "countertop" and p.wall == "island"]
+        run = rows_to_runs.as_runs(s).find(island(s)[0].id).run
+        top = [p for p in sc.parts if p.type == "countertop" and p.run == run]
         self.assertEqual(len(top), 1)
         self.assertLessEqual(top[0].min[2], z0)
         self.assertGreater(sc.lphai, z0 + s.common.baseDepth)

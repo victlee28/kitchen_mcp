@@ -102,6 +102,23 @@ class TestErrorsEndToEnd(unittest.TestCase):
         self.assertEqual((st, body["code"]), (400, "operation-differs-from-preview"))
         self.assertIn("error", body)
 
+    def test_http_lists_and_edits_effective_openings(self):
+        status, types = self.call("GET", "/api/opening-types?country=VN")
+        self.assertEqual(status, 200)
+        self.assertIn("door-swing-1", {item["id"] for item in types["items"]})
+
+        base_rev = self.svc.store.get(self.did)[1]
+        status, _ = self.call("POST", f"/api/designs/{self.did}/ops", {
+            "baseRev": base_rev,
+            "op": {"op": "add-opening", "opening": {
+                "kind": "door", "wallAxis": "back", "center": 600, "width": 900, "height": 2100,
+            }},
+        })
+        self.assertEqual(status, 200)
+        status, result = self.call("GET", f"/api/designs/{self.did}/openings")
+        self.assertEqual(status, 200)
+        self.assertEqual(result["openings"][0]["id"], "OP1")
+
 
 if __name__ == "__main__":
     unittest.main()

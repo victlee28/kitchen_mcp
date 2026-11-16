@@ -15,6 +15,7 @@ kinds listed in ``ALLOWED_OPS`` pass, so a model cannot ``replace`` the whole de
 from __future__ import annotations
 
 import re
+import unicodedata
 from typing import Any
 
 from .edit import combine_ops
@@ -138,22 +139,40 @@ def _clause(spec: KitchenSpec, f: str, ids: list[str], catalog: Catalog) -> dict
         ops = [{"op": "remove", "id": i} for i in ids]
         return combine_ops(ops), said("summary.edit.remove", ids=", ".join(ids))
     if _says(f, "handle", catalog):
-        variant = _first(f, "edit-handle", catalog)
-        color = _color(f, catalog)
-        length = _mm(f, _verb_words("length", catalog))
+        found = _item_named(f, "handle", catalog)
+        named = found[0] if found else None
+        rest = f.replace(found[1], " " * len(found[1])) if found else f      # the item's own name says nothing more (its colour, its length)
+        variant = _first(rest, "edit-handle", catalog)
+        color = _color(rest, catalog)
+        length = _mm(rest, _verb_words("length", catalog))
         change: dict[str, Any] = {}
+        if named is not None:                 # a handle of the catalog by its name: its kind, length and finish, unless the sentence says otherwise
+            data = catalog.data("handle", named)
+            change.update({"item": named, "variant": str(data.get("variant") or "bar")})
+            if isinstance(data.get("length"), (int, float)):
+                change["length"] = float(data["length"])
+            if isinstance(data.get("material"), str):
+                change["material"] = str(data["material"])
         if variant:
             change["variant"] = variant
         if color:
             change["material"] = color
         if length is not None and variant != "none":
             change["length"] = length
+        if named is not None:
+            data = catalog.data("handle", named)
+            if any(k in change and data.get(k) is not None and change[k] != data.get(k) for k in ("variant", "length", "material")):
+                del change["item"]                # the sentence changed the catalog handle: it is no longer that one
         if not change:
             return _clarify(said("edit.ask.handle"), [say(f"edit.choice.handle.{k}") for k in ("bar", "knob", "concealed", "none")])
         if ids or storeys:
             targets = _pick(spec, ids, storeys)
-            return combine_ops([{"op": "update", "id": i, "changes": {"handle": change}} for i in targets]), said("summary.edit.handle", change=change, ids=", ".join(targets))
-        handle = {**to_data(spec)["common"]["handle"], **change}
+            def own(i: str) -> dict[str, Any]:     # a cabinet that had a catalog handle of its own loses it unless one is named
+                had = next((m.handle for m in spec.module if m.id == i), None)
+                return {**change, "item": None} if "item" not in change and had is not None and had.item else change
+            return combine_ops([{"op": "update", "id": i, "changes": {"handle": own(i)}} for i in targets]), said("summary.edit.handle", change=change, ids=", ".join(targets))
+        current = {k: v for k, v in to_data(spec)["common"]["handle"].items() if k != "item"}     # settings changed by hand: no catalog handle
+        handle = {**current, **change}
         return {"op": "common", "changes": {"handle": handle}}, said("summary.edit.handle-common", change=change)
     style = _first(f, "edit-door", catalog)
     if style and _says(f, "door", catalog):
@@ -218,3 +237,138 @@ def check_operation(op: Any) -> dict[str, Any]:
 
 def module_choices(modules: list[Module]) -> list[str]:
     return [m.id for m in modules][:MAX_CHOICES]
+
+
+def surface_edit(text: str, surfaces: list[str], catalog: Catalog = builtin.CATALOG) -> dict[str, Any]:
+    """A sentence about the wall faces the user selected (``surfaces``: ``kitchen.wall_surfaces`` ids) -> ``surface-material``.
+
+    What follows a finishing verb ("sơn trắng", "ốp gạch thẻ xanh", "đổi sang gỗ sồi") is the material, as written; a colour or wood alone is
+    taken by its name; "bỏ vật liệu" / "như tường" gives the faces back the wall's finish. Other wishes about faces (hang something on the
+    wall, cabinets along it) are not read yet."""
+    raw = unicodedata.normalize("NFC", text).strip()
+    f = fold(raw)                                        # same length as the NFC text: a match in f marks the same words in raw
+    if not f.strip():
+        return {"status": "unsupported", "message": said("edit.empty")}
+    words = _words("edit-surface", catalog)
+    makes = [w for w, v in _words("edit-opening", catalog) if v == "make"]
+    if any(_has(f, w) for w, v in words if v == "cabinets") and any(_has(f, w) for w in makes):
+        return {"status": "cabinets", "prompt": raw}      # cabinets along the face: the caller lays a run on it
+    if any(_has(f, w) for w, v in words if v == "reset"):
+        return {"status": "ok", "operation": {"op": "surface-material", "surfaces": surfaces, "material": None},
+                "summary": [said("summary.edit.surface-material-reset", n=len(surfaces))], "targets": []}
+    spans = [(m.start(), -m.end()) for w, v in words if v == "finish" for m in re.finditer(r"(?:^|\s)" + re.escape(w) + r"\s+", f)]
+    name = raw[-min(spans)[1]:].strip(" .,!;:") if spans else None          # the first verb, its longest wording ("paint it" over "paint")
+    if not name:
+        color = _color(f, catalog)          # a colour alone, written with its accents ("đỏ", not "đó": folding loses them)
+        name = color if color and color.lower() in text.lower() else None
+    if not name:
+        return _clarify(said("edit.ask.surface-material", n=len(surfaces)))
+    name = name[:1].upper() + name[1:]
+    return {"status": "ok", "operation": {"op": "surface-material", "surfaces": surfaces, "material": name[:120]},
+            "summary": [said("summary.edit.surface-material", n=len(surfaces), value=name[:120])], "targets": []}
+
+
+SIZE_PAIR = re.compile(r"(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?\s*[x*]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?(?![a-z0-9])")
+
+
+def _pair(f: str) -> tuple[float, float] | None:
+    """``width x height`` written as one ("1200x2400", "90 x 220 cm"), mm."""
+    m = SIZE_PAIR.search(f)
+    if m is None:
+        return None
+    unit = m.group(4) or m.group(2)
+    scale = {"cm": 10.0, "m": 1000.0}.get(unit or "", 1.0)
+    return (float(round_half_away(float(m.group(1).replace(",", ".")) * scale, 0)), float(round_half_away(float(m.group(3).replace(",", ".")) * scale, 0)))
+
+
+def _item_named(f: str, kind: str, catalog: Catalog) -> tuple[str, str] | None:
+    """``(id, the name found)`` of the catalog item of ``kind`` the sentence names by its whole label (any language) or id; the longest
+    name wins."""
+    best: tuple[int, str, str] | None = None
+    for item in catalog.all(kind):
+        label = as_dict(item.data.get("label")) or {}
+        for name in [fold(str(v)).strip() for v in label.values() if isinstance(v, str)] + [item.id.replace("-", " ")]:
+            if len(name) >= 4 and _has(f, name) and (best is None or len(name) > best[0]):
+                best = (len(name), item.id, name)
+    return (best[1], best[2]) if best else None
+
+
+def _opening_type_named(f: str, catalog: Catalog) -> str | None:
+    """The opening type (catalog kind ``opening-type``, the workshop's and the user's own included) the sentence names by its label or id;
+    the longest name wins ("cửa đi hai cánh có ô thoáng" over "cửa đi hai cánh")."""
+    best: tuple[int, str] | None = None
+    near: tuple[float, int, str] | None = None
+    said_words = set(_tokens(f))
+    for item in catalog.all("opening-type"):
+        label = as_dict(item.data.get("label")) or {}
+        names = [fold(str(v)).strip() for v in label.values() if isinstance(v, str)] + [item.id.replace("-", " "), item.id]
+        for name in names:
+            if len(name) >= 4 and _has(f, name) and (best is None or len(name) > best[0]):
+                best = (len(name), item.id)
+            words_ = _tokens(name)
+            hit = sum(1 for w in words_ if w in said_words)
+            share = hit / len(words_) if words_ else 0.0
+            if hit >= NEAR_MIN_WORDS and share >= NEAR_SHARE and (near is None or (share, -len(words_)) > (near[0], -near[1])):
+                near = (share, len(words_), item.id)
+    if best:
+        return best[1]
+    return near[2] if near else None
+
+
+NEAR_MIN_WORDS = 3          # a type named loosely: at least this many of its label's words in the sentence...
+NEAR_SHARE = 0.6            # ...and this share of them ("cửa đi hai cánh" -> "Cửa đi hai cánh đều")
+_DIGITS = {"1": "mot", "2": "hai", "3": "ba", "4": "bon"}
+
+
+def _tokens(f: str) -> list[str]:
+    """Words of folded text, single digits read as words ("2 cánh" = "hai cánh"), brackets and commas dropped."""
+    found: list[str] = re.findall(r"[a-z0-9]+", f)
+    return [_DIGITS.get(w) or w for w in found]
+
+
+def opening_wish(text: str, catalog: Catalog = builtin.CATALOG) -> dict[str, Any] | None:
+    """A sentence about a room door, window or passage, or about saving what was clicked to the catalog; None when it is neither.
+
+    ``{"action": "save", "name": str | None, "what": "system" | None}``: "lưu vào database", "lưu cửa này thành mẫu tên Cửa nhôm" (``what`` None:
+    whatever was clicked, a door or a cabinet system).
+    ``{"action": "make" | "replace", "kind": "door" | "window" | "passage", "type": id | None, "width"?, "height"?}``: "tạo cửa đi ở vị trí này",
+    "thay bằng cửa sổ 1200x1400", "đặt cửa đi hai cánh". Words of the lexicon group ``edit-opening``; "cửa tủ" (a cabinet door) is not an opening."""
+    raw = unicodedata.normalize("NFC", text).strip()
+    f = fold(raw)
+    words = _words("edit-opening", catalog)
+
+    def said_(value: str) -> list[str]:
+        return [w for w, v in words if v == value and _has(f, w)]
+    if said_("save") and (said_("store") or said_("door") or said_("window") or said_("passage") or said_("system")):
+        name = None
+        for w in sorted((w for w, v in words if v == "name"), key=len, reverse=True):
+            m = re.search(rf"(?<![a-z0-9]){re.escape(w)}(?![a-z0-9])\s*[:\"'“]?\s*", f)
+            if m:
+                name = raw[m.end():].strip(" .,!;:\"'”“") or None
+                break
+        return {"action": "save", "name": name[:80] if name else None, "what": "system" if said_("system") else None}
+    if said_("not"):
+        return None
+    named = _opening_type_named(f, catalog)
+    kind = next((v for w, v in words if v in ("window", "passage", "door") and _has(f, w)), None)
+    if named is not None:
+        kind = str(catalog.data("opening-type", named).get("kind") or kind or "door")
+    if kind is None:
+        return None
+    out: dict[str, Any] = {"action": "replace" if said_("replace") else "make", "kind": kind, "type": named}
+    if said_("keep-size"):
+        out["size"] = "keep"            # answers "the hole is wider than the type allows": keep it (``oversize``)
+    elif said_("fit-size"):
+        out["size"] = "fit"             # ...or bring it into the type's range
+    pair = _pair(f)
+    if pair is not None:
+        out["width"], out["height"] = pair
+    else:
+        high = said_("height")
+        if high:
+            out["height"] = _mm(f, tuple(high))
+        if any(_has(f, w) for w in _verb_words("width", catalog)):
+            out["width"] = _mm(f, _verb_words("width", catalog))
+        elif not high:
+            out["width"] = _mm(f)
+    return {k: v for k, v in out.items() if v is not None or k == "type"}

@@ -21,7 +21,7 @@ class TestInterpret(unittest.TestCase):
         self.svc = KitchenService(self.tmp / "k.db", self.tmp / "renders")
         self.did = self.svc.create_from_spec(json.loads(json.dumps(FIX)))["id"]
         self.spec, self.rev = self.svc.store.get(self.did)
-        self.first = next(m for m in self.spec.module if m.storey == "base" and m.wall == "back")
+        self.first = next(m for m in self.spec.module if m.id == "TD1")         # the base cabinet of the back wall (now a run)
 
     def tearDown(self):
         shutil.rmtree(self.tmp, ignore_errors=True)

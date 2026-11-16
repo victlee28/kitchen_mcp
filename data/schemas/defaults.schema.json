@@ -398,6 +398,30 @@
       "vi": "Thiết bị âm tủ",
       "en": "Built-in appliances"
      }
+    },
+    "openingFrame": {
+     "type": "string",
+     "minLength": 1,
+     "x-label": {
+      "vi": "Khung, nẹp cửa phòng",
+      "en": "Room door and window frames"
+     }
+    },
+    "openingLeaf": {
+     "type": "string",
+     "minLength": 1,
+     "x-label": {
+      "vi": "Cánh cửa đi phòng",
+      "en": "Room door leaves"
+     }
+    },
+    "openingGlass": {
+     "type": "string",
+     "minLength": 1,
+     "x-label": {
+      "vi": "Kính cửa sổ, ô thoáng",
+      "en": "Window and transom glass"
+     }
     }
    }
   },
@@ -443,6 +467,15 @@
      "x-label": {
       "vi": "Cửa xa tủ hơn mức này là của phòng khác (mm)",
       "en": "Openings further than this from every cabinet belong to another room (mm)"
+     }
+    },
+    "snapTolerance": {
+     "type": "number",
+     "minimum": 0,
+     "maximum": 100,
+     "x-label": {
+      "vi": "Dung sai bắt khổ cửa (mm)",
+      "en": "Opening size snap tolerance (mm)"
      }
     }
    }

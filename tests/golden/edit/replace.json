@@ -62,7 +62,7 @@
         },
         {
          "field": "fromCorner",
-         "old": 550.0,
+         "old": 670.0,
          "new": 0.0
         },
         {
@@ -103,8 +103,8 @@
          "type": "sink",
          "dimensions": "780 × 410",
          "position": "Trên TD2, tâm cách góc 1000",
-         "module": null,
-         "wall": "right",
+         "module": "TD2",
+         "wall": null,
          "center": 1000.0,
          "model": null,
          "energy": null,
@@ -118,8 +118,8 @@
          "type": "faucet",
          "dimensions": "cao 310",
          "position": "Sau chậu rửa",
-         "module": null,
-         "wall": "right",
+         "module": "TD2",
+         "wall": null,
          "center": 1000.0,
          "model": null,
          "energy": null,
@@ -133,8 +133,8 @@
          "type": "cooktop",
          "dimensions": "730 × 430",
          "position": "Tâm cách góc 2130",
-         "module": null,
-         "wall": "right",
+         "module": "TD4",
+         "wall": null,
          "center": 2130.0,
          "model": null,
          "energy": null,
@@ -399,6 +399,35 @@
        "new": null
       },
       {
+       "path": "room.wall[back].length",
+       "old": 2520.0,
+       "new": 1200.0
+      },
+      {
+       "path": "room.wall[right].length",
+       "old": 3430.0,
+       "new": 600.0
+      },
+      {
+       "path": "runs[R1].x",
+       "old": -1920.0,
+       "new": -600.0
+      },
+      {
+       "path": "runs[R2]",
+       "old": {
+        "id": "R2",
+        "x": -0.0,
+        "z": 0.0,
+        "yaw": -90.0,
+        "purpose": null,
+        "tvLayout": null,
+        "system": null,
+        "anchor": null
+       },
+       "new": null
+      },
+      {
        "path": "source",
        "old": "Ước lượng từ phối cảnh ảnh render (hiệu chỉnh camera theo 18 điểm, sai số trung bình 1,4 px), quy về chiều cao mặt bếp 900 mm. Sai số kích thước khoảng ±5–10%.",
        "new": null
@@ -406,7 +435,15 @@
      ],
      "truncated": false
     },
-    "runs": []
+    "runs": [
+     {
+      "id": "R1",
+      "x": -600.0,
+      "z": 0.0,
+      "yaw": 0.0,
+      "anchor": "end"
+     }
+    ]
    }
   },
   {

@@ -74,6 +74,24 @@ def design_history(design_id: str) -> list[dict[str, Any]]:
     """Return the revision history for a design."""
     return _call(svc().history, design_id)
 
+def list_openings(design_id: str, rev: int | None=None, country: str | None=None) -> dict[str, Any]:
+    """List effective room openings for a design revision."""
+    return _call(svc().list_openings, design_id, rev, country)
+
+def opening_types(country: str | None=None) -> dict[str, Any]:
+    """List catalog opening types available for a country."""
+    return svc().opening_types(country)
+
+def propose_opening(design_id: str, op: dict[str, Any], base_rev: int | None=None) -> dict[str, Any]:
+    """Preview a room door / window operation without saving it: add-opening {opening}, update-opening {id, changes},
+    move-opening {id, center | fromEdge}, remove-opening {id}, reset-opening {id} (a floorplan opening back as drawn),
+    rehost-opening {id, wallAxis, center?}. An opening: kind, openingType, wallAxis + center (mm along the wall axis) or point {x, z},
+    width (the hole), height, sill, optional axes / hAxes / leaves, hinge left|right and opens in|out seen from the kitchen."""
+    from kitchen.service import OPENING_OPS
+    if op.get("op") not in OPENING_OPS:
+        raise ToolError("propose_opening accepts only opening operations.")
+    return _call(svc().propose, design_id, op, base_rev)
+
 def add_module(design_id: str, base_rev: int, module: dict[str, Any], after_module: str | None=None, close_gap: bool=True, expect: str | None=None) -> dict[str, Any]:
     """Add a cabinet module to a design. expect: the opHash from propose_change, to refuse anything but the previewed operation."""
     return _call(svc().apply, design_id, {'op': 'add', 'module': module, 'afterModule': after_module, 'closeGap': close_gap}, base_rev, 'mcp', expect)
@@ -259,7 +277,7 @@ def reject_image_job(job_id: str) -> dict[str, Any]:
 def regenerate_image_job(job_id: str, seed: int | None=None) -> dict[str, Any]:
     """Create a replacement job with the same request and a new seed."""
     return _slim_job(_call(svc().images.regenerate, job_id, seed))
-TOOLS = [create_design, list_floorplan_rooms, import_floorplan, bind_floorplan, design_kitchen, list_designs, get_design, design_history, add_module, update_module, remove_module, update_global, set_moldings, list_molding_profiles, apply_action, propose_change, interpret_edit, recognize_design, propose_template, save_layout_template, revert_design, validate_design, get_scene, export_threejs, render_views, search_knowledge, list_regions, add_knowledge, export_ai_package, list_layers, get_view_status, regenerate_stale_views, create_image_job, get_image_job, list_image_jobs, submit_image_result, import_base_image, accept_image_job, reject_image_job, regenerate_image_job, send_image_job]
+TOOLS = [create_design, list_floorplan_rooms, import_floorplan, bind_floorplan, design_kitchen, list_designs, get_design, design_history, list_openings, opening_types, propose_opening, add_module, update_module, remove_module, update_global, set_moldings, list_molding_profiles, apply_action, propose_change, interpret_edit, recognize_design, propose_template, save_layout_template, revert_design, validate_design, get_scene, export_threejs, render_views, search_knowledge, list_regions, add_knowledge, export_ai_package, list_layers, get_view_status, regenerate_stale_views, create_image_job, get_image_job, list_image_jobs, submit_image_result, import_base_image, accept_image_job, reject_image_job, regenerate_image_job, send_image_job]
 for tool_function in TOOLS:
     mcp.add_tool(tool_function, name=tool_function.__name__, description=(tool_function.__doc__ or '').strip(), structured_output=False if tool_function is render_views else None)
 

@@ -1,0 +1,46 @@
+{
+ "function": "openings.ops.update",
+ "cases": [
+  {
+   "name": "update opening fields without changing id",
+   "input": {
+    "spec": {
+     "openings": [
+      {
+       "id": "OP1",
+       "width": 900
+      }
+     ]
+    },
+    "id": "OP1",
+    "changes": {
+     "width": 1000
+    }
+   },
+   "expected": {
+    "openings": [
+     {
+      "id": "OP1",
+      "width": 1000
+     }
+    ]
+   }
+  },
+  {
+   "name": "report a missing opening",
+   "input": {
+    "spec": {
+     "openings": []
+    },
+    "id": "OP404",
+    "changes": {
+     "width": 1000
+    }
+   },
+   "error": {
+    "kind": "not-found",
+    "code": "opening-not-found"
+   }
+  }
+ ]
+}

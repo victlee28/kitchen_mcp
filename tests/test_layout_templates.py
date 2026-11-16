@@ -136,6 +136,19 @@ class TestSaveSystemAsTemplate(unittest.TestCase):
         self.assertTrue(any("Bếp nhà tôi".lower() in str(line).lower() for line in plan["summary"]), plan["summary"])
         self.assertEqual(saved["id"], "bep-nha-toi")
 
+    def test_glass_and_open_wall_cabinets_are_kept(self):
+        did = self._make(geometry_edit="I", backWallLength=3200, fridge=True)
+        spec = self.svc.get(did)["spec"]
+        uppers = sorted((m for m in spec["module"] if m["type"] == "upper"), key=lambda m: m["fromCorner"])
+        rev = self.svc.store.get(did)[1]
+        self.svc.apply(did, {"op": "multi", "ops": [{"op": "update", "id": uppers[0]["id"], "changes": {"type": "upper-glass"}},
+                                                   {"op": "update", "id": uppers[-1]["id"], "changes": {"type": "upper-open"}}]}, rev)
+        saved = self.svc.layout_template_from_design(did, "user", label="Kính và kệ", system=self._system(did))
+        again = self._make(geometry_edit=saved["id"], backWallLength=3200, fridge=True)
+        kinds = lambda d: [t for _, t, _, _ in sorted(self._cabinets(d, ("upper",)), key=lambda r: r[2])]
+        self.assertEqual(kinds(again), kinds(did))
+        self.assertIn("upper-glass", kinds(again))
+
     def test_a_design_with_two_systems_asks_which(self):
         did = self._make(geometry_edit="I", backWallLength=3600, island=True)
         with self.assertRaises(InvalidInput) as e:

@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://example.com/schemas/kitchen-threejs-full.v1.5.0.schema.json",
-  "title": "Complete Kitchen Three.js Scene Schema (v1.5)",
-  "description": "Comprehensive parametric schema for rendering fully-detailed kitchen scenes and cabinet systems in Three.js. v1.1 thêm trường tùy chọn cho tủ tham số, vùng tiêu chuẩn và ảnh điều khiển AI; v1.2 thêm phong cách phụ, gợi ý ảnh AI và bảng diễn giải mô tả; v1.3 thêm nguồn độ dày tường và thông tin mặt bằng nhập vào; v1.4 thêm partRef (chi tiết nào bị chọn: cánh, ngăn kéo, tay nắm, mặt bàn); v1.5 thêm runs[] (dãy tủ có hướng bất kỳ: gốc + góc xoay), module.placement.runId và module.localTransform (vị trí trong khung dãy); tương thích ngược v1.0.0.",
+  "$id": "https://example.com/schemas/kitchen-threejs-full.v1.7.0.schema.json",
+  "title": "Complete Kitchen Three.js Scene Schema (v1.6)",
+  "description": "Comprehensive parametric schema for rendering fully-detailed kitchen scenes and cabinet systems in Three.js. v1.1 thêm trường tùy chọn cho tủ tham số, vùng tiêu chuẩn và ảnh điều khiển AI; v1.2 thêm phong cách phụ, gợi ý ảnh AI và bảng diễn giải mô tả; v1.3 thêm nguồn độ dày tường và thông tin mặt bằng nhập vào; v1.4 thêm partRef (chi tiết nào bị chọn: cánh, ngăn kéo, tay nắm, mặt bàn); v1.5 thêm runs[] (dãy tủ có hướng bất kỳ: gốc + góc xoay), module.placement.runId và module.localTransform (vị trí trong khung dãy); v1.6 thêm level (tầng nhà, cao độ sàn) và cửa phòng theo trục (room.walls[].openings[]: wallAxis, center, frame, leaves); tương thích ngược v1.0.0.",
   "type": "object",
   "required": [
     "schemaVersion",
@@ -17,7 +17,7 @@
   "properties": {
     "schemaVersion": {
       "type": "string",
-      "default": "1.5.0"
+      "default": "1.7.0"
     },
     "metadata": {
       "type": "object",
@@ -58,6 +58,24 @@
         "createdAt": {
           "type": "string",
           "format": "date-time"
+        },
+        "level": {
+          "type": "object",
+          "required": [
+            "name",
+            "elevation"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "elevation": {
+              "type": "number",
+              "description": "mm, mặt sàn hoàn thiện của tầng so với cốt 0 của nhà"
+            }
+          },
+          "description": "[Bổ sung v1.6 (VicKitchenCabinet)] Tầng nhà của bếp: mọi cao độ trong cảnh tính từ sàn tầng này; tuyệt đối = elevation + cao độ"
         },
         "region": {
           "$ref": "#/$defs/region"
@@ -407,10 +425,115 @@
                     "sillHeight": {
                       "type": "number",
                       "default": 0
+                    },
+                    "openingType": {
+                      "type": "string",
+                      "description": "[v1.6, ADR 0005] Catalog opening type of an opening the design places"
+                    },
+                    "wallAxis": {
+                      "type": "string",
+                      "description": "[v1.6, ADR 0005] Wall axis the opening is measured along"
+                    },
+                    "center": {
+                      "type": "number",
+                      "description": "[v1.6, ADR 0005] Centre along the wall axis, mm from its start"
+                    },
+                    "frame": {
+                      "type": "array",
+                      "description": "[v1.6, ADR 0005] Frame boxes: x along the wall from offset, y above the sill, z across from the wall centreline towards the room (mm)",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "part",
+                          "x0",
+                          "x1",
+                          "y0",
+                          "y1",
+                          "z0",
+                          "z1"
+                        ],
+                        "properties": {
+                          "part": {
+                            "type": "string"
+                          },
+                          "x0": {
+                            "type": "number"
+                          },
+                          "x1": {
+                            "type": "number"
+                          },
+                          "y0": {
+                            "type": "number"
+                          },
+                          "y1": {
+                            "type": "number"
+                          },
+                          "z0": {
+                            "type": "number"
+                          },
+                          "z1": {
+                            "type": "number"
+                          }
+                        }
+                      }
+                    },
+                    "leaves": {
+                      "type": "array",
+                      "description": "[v1.6, ADR 0005] Closed leaves, same box coordinates as frame",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "operation",
+                          "x0",
+                          "x1",
+                          "y0",
+                          "y1",
+                          "z0",
+                          "z1"
+                        ],
+                        "properties": {
+                          "operation": {
+                            "type": "string"
+                          },
+                          "glass": {
+                            "type": "boolean"
+                          },
+                          "x0": {
+                            "type": "number"
+                          },
+                          "x1": {
+                            "type": "number"
+                          },
+                          "y0": {
+                            "type": "number"
+                          },
+                          "y1": {
+                            "type": "number"
+                          },
+                          "z0": {
+                            "type": "number"
+                          },
+                          "z1": {
+                            "type": "number"
+                          }
+                        }
+                      }
+                    },
+                    "sourceElement": {
+                      "type": "string",
+                      "description": "[v1.6] Floorplan element of the opening"
                     }
                   }
                 },
                 "description": "[Bổ sung v1.1 (VicKitchenCabinet)] Cửa sổ / cửa đi trên tường (cần cho quy tắc không đặt bếp dưới cửa sổ, và cho ảnh)"
+              },
+              "sourceElement": {
+                "type": "string",
+                "description": "[Bổ sung v1.1 (VicKitchenCabinet)] [v1.5] Floorplan wall element this scene wall comes from"
+              },
+              "floorplanWallId": {
+                "type": "string",
+                "description": "[Bổ sung v1.1 (VicKitchenCabinet)] [v1.5] Imported floorplan wall record (WALL-FP-n)"
               },
               "visible": {
                 "type": "boolean",
@@ -583,6 +706,109 @@
               "steps": {
                 "type": "integer",
                 "description": "Số bậc cầu thang (độ cao đo tổng = height)"
+              }
+            }
+          }
+        },
+        "surfaces": {
+          "type": "array",
+          "description": "[Bổ sung v1.7 (VicKitchenCabinet)] Mọi mặt phẳng của mọi tường (kitchen.wall_surfaces): mặt bên theo từng cạnh đường viền (hình chữ nhật origin + u + width + height, có lỗ cửa holes), mặt trên / dưới (outline ở cao độ y). id ổn định <tường>#<mặt>; room = phòng mặt đó nhìn vào (null: không thuộc phòng nào). Toạ độ như phần còn lại của tài liệu (mm)",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "wall",
+              "face",
+              "normal",
+              "room"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "wall": {
+                "type": "string"
+              },
+              "structure": {
+                "type": "string"
+              },
+              "face": {
+                "type": "string",
+                "description": "inside | outside | side-a | side-b | start | end | top | bottom | e<k>"
+              },
+              "normal": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 3,
+                "maxItems": 3
+              },
+              "room": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "origin": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 3,
+                "maxItems": 3
+              },
+              "u": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 2,
+                "maxItems": 2
+              },
+              "width": {
+                "type": "number"
+              },
+              "height": {
+                "type": "number"
+              },
+              "holes": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "minItems": 4,
+                  "maxItems": 4
+                },
+                "description": "[u0, u1, v0, v1] trên mặt, v từ chân mặt lên"
+              },
+              "y": {
+                "type": "number"
+              },
+              "outline": {
+                "type": "array",
+                "minItems": 3,
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "x",
+                    "z"
+                  ],
+                  "properties": {
+                    "x": {
+                      "type": "number"
+                    },
+                    "z": {
+                      "type": "number"
+                    }
+                  }
+                }
+              },
+              "materialId": {
+                "type": "string",
+                "description": "Vật liệu riêng của mặt (gán theo mặt); không có = vật liệu tường"
               }
             }
           }

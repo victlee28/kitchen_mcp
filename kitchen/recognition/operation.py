@@ -5,6 +5,7 @@ from typing import Any
 
 from ..numeric import round_half_away
 from .draft import Draft, DraftModule
+from .openings import flat_to_runs
 from ..words import say
 
 PREFIX = {"base": "TD", "upper": "TT", "tall": "TC"}
@@ -80,6 +81,11 @@ def runs_from_draft(draft: Draft, common: dict[str, Any]) -> dict[str, Any]:
                 entry["niche"] = m.niche
             modules.append(entry)
         runs.append({"id": wall, "length": length, "modules": modules})
+    if draft.openings:                        # doors and windows: measured like the cabinets, so mirrored the same way
+        seen = flat_to_runs(draft.openings, {r["id"]: r["length"] for r in runs})
+        for r in runs:
+            if r["id"] in seen:
+                r["openings"] = seen[r["id"]]
     ids = [r["id"] for r in runs]
     joints = [{"a": a, "b": b, "angle": 90} for a, b in (("left", "back"), ("back", "right")) if a in ids and b in ids]
     return {"schema": "recognized-runs/1", "unit": "mm", "runs": runs, "joints": joints}

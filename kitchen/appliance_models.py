@@ -195,7 +195,7 @@ def changes_cabinets(spec: KitchenSpec, app: Appliance, m: dict[str, Any], h: Mo
         if to == "insert":
             if h.storey != "base":
                 return [said("reason.cannot.in-wall-cabinet", id=app.id)]
-            if not h.run and h.wall == "island":
+            if _free_standing(spec, h):
                 return [said("reason.cannot.island")]
             busy = [x.id for x in spec.module if x.storey in ("upper", "loft") and over(x, h)]
             if busy:
@@ -221,9 +221,16 @@ def changes_cabinets(spec: KitchenSpec, app: Appliance, m: dict[str, Any], h: Mo
 
 
 def over(a: Module, b: Module) -> bool:
-    """Do the two cabinets share some length of the same row (one above the other)?"""
-    same = (a.run == b.run) if (a.run or b.run) else (a.wall == b.wall and (a.offset, a.facing) == (b.offset, b.facing))
-    return same and a.fromCorner < b.endAt - 1 and b.fromCorner < a.endAt - 1
+    """Do the two cabinets share some length of the same run (one above the other)?"""
+    return a.run == b.run and a.fromCorner < b.endAt - 1 and b.fromCorner < a.endAt - 1
+
+
+def _free_standing(spec: Any, m: Module) -> bool:
+    """Whether the run of ``m`` stands free in the room (an island): no wall behind it, so no hood can be built into a cabinet over it."""
+    from . import runs
+    from .geometry import wall_length
+    fr = runs.frame_of(spec, m)
+    return fr is not None and runs.run_wall(fr, wall_length(spec)[0]) is None and not getattr(spec, "floorplan", None)
 
 
 def needed_width(m: dict[str, Any], catalog: Catalog = builtin.CATALOG) -> float | None:

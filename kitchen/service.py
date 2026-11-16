@@ -9,11 +9,12 @@ import unicodedata
 import os
 from pathlib import Path
 from typing import Any, Callable
-from . import appliance_kind, appliance_models, cabinet_run, run_line, run_template, runs, system_replace, tv_system, wall_line, edit, edit_intent, geometry, intent, llm, recognition, regions, roomctx, render, rules, threejs_export
+from . import appliance_kind, appliance_models, cabinet_run, run_join, run_line, run_template, runs, system_replace, tv_system, wall_line, edit, edit_intent, geometry, intent, llm, recognition, regions, roomctx, render, rules, threejs_export
 from .intent import KitchenTemplate as KitchenTemplate
 from .spec import Common, KitchenSpec, LaidModule, Room, Wall, dump_spec, load_spec, to_data
 from .store import ConflictError, Store
 from . import legacy as legacy_schema
+from .edit import OPENING_OPS  # noqa: F401  (the MCP adapter offers exactly these opening operations)
 from . import builtin, cabinet_types, catalog as cat, layout_solver, catalog_csv, catalog_files, i18n, lexicon, words
 from .config import Config
 from .identity import IdentityProvider, provider as identity_provider
@@ -55,6 +56,8 @@ class KitchenService:
         legacy_schema.migrate_renders(self.render_dir)
         from .images import ImageJobs
         self.images = ImageJobs(self.store, self.render_dir, self.apply, self.config, catalog=self.catalog, design_catalog=self.catalog_for_revision)
+        from .opening_service import OpeningService
+        self.opening_service = OpeningService(self.store, self.catalog, self.catalog_for_revision)
 
     # ---------- catalog (data-driven business data: kitchen.catalog) and wording (kitchen.i18n)
     USER = "default"          # one user until accounts exist (decision of 11/11/2026)
@@ -290,10 +293,12 @@ class KitchenService:
         y, height, depth = self.PREVIEW_SIZES.get(t.storey, self.PREVIEW_SIZES['base'])
         samples = []
         for width in self.PREVIEW_WIDTHS:
-            m = {'id': 'P1', 'type': id, 'wall': 'back', 'fromCorner': 0, 'width': width, 'y': y, 'height': height, 'depth': depth}
-            if t.builder == 'corner-shelf':
-                m.update(wall='corner', backLength=width, rightLength=width)
-            spec = KitchenSpec.model_validate({'module': [m], 'appliances': []})
+            m = {'id': 'P1', 'type': id, 'wall': 'island', 'run': 'R1', 'fromCorner': 0, 'width': width, 'y': y, 'height': height, 'depth': depth}
+            runs = [{'id': 'R1', 'x': -width, 'z': 0, 'yaw': 0, 'anchor': 'end'}]          # along the back wall, ending in its right-hand corner
+            if t.builder == 'corner-shelf':                                                 # ...and turning into a run along the right wall
+                m.update(turnsInto='R2', rightLength=width)
+                runs.append({'id': 'R2', 'x': 0, 'z': 0, 'yaw': -90})
+            spec = KitchenSpec.model_validate({'module': [m], 'appliances': [], 'runs': runs})
             scene = geometry.compile_spec(spec, trial)
             parts = [{'id': p.id, 'type': p.type, 'min': list(p.min), 'max': list(p.max)} for p in scene.parts if p.module == 'P1']
             problems = cabinet_types.check(t, geometry.module_values(spec.module[0], spec.common))
@@ -304,6 +309,40 @@ class KitchenService:
 
     LAYOUT_PREVIEW_BACKS = (2400.0, 3200.0, 4200.0)
     LAYOUT_PREVIEW_SIDE = 2400.0
+
+    OPENING_PREVIEW_WALL = 3600.0
+
+    def opening_type_preview(self, id: str, data: dict, role: str, country: str | None = None) -> dict:
+        """What an opening type (not saved yet: ``data``) makes: the type on a 3600 mm back wall at each of its standard hole widths for
+        ``country`` (or 900 / 1200 mm): front view boxes of the frame and leaves (x along the wall from the hole's left edge seen from the
+        kitchen, y above the floor), its clear width, and the inputs it refuses."""
+        info = self._kind('opening-type')
+        cat.check_write(info, role)
+        errors_found = catalog_files.schema_errors(self.builtin.schemas['opening-type'], data)
+        if errors_found:
+            raise catalog_files.CatalogInvalid('; '.join(errors_found[:10]))
+        trial = self._trial('opening-type', id, cat.scope_for(role, self.USER), data, False)
+        from . import openings as room_openings
+        kind = str(data.get('kind') or 'door')
+        sizes = ((data.get('sizes') or {}).get((country or 'VN').upper()) or {}).get('widths') or [900 if kind != 'window' else 1200]
+        axes = room_openings.wall_axes.for_room(self.OPENING_PREVIEW_WALL, 3000.0)
+        back = axes[0]
+        samples = []
+        for width in sizes[:6]:
+            raw = {'id': 'OP1', 'kind': kind, 'openingType': id, 'wallAxis': 'back', 'center': back.length / 2, 'width': width}
+            try:
+                o, notes = room_openings.normalize(raw, 'human', trial, axes, country)
+            except KitchenError as e:
+                samples.append({'width': width, 'error': {'code': e.code, 'message': str(e)}})
+                continue
+            sh = room_openings.shape(o, back, room_openings.types.get(trial, id))
+            e1 = sh['edges'][1]                      # the back axis runs right to left seen from the kitchen: mirror to read left to right
+            box = lambda b: {'x0': round(e1 - b['s1'], 1), 'x1': round(e1 - b['s0'], 1), 'y0': b['y0'], 'y1': b['y1']}
+            samples.append({'width': o.width, 'height': o.height, 'sill': o.sill, 'clearWidth': o.clear_width, 'notes': notes,
+                            'frame': [{'part': b['part'], **box(b)} for b in sh['frame'] if not b['part'].startswith('casing-minus')],
+                            'leaves': [{'operation': lf['operation'], 'active': lf['active'], **box(lf)} for lf in sh['leaves']],
+                            'sweeps': len(sh['sweeps'])})
+        return {'id': id, 'kind': kind, 'country': country, 'samples': samples}
 
     def layout_template_preview(self, id: str, data: dict, role: str, options: dict | None = None) -> dict:
         """What a layout template (not saved yet: ``data``) lays out: sample kitchens with the back wall 2400 / 3200 / 4200 mm (the other
@@ -324,7 +363,7 @@ class KitchenService:
                 request['rightWallLength'] = self.LAYOUT_PREVIEW_SIDE
             if 'left' in walls:
                 request['leftWallLength'] = self.LAYOUT_PREVIEW_SIDE
-            spec = intent.from_template(KitchenTemplate.model_validate(request), '', None, trial)
+            spec = intent.from_template(KitchenTemplate.model_validate(request), '', None, trial, as_rows=True)
             scene = geometry.compile_spec(spec, trial)
             storey = {m.id: m.storey for m in spec.module}
             parts = [{'module': p.module, 'type': p.type, 'storey': storey.get(p.module or ''), 'x': [p.min[0], p.max[0]], 'z': [p.min[2], p.max[2]]}
@@ -508,6 +547,7 @@ class KitchenService:
             raise TypeError(f"Unexpected options: {', '.join(legacy)}")
         spec = spec_data if isinstance(spec_data, KitchenSpec) else load_spec(self.unword_names(spec_data))
         cabinet_types.check_known([m.type for m in spec.module], self.catalog())
+        spec = self._by_runs(spec, self.catalog())          # stored by explicit runs, as everything else reads it
         record = self.store.create_design(spec, source)
         return self._summary(record['id'], 1, spec)
 
@@ -550,12 +590,12 @@ class KitchenService:
 
     @staticmethod
     def _by_runs(spec: KitchenSpec, catalog: cat.Catalog = builtin.CATALOG) -> KitchenSpec:
-        """A newly generated kitchen written by explicit runs (``rows_to_runs``): the generator still thinks in walls, a design is stored by runs.
-        Kept as generated if the rewritten kitchen would not compile to the very same boxes."""
+        """A kitchen written by explicit runs (``rows_to_runs``): generators and old files still think in walls, a design is stored by runs."""
         from . import rows_to_runs
+        if not rows_to_runs.has_rows(spec):
+            return spec
         data, _ = rows_to_runs.convert(spec, catalog)
-        after = KitchenSpec.model_validate(data)
-        return spec if rows_to_runs.equivalent(spec, after, catalog) else after
+        return KitchenSpec.model_validate(data)
 
     def create_from_template(self, template: dict | KitchenTemplate, name: str='', **legacy: Any) -> dict:
         """Generate and persist a design from a structured template."""
@@ -615,7 +655,7 @@ class KitchenService:
         return self._summary(design_id, new_revision, updated_spec)
 
     def interpret(self, design_id: str, text: str, base_revision: int | None=None, scope: list[str] | None=None,
-                  country: str | None=None, use_llm: bool=False) -> dict:
+                  country: str | None=None, use_llm: bool=False, surfaces: list[str] | None=None) -> dict:
         """Free-form edit sentence -> a previewed operation, never saved. Send ``operation`` to :meth:`apply` with ``proposal.opHash`` to confirm.
 
         ``status`` is ``ok`` (with ``operation``, ``summary`` and the full :meth:`propose` result under ``proposal``), ``clarify`` (a
@@ -625,6 +665,13 @@ class KitchenService:
         spec, current = self.store.get(design_id)
         if base_revision is not None and base_revision != current:
             raise ConflictError(f'base_rev={base_revision}, but the latest revision is {current}; reload before editing', params={'base': base_revision, 'latest': current})
+        if surfaces:                    # wall faces the user selected (wall surface ids): the sentence is about them
+            result = edit_intent.surface_edit(text, [str(x) for x in surfaces][:500], self.catalog())
+            if result['status'] == 'cabinets':
+                return self._cabinets_on_face(design_id, spec, current, [str(x) for x in surfaces], str(result['prompt']), country)
+            if result['status'] != 'ok':
+                return {'id': design_id, 'baseRev': current, **result}
+            return {'id': design_id, 'baseRev': current, **result, 'proposal': self.propose(design_id, result['operation'], current, None, country)}
         result = edit_intent.interpret_edit(spec, text, scope, self.catalog())
         if result['status'] == 'unsupported' and use_llm:
             guess, status = llm.edit_operation_llm(text, spec, self.config)
@@ -633,6 +680,55 @@ class KitchenService:
             return {'id': design_id, 'baseRev': current, **result}
         preview = self.propose(design_id, result['operation'], current, scope or result.get('targets') or None, country)
         return {'id': design_id, 'baseRev': current, **result, 'proposal': preview}
+
+    def _join_runs(self, design_id: str, spec: Any, current: int, template: dict[str, Any], country: str | None) -> dict:
+        """Two runs meeting in a corner at any angle, joined (``run_join.plan_join``): the run of the clicked cabinet (or ``runA``) keeps the
+        corner, the other (``runB``, or the run that meets it nearest) starts where it clears it. A preview."""
+        out = {'id': design_id, 'baseRev': current}
+        run_a = str(template.get('runA') or '')
+        if not run_a and template.get('module'):
+            try:
+                run_a = spec.find(str(template['module'])).run or ''
+            except KeyError:
+                run_a = ''
+        if not run_a:
+            return {**out, 'status': 'unsupported', 'message': words.said('summary.join.not-a-run')}
+        run_b = str(template.get('runB') or '') or run_join.meeting_run(spec, run_a)
+        if not run_b:
+            return {**out, 'status': 'unsupported', 'message': words.said('summary.join.no-corner', run=run_a)}
+        try:
+            plan = run_join.plan_join(spec, run_a, run_b, self.catalog())
+        except KitchenError as error:
+            return {**out, 'status': 'unsupported', 'message': str(error)}
+        if plan['operation'] is None:
+            return {**out, 'status': 'unsupported', 'message': words.said('summary.join.already', a=run_a, b=run_b, angle=f"{plan['angle']:g}")}
+        summary = [words.said('summary.join.done', a=run_a, b=run_b, angle=f"{plan['angle']:g}", n=len(plan['touched']))]
+        preview = self.propose(design_id, plan['operation'], current, None, country)
+        return {**out, 'status': 'ok', 'operation': plan['operation'], 'summary': summary, 'angle': plan['angle'], 'limits': plan['limits'],
+                'proposal': preview}
+
+    def _cabinets_on_face(self, design_id: str, spec: Any, current: int, surfaces: list[str], prompt: str, country: str | None) -> dict:
+        """"tạo tủ …" with wall faces selected: a run along the bottom of the first upright face picked (the face's width, its doors looking
+        away from the wall), filled as the sentence says, previewed. Faces on top of or under a wall are passed over."""
+        doc = self.threejs(design_id)
+        by_id = {str(sf.get('id')): sf for sf in (doc.get('room') or {}).get('surfaces') or [] if isinstance(sf, dict)}
+        face = next((by_id[i] for i in surfaces if i in by_id and by_id[i].get('u') and by_id[i].get('width')), None)
+        out = {'id': design_id, 'baseRev': current}
+        if face is None:
+            return {**out, 'status': 'unsupported', 'message': words.said('summary.surface.no-upright')}
+        o, u, n = face['origin'], face['u'], face['normal']
+        width = float(face['width'])
+        a = {'x': float(o[0]), 'z': float(o[-1])}
+        ux, uz = (float(u[0]), float(u[-1]))                      # u: along the floor (x, z), or (x, y, z)
+        b = {'x': float(o[0]) + ux * width, 'z': float(o[-1]) + uz * width}
+        nx, nz = float(n[0]), float(n[-1])
+        front = {'x': (a['x'] + b['x']) / 2 + nx * 600, 'z': (a['z'] + b['z']) / 2 + nz * 600}
+        plan = self._plan_on_drawn_line(spec, {'kind': 'run-line', 'a': a, 'b': b, 'front': front, 'prompt': prompt}, country)
+        summary = [words.said('summary.surface.cabinets', face=face['id'], length=f"{plan['length']:g}"), *plan['summary']]
+        if len(surfaces) > 1:
+            summary.append(words.said('summary.surface.first-face-only', n=len(surfaces)))
+        preview = self.propose(design_id, plan['operation'], current, None, country)
+        return {**out, 'status': 'ok', 'operation': plan['operation'], 'summary': summary, 'targets': [], 'proposal': preview}
 
     def template(self, design_id: str, template: dict[str, Any], base_revision: int | None=None, country: str | None=None) -> dict:
         """A cabinet template standing against an object of the imported floorplan, or on a line the user drew, previewed and never saved.
@@ -653,6 +749,8 @@ class KitchenService:
             preview = self.propose(design_id, plan['operation'], current, None, country)
             return {'id': design_id, 'baseRev': current, 'status': 'ok', 'facing': None, 'angle': plan['angle'], 'clearance': plan['clearance'], 'length': template.get('width') or 900.0,
                     'summary': plan['summary'], 'operation': plan['operation'], 'proposal': preview}
+        if template.get('kind') == 'join-runs':  # {"kind": "join-runs", "module"?: id, "runA"?: run, "runB"?: run}: two runs joined at their corner
+            return self._join_runs(design_id, spec, current, template, country)
         if template.get('kind') == 'run-line':   # {"kind": "run-line", "a": {x, z}, "b": {x, z}, "front": {x, z}, "prompt"?}: a run on a drawn line
             plan = self._plan_on_drawn_line(spec, template, country)
             preview = self.propose(design_id, plan['operation'], current, None, country)
@@ -666,7 +764,7 @@ class KitchenService:
             return {'id': design_id, 'baseRev': current, 'status': 'ok', 'facing': None, 'system': plan['system'], 'mode': plan['mode'], 'style': plan.get('style'),
                     'summary': plan['summary'], 'operation': plan['operation'], 'proposal': preview}
         if template.get('kind') != 'run-i':
-            raise InvalidInput("template.kind must be 'run-i', 'run-line', 'corner', 'replace-system' or 'replace-appliance'", code='bad-template-kind')
+            raise InvalidInput("template.kind must be 'run-i', 'run-line', 'corner', 'join-runs', 'replace-system' or 'replace-appliance'", code='bad-template-kind')
         point = template.get('point')
         if not isinstance(point, dict) or not all(isinstance(point.get(k), (int, float)) for k in ('x', 'z')):
             raise InvalidInput('template.point needs numeric x and z (mm, room frame)', code='bad-template-point')
@@ -696,6 +794,91 @@ class KitchenService:
         preview = self.propose(design_id, plan['operation'], current, None, country)
         return {'id': design_id, 'baseRev': current, 'status': 'ok', 'structureId': struct['id'], 'facing': plan['facing'], 'length': plan['length'],
                 'summary': plan['summary'], 'operation': plan['operation'], 'proposal': preview}
+
+    def opening_command(self, design_id: str, text: str, place: dict[str, Any], role: str, base_revision: int | None = None,
+                        country: str | None = None) -> dict:
+        """A right-click sentence about a room door, window or passage, or about saving what was clicked to the catalog.
+
+        ``place``: ``{"point": {x, z}, "structureId"?, "module"?}`` (the point in the frame of the wall axes, as for ``recognize``'s anchor).
+        ``status``: ``not-opening`` (the sentence is about something else: the caller reads it as before), ``ok`` (a previewed operation:
+        a door at the point, one filling a floorplan hole, or the clicked opening turned into the type asked for — the default type of the
+        kind when the sentence names none), ``saved`` (the clicked door or window as an ``opening-type`` item, or the clicked cabinet
+        system as a ``layout-template``, in the role's catalog layer) or ``unsupported`` with a ``message``."""
+        from . import openings as room_openings
+        spec, current = self.store.get(design_id)
+        if base_revision is not None and base_revision != current:
+            raise ConflictError(f'base_rev={base_revision}, but the latest revision is {current}; reload before editing', params={'base': base_revision, 'latest': current})
+        out: dict[str, Any] = {'id': design_id, 'baseRev': current}
+        wish = edit_intent.opening_wish(text, self.catalog())
+        if wish is None:
+            return {**out, 'status': 'not-opening'}
+        point_raw = place.get('point') if isinstance(place, dict) else None
+        point = (float(point_raw['x']), float(point_raw['z'])) if isinstance(point_raw, dict) and all(
+            isinstance(point_raw.get(k), (int, float)) for k in ('x', 'z')) else None
+        element = str(place.get('structureId') or '') if isinstance(place, dict) else ''
+        selected = element[len('STRUCT-'):] if element.startswith('STRUCT-') else (element or None)
+        module = str(place.get('module') or '') if isinstance(place, dict) else ''
+        scene = geometry.compile_spec(spec, self.catalog())
+        data = to_data(spec)
+        axes = room_openings.wall_axes.for_spec(data, scene.lsau, scene.lphai)
+        existing = room_openings.effective(data, self.catalog(), axes, spec.country)
+        target = recognition.openings.clicked_opening(point, axes, existing, selected) if point is not None else None
+        fp = data.get('floorplan')
+        listed = fp.get('elements') if isinstance(fp, dict) else None
+        elements = [e for e in listed if isinstance(e, dict)] if isinstance(listed, list) else []
+        if wish['action'] == 'save':
+            drawn_name = None
+            if target is None and wish.get('what') != 'system' and not module:     # a hole of the floorplan the design has not made a door of
+                found = room_openings.command.hole_opening(point, axes, self.catalog(), selected, elements, spec.country)
+                if found is not None:
+                    target, drawn_name = found
+            if wish.get('what') != 'system' and target is not None and not module:
+                name = wish.get('name') or drawn_name or words.say('summary.opening.saved-name', type=self._type_label(target.opening_type),
+                                                                   width=f'{target.width:g}', height=f'{target.height:g}')
+                item = room_openings.command.saved_type(target, self.catalog().data('opening-type', target.opening_type), str(name))
+                tid = self._free_item_id('opening-type', str(name))
+                saved = self.catalog_put('opening-type', tid, item, role)
+                return {**out, 'status': 'saved', 'kind': 'opening-type', 'item': {**saved, 'label': str(name)},
+                        'summary': [words.said('summary.opening.saved', name=str(name), id=tid)]}
+            if module:
+                system = runs.systems(spec).get(module)
+                saved = self.layout_template_from_design(design_id, role, str(wish.get('name') or ''), '', system, None, True)
+                return {**out, 'status': 'saved', 'kind': 'layout-template', 'item': {k: saved[k] for k in ('id', 'scope', 'version', 'system') if k in saved},
+                        'summary': [words.said('summary.system.saved', id=saved['id'])]}
+            return {**out, 'status': 'unsupported', 'message': words.said('summary.save.nothing')}
+        if point is None:
+            return {**out, 'status': 'unsupported', 'message': words.said('summary.opening.need-point')}
+        try:
+            operation, what, facts = room_openings.command.operation(wish, point, axes, self.catalog(), existing, selected, elements,
+                                                                     country or spec.country)
+        except room_openings.command.SizeQuestion as ask:
+            p = ask.params
+            return {**out, 'status': 'ask', 'message': words.said('summary.opening.size-ask', width=f"{p['width']:g}", type=self._type_label(str(p['type'])),
+                                                                  min=f"{p['min']:g}", max=f"{p['max']:g}"),
+                    'choices': [words.say('summary.opening.choice-keep'), words.say('summary.opening.choice-fit')]}
+        except KitchenError as error:
+            return {**out, 'status': 'unsupported', 'message': str(error)}
+        summary = [words.said(f'summary.opening.{what}', type=self._type_label(str(facts['type'])), width=f"{facts['width']:g}",
+                              height=f"{facts['height']:g}", id=facts.get('id', ''))]
+        preview = self.propose(design_id, operation, current, None, country)
+        return {**out, 'status': 'ok', 'operation': operation, 'summary': summary, 'proposal': preview}
+
+    def _type_label(self, type_id: str) -> str:
+        """An opening type's name in the reader's language (its id when it has none)."""
+        label = self.catalog().data('opening-type', type_id).get('label')
+        if isinstance(label, dict):
+            return i18n.pick(label, i18n.DEFAULT_LANG) or type_id
+        return type_id
+
+    def _free_item_id(self, kind: str, name: str) -> str:
+        """An unused catalog id of ``kind`` made from a name (ASCII letters, digits and ``-``)."""
+        flat = unicodedata.normalize('NFD', name.translate({0x111: 'd', 0x110: 'D'}))
+        slug = re.sub(r'[^a-z0-9]+', '-', ''.join(ch for ch in flat if not unicodedata.combining(ch)).lower()).strip('-')[:48] or kind
+        taken = {it.id for it in self.catalog().all(kind)}
+        tid, n = slug, 2
+        while tid in taken:
+            tid, n = f'{slug}-{n}', n + 1
+        return tid
 
     def _recognised_on_object(self, spec: KitchenSpec, outline: list, click: tuple, system: str | None, found: list, joints: list,
                               clear: list[str] | None) -> dict:
@@ -1116,16 +1299,21 @@ class KitchenService:
             return {**out, 'status': 'failed', 'recognizer': name, 'message': f'{type(error).__name__}: {error}'[:300]}
         draft = recognition.build_draft(raw)
         if not draft.modules:
+            photo = self._photo_openings(raw)
+            if photo[0] or photo[1]:                # a picture with no cabinets, only a door or window: it goes where the user clicked
+                return self._place_photo_openings(design_id, spec, current, out, name, draft, photo, anchor, country)
             return {**out, 'status': 'empty', 'recognizer': name, 'draft': draft.to_data()}
-        layout = recognition.build_layout(raw.get('layout')) if isinstance(raw, dict) else None
+        doc = raw.get('layout') if isinstance(raw, dict) else None
+        layout = recognition.build_layout(doc)
         if layout is None:                          # a flat draft (wall + fromCorner): the same kitchen written by runs
-            layout = recognition.build_layout(recognition.runs_from_draft(draft, to_data(spec)['common']))
+            doc = recognition.runs_from_draft(draft, to_data(spec)['common'])
+            layout = recognition.build_layout(doc)
         if layout is None:
             return {**out, 'status': 'empty', 'recognizer': name, 'draft': draft.to_data(), 'message': 'No cabinet could be placed in a run'}
-        return self._place_layout(design_id, spec, current, out, name, draft, layout, country, anchor, mode)
+        return self._place_layout(design_id, spec, current, out, name, draft, layout, country, anchor, mode, recognition.openings.read(doc))
 
     def _place_layout(self, design_id: str, spec: Any, current: int, out: dict[str, Any], name: str, draft: Any, layout: Any, country: str | None,
-                      anchor: dict[str, Any] | None, mode: str) -> dict:
+                      anchor: dict[str, Any] | None, mode: str, seen: tuple[list, list[dict[str, Any]]] = ([], [])) -> dict:
         """A kitchen recognised BY RUNS: its main run along the edge the user picked (no edge picked: along the back wall of the kitchen frame,
         instead of the cabinets already there), the runs joined to it square to it."""
         runs = [{'id': r.id, 'length': r.length, 'modules': list(r.modules)} for r in layout.runs]
@@ -1139,7 +1327,10 @@ class KitchenService:
             changes = recognition.common_changes(to_data(spec)['common'], layout, draft.ceiling, dict(draft.materials))
             if changes:
                 before = [{'op': 'common', 'changes': changes}]
-                base = edit.apply_op(spec, before[0], self.catalog())
+            if spec.floorplan is None and spec.room is not None:     # ...and its room: no floorplan, so the walls are sized to the new kitchen
+                before.append({'op': 'set-room', 'room': None})
+            for op in before:
+                base = edit.apply_op(base, op, self.catalog())
         clear = [m.id for m in spec.module] if mode == 'replace' else None
         if anchor is None:
             plan = run_line.plan_runs(base, run_line.back_wall_line(base, runs), runs, joints, clear)
@@ -1147,15 +1338,84 @@ class KitchenService:
             struct, plan = self._plan_at_object(base, anchor['structureId'], anchor['point'],
                                                 lambda outline, click, system: self._recognised_on_object(base, outline, click, system, runs, joints, clear))
             place = {'structureId': struct['id']}
-        if before:
-            plan = {**plan, 'operation': edit.combine_ops([*before, plan['operation']])}
+        opening_ops, opening_notes = self._recognised_openings(base, plan, seen, country)
+        if before or opening_ops:
+            plan = {**plan, 'operation': edit.combine_ops([*before, plan['operation'], *opening_ops])}
         left_out = len(draft.modules) - layout.count
-        summary = [*plan['summary'], *layout.notes]
+        summary = [*plan['summary'], *layout.notes, *opening_notes]
         if layout.rejected or left_out > 0:
             summary.append(words.said('summary.recognised-unused', n=max(len(layout.rejected), left_out)))
         preview = self.propose(design_id, plan['operation'], current, None, country)
         return {**out, 'status': 'ok', 'recognizer': name, 'draft': draft.to_data(), 'layout': layout.to_data(), 'operation': plan['operation'],
                 'summary': summary, **place, 'mode': mode, 'runs': plan['runs'], 'proposal': preview}
+
+    @staticmethod
+    def _photo_openings(raw: Any) -> tuple[list, list[dict[str, Any]]]:
+        """The doors and windows of a picture with no cabinets: in the recognizer's runs (``layout.photoOpenings``) or the flat draft."""
+        if not isinstance(raw, dict):
+            return [], []
+        found = recognition.openings.read_photo(raw.get('layout'))
+        return found if found[0] or found[1] else recognition.openings.read_photo(raw)
+
+    def _place_photo_openings(self, design_id: str, spec: Any, current: int, out: dict[str, Any], name: str, draft: Any,
+                              photo: tuple[list, list[dict[str, Any]]], anchor: dict[str, Any] | None, country: str | None) -> dict:
+        """A door or window seen in a picture with nothing to measure it by: one ``add-opening`` at the point the user right-clicked (room
+        frame: on the nearest wall axis), sized from the type and the picture's proportions, previewed, nothing saved."""
+        from . import openings as room_openings
+        found, rejected = photo
+        notes = [f"opening-not-read: picture, opening {r['index']}: {r['reason']}" for r in rejected]
+        if not found:
+            return {**out, 'status': 'empty', 'recognizer': name, 'draft': draft.to_data(), 'summary': notes}
+        if anchor is None:
+            return {**out, 'status': 'empty', 'recognizer': name, 'draft': draft.to_data(), 'summary': notes,
+                    'message': 'The picture shows a door or window but no cabinets: right-click the wall where it goes and send the picture again'}
+        scene = geometry.compile_spec(spec, self.catalog())
+        axes = room_openings.wall_axes.for_spec(to_data(spec), scene.lsau, scene.lphai)
+        point = (float(anchor['point']['x']), float(anchor['point']['z']))
+        existing = room_openings.effective(to_data(spec), self.catalog(), axes, spec.country)
+        element = str(anchor.get('structureId') or '')
+        selected = element[len('STRUCT-'):] if element.startswith('STRUCT-') else (element or None)     # the floorplan element right-clicked
+        fp = to_data(spec).get('floorplan')
+        listed = fp.get('elements') if isinstance(fp, dict) else None
+        elements = [e for e in listed if isinstance(e, dict)] if isinstance(listed, list) else []
+        ops, placed = recognition.openings.photo_operations(found, point, axes, self.catalog(), country or spec.country, existing, selected,
+                                                            elements)
+        if ops and ops[0]['op'] == 'update-opening':           # the dividers seen may not fit the hole: then the type's own template
+            try:
+                edit.apply_op(spec.model_copy(deep=True), ops[0], self.catalog())
+            except KitchenError:
+                changes = {k: v for k, v in ops[0]['changes'].items() if k not in ('axes', 'hAxes')}
+                ops = [{**ops[0], 'changes': changes}]
+                placed.append(f"opening-axes-dropped: the dividers seen do not fit {changes['openingType']}.")
+        if not ops:
+            return {**out, 'status': 'empty', 'recognizer': name, 'draft': draft.to_data(), 'summary': [*notes, *placed]}
+        operation = edit.combine_ops(ops)
+        preview = self.propose(design_id, operation, current, None, country)
+        return {**out, 'status': 'ok', 'recognizer': name, 'draft': draft.to_data(), 'operation': operation, 'summary': [*notes, *placed],
+                'structureId': anchor.get('structureId'), 'mode': 'opening', 'runs': [], 'proposal': preview}
+
+    def _recognised_openings(self, base: Any, plan: dict[str, Any], seen: tuple[list, list[dict[str, Any]]], country: str | None
+                             ) -> tuple[list[dict[str, Any]], list[str]]:
+        """The doors and windows seen with a recognised kitchen, as ``add-opening`` operations on the design the cabinets make (its wall axes,
+        its floorplan frame), and the notes on what was left out. They go into the same previewed operation as the cabinets."""
+        from . import openings as room_openings
+        found, rejected = seen
+        notes = [f"opening-not-read: {r['run']} run, opening {r['index']}: {r['reason']}" for r in rejected]
+        if not found:
+            return [], notes
+        try:
+            after = edit.apply_op(base.model_copy(deep=True), plan['operation'], self.catalog())
+            scene = geometry.compile_spec(after, self.catalog())
+            ctx = roomctx.for_spec(after, scene.lsau, scene.lphai)
+        except Exception:       # the cabinets cannot be placed: the preview says why; the openings wait for them
+            return [], notes
+        data = to_data(after)
+        axes = room_openings.wall_axes.for_spec(data, scene.lsau, scene.lphai)
+        to_axes = ctx.placement.to_room if ctx is not None and after.floorplan is not None else (lambda x, z: (x, z))
+        existing = room_openings.effective(data, self.catalog(), axes, after.country)
+        ops, placed_notes = recognition.openings.operations(found, plan.get('lines') or {}, axes, to_axes, existing, self.catalog(),
+                                                            country or after.country)
+        return ops, [*notes, *placed_notes]
 
     def propose(self, design_id: str, operation: dict[str, Any], base_revision: int | None=None, scope: list[str] | None=None,
                 country: str | None=None) -> dict:
@@ -1225,6 +1485,18 @@ class KitchenService:
     def list_designs(self) -> list[dict]:
         """List stored designs and their latest revisions."""
         return self.store.list_designs()
+
+    def list_openings(self, design_id: str, revision: int | None = None, country: str | None = None) -> dict:
+        """List effective floorplan, overridden, and design-authored openings."""
+        return self.opening_service.list_openings(design_id, revision, country)
+
+    def opening_types(self, country: str | None = None) -> dict:
+        """List catalog opening types available for a country."""
+        return self.opening_service.opening_types(country)
+
+    def preview_opening(self, design_id: str, opening: dict[str, Any], revision: int | None = None, country: str | None = None) -> dict:
+        """Normalize an opening draft and derive its geometry without saving it."""
+        return self.opening_service.preview_opening(design_id, opening, revision, country)
 
     def validate_spec(self, spec: KitchenSpec, country: str | None=None, region: str | None=None, **legacy: Any) -> dict:
         """Validate a specification against geometry and stored knowledge rules."""

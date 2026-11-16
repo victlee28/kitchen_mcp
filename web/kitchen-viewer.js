@@ -5,12 +5,13 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { buildKitchen } from './scene-loader.js';
-import { dragChange, floorPoint, isClick, pickTarget, sceneToMm } from './menu-logic.js';
+import { clickEffect, dragChange, dragTurn, floorPoint, isClick, opensMenu, pickTarget, sceneToMm, surfaceHit } from './menu-logic.js';
 
 /**
  * opts: { container, moduleIds() -> string[] | null (null: nothing to pick yet), extraPickables() -> Object3D[],
  *         onSceneBuilt({structures, structurePickables}), onPick({kind:'module'|'structure', id} | null, {x, y}, menuTarget | null),
- *         onContext(target | null, {x, y}) }   target: see menu-logic.pickTarget; target.point is in millimetres.
+ *         onContext(target | null, {x, y}), onSurfacePick(id | null, 'click' | 'toggle' | 'region' | 'clear') }
+ *   target: see menu-logic.pickTarget; target.point is in millimetres.
  */
 export function createViewer(opts) {
   const { container } = opts;
@@ -30,6 +31,7 @@ export function createViewer(opts) {
   const root = new THREE.Group(); scene3.add(root);
   const raycaster = new THREE.Raycaster(); const pointer = new THREE.Vector2();
   let meshes = []; let doc = null; let views = {}; let docCams = {}; let hiddenByView = []; let selected = null;
+  let faces = new Map(); let wallFaces = []; let litFaces = [];     // wall surfaces: id -> {record, mesh}; the default walls' faces (not structures)
 
   function resize() {
     const w = container.clientWidth, h = container.clientHeight;
@@ -40,7 +42,10 @@ export function createViewer(opts) {
 
   // ---- overlay: the line of a run being drawn, and the handles of the selected cabinet's run (never part of the kitchen document)
   const overlay = new THREE.Group(); scene3.add(overlay);
-  const guideGroup = new THREE.Group(); const handleGroup = new THREE.Group(); overlay.add(guideGroup, handleGroup);
+  const guideGroup = new THREE.Group(); const handleGroup = new THREE.Group(); const markGroup = new THREE.Group(); overlay.add(guideGroup, handleGroup, markGroup);
+  const markMat = new THREE.LineBasicMaterial({ color: 0xd9480f, depthTest: false, transparent: true, opacity: 0.85 });
+  const mainMat = new THREE.LineDashedMaterial({ color: 0xc2185b, depthTest: false, dashSize: 0.08, gapSize: 0.05 });
+  let marks = [];
   const overlayMat = new THREE.MeshBasicMaterial({ color: 0x2f6bff, depthTest: false, transparent: true, opacity: 0.9 });
   const moveMat = new THREE.MeshBasicMaterial({ color: 0xff8a1f, depthTest: false, transparent: true, opacity: 0.9 });
   const unit = () => ({ mm: 0.001, cm: 0.01, m: 1 }[doc?.units || 'mm']);        // scene units per millimetre
@@ -60,13 +65,25 @@ export function createViewer(opts) {
     guideGroup.add(dot(a.x, a.z));
     if (to) guideGroup.add(bar(a, to), dot(to.x, to.z));
   }
+  // the axes of the opening being edited (lines in mm, the document's frame): ``main`` is the opening's centre axis
+  function drawMarks() {
+    markGroup.clear();
+    const k = unit();
+    for (const l of marks) {
+      const g = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(l.a.x * k, l.a.y * k, l.a.z * k), new THREE.Vector3(l.b.x * k, l.b.y * k, l.b.z * k)]);
+      const line = new THREE.Line(g, l.main ? mainMat : markMat);
+      if (l.main) line.computeLineDistances();
+      line.renderOrder = 11; markGroup.add(line);
+    }
+  }
   function floorAt(ev) {
     const r = renderer.domElement.getBoundingClientRect();
     pointer.set(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1);
     raycaster.setFromCamera(pointer, camera);
     return floorPoint(raycaster.ray.origin, raycaster.ray.direction);
   }
-  // Three handles in front of the run of the selected cabinet: its two ends (drag along the run) and its middle (drag the whole run).
+  // Four handles on the run of the selected cabinet: its two ends (drag along the run), its middle (drag the whole run) and a ring at the run's
+  // origin, out in front (drag it round: the run turns about its origin).
   function refreshHandles() {
     handleGroup.clear(); handleAxes = null;
     const ids = typeof selected === 'string' && opts.runModules ? opts.runModules(selected) : null;      // a group shows no run handles
@@ -88,6 +105,15 @@ export function createViewer(opts) {
       m.renderOrder = 11; m.userData = { handle: name, home: m.position.clone() };
       handleGroup.add(m);
     }
+    const run = opts.runOf ? opts.runOf(selected) : null;          // mm, kitchen frame = scene frame scaled
+    if (run) {
+      const pivot = new THREE.Vector3(run.x * k, 0.09, run.z * k);
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.11, 0.025, 10, 32), moveMat);
+      ring.rotation.x = Math.PI / 2;
+      ring.position.copy(pivot).addScaledVector(u, -0.35).addScaledVector(n, front);
+      ring.renderOrder = 11; ring.userData = { handle: 'turn', home: ring.position.clone(), pivot };
+      handleGroup.add(ring);
+    }
     handleAxes = { u, n };
   }
   renderer.domElement.addEventListener('pointerdown', (ev) => {       // capture: before the orbit controls start turning the camera
@@ -103,6 +129,13 @@ export function createViewer(opts) {
       const at = floorAt(ev); if (!at) return;
       drag.d = { x: at.x - drag.from.x, z: at.z - drag.from.z };
       const { u } = handleAxes; const home = drag.mesh.userData.home;
+      if (drag.mesh.userData.handle === 'turn') {                  // the ring goes round the origin; the status line says the angle
+        const pv = drag.mesh.userData.pivot; const deg = dragTurn(pv, drag.from, at) || 0; const t = (deg * Math.PI) / 180;
+        const rx = home.x - pv.x, rz = home.z - pv.z;
+        drag.mesh.position.set(pv.x + rx * Math.cos(t) + rz * Math.sin(t), home.y, pv.z - rx * Math.sin(t) + rz * Math.cos(t));
+        drag.turn = deg; opts.onTurn?.(deg);
+        return;
+      }
       if (drag.mesh.userData.handle === 'move') drag.mesh.position.set(home.x + drag.d.x, home.y, home.z + drag.d.z);
       else drag.mesh.position.copy(home).addScaledVector(u, drag.d.x * u.x + drag.d.z * u.z);       // an end slides along its run only
       return;
@@ -114,7 +147,7 @@ export function createViewer(opts) {
     const { u, n } = handleAxes; const k = unit(); const d = drag; drag = null;
     controls.enabled = true; renderer.domElement.style.cursor = ''; suppressClick = true; setTimeout(() => { suppressClick = false; }, 80);   // released outside the view: no click follows
     d.mesh.position.copy(d.mesh.userData.home);
-    const change = dragChange(d.mesh.userData.handle, (d.d.x * u.x + d.d.z * u.z) / k, (d.d.x * n.x + d.d.z * n.z) / k);
+    const change = dragChange(d.mesh.userData.handle, (d.d.x * u.x + d.d.z * u.z) / k, (d.d.x * n.x + d.d.z * n.z) / k, d.turn || null);
     if (change && typeof selected === 'string') opts.onRunDrag?.({ module: selected, ...change }, { x: ev.clientX, y: ev.clientY });
   });
 
@@ -147,20 +180,39 @@ export function createViewer(opts) {
     const r = renderer.domElement.getBoundingClientRect();
     pointer.set(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1);
     raycaster.setFromCamera(pointer, camera);
-    return raycaster.intersectObjects([...meshes, ...opts.extraPickables()], false);
+    return raycaster.intersectObjects([...meshes, ...opts.extraPickables(), ...wallFaces.filter((m) => m.visible)], false);
   };
+  // wall surfaces lit on their own (never the whole wall); the colour is a tint of each face's own material
+  const faceMats = new WeakMap();
+  function paintFaces(ids) {
+    for (const m of litFaces) if (m.userData.faceBase) m.material = m.userData.faceBase;
+    litFaces = [];
+    for (const id of ids || []) {
+      const m = faces.get(id)?.mesh; if (!m) continue;
+      if (!m.userData.faceBase || m.material !== m.userData.faceBase) m.userData.faceBase = m.material;
+      if (!faceMats.has(m.userData.faceBase)) {
+        const c = m.userData.faceBase.clone(); c.color?.lerp(SEL_TINT, 0.5); c.emissive = SEL_TINT.clone(); c.emissiveIntensity = 0.35; c.transparent = false; c.opacity = 1;
+        faceMats.set(m.userData.faceBase, c);
+      }
+      m.material = faceMats.get(m.userData.faceBase); litFaces.push(m);
+    }
+  }
 
   // left click: the nearest thing under the pointer wins: a cabinet module or a visible floorplan element
   renderer.domElement.addEventListener('click', (ev) => {
     if (suppressClick) { suppressClick = false; return; }      // the release of a handle drag is not a click on what lies under it
-    if (ev.shiftKey && opts.onShiftPick) { opts.onShiftPick(contextTarget(ev)); return; }   // Shift: the same role in the same tier of the same system
+    const face = surfaceHit(hitsAt(ev));                        // the nearest thing is a wall face: Ctrl/⌘ adds or drops it, Shift takes its room
+    const eff = clickEffect({ ctrl: ev.ctrlKey, meta: ev.metaKey, shift: ev.shiftKey }, face);
+    if (!eff.pick && eff.surface) { opts.onSurfacePick?.(face, eff.surface); return; }
+    if (eff.shiftPick) { opts.onShiftPick?.(contextTarget(ev)); return; }   // Shift: the same role in the same tier of the same system
     const ids = opts.moduleIds() || [];
     const hit = hitsAt(ev).find((h) => h.object.userData.structureId || (h.object.userData.module && ids.includes(h.object.userData.module)));
     const at = { x: ev.clientX, y: ev.clientY };
     const menuTarget = contextTarget(ev);     // what a right click here would open the menu on (null = empty space)
-    if (hit?.object.userData.structureId) opts.onPick({ kind: 'structure', id: hit.object.userData.structureId }, at, menuTarget);
+    if (hit?.object.userData.structureId) opts.onPick({ kind: 'structure', id: hit.object.userData.structureId, ...(face ? { surface: face } : {}) }, at, menuTarget);
     else if (hit) opts.onPick({ kind: 'module', id: hit.object.userData.module }, at, menuTarget);
     else opts.onPick(null, at, null);
+    opts.onSurfacePick?.(face, eff.surface);      // after the pick: the wall's own selection must not light over the face
   });
 
   function contextTarget(ev) {
@@ -182,6 +234,7 @@ export function createViewer(opts) {
     const d = lastDown; lastDown = null;
     const ids = opts.moduleIds();
     if (!d || !(d.button === 2 || (d.button === 0 && d.ctrl)) || !isClick(d, { x: ev.clientX, y: ev.clientY, t: performance.now() }) || !ids) return;
+    if (!opensMenu(d, surfaceHit(hitsAt(ev)))) return;           // Ctrl+click on a wall face picks faces; the menu opens with the right button
     opts.onContext(contextTarget(ev), { x: ev.clientX, y: ev.clientY });
   });
 
@@ -194,9 +247,16 @@ export function createViewer(opts) {
       const k = buildKitchen(doc, THREE, { RectAreaLightUniformsLib, loadModel });
       root.add(k.root);
       meshes = k.pickables; byModule = k.byModule; docCams = k.cameras || {};
+      faces = k.surfaces || new Map(); wallFaces = (k.surfacePickables || []).filter((m) => m.userData.type === 'wall'); litFaces = [];
       opts.onSceneBuilt(k);
-      highlight(); refreshHandles(); drawGuide(guide?.to ? { x: guide.to.x * unit(), z: guide.to.z * unit() } : null);
+      highlight(); refreshHandles(); drawGuide(guide?.to ? { x: guide.to.x * unit(), z: guide.to.z * unit() } : null); drawMarks();
     },
+    /** Lines drawn over the scene ({a, b, main}, mm): the axes of the opening being edited; an empty list removes them. */
+    setMarks(lines) { marks = lines || []; drawMarks(); },
+    /** Light these wall surfaces (ids of room.surfaces), each face alone; [] lights none. */
+    setSelectedSurfaces(ids) { paintFaces(ids); },
+    /** Whether a wall surface is drawn now (a hidden wall's faces are not). */
+    surfaceShown(id) { let o = faces.get(id)?.mesh; while (o) { if (o.visible === false) return false; o = o.parent; } return faces.has(id); },
     /** One module (its id), a Shift-selected group ({ modules, role }), or nothing. */
     setSelected(sel) { selected = sel || null; highlight(); refreshHandles(); },
     /** Whether the view shows a part of `role` (door / drawer / handle / all) on `module`. */
@@ -214,7 +274,7 @@ export function createViewer(opts) {
       const hide = new Set(v.hide || []);
       for (const o of hiddenByView) o.visible = true;
       hiddenByView = [];
-      if (hide.size) root.traverse((o) => { if (o.userData && hide.has(o.userData.structureId) && o.visible) { o.visible = false; hiddenByView.push(o); } });
+      if (hide.size) root.traverse((o) => { if (o.userData && (hide.has(o.userData.structureId) || hide.has(o.userData.openingId)) && o.visible) { o.visible = false; hiddenByView.push(o); } });
       // the document's camera is in the frame the scene is drawn in (an imported floorplan moves the kitchen into its room); the view's own numbers
       // are in the kitchen frame and only stand in when the document has no such camera
       const c = docCams[`CAM-${key}`];

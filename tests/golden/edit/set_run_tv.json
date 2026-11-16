@@ -42,7 +42,8 @@
       "z": 0.0,
       "yaw": 0.0,
       "purpose": "tv",
-      "tvLayout": "shelves"
+      "tvLayout": "shelves",
+      "anchor": "end"
      },
      {
       "id": "R2",
@@ -99,7 +100,8 @@
       "id": "R1",
       "x": -1920.0,
       "z": 0.0,
-      "yaw": 0.0
+      "yaw": 0.0,
+      "anchor": "end"
      },
      {
       "id": "R2",

@@ -115,7 +115,7 @@ Coordinates are fractions of image width/height (0 = left/top, 1 = right/bottom)
 
 Return:
 {{
-  "layout": "straight" | "l-shape" | "u-shape",
+  "layout": "straight" | "l-shape" | "u-shape" | "none",   // none = no kitchen cabinets at all (e.g. only a wall with a door or window): then "runs": []
   "view": "frontal" | "perspective",   // frontal = a single run seen square-on with horizontal edges; anything else = perspective
   "runs": [ {{
      "wall": "back" | "left" | "right",   // back = wall facing the camera; left/right = side walls
@@ -171,4 +171,46 @@ Return:
   "worktopThicknessMm": int, "widthRoundingMm": int, "heightRoundingMm": int, "alignToleranceMm": int,
   "snapToleranceMm": int, "worktopOptionsMm": [int], "gapOptionsMm": [int], "upperHeightOptionsMm": [int],
   "verticalCorrection": "auto"|"none", "fovDeg": float, "reasoning": "one or two sentences"}}
+{_JSON_ONLY}"""
+
+
+def openings_prompt(walls: list[str]) -> str:
+    from .contract_openings import CORNERS, EDGES, KINDS, SIDES, STYLES
+    return f"""Find the room openings in this kitchen photo: doors, windows and open passages in the walls {walls}
+(back = wall facing the camera; left/right = side walls). Ignore cabinet doors, appliance doors, mirrors and pictures.
+Coordinates are fractions of image width/height (0 = left/top, 1 = right/bottom).
+
+For each opening give:
+ {{"kind": one of {list(KINDS)}, "wall": one of {walls},
+   "corners": {{{", ".join(f'"{k}": [x, y]' for k in CORNERS)}}},   // the 4 corners of the opening ON THE WALL SURFACE, as seen in the image
+   "edgesSeen": one of {list(EDGES)},   // casing = the corners are the outer edges of the trim around it; hole = there is no trim
+   "style": one of {list(STYLES)},      // how the leaves open (fixed glass = fixed; open passage = none)
+   "leaves": int,                       // number of leaves that open or slide (not the fixed panes), 0 for a passage or fixed glass
+   "verticals": [[x, y]],               // one point on each vertical divider between leaves (mullion, meeting stiles), not the outer edges
+   "horizontals": [[x, y]],             // one point on each horizontal divider (transom), not the top or bottom edge
+   "hidden": [subset of {list(SIDES)}], // edges you cannot see (behind a cabinet, out of the picture); still give your best corner
+   "confidence": 0..1, "note": ""}}
+Only openings in those walls. If a corner is hidden, put it where the edge would be. If there is no opening, return an empty list.
+Return {{"openings": [...]}}
+{_JSON_ONLY}"""
+
+
+def opening_photo_prompt() -> str:
+    """Ảnh không có tủ: chỉ hỏi cửa trên bức tường nhìn thấy (không có vật chuẩn nên không đo mm, code chỉ lấy tỉ lệ)."""
+    from .contract_openings import CORNERS, EDGES, KINDS, SIDES, STYLES
+    return f"""This photo shows a wall with no kitchen cabinets. Find the room openings in it: doors, windows and open passages.
+Ignore furniture, mirrors and pictures. Coordinates are fractions of image width/height (0 = left/top, 1 = right/bottom).
+
+For each opening give:
+ {{"kind": one of {list(KINDS)},
+   "corners": {{{", ".join(f'"{k}": [x, y]' for k in CORNERS)}}},   // the 4 corners of the opening ON THE WALL SURFACE
+   "edgesSeen": one of {list(EDGES)},   // casing = the corners are the outer edges of the trim around it; hole = there is no trim
+   "style": one of {list(STYLES)},      // how the leaves open (fixed glass = fixed; open passage = none)
+   "leaves": int,                       // number of leaves that open or slide (not the fixed panes), 0 for a passage
+   "verticals": [[x, y]],               // one point on each vertical divider between leaves or panes, not the outer edges
+   "horizontals": [[x, y]],             // one point on each horizontal divider (transom), not the top or bottom edge
+   "hidden": [subset of {list(SIDES)}], // edges you cannot see; still give your best corner
+   "confidence": 0..1, "note": ""}}
+If there is no opening, return an empty list.
+Return {{"openings": [...]}}
 {_JSON_ONLY}"""

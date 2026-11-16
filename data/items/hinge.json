@@ -1,0 +1,46 @@
+[
+ {
+  "id": "clip-110-soft",
+  "label": {
+   "vi": "Bản lề giảm chấn 110°",
+   "en": "Soft-close hinge 110°"
+  },
+  "openingAngle": 110,
+  "overlay": "full",
+  "softClose": true,
+  "cupDiameter": 35
+ },
+ {
+  "id": "clip-110-half",
+  "label": {
+   "vi": "Bản lề trùm nửa 110°",
+   "en": "Half-overlay hinge 110°"
+  },
+  "openingAngle": 110,
+  "overlay": "half",
+  "softClose": true,
+  "cupDiameter": 35
+ },
+ {
+  "id": "clip-110-inset",
+  "label": {
+   "vi": "Bản lề lọt lòng 110°",
+   "en": "Inset hinge 110°"
+  },
+  "openingAngle": 110,
+  "overlay": "inset",
+  "softClose": true,
+  "cupDiameter": 35
+ },
+ {
+  "id": "wide-165",
+  "label": {
+   "vi": "Bản lề mở rộng 165°",
+   "en": "Wide-angle hinge 165°"
+  },
+  "openingAngle": 165,
+  "overlay": "full",
+  "softClose": true,
+  "cupDiameter": 35
+ }
+]

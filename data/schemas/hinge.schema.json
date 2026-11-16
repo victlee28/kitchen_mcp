@@ -1,0 +1,121 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "hinge",
+ "type": "object",
+ "required": [
+  "label",
+  "openingAngle"
+ ],
+ "additionalProperties": false,
+ "properties": {
+  "label": {
+   "type": "object",
+   "required": [
+    "vi"
+   ],
+   "properties": {
+    "vi": {
+     "type": "string"
+    },
+    "en": {
+     "type": "string"
+    }
+   },
+   "additionalProperties": false,
+   "x-label": {
+    "vi": "Tên",
+    "en": "Name"
+   }
+  },
+  "brand": {
+   "type": "string",
+   "x-label": {
+    "vi": "Hãng",
+    "en": "Brand"
+   }
+  },
+  "code": {
+   "type": "string",
+   "x-label": {
+    "vi": "Mã sản phẩm",
+    "en": "Product code"
+   }
+  },
+  "openingAngle": {
+   "type": "number",
+   "exclusiveMinimum": 0,
+   "maximum": 270,
+   "x-label": {
+    "vi": "Góc mở (độ)",
+    "en": "Opening angle (degrees)"
+   }
+  },
+  "overlay": {
+   "enum": [
+    "full",
+    "half",
+    "inset"
+   ],
+   "x-label": {
+    "vi": "Kiểu trùm cánh",
+    "en": "Overlay"
+   }
+  },
+  "softClose": {
+   "type": "boolean",
+   "x-label": {
+    "vi": "Giảm chấn",
+    "en": "Soft close"
+   }
+  },
+  "cupDiameter": {
+   "type": "number",
+   "exclusiveMinimum": 0,
+   "x-label": {
+    "vi": "Đường kính chén (mm)",
+    "en": "Cup diameter (mm)"
+   }
+  },
+  "price": {
+   "type": "object",
+   "required": [
+    "amount",
+    "currency"
+   ],
+   "additionalProperties": false,
+   "properties": {
+    "amount": {
+     "type": "number",
+     "minimum": 0
+    },
+    "currency": {
+     "type": "string",
+     "pattern": "^[A-Z]{3}$"
+    }
+   },
+   "x-label": {
+    "vi": "Giá",
+    "en": "Price"
+   }
+  },
+  "note": {
+   "type": "object",
+   "required": [
+    "vi"
+   ],
+   "properties": {
+    "vi": {
+     "type": "string"
+    },
+    "en": {
+     "type": "string"
+    }
+   },
+   "additionalProperties": false,
+   "x-label": {
+    "vi": "Ghi chú",
+    "en": "Note"
+   }
+  }
+ }
+}

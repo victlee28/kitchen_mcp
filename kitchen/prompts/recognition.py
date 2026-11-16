@@ -10,6 +10,18 @@ SCHEMA: dict[str, Any] = {
             "type": {"type": "STRING"}, "wall": {"type": "STRING"}, "width": {"type": "NUMBER"}, "fromCorner": {"type": "NUMBER"},
             "height": {"type": "NUMBER"}, "depth": {"type": "NUMBER"}, "confidence": {"type": "NUMBER"}, "label": {"type": "STRING"}},
             "required": ["type", "wall", "width"]}},
+        "openings": {"type": "ARRAY", "items": {"type": "OBJECT", "properties": {
+            "kind": {"type": "STRING"}, "wall": {"type": "STRING"},
+            "axes": {"type": "ARRAY", "items": {"type": "OBJECT", "properties": {"fromCorner": {"type": "NUMBER"}, "confidence": {"type": "NUMBER"}},
+                                                "required": ["fromCorner"]}},
+            "sill": {"type": "NUMBER"}, "head": {"type": "NUMBER"}, "edgesSeen": {"type": "STRING"}, "style": {"type": "STRING"},
+            "leaves": {"type": "INTEGER"}, "confidence": {"type": "NUMBER"}},
+            "required": ["kind", "wall", "axes"]}},
+        "photoOpenings": {"type": "ARRAY", "items": {"type": "OBJECT", "properties": {
+            "kind": {"type": "STRING"}, "style": {"type": "STRING"}, "leaves": {"type": "INTEGER"}, "edgesSeen": {"type": "STRING"},
+            "aspect": {"type": "NUMBER"}, "axesRatio": {"type": "ARRAY", "items": {"type": "NUMBER"}},
+            "hAxesRatio": {"type": "ARRAY", "items": {"type": "NUMBER"}}, "confidence": {"type": "NUMBER"}},
+            "required": ["kind", "aspect"]}},
         "room": {"type": "OBJECT", "properties": {"ceiling": {"type": "NUMBER"}}},
         "materials": {"type": "OBJECT", "properties": {k: {"type": "STRING"} for k in ("base", "upper", "tall", "countertop", "wall", "floor")}},
         "confidence": {"type": "NUMBER"},
@@ -29,6 +41,13 @@ def recognition_text(kind: str, module_types: tuple[str, ...]) -> str:
         "standard sizes (base units 300-900, a hob or sink unit 600-900, a tall unit 600).\n"
         "- fromCorner: distance from the left end of that wall to the module's left edge, when you can tell.\n"
         "- height and depth only when printed or obvious. confidence 0-1 for each module: be honest, use below 0.5 when guessing.\n"
+        "openings: the doors, windows and open passages in those walls (not cabinet or appliance doors): kind door, window or passage; wall; "
+        "axes = every vertical edge or divider you see across it, as fromCorner measured like the modules' fromCorner, outer edges included; "
+        "sill and head heights above the floor; edgesSeen 'casing' when the edges you measured are the outer edges of a trim, else 'hole'; "
+        "style swing, sliding, folding, fixed or top-hung; leaves; confidence.\n"
+        "If the picture shows no cabinets at all but a door or window, return an empty modules list and photoOpenings instead: kind, style, "
+        "leaves (the ones that open or slide), edgesSeen, aspect = height / width of the opening, axesRatio = each vertical divider as a "
+        "fraction of the width from the left edge, hAxesRatio = each horizontal divider as a fraction of the height from the sill, confidence.\n"
         "Also give room.ceiling if shown, the materials you see (base, upper, tall, countertop, wall, floor) as short names, "
         "and notes for anything you could not read. Never invent modules that are not visible. "
         "If the image is not a kitchen, return an empty modules list and say so in notes.")

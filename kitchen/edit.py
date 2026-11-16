@@ -5,6 +5,8 @@
 """
 from __future__ import annotations
 
+import re
+
 from typing import Any
 
 from .numeric import round_half_away
@@ -21,18 +23,14 @@ def _clone(spec: KitchenSpec) -> KitchenSpec:
 
 
 def _same_run(a: Module, b: Module) -> bool:
-    """Hai module cùng tường và chồng nhau theo phương đứng."""
-    if a.run or b.run:
-        return a.run == b.run and min(a.y + a.height, b.y + b.height) - max(a.y, b.y) > 1     # modules of an explicit run only meet in that run
-    if a.wall == "island" and (a.offset, a.facing or "-z") != (b.offset, b.facing or "-z"):
-        return False                      # free runs at another place or facing are other runs
-    return a.wall == b.wall and a.wall != "corner" and min(a.y + a.height, b.y + b.height) - max(a.y, b.y) > 1
+    """Two cabinets of the same run that overlap in height (the row that closes up when one of them changes)."""
+    return bool(a.run) and a.run == b.run and min(a.y + a.height, b.y + b.height) - max(a.y, b.y) > 1
 
 
 def _shift(spec: KitchenSpec, ref: Module, shift_from: float, delta: float, skip: set[str]):
     if not delta:
         return
-    moved = [m for m in spec.module if m.id not in skip and _same_run(m, ref) and m.fromCorner >= shift_from - 1]
+    moved = [m for m in spec.module if m.id not in skip and _same_run(m, ref) and m.storey != "corner" and m.fromCorner >= shift_from - 1]
     if delta < 0:   # closing a gap: a tall cabinet slides only into room that is free on every storey; else it and what follows it stay
         blocked = [t for t in moved if t.storey == "tall" and _tall_blocked(spec, t, delta, moved, skip)]
         if blocked:
@@ -40,27 +38,72 @@ def _shift(spec: KitchenSpec, ref: Module, shift_from: float, delta: float, skip
             moved = [m for m in moved if m.fromCorner < stop - 1]
     # tủ cao bị dịch thì kéo theo mọi module cùng tường phía sau nó (mọi tầng)
     for tall in [m for m in moved if m.storey == "tall"]:
-        moved += [m for m in spec.module if m.wall == tall.wall and m.run == tall.run and (m.offset, m.facing) == (tall.offset, tall.facing)
-                  and m.fromCorner >= tall.fromCorner - 1 and m.id not in skip and m not in moved]
+        moved += [m for m in spec.module if m.run == tall.run and m.storey != "corner" and m.fromCorner >= tall.fromCorner - 1 and m.id not in skip and m not in moved]
     for m in moved:
         m.fromCorner = max(0.0, m.fromCorner + delta)
-    for tb in spec.appliances:  # thiết bị gắn vị trí trên tường dịch cùng
-        if tb.wall == ref.wall and tb.center is not None and ref.storey == "base" and tb.center >= shift_from - 1:
+    _move_devices(spec, moved, delta)
+
+
+def _move_devices(spec: KitchenSpec, moved: list[Module], delta: float) -> None:
+    """A device placed at a point along the run of the cabinet it stands in (``center``) moves with that cabinet."""
+    ids = {m.id for m in moved}
+    for tb in spec.appliances:
+        if tb.module in ids and tb.center is not None:
             tb.center += delta
+
+
+def _anchored_end(spec: KitchenSpec, ref: Module) -> Run | None:
+    """The run of ``ref`` when its END stays put (``Run.anchor == "end"``): there closing a gap moves the cabinets before the change."""
+    run = next((r for r in spec.runs if r.id == ref.run), None) if ref.run else None
+    return run if run is not None and run.anchor == "end" else None
+
+
+def _shift_back(spec: KitchenSpec, ref: Module, upto: float, delta: float, skip: set[str]) -> None:
+    """``_shift`` for a run anchored at its end: the cabinets of ``ref``'s row that end at or before ``upto`` move by ``-delta`` (a corner shelf stays,
+    as in a corner it always did); a tall cabinet that moves takes every storey before it along. The run's start is then kept at s = 0."""
+    if not delta:
+        return
+    moved = [m for m in spec.module if m.id not in skip and _same_run(m, ref) and m.storey != "corner" and m.endAt <= upto + 1]
+    if delta < 0:   # closing a gap: a tall cabinet slides only into room free on every storey
+        blocked = [t for t in moved if t.storey == "tall" and _tall_blocked(spec, t, -delta, moved, skip)]
+        if blocked:
+            stop = max(t.endAt for t in blocked)
+            moved = [m for m in moved if m.endAt > stop + 1]
+    for tall in [m for m in moved if m.storey == "tall"]:
+        moved += [m for m in spec.module if m.run == tall.run and m.storey != "corner" and m.endAt <= tall.endAt + 1 and m.id not in skip and m not in moved]
+    for m in moved:
+        m.fromCorner = m.fromCorner - delta
+    _move_devices(spec, moved, -delta)
+
+
+def _keep_start(spec: KitchenSpec, run_id: str | None) -> None:
+    """A run anchored at its end whose cabinets now start before (or after) s = 0: its origin moves there, so nothing moves in the room."""
+    run = next((r for r in spec.runs if r.id == run_id), None) if run_id else None
+    mods = [m for m in spec.module if m.run == run_id]
+    if run is None or run.anchor != "end" or not mods:
+        return
+    lo = min(m.fromCorner for m in mods)
+    if abs(lo) <= 1e-6:
+        return
+    from .runs import RunFrame
+    run.x, run.z = RunFrame(run.id, run.x, run.z, run.yaw).to_world(lo, 0.0)
+    for m in mods:
+        m.fromCorner = m.fromCorner - lo
+    _move_devices(spec, mods, -lo)
 
 
 def _tall_blocked(spec: KitchenSpec, tall: Module, delta: float, moved: list[Module], skip: set[str]) -> bool:
     """Whether a cabinet that stays put stands where ``tall`` would go after sliding by ``delta`` (same wall row, any storey)."""
     lo, hi = tall.fromCorner + delta, tall.endAt + delta
-    return any(m.id not in skip and m not in moved and m.wall == tall.wall and m.run == tall.run and (m.offset, m.facing) == (tall.offset, tall.facing)
-               and m.fromCorner < hi - 1 and m.endAt > lo + 1 for m in spec.module)
+    return any(m.id not in skip and m not in moved and m.run == tall.run and m.storey != "corner" and m.fromCorner < hi - 1 and m.endAt > lo + 1
+               for m in spec.module)
 
 
 def new_id(spec: KitchenSpec, prefix: str) -> str:
     """Next id of a kind. Monotonic: the number never goes back (not even into the hole a removed module left), so a name
     that once meant one cabinet never means another — images, comments and approvals stay attached to the right one."""
     top = 0
-    for m in [*spec.module, *spec.runs]:
+    for m in [*spec.module, *spec.runs, *spec.openings]:
         tail = m.id[len(prefix):] if m.id.startswith(prefix) else ""
         if tail.isdigit():
             top = max(top, int(tail))
@@ -69,11 +112,27 @@ def new_id(spec: KitchenSpec, prefix: str) -> str:
     return f"{prefix}{n}"
 
 
-def add_module(spec: KitchenSpec, module: dict[str, Any], after_module: str | None = None, close_gap: bool = True) -> KitchenSpec:
-    """Thêm module. Nếu có `sau_module`, đặt ngay sau module đó (cùng tường, cùng tầng nếu không nói khác)."""
+def add_module(spec: KitchenSpec, module: dict[str, Any], after_module: str | None = None, close_gap: bool = True,
+               before_module: str | None = None) -> KitchenSpec:
+    """Thêm module. ``after_module`` / ``before_module``: right after (to the right of) / right before that cabinet, in its run, with its
+    storey's sizes unless said otherwise. Closing up moves the cabinets on the run's free side: after the new one, or before it when the
+    run keeps its end (``Run.anchor``)."""
     s = _clone(spec)
     data = dict(module)
     devices = [d for d in (as_dict(x) for x in [data.pop("appliance", None), *(as_list(data.pop("appliances", None)) or [])]) if d is not None]   # devices standing in/on this module
+    if before_module and not after_module:
+        ref = s.find(before_module)
+        for key in ("y", "height", "depth"):
+            data.setdefault(key, getattr(ref, key))
+        data.setdefault("type", ref.type if ref.storey != "corner" else "base")
+        data["wall"], data["run"] = "island", ref.run
+        width = float(data.get("width") or 0)
+        data["fromCorner"] = ref.fromCorner
+        if _anchored_end(s, ref) is not None:          # the run keeps its end: the new cabinet ends where ``ref`` starts
+            data["fromCorner"] = ref.fromCorner - width
+            if close_gap:                              # ...and the cabinets before ``ref`` make room
+                _shift_back(s, from_data(Module, {**data, "id": data.get("id") or "__probe__"}), ref.fromCorner, width, set())
+                close_gap = False
     if after_module:
         ref = s.find(after_module)
         data.setdefault("wall", ref.wall)
@@ -82,17 +141,25 @@ def add_module(spec: KitchenSpec, module: dict[str, Any], after_module: str | No
         data.setdefault("depth", ref.depth)
         data.setdefault("type", ref.type if ref.storey != "corner" else "base")
         data["fromCorner"] = ref.endAt
-        if ref.wall == "island":              # a free or angled run: the new module stands in the same run
-            for key in ("run", "offset", "facing"):
-                if getattr(ref, key) and key not in data:
-                    data[key] = getattr(ref, key)
+        if ref.run and "run" not in data:     # the new module stands in the same run
+            data["run"] = ref.run
+    if not data.get("run") and data.get("wall") in ("back", "right", "left", "island", "corner"):     # given by wall: placed in the run along it
+        from .rows_to_runs import placed_in_run
+        data, made = placed_in_run(s, data)
+        s.runs.extend(made)
     if not data.get("id"):
         storey = data.get("type", "base")
         data["id"] = new_id(s, "KG" if storey == "corner-shelf" else "TC" if storey.startswith("tall") else "TT" if storey.startswith("upper") else "TD")
+    if after_module and _anchored_end(s, s.find(after_module)) is not None:      # the run keeps its end: the new cabinet ends where ``ref`` ended
+        data["fromCorner"] = s.find(after_module).endAt - float(data.get("width") or 0)
     new = from_data(Module, data)
     if close_gap:
-        _shift(s, new, new.fromCorner, new.width, set())
+        if _anchored_end(s, new) is not None:
+            _shift_back(s, new, new.endAt, new.width, set())
+        else:
+            _shift(s, new, new.fromCorner, new.width, set())
     s.module.append(new)
+    _keep_start(s, new.run)
     for device in devices:                        # {"type", "name"?, "dimensions"?, "wall"?/"center"? for a sink, hob or tap}
         s.appliances.append(from_data(Appliance, {**device, "id": new_id(s, "TB"), "module": new.id}))
     return from_data(KitchenSpec, to_data(s))
@@ -276,7 +343,7 @@ def next_run_id(spec: KitchenSpec) -> str:
 
 def _prune_runs(s: KitchenSpec) -> None:
     """Drop runs no module stands in any more (a removed last cabinet leaves no ghost frame behind)."""
-    used = {m.run for m in s.module if m.run}
+    used = {m.run for m in s.module if m.run} | {m.turnsInto for m in s.module if m.turnsInto}     # a corner shelf's second leg holds its run
     s.runs = [r for r in s.runs if r.id in used]
 
 
@@ -285,8 +352,12 @@ def remove_module(spec: KitchenSpec, id: str, close_gap: bool = True) -> Kitchen
     m = s.find(id)
     s.module = [x for x in s.module if x.id != id]
     s.appliances = [t for t in s.appliances if t.module != id]
-    if close_gap and m.wall != "corner":
-        _shift(s, m, m.endAt, -m.width, set())
+    if close_gap and m.storey != "corner":
+        if _anchored_end(s, m) is not None:
+            _shift_back(s, m, m.fromCorner, -m.width, set())
+        else:
+            _shift(s, m, m.endAt, -m.width, set())
+    _keep_start(s, m.run)
     _prune_runs(s)
     return from_data(KitchenSpec, to_data(s))
 
@@ -301,11 +372,20 @@ def update_module(spec: KitchenSpec, id: str, changes: dict[str, Any], close_gap
         free_old = old.width - old.blindCorner - old.endPanel
         free_new = merged["width"] - merged.get("blindCorner", 0) - merged.get("endPanel", 0)
         merged["doors"] = [round_half_away(w * free_new / free_old, 1) for w in old.doors]
+    end_run = _anchored_end(s, old) if old.run and merged.get("run") == old.run else None
+    if end_run is not None and close_gap and "fromCorner" not in changes and merged.get("width") != old.width:
+        merged["fromCorner"] = old.endAt - float(merged["width"])        # the run keeps its end: the cabinet keeps its right edge
     new = from_data(Module, merged)
-    if close_gap and new.wall == old.wall and new.wall != "corner":
-        if new.endAt != old.endAt:
+    if close_gap and new.run == old.run and new.storey != "corner":
+        if end_run is not None:
+            if new.fromCorner != old.fromCorner:
+                _shift_back(s, old, old.fromCorner, old.fromCorner - new.fromCorner, {id})
+                if "fromCorner" not in changes:
+                    _move_devices(s, [old], new.fromCorner - old.fromCorner)
+        elif new.endAt != old.endAt:
             _shift(s, old, old.endAt, new.endAt - old.endAt, {id})
     s.module = [new if x.id == id else x for x in s.module]
+    _keep_start(s, new.run)
     return from_data(KitchenSpec, to_data(s))
 
 
@@ -313,6 +393,31 @@ def combine_ops(ops: list[dict[str, Any]]) -> dict[str, Any]:
     """One op from a list of ops. A multi op cannot nest, so nested multi ops are flattened."""
     flat = [x for o in ops for x in ((o.get("ops") or []) if o.get("op") == "multi" else [o])]
     return flat[0] if len(flat) == 1 else {"op": "multi", "ops": flat}
+
+
+SURFACE_ID = re.compile(r"[^#\s]{1,80}#[a-z0-9-]{1,20}")
+
+
+def surface_material(spec: KitchenSpec, surfaces: Any, material: Any) -> KitchenSpec:
+    """{"op": "surface-material", "surfaces": ["wall_006#inside", ...], "material": "Sơn trắng" | null}: the finish of single wall faces
+    (``kitchen.wall_surfaces`` ids); null or "" gives the faces back the wall's own finish."""
+    ids = [str(x) for x in as_list(surfaces) or []]
+    if not ids or any(not SURFACE_ID.fullmatch(i) for i in ids):
+        raise InvalidInput("surfaces must be wall surface ids such as wall_006#inside", code="bad-surfaces")
+    name = str(material).strip() if isinstance(material, str) else ""
+    if material is not None and not isinstance(material, str):
+        raise InvalidInput("material must be a material name or null", code="bad-material")
+    if len(name) > 120:
+        raise InvalidInput("material name is too long (120 characters at most)", code="bad-material")
+    data = to_data(_clone(spec))
+    finishes: dict[str, str] = {str(k): str(v) for k, v in (as_dict(data.get("surfaceMaterials")) or {}).items()}
+    for i in ids:
+        if name:
+            finishes[i] = name
+        else:
+            finishes.pop(i, None)
+    data["surfaceMaterials"] = dict(sorted(finishes.items())) or None
+    return from_data(KitchenSpec, data)
 
 
 def update_common(spec: KitchenSpec, changes: dict[str, Any]) -> KitchenSpec:
@@ -324,9 +429,100 @@ def update_common(spec: KitchenSpec, changes: dict[str, Any]) -> KitchenSpec:
 
 def apply_op(spec: KitchenSpec, op: dict[str, Any], catalog: Catalog = builtin.CATALOG) -> KitchenSpec:
     """``_apply_op``, then every cabinet's type must be one of the catalog (catalog kind ``cabinet-type``)."""
-    out = _apply_op(spec, op, catalog)
+    from .rows_to_runs import as_runs
+    out = _apply_op(as_runs(spec, catalog), op, catalog)
     cabinet_types.check_known([m.type for m in out.module], catalog)
-    return out
+    return as_runs(out, catalog)                 # a cabinet added by wall stands in the run along that wall
+
+
+OPENING_OPS = ("add-opening", "update-opening", "move-opening", "remove-opening", "reset-opening", "rehost-opening", "adopt-openings")
+
+
+def _opening_op(spec: KitchenSpec, kind: str, op: dict[str, Any], catalog: Catalog) -> KitchenSpec:
+    """Room openings (kitchen.openings, ADR 0005). ``id`` names the design's record (OPn) or a floorplan opening (its element id):
+    changing a floorplan opening writes a record that overrides it, removing one writes a ``removed`` record, ``reset-opening``
+    drops the record so the opening is again as drawn. Every record is stored normalized."""
+    from . import geometry, openings
+    from .openings.normalize import upgrade_first_form
+    spec = _clone(spec)
+    lsau, lphai = geometry.wall_length(spec)
+    axes = openings.wall_axes.for_spec(to_data(spec), lsau, lphai)
+    data = to_data(spec)
+    def fresh_id() -> str:                              # monotonic (idCounters), carried into the data written back
+        oid = new_id(spec, "OP")
+        data["idCounters"] = dict(spec.idCounters)
+        return oid
+    def save(raw: dict[str, Any]) -> dict[str, Any]:
+        parsed, _ = openings.normalize(raw, str(raw.get("source") or "human"), catalog, axes, spec.country)
+        out = parsed.to_data()
+        return {k: v for k, v in out.items() if not (k == "removed" and v is False)}
+    if kind == "add-opening":
+        raw = dict(op.get("opening") or {})
+        raw["id"] = fresh_id()
+        return from_data(KitchenSpec, openings.ops.add(data, save(raw)))
+    if kind == "adopt-openings":      # floorplan openings left as drawn -> records of their own (drawn with frames and leaves)
+        wanted = {str(x) for x in as_list(op.get("ids")) or []}
+        taken = openings.overridden(data)
+        todo = [o for o in openings.effective(data, catalog, axes, spec.country)
+                if o.source == "drawn" and o.source_element and o.source_element not in taken and (not wanted or o.source_element in wanted)]
+        if not todo:
+            raise InvalidInput("Every floorplan opening already has a record in this design", code="opening-nothing-to-adopt")
+        for o in todo:
+            record = {**o.to_data(), "id": fresh_id(), "sourceElement": o.source_element}
+            record.pop("removed", None)
+            data = openings.ops.add(data, record)
+        return from_data(KitchenSpec, data)
+    oid = str(op.get("id") or "")
+    own = next((to_data(o) for o in spec.openings if o.id == oid or (o.sourceElement and o.sourceElement == oid)), None)
+    if own is not None and own.get("wallAxis") is None and "host" in own and not own.get("removed"):
+        own = upgrade_first_form(own, axes)[0]                             # a record saved in the first, axis-less form
+    inherited = None
+    if own is None or own.get("removed"):
+        inherited = next((o for o in openings.effective(data, catalog, axes, spec.country) if o.source_element == oid and o.source == "drawn"), None)
+    if own is None and inherited is None:
+        raise NotFound(f"No opening {oid!r}", code="opening-not-found", params={"id": oid})
+    if kind == "reset-opening":
+        element = (own or {}).get("sourceElement") or (inherited.source_element if inherited is not None else None)
+        if not element:
+            raise InvalidInput(f"Opening {oid!r} is not a floorplan opening", code="opening-not-inherited", params={"id": oid})
+        return from_data(KitchenSpec, openings.ops.reset(data, str(element)))
+    if kind == "remove-opening":
+        if own is not None and not own.get("sourceElement"):
+            return from_data(KitchenSpec, openings.ops.remove(data, str(own["id"])))
+        element = str((own or {}).get("sourceElement") or (inherited.source_element if inherited is not None else oid))
+        tomb_id = fresh_id()
+        base = openings.ops.reset(data, element) if own is not None else data
+        tomb = {"id": tomb_id, "kind": (own or {}).get("kind") or (inherited.kind if inherited is not None else "door"),
+                "sourceElement": element, "removed": True, "source": "human"}
+        return from_data(KitchenSpec, openings.ops.add(base, tomb))
+    changes = dict(op.get("changes") or {})
+    if kind == "move-opening":
+        changes = {"center": op["center"]} if "center" in op else {"fromEdge": op.get("fromEdge")}
+    if kind == "rehost-opening":
+        changes = {"wallAxis": op.get("wallAxis"), **({"center": op["center"]} if "center" in op else {})}
+    if "fromEdge" in changes:
+        changes["center"] = None
+    current = own if own is not None and not own.get("removed") else (inherited.to_data() if inherited is not None else {})
+    merged = {**current, **changes, "source": changes.get("source", "human")}
+    if merged.get("center") is None:
+        merged.pop("center", None)
+    new_axis: Any = changes.get("wallAxis")
+    axis_record = as_dict(new_axis)
+    if isinstance(new_axis, str):
+        merged["wallAxis"] = {"id": new_axis}
+    elif axis_record is not None:
+        merged["wallAxis"] = {"id": str(axis_record.get("id") or "")}
+    if "openingType" in changes and "leaves" not in changes:      # another type: its own template of axes and leaves
+        for key in ("leaves", "axes", "hAxes"):
+            if key not in changes:
+                merged.pop(key, None)
+    if own is not None and not own.get("removed"):
+        record = save({**merged, "id": own["id"]})
+        return from_data(KitchenSpec, openings.ops.replace(data, str(own["id"]), record))
+    element = inherited.source_element if inherited is not None else oid
+    record = save({**merged, "id": fresh_id(), "sourceElement": element})
+    base = openings.ops.reset(data, str(element)) if own is not None else data
+    return from_data(KitchenSpec, openings.ops.add(base, record))
 
 
 def _apply_op(spec: KitchenSpec, op: dict[str, Any], catalog: Catalog = builtin.CATALOG) -> KitchenSpec:
@@ -338,7 +534,7 @@ def _apply_op(spec: KitchenSpec, op: dict[str, Any], catalog: Catalog = builtin.
     {"op": "update-appliance", "id": "TB4", "model": "hob-gas-2b-75", "changes"?: {...}}  — another model in the same place
     {"op": "replace-element", "id": "furniture_003", "replaced": true|false}  — a floorplan element replaced by cabinets (no longer built) / back
     {"op": "stretch-run", "id": "R1", "end": "start"|"end", "delta": mm}  — drag one end; the cabinets at that end take the change
-    {"op": "add", "module": {...}, "afterModule": "TD3"} | {"op": "remove", "id": "TD3"}
+    {"op": "add", "module": {...}, "afterModule": "TD3"} | {"op": "add", "module": {...}, "beforeModule": "TD3"} | {"op": "remove", "id": "TD3"}
     {"op": "update", "id": "TD3", "changes": {...}} | {"op": "common", "changes": {...}}
     {"op": "replace", "spec": {...}}  — thay toàn bộ (vd nhập file)
     {"op": "lower-top", "newTop": 2550} | {"op": "molding", "id": "crown-molding", "changes": {"ignoreCeiling": true}}
@@ -351,7 +547,11 @@ def _apply_op(spec: KitchenSpec, op: dict[str, Any], catalog: Catalog = builtin.
     if kind == "catalog-refresh":       # the design as it is; saving it keeps the catalog items it uses as they are now (the revision's snapshot)
         return from_data(KitchenSpec, to_data(spec))
     if kind == "add":
-        return add_module(spec, op["module"], op.get("afterModule"), dd)
+        return add_module(spec, op["module"], op.get("afterModule"), dd, op.get("beforeModule"))
+    if kind in OPENING_OPS:
+        return _opening_op(spec, kind, op, catalog)
+    if kind == "surface-material":
+        return surface_material(spec, op.get("surfaces"), op.get("material"))
     if kind == "add-run":
         return add_run(spec, op["run"])
     if kind == "move-run":
@@ -372,6 +572,10 @@ def _apply_op(spec: KitchenSpec, op: dict[str, Any], catalog: Catalog = builtin.
         return remove_module(spec, op["id"], dd)
     if kind == "update":
         return update_module(spec, op["id"], op.get("changes", {}), dd)
+    if kind == "set-room":             # the default room's walls (a design without floorplan): {"room": {"wall": [...]}} or null (sized to its cabinets)
+        data = to_data(spec)
+        data["room"] = op.get("room")
+        return from_data(KitchenSpec, data)
     if kind == "common":
         return update_common(spec, op.get("changes", {}))
     if kind == "replace":

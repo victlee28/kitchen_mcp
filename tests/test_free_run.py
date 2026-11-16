@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from kitchen import geometry, rules, threejs_export  # noqa: E402
-from kitchen.spec import KitchenSpec, from_data  # noqa: E402
+from kitchen.spec import KitchenSpec, from_data, load_spec  # noqa: E402
 
 FIX = json.loads((ROOT / "fixtures" / "l-shaped-kitchen.json").read_text(encoding="utf-8"))
 # a 1200-wide run whose door face is at offset 2000, 550 deep, starting 500 from the origin of its own axis
@@ -18,7 +18,7 @@ RUN = {"id": "TD90", "type": "base-drawers", "wall": "island", "offset": 2000, "
 def _spec(facing):
     data = json.loads(json.dumps(FIX))
     data["module"].append({**RUN, **({"facing": facing} if facing else {})})
-    return from_data(KitchenSpec, data)
+    return load_spec(data)              # a legacy free run is read as a run of its own
 
 
 def _box(spec, kind):

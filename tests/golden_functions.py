@@ -70,8 +70,82 @@ def openings_hull(i):
     return {"hull": [list(p) for p in openings.hull([tuple(p) for p in i["points"]])]}
 
 
+def _opening_axes(i):
+    from kitchen.openings import wall_axes
+    if "floorplan" in i:
+        return wall_axes.from_floorplan(i["floorplan"])
+    room = i.get("room", {})
+    return wall_axes.for_room(room.get("back", 3600), room.get("side", 3000), room.get("thickness"))
+
+
+def _axis_data(a):
+    return {"id": a.id, "start": list(a.start), "dir": list(a.dir), "length": a.length, "inward": a.inward, "frame": a.frame,
+            "segments": [{"s0": g.s0, "s1": g.s1, "thickness": g.thickness, "source": g.source, "wall": g.wall} for g in a.segments]}
+
+
+def openings_wall_axes(i):
+    return {"axes": [_axis_data(a) for a in _opening_axes(i)]}
+
+
+def wall_surfaces_of_wall(i):
+    from kitchen import wall_surfaces
+    holes = [wall_surfaces.Hole(tuple(h["start"]), tuple(h["dir"]), h["e0"], h["e1"], h["y0"], h["y1"], h["reach"]) for h in i.get("holes", [])]
+    rooms = [(r["id"], [tuple(p) for p in r["outline"]]) for r in i.get("rooms", [])]
+    return {"surfaces": [s.to_data() for s in wall_surfaces.of_wall(i["wall"], [tuple(p) for p in i["outline"]], i["y0"], i["y1"], rooms,
+                                                                     i.get("kitchen"), holes, i.get("structure"))]}
+
+
+def openings_inner_corner(i):
+    from kitchen.openings import frames, wall_axes
+    axes = _opening_axes(i)
+    axis = wall_axes.find(i["axis"], axes)
+    return {"start": frames.inner_corner_s(axis, axes, "start"), "end": frames.inner_corner_s(axis, axes, "end")}
+
+
+def openings_normalize(i):
+    from kitchen import builtin, openings
+    opening, notes = openings.normalize(i["opening"], i.get("source", "human"), builtin.CATALOG, _opening_axes(i), i.get("country"))
+    return {"opening": opening.to_data(), "notes": notes}
+
+
+def openings_shape(i):
+    from kitchen import builtin, openings
+    axes = _opening_axes(i)
+    opening, _ = openings.normalize(i["opening"], i.get("source", "human"), builtin.CATALOG, axes, i.get("country"))
+    axis = openings.wall_axes.find(opening.wall_axis, axes)
+    return dict(openings.shape(opening, axis, builtin.CATALOG.data("opening-type", opening.opening_type)))
+
+
+def openings_from_floorplan(i):
+    from kitchen import builtin, openings
+    axes = openings.wall_axes.from_floorplan(i["floorplan"])
+    return {"openings": [opening.to_data() for opening in openings.from_floorplan(i["floorplan"], builtin.CATALOG, axes, i.get("country"))]}
+
+
+def openings_effective(i):
+    from kitchen import builtin, openings
+    axes = _opening_axes({"floorplan": i["spec"]["floorplan"]} if i["spec"].get("floorplan") else i)
+    return {"openings": [opening.to_data() for opening in openings.effective(i["spec"], builtin.CATALOG, axes, i.get("country"))]}
+
+
+def openings_ops_add(i):
+    from kitchen.openings import ops
+    return ops.add(i["spec"], i["opening"])
+
+
+def openings_ops_update(i):
+    from kitchen.openings import ops
+    return ops.update(i["spec"], i["id"], i["changes"])
+
+
+def openings_ops_remove(i):
+    from kitchen.openings import ops
+    return ops.remove(i["spec"], i["id"])
+
+
 def rules_openings_check(i):
-    from kitchen import openings, rules_openings
+    from kitchen import openings
+    from kitchen.openings import checks as rules_openings
     found = openings.from_structures(i["structures"], lambda x, z: (x, z))
     return {"findings": [{"topic": f.topic, "modules": list(f.modules), "key": f.key, "params": dict(f.params), "measured": f.measured,
                           "limit": f.limit} for f in rules_openings.check(found, i["bodies"], i["params"], i.get("settings", {}))]}
@@ -695,10 +769,6 @@ def runs_run_wall(i):
 
 def runs_walls_used(i):
     return {"walls": sorted(runs.walls_used(_ctx(i), i["backLength"]))}
-
-
-def runs_along_wall(i):
-    return {"span": _json(runs.along_wall(_rf(i["frame"]), i["wall"], i["s0"], i["s1"]))}
 
 
 def runs_frames(i):
@@ -1395,7 +1465,6 @@ FUNCTIONS = {
     "runs.front_cross": runs_front_cross,
     "runs.run_wall": runs_run_wall,
     "runs.walls_used": runs_walls_used,
-    "runs.along_wall": runs_along_wall,
     "runs.frames": runs_frames,
     "runs.aabb": runs_aabb,
     "runs.penetration": runs_penetration,
@@ -1508,4 +1577,14 @@ FUNCTIONS = {
     "floorplan.bind_kitchen": floorplan_bind_kitchen,
     "floorplan.structures": floorplan_structures,
     "floorplan.detect_back": floorplan_detect_back,
+    "openings.wall_axes": openings_wall_axes,
+    "wall_surfaces.of_wall": wall_surfaces_of_wall,
+    "openings.inner_corner": openings_inner_corner,
+    "openings.normalize": openings_normalize,
+    "openings.shape": openings_shape,
+    "openings.from_floorplan": openings_from_floorplan,
+    "openings.effective": openings_effective,
+    "openings.ops.add": openings_ops_add,
+    "openings.ops.update": openings_ops_update,
+    "openings.ops.remove": openings_ops_remove,
 }

@@ -46,13 +46,17 @@
    "steel": "Inox",
    "sink": "Chậu rửa màu tối",
    "cooktop": "Mặt kính đen bếp",
-   "openings": "Kính đen, khung inox"
+   "openings": "Kính đen, khung inox",
+   "openingFrame": "Khung cửa gỗ sơn trắng",
+   "openingLeaf": "Cánh cửa gỗ vân sồi",
+   "openingGlass": "Kính trong"
   },
   "openings": {
    "clearAllowance": 60,
    "doorZone": 300,
    "windowZone": 650,
-   "near": 2000
+   "near": 2000,
+   "snapTolerance": 30
   }
  }
 ]

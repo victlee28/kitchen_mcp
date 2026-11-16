@@ -3,9 +3,9 @@
 const KIND_LABEL = { wall: 'Walls', column: 'Columns', opening: 'Doors / windows', furniture: 'Furniture', shaft: 'Shafts', stair: 'Stairs', area: 'Areas' };
 const EMPTY = { entries: new Map() };
 
-export function createStructureSelector({ THREE, els, onSelect }) {
+export function createStructureSelector({ THREE, els, onSelect, onChange }) {
   let entries = EMPTY.entries; let pickables = [];
-  let selected = null; const hiddenKinds = new Set(); const hiddenIds = new Set();
+  let selected = null; let tint = true; const hiddenKinds = new Set(); const hiddenIds = new Set();
   const selMats = new WeakMap();
 
   const meshOf = (m) => m.userData?.structureId;
@@ -20,15 +20,23 @@ export function createStructureSelector({ THREE, els, onSelect }) {
       const shown = isShown(id);
       for (const o of e.parts) o.visible = shown;
       for (const m of e.meshes) {
+        const lit = id === selected && tint;
+        if (m.userData.surfaceId) {            // a wall face: lit with its wall only when the wall itself was chosen; otherwise its own light stays
+          if (lit && !m.userData.structLit) { m.userData.structBase = m.material; m.material = tinted(m.material); m.userData.structLit = true; }
+          else if (!lit && m.userData.structLit) { m.material = m.userData.structBase; m.userData.structLit = false; }
+          continue;
+        }
         if (!m.userData.baseMat) m.userData.baseMat = m.material;
-        if (id === selected) {
-          if (!selMats.has(m.userData.baseMat)) {
-            const c = m.userData.baseMat.clone(); c.emissive = new THREE.Color(0xff8a1f); c.emissiveIntensity = 0.55; c.transparent = false; c.opacity = 1; selMats.set(m.userData.baseMat, c);
-          }
-          m.material = selMats.get(m.userData.baseMat);
-        } else m.material = m.userData.baseMat;
+        m.material = lit ? tinted(m.userData.baseMat) : m.userData.baseMat;
       }
     }
+  }
+
+  function tinted(base) {
+    if (!selMats.has(base)) {
+      const c = base.clone(); c.emissive = new THREE.Color(0xff8a1f); c.emissiveIntensity = 0.55; c.transparent = false; c.opacity = 1; selMats.set(base, c);
+    }
+    return selMats.get(base);
   }
 
   function describe(rec) {
@@ -70,9 +78,10 @@ export function createStructureSelector({ THREE, els, onSelect }) {
     els.showAll.hidden = !(hiddenIds.size || hiddenKinds.size);
   }
 
-  function refresh() { paint(); render(); }
-  function select(id) {
-    selected = id && isShown(id) ? id : null;
+  function refresh() { paint(); render(); onChange?.(); }
+  /** `quiet`: the wall was reached through one of its faces, so the face is lit, not the whole wall. */
+  function select(id, { quiet = false } = {}) {
+    selected = id && isShown(id) ? id : null; tint = !quiet;
     refresh();
     if (selected) onSelect?.(selected);
   }

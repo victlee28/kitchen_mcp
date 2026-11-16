@@ -111,6 +111,25 @@ export function templateIntent(text) {
   return null;
 }
 
+/** Might the sentence be about a room door, a room opening or a passage, or ask to save what was clicked ("lưu vào database")? A cheap first look:
+ *  the server reads it (/opening-command) and answers 'not-opening' when it is about something else ("đổi màu cửa tủ"). */
+export function opensOrSaves(text) {
+  const f = plain(text);
+  return /\bcua\b|\bluu\b|\bdoor\b|\bwind[o]w\b|\bsave\b|\bloi di\b/.test(f);
+}
+
+/** "nối góc", "nối dãy", "join the runs": two runs that meet at a corner (any angle) joined there (/template kind 'join-runs'). */
+export function joinsRuns(text) {
+  const f = plain(text);
+  return /\bnoi (goc|day|hai day|2 day|voi day)\b|\bjoin\b/.test(f);
+}
+
+/** "thay (thế) … bằng cửa đi": on cabinets the browser itself takes them out and puts the door in their place (menu-logic openingCommand). */
+export function replacesWithDoor(text) {
+  const f = plain(text);
+  return /\b(thay the|thay|replace)\b/.test(f) && /\bcua di\b|\bcua ra vao\b/.test(f);
+}
+
 /** A sentence about the clicked cabinet's whole SYSTEM ("thay cả hệ tủ …", "sửa lại, thêm tủ nóc cho hệ, cho tủ lạnh sang phải"): it names the
  *  system ("hệ tủ", "cả / cho / của / toàn hệ") and asks for a change (thay, đổi, sửa, làm lại, thêm, bỏ…). Returns null when it is not such a
  *  sentence, else `{ prompt }` (what is left once the system phrase and the lead-in verbs are taken out describes the new system: it is laid out

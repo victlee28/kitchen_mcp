@@ -30,7 +30,7 @@ class Defaults:
     hood_side: float             # room each side of an integrated hood inside its cabinet
     new_design: Mapping[str, float]   # common sizes of a new design the request does not give
     menu: Mapping[str, float]         # input limits of the web menu
-    openings: Mapping[str, float]     # the checks against doors and windows (``rules_openings``): clearAllowance, doorZone, windowZone, near
+    openings: Mapping[str, float]     # the checks against doors and windows (``openings.checks``): clearAllowance, doorZone, windowZone, near
     materials: Mapping[str, str]      # finish names drawn where a design names none (``base``, ``carcass``, ``sink`` ...)
 
 

@@ -92,10 +92,15 @@ def swing_sheet(st: dict[str, Any], to_kitchen: ToKitchen) -> tuple[list[tuple[f
     return [(x, y, z) for x, z in pts], [(0, i, i + 1) for i in range(1, len(pts) - 1)]
 
 
-def meshes(structures: list[dict[str, Any]], to_kitchen: ToKitchen) -> list[MeshPart]:
-    """``structures``: floorplan.structures() records (scene outline in mm). ``to_kitchen(x, z) -> (x, z)`` maps room-scene to kitchen frame."""
+def meshes(structures: list[dict[str, Any]], to_kitchen: ToKitchen, holes: list[Any] | None = None,
+           hidden: set[str] | None = None) -> list[MeshPart]:
+    """``structures``: floorplan.structures() records (scene outline in mm). ``to_kitchen(x, z) -> (x, z)`` maps room-scene to kitchen frame.
+    ``holes`` (``openings.meshes.Hole``, kitchen frame): openings the design places, cut out of the wall solids they pass through;
+    ``hidden``: floorplan elements not to draw (openings the design replaces or removes)."""
     out: list[MeshPart] = []
     for st in structures:
+        if hidden and str(st.get("sourceElement") or st.get("id")) in hidden:
+            continue
         kind = st["kind"] if st["kind"] in KINDS else "area"
         poly: list[Pt] = [to_kitchen(p["x"], p["z"]) for p in st["outline"]]
         if len(poly) < 3:
@@ -108,6 +113,17 @@ def meshes(structures: list[dict[str, Any]], to_kitchen: ToKitchen) -> list[Mesh
             solids = [(poly, base, base + float(st["height"]))]
         else:
             solids = [(poly, base + 1.0, base + 1.0)]
+        if kind == "wall" and holes:
+            from .openings.meshes import cut_polygon
+            for h in holes:
+                cut_solids: list[tuple[list[Pt], float, float]] = []
+                touched = False
+                for pp, y0, y1 in solids:
+                    pieces = cut_polygon(pp, y0, y1, h, h.axis.thickness_at((h.e0 + h.e1) / 2) / 2 + 60.0)
+                    touched = touched or pieces is not None
+                    cut_solids += pieces if pieces is not None else [(pp, y0, y1)]
+                if touched:
+                    solids = cut_solids
         for k, (pp, y0, y1) in enumerate(solids):
             v, f = prism(pp, y0, y1)
             out.append(MeshPart(st["id"] if len(solids) == 1 else f"{st['id']}-{k + 1}", st["id"], TYPE_PREFIX + kind, v, f))

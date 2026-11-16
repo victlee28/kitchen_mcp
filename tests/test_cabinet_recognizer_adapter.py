@@ -27,6 +27,7 @@ DATA = SERVICE / "tests" / "data"
 NAME = "bep-chu-L-trang"
 IMAGE = (DATA / f"{NAME}.png").read_bytes()
 ANSWERS = json.loads((DATA / f"{NAME}.answers.json").read_text(encoding="utf-8"))
+OPENINGS = json.loads((DATA / f"{NAME}.openings.json").read_text(encoding="utf-8"))     # a window on the back wall, a door on the left one
 
 
 def serve(handler) -> tuple[ThreadingHTTPServer, str]:
@@ -161,7 +162,7 @@ class TestEndToEnd(unittest.TestCase):
         self.svc.apply(self.did, r["operation"], r["baseRev"], "test", r["proposal"]["opHash"])
         after, rev2 = self.svc.store.get(self.did)
         self.assertEqual((rev2, len(after.module)), (rev + 1, total))
-        self.assertEqual(after.model_dump(mode="json")["room"], before.model_dump(mode="json")["room"], "the design's own room is kept")
+        self.assertIsNone(after.room, "no floorplan: the room's walls are sized to the kitchen that was seen")
         self.assertTrue(any(m.doors for m in after.module) and any(m.frontSections for m in after.module), "doors and drawers are kept")
         back = next(run for run in after.runs if run.yaw == 0)
         self.assertEqual(back.z, 0.0, "the main run stands on the back wall of the kitchen frame")
@@ -191,7 +192,7 @@ class TestEndToEnd(unittest.TestCase):
         self.assertEqual(self.svc.store.get(did)[1], rev, "nothing is saved before apply")
         self.svc.apply(did, r["operation"], r["baseRev"], "test", r["proposal"]["opHash"])
         after, _ = self.svc.store.get(did)
-        self.assertEqual((len(after.runs), len([m for m in after.module if m.run])), (2, total))
+        self.assertEqual((len(after.runs), len([m for m in after.module if m.run])), (3, total + 1), "the back-wall cabinet's own run, then the two")
 
     def test_service_down_is_a_failed_status(self):
         self.server.shutdown(); self.server.server_close()
@@ -226,13 +227,36 @@ class TestInbox(unittest.TestCase):
         again = self.svc.recognize_collect(self.did, job)
         self.assertEqual((again["status"], again["job"]), ("pending", job), "no answer yet")
         answers = self.tmp / "jobs" / job / "inbox" / "answers"
-        for step, answer in ANSWERS.items():                  # what Claude Desktop does when the user asks it to answer the job
+        for step, answer in {**ANSWERS, "openings": OPENINGS}.items():     # what Claude Desktop does when the user asks it to answer the job
             (answers / f"{step}.json").write_text(answer if isinstance(answer, str) else json.dumps(answer), encoding="utf-8")
         done = self.svc.recognize_collect(self.did, job, r["baseRev"])
         self.assertEqual(done["status"], "ok")
         self.assertEqual([o["op"] for o in done["operation"]["ops"]].count("add-run"), 2)
+        seen = [o["opening"] for o in done["operation"]["ops"] if o["op"] == "add-opening"]       # the doors and windows ride in the same preview
+        self.assertEqual(sorted((o["kind"], o["wallAxis"]["id"], o["openingType"]) for o in seen),
+                         [("door", "left", "door-swing-1"), ("window", "back", "window-swing-2-top")])
+        window = next(o for o in seen if o["kind"] == "window")
+        self.assertEqual((window["sill"], window["head"], len(window["axes"]), len(window["hAxes"])), (1100, 2000, 3, 1))
         self.assertTrue(done["proposal"]["applicable"])
         self.assertEqual(len(self.svc.history(self.did)), r["baseRev"], "nothing is saved before the user applies it")
+
+    def test_a_picture_with_only_a_door_puts_the_door_where_the_user_clicked(self):
+        """Inbox job 20261113-154907, replayed: a wall with a double door and a transom, no cabinets."""
+        from test_recognition_openings import building_design
+        did = building_design(self.svc)
+        image = (DATA / "cua-2-canh-o-fix.png").read_bytes()
+        anchor = {"structureId": "STRUCT-wall_h05", "point": {"x": -70.0, "z": 1500.0}}
+        r = self.svc.recognize(did, {"kind": "photo", "imageBase64": base64.b64encode(image).decode(), "note": "tạo cửa ở vị trí này"}, "inbox",
+                               anchor=anchor)
+        self.assertEqual((r["status"], r["step"]), ("pending", "scene"))
+        answers = self.tmp / "jobs" / r["job"] / "inbox" / "answers"
+        for step, answer in json.loads((DATA / "cua-2-canh-o-fix.answers.json").read_text(encoding="utf-8")).items():
+            (answers / f"{step}.json").write_text(json.dumps(answer), encoding="utf-8")
+        done = self.svc.recognize_collect(did, r["job"], r["baseRev"], anchor=anchor)
+        self.assertEqual((done["status"], done["mode"]), ("ok", "opening"))
+        opening = done["operation"]["opening"]
+        self.assertEqual((opening["openingType"], opening["width"], opening["height"]), ("door-swing-2-transom", 1650.0, 2700.0))
+        self.assertTrue(done["proposal"]["applicable"])
 
     def test_bad_job_ids_and_missing_inbox(self):
         for bad in ("", "../x", "20261109-1", None):

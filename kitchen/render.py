@@ -17,7 +17,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 import numpy as np
@@ -251,8 +251,33 @@ def render_key(scene: Scene, view: ViewAngle, width: int, height: int) -> str:
 _DARK = np.array([0.35, 0.85, 0.40]) / np.linalg.norm([0.35, 0.85, 0.40])
 
 
+@dataclass(frozen=True)
+class FaceColor:
+    """A wall face with a finish of its own (``spec.surfaceMaterials``): the parts it lies on (a default wall's box by its ``wall``,
+    a floorplan wall's meshes by their structure id), its outward normal (kitchen frame) and the colour."""
+    wall: str | None             # default wall: back / right / left
+    structure: str | None        # floorplan wall: the structure id its meshes carry as ``module``
+    normal: tuple[float, float, float]
+    rgb: tuple[int, int, int]
+
+
+FACE_NORMAL_COS = 0.95
+
+
+def _paint_faces(alb: np.ndarray, hit: np.ndarray, pid: np.ndarray, nw: np.ndarray, shade: np.ndarray, all_parts: list,
+                 faces: list[FaceColor]) -> None:
+    """Give the pixels of each finished face its colour (the albedo's shading kept): pixels of the face's wall whose normal is the face's."""
+    for fc in faces:
+        own = np.array([(fc.wall is not None and p.type == "wall" and getattr(p, "wall", None) == fc.wall)
+                        or (fc.structure is not None and p.module == fc.structure and p.type.startswith("structure-")) for p in all_parts] + [False], bool)
+        n = np.asarray(fc.normal, float)
+        mask = hit & own[pid] & ((nw @ n) > FACE_NORMAL_COS)
+        alb[mask] = np.asarray(fc.rgb, float) * shade[mask][:, None]
+
+
 def render_view(scene: Scene, view: ViewAngle, out_dir: Path, width: int = 1280, height: int = 960,
-                legend: dict | None = None, colors: list | None = None, meta: dict | None = None) -> dict:
+                legend: dict | None = None, colors: list | None = None, meta: dict | None = None,
+                faces: list[FaceColor] | None = None) -> dict:
     out_dir.mkdir(parents=True, exist_ok=True)
     if view.hide:  # structures that would stand between this camera and the cabinets
         scene = replace(scene, meshes=[m for m in scene.meshes if m.module not in view.hide])
@@ -340,6 +365,8 @@ def render_view(scene: Scene, view: ViewAngle, out_dir: Path, width: int = 1280,
     shade = 0.74 + 0.26 * np.clip(nw @ _DARK, 0, 1)
     alb = np.full((height, width, 3), 244.0)
     alb[hit] = col[pid[hit]] * shade[hit][:, None]
+    if faces:
+        _paint_faces(alb, hit, pid, nw, shade, all_parts, faces)
     alb[lines] *= 0.72
     Image.fromarray(alb.clip(0, 255).astype(np.uint8), "RGB").save(out_dir / "albedo.png")
 
@@ -389,5 +416,37 @@ def render_views(spec: KitchenSpec, out_root: Path, views: list[str] | None = No
               "seg_module": {**{m.id: list(_module_color(m.id)) for m in spec.module},
                              **{x.id: list(_module_color(x.id)) for x in spec.moldings}}}
     (out_root / "legend.json").write_text(json.dumps(legend, ensure_ascii=False, indent=2), encoding="utf-8")
-    results = {v: render_view(scene, all_views[v], out_root / v, width, height, colors=colors, meta=meta) for v in chosen}
+    faces = face_colors(spec, catalog)
+    results = {v: render_view(scene, all_views[v], out_root / v, width, height, colors=colors, meta=meta, faces=faces) for v in chosen}
     return {"outDir": str(out_root), "views": results, "legend": "legend.json"}
+
+
+def face_colors(spec: KitchenSpec, catalog: Catalog = builtin.CATALOG) -> list[FaceColor]:
+    """The wall faces with a finish of their own and its colour (the three.js export's surface materials), in the render's kitchen
+    frame. Empty without ``spec.surfaceMaterials``."""
+    if not spec.surfaceMaterials:
+        return []
+    from . import roomctx
+    from .threejs_export import export
+    doc = export(spec, catalog=catalog)
+    room = doc.get("room") or {}
+    colours = {m.get("id"): m.get("color") for m in doc.get("materials") or [] if isinstance(m, dict)}
+    scene = compile_spec(spec, catalog)
+    ctx = roomctx.for_spec(spec, scene.lsau, scene.lphai) if isinstance(spec.floorplan, dict) else None
+    out: list[FaceColor] = []
+    for sf in room.get("surfaces") or []:
+        hexc = colours.get(sf.get("materialId")) if str(sf.get("materialId") or "").startswith("MAT-SURFACE-") else None
+        if not isinstance(hexc, str) or not hexc.startswith("#") or len(hexc) < 7:
+            continue
+        rgb = (int(hexc[1:3], 16), int(hexc[3:5], 16), int(hexc[5:7], 16))
+        n = [float(v) for v in sf.get("normal") or (0.0, 0.0, 0.0)]
+        nx, ny, nz = (n + [0.0, 0.0, 0.0])[:3] if len(n) == 3 else (n[0], 0.0, n[1]) if len(n) == 2 else (0.0, 0.0, 0.0)
+        if ctx is not None:
+            a = ctx.placement.to_kitchen(0.0, 0.0)
+            b = ctx.placement.to_kitchen(nx, nz)
+            nx, nz = b[0] - a[0], b[1] - a[1]
+            out.append(FaceColor(None, str(sf.get("structure") or ""), (nx, ny, nz), rgb))
+        else:
+            wall = str(sf.get("wall") or "").removeprefix("WALL-").lower()
+            out.append(FaceColor(wall, None, (nx, ny, nz), rgb))
+    return out

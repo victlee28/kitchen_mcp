@@ -50,7 +50,7 @@
       {
        "op": "add-run",
        "run": {
-        "id": "R1",
+        "id": "R3",
         "x": -2000.0,
         "z": 1500.0,
         "yaw": 0.0
@@ -62,7 +62,7 @@
        "module": {
         "type": "base",
         "wall": "island",
-        "run": "R1",
+        "run": "R3",
         "fromCorner": 0.0,
         "width": 600.0,
         "y": 0.0,
@@ -76,7 +76,7 @@
        "module": {
         "type": "base-sink",
         "wall": "island",
-        "run": "R1",
+        "run": "R3",
         "fromCorner": 600.0,
         "width": 800.0,
         "y": 0.0,
@@ -90,14 +90,14 @@
      ]
     },
     "run": {
-     "id": "R1",
+     "id": "R3",
      "x": -2000.0,
      "z": 1500.0,
      "yaw": 0.0
     },
     "length": 1400.0,
     "summary": [
-     "2 tủ, 1400 mm, dọc cạnh nghiêng 0° (dãy R1)"
+     "2 tủ, 1400 mm, dọc cạnh nghiêng 0° (dãy R3)"
     ]
    }
   },
@@ -157,7 +157,7 @@
       {
        "op": "add-run",
        "run": {
-        "id": "R1",
+        "id": "R3",
         "x": -2000.0,
         "z": 1500.0,
         "yaw": 0.0,
@@ -171,7 +171,7 @@
        "module": {
         "type": "base",
         "wall": "island",
-        "run": "R1",
+        "run": "R3",
         "fromCorner": 0.0,
         "width": 600.0,
         "y": 0.0,
@@ -182,7 +182,7 @@
      ]
     },
     "run": {
-     "id": "R1",
+     "id": "R3",
      "x": -2000.0,
      "z": 1500.0,
      "yaw": 0.0,
@@ -191,7 +191,7 @@
     },
     "length": 600.0,
     "summary": [
-     "1 tủ, 600 mm, dọc cạnh nghiêng 0° (dãy R1)"
+     "1 tủ, 600 mm, dọc cạnh nghiêng 0° (dãy R3)"
     ]
    }
   }

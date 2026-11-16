@@ -12,6 +12,7 @@ WALLS = ("back", "left", "right")
 MIN_WIDTH, MAX_WIDTH = 150.0, 1500.0
 MIN_CONFIDENCE = 0.5          # below this a module is kept but flagged for review
 MAX_MODULES = 60
+MAX_OPENINGS = 12
 MATERIAL_SLOTS = ("base", "upper", "tall", "countertop", "wall", "floor")
 
 
@@ -41,11 +42,13 @@ class Draft:
     confidence: float = 1.0
     rejected: list[dict[str, Any]] = field(default_factory=list[dict[str, Any]])     # [{"index", "reason", "raw"}]
     notes: list[str] = field(default_factory=list[str])
+    openings: list[dict[str, Any]] = field(default_factory=list[dict[str, Any]])    # as given; ``recognition.openings`` checks them
 
     def to_data(self) -> dict[str, Any]:
         return {"modules": [{"type": m.type, "wall": m.wall, "width": m.width, "fromCorner": m.fromCorner, "height": m.height, "depth": m.depth,
                              "confidence": m.confidence, "label": m.label, "needsReview": m.needs_review} for m in self.modules],
-                "ceiling": self.ceiling, "materials": self.materials, "confidence": self.confidence, "rejected": self.rejected, "notes": self.notes}
+                "ceiling": self.ceiling, "materials": self.materials, "confidence": self.confidence, "rejected": self.rejected, "notes": self.notes,
+                **({"openings": self.openings} if self.openings else {})}
 
 
 def number(value: Any) -> float | None:
@@ -115,4 +118,5 @@ def build_draft(value: Any) -> Draft:
     draft.confidence = confidence_of(raw.get("confidence")) if raw.get("confidence") is not None else (
         round_half_away(sum(m.confidence for m in draft.modules) / len(draft.modules), 2) if draft.modules else 0.0)
     draft.notes += [n for n in as_list(raw.get("notes")) or [] if isinstance(n, str)][:10]
+    draft.openings = [o for o in (as_dict(x) for x in as_list(raw.get("openings")) or []) if o is not None][:MAX_OPENINGS]
     return draft

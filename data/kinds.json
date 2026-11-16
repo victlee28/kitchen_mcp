@@ -230,6 +230,20 @@
    "module[].type"
   ]
  },
+ "opening-type": {
+  "label": {
+   "vi": "Loại cửa phòng",
+   "en": "Room opening types"
+  },
+  "writers": [
+   "workshop",
+   "user"
+  ],
+  "snapshot": "whole",
+  "usedBy": [
+   "openings[].openingType"
+  ]
+ },
  "layout-template": {
   "label": {
    "vi": "Mẫu bố trí bếp",
@@ -266,5 +280,29 @@
    "user"
   ],
   "closed": true
+ },
+ "handle": {
+  "label": {
+   "vi": "Tay nắm",
+   "en": "Handles"
+  },
+  "writers": [
+   "workshop",
+   "user"
+  ],
+  "usedBy": [
+   "common.handle.item",
+   "module[].handle.item"
+  ]
+ },
+ "hinge": {
+  "label": {
+   "vi": "Bản lề",
+   "en": "Hinges"
+  },
+  "writers": [
+   "workshop",
+   "user"
+  ]
  }
 }

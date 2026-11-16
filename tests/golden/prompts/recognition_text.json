@@ -13,7 +13,7 @@
    },
    "expected": {
     "start": "You are reading a photograph of a kitchen. List the cabinet modules you can see, wall by wall, in millimetres.\n- type: o",
-    "length": 956,
+    "length": 1813,
     "mentions": [
      "base",
      "upper",
@@ -32,7 +32,7 @@
    },
    "expected": {
     "start": "You are reading a technical drawing (plan or elevation) of a kitchen. List the cabinet modules you can see, wall by wall",
-    "length": 975,
+    "length": 1832,
     "mentions": [
      "base",
      "upper-loft"

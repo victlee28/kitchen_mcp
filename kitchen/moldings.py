@@ -88,76 +88,8 @@ def _lsau(spec: KitchenSpec) -> float:
     return wall_length(spec)[0]
 
 
-def _wall_pt(wall: str, s: float, d: float, lsau: float) -> tuple[float, float]:
-    if wall == "back":
-        return (-s, d)
-    if wall == "right":
-        return (-d, s)
-    return (-lsau + d, s)
-
-
 def _top(m: Module) -> float:
     return m.y + m.height
-
-
-def _on_wall(spec: KitchenSpec) -> dict[str, str]:
-    """Explicit runs standing against a wall of the kitchen frame: run id -> wall. Their cabinets are that wall's row for the moldings, so a
-    kitchen written by runs gets the moldings of the same kitchen written by walls (corners, corner shelf and all)."""
-    lsau = _lsau(spec)
-    out: dict[str, str] = {}
-    for r in spec.runs:
-        wall = runmod.run_wall(runmod.RunFrame(r.id, r.x, r.z, r.yaw), lsau)
-        if wall is not None:
-            out[r.id] = wall
-    for joint in runmod.corner_joints(spec):      # a corner with a run that is not on a wall (or not square) is turned run by run, both of them
-        if not (joint.square and joint.a in out and joint.b in out):
-            out.pop(joint.a, None)
-            out.pop(joint.b, None)
-    return out
-
-
-def _place(spec: KitchenSpec, m: Module, on_wall: dict[str, str]) -> tuple[str, float, float] | None:
-    """(wall, s0, s1) of a cabinet that follows a wall, itself or through its run; None for the others."""
-    if m.run:
-        wall = on_wall.get(m.run)
-        fr = runmod.frame_of(spec, m)
-        if wall is None or fr is None:
-            return None
-        s0, s1 = runmod.along_wall(fr, wall, m.fromCorner, m.endAt)
-        return wall, s0, s1
-    return (m.wall, m.fromCorner, m.endAt) if m.wall in ("back", "right", "left") else None
-
-
-def _intervals(spec: KitchenSpec, variant: str) -> tuple[dict[str, list[tuple[float, float, float, str]]], float]:
-    """Đoạn (s0, s1, độ sâu mặt trước, mã module) theo từng tường + cao độ đường chạy."""
-    iv: dict[str, list[Any]] = {"back": [], "right": [], "left": []}
-    on_wall = _on_wall(spec)
-    if variant == "crown":
-        cands = [m for m in spec.module if m.storey in ("upper", "loft", "tall", "corner")]
-        if not cands:
-            return iv, 0.0
-        y = max(_top(m) for m in cands)
-        for m in cands:
-            if abs(_top(m) - y) > 1:
-                continue
-            if m.type == "corner-shelf" and not m.run:
-                iv["back"].append((0.0, m.backLength, m.depth, m.id))
-                iv["right"].append((0.0, m.rightLength, m.depth, m.id))
-            elif m.type == "corner-shelf":             # by runs: each leg belongs to the wall its run stands against
-                if (at := _place(spec, m, on_wall)) is not None:
-                    iv[at[0]].append((at[1], at[2], m.depth, m.id))
-                other = runmod.frames(spec).get(m.turnsInto or "")
-                wall = on_wall.get(m.turnsInto or "")
-                if other is not None and wall is not None and m.rightLength:
-                    s0, s1 = runmod.along_wall(other, wall, 0.0, m.rightLength)
-                    iv[wall].append((s0, s1, m.depth, m.id))
-            elif (at := _place(spec, m, on_wall)) is not None:
-                iv[at[0]].append((at[1], at[2], m.depth, m.id))
-        return iv, y
-    for m in spec.module:  # phào chân: tủ đặt sàn, bỏ tủ cao có hốc thiết bị sát sàn (tủ lạnh)
-        if m.y == 0 and (m.storey == "base" or (m.storey == "tall" and not m.niche)) and (at := _place(spec, m, on_wall)) is not None:
-            iv[at[0]].append((at[1], at[2], m.depth, m.id))
-    return iv, 0.0
 
 
 def _segments(items: list[tuple[float, float, float, str]], gap: float) -> list[dict[str, Any]]:
@@ -191,16 +123,23 @@ def _run_items(spec: KitchenSpec, mol: Molding, run_id: str, y: float) -> list[t
             if m.run == run_id and m.y == 0 and (m.storey == "base" or (m.storey == "tall" and not m.niche))]
 
 
-def _butts(fr: "runmod.RunFrame", s: float) -> bool:
-    """Whether a run's end at ``s`` stands in the back-right corner of the kitchen frame, against the wall it runs into (a run along the back
-    wall ending at x = 0, a run along a side wall ending at z = 0): there a molding stops at the wall instead of returning to its own."""
+def _butts(fr: "runmod.RunFrame", s: float, walls: list[tuple[str, float]]) -> bool:
+    """Whether a run's end at ``s`` stands against a wall of the room that the run runs INTO (not along): there a molding stops at the wall
+    instead of returning to its own. ``walls``: the walls of the kitchen frame, as (axis, value) — ("z", 0) the back wall, ("x", 0) the
+    right wall, ("x", -back length) the left wall when it is there. Any angle: a run turned 30 degrees ending on the back wall butts too."""
     x, z = fr.to_world(s, 0.0)
-    nx, nz = fr.normal()
-    return (abs(nx) < 1e-6 and abs(x) <= 1.0 and abs(z) <= 1.0) or (abs(nz) < 1e-6 and abs(z) <= 1.0 and (abs(x) <= 1.0 or nx > 0))
+    tx, tz = fr.to_world(1.0, 0.0)
+    ox, oz = fr.to_world(0.0, 0.0)
+    tx, tz = tx - ox, tz - oz                                   # along the run
+    for axis, value in walls:
+        across = abs(tz) if axis == "z" else abs(tx)            # how squarely the run meets that wall
+        if abs((z if axis == "z" else x) - value) <= 1.0 and across >= 0.2:
+            return True
+    return False
 
 
-def _angled_runs(spec: KitchenSpec, mol: Molding, prof: MoldingProfile, y: float) -> list[Run]:
-    """Moldings along the explicit runs (any angle). Points are walked against s (the run frame is mirror-wise like the right wall).
+def _angled_runs(spec: KitchenSpec, mol: Molding, prof: MoldingProfile, y: float, lsau: float) -> list[Run]:
+    """Moldings along the runs (any angle; a run against a wall is named after it). Points are walked against s.
 
     Each run is its own chain, except where two runs meet in an inside corner, square or not (``runs.corner_joints``: the end of a meets
     the start of b) and both have cabinets up to the corner: there the two chains are ONE, turning at the point where the two front lines
@@ -209,9 +148,10 @@ def _angled_runs(spec: KitchenSpec, mol: Molding, prof: MoldingProfile, y: float
     chains: dict[tuple[str, int], dict[str, Any]] = {}
     order: list[tuple[str, int]] = []
     segs_of: dict[str, list[dict[str, Any]]] = {}
-    on_wall = _on_wall(spec)
+    walls = {r.id: runmod.run_wall(runmod.RunFrame(r.id, r.x, r.z, r.yaw), lsau) for r in spec.runs}
+    room = [("z", 0.0), ("x", 0.0)] + ([("x", -lsau)] if "left" in walls.values() else [])     # the walls of the kitchen frame that are there
     for r in spec.runs:
-        if r.id in on_wall or (mol.wall and r.id not in mol.wall):   # a run against a wall is walked as that wall's row (``_intervals``)
+        if mol.wall and r.id not in mol.wall and walls.get(r.id) not in mol.wall:   # mol.wall: runs, or the walls they are against
             continue
         fr = runmod.RunFrame(r.id, r.x, r.z, r.yaw)
         segs = _segments(_run_items(spec, mol, r.id, y), mol.joinGap)
@@ -220,11 +160,11 @@ def _angled_runs(spec: KitchenSpec, mol: Molding, prof: MoldingProfile, y: float
             prev_n = segs[i - 1] if i > 0 and sg["s0"] - segs[i - 1]["s1"] <= mol.joinGap else None
             next_n = segs[i + 1] if i + 1 < len(segs) and segs[i + 1]["s0"] - sg["s1"] <= mol.joinGap else None
             d = sg["d"]
-            dr = None if prev_n is None and _butts(fr, sg["s0"]) else _end_depth(sg, prev_n, mol.openEnd)
+            dr = None if prev_n is None and _butts(fr, sg["s0"], room) else _end_depth(sg, prev_n, mol.openEnd)
             start = [(sg["s0"], d)] if dr is None or abs(dr - d) < 1 else [(sg["s0"], dr), (sg["s0"], d)]
-            dr = None if next_n is None and _butts(fr, sg["s1"]) else _end_depth(sg, next_n, mol.openEnd)
+            dr = None if next_n is None and _butts(fr, sg["s1"], room) else _end_depth(sg, next_n, mol.openEnd)
             end = [(sg["s1"], d)] if dr is None or abs(dr - d) < 1 else [(sg["s1"], d), (sg["s1"], dr)]
-            chains[(r.id, i)] = {"fr": fr, "start": start, "end": end, "mods": sg["mods"], "runs": [r.id], "d": d, "s0": sg["s0"], "s1": sg["s1"]}
+            chains[(r.id, i)] = {"fr": fr, "start": start, "end": end, "mods": sg["mods"], "runs": [walls.get(r.id) or r.id], "d": d, "s0": sg["s0"], "s1": sg["s1"]}
             order.append((r.id, i))
     joined: dict[tuple[str, int], tuple[str, int]] = {}          # last chain of a -> first chain of b, where they turn the corner together
     for joint in runmod.corner_joints(spec):
@@ -268,79 +208,26 @@ def _angled_runs(spec: KitchenSpec, mol: Molding, prof: MoldingProfile, y: float
 
 
 def compute_runs(spec: KitchenSpec) -> list[Run]:
+    """Every molding walked run by run (``_angled_runs``): corners between runs, square or not, are turned where the front lines cross."""
+    from .rows_to_runs import as_runs
+    spec = as_runs(spec)
     lsau = _lsau(spec)
-    runs: list[Run] = []
+    out: list[Run] = []
     for mol in spec.moldings:
         if not mol.enabled:
             continue
         prof = profile_of(spec, mol.profile)
         if prof is None:
             continue
-        iv, y = _intervals(spec, mol.variant)
-        on_wall = _on_wall(spec)
-        walls = [on_wall.get(w, w) for w in mol.wall] or ["right", "back", "left"]      # a run named in mol.wall stands for the wall it is against
-        segs = {w: (_segments(iv[w], mol.joinGap) if w in walls else []) for w in ("right", "back", "left")}
-        # nối góc: đoạn đầu tường phải/trái chạm đoạn đầu (cuối) tường sau
-        join_r = bool(segs["right"] and segs["back"] and segs["right"][0]["s0"] <= segs["back"][0]["d"] + 1
-                      and segs["back"][0]["s0"] <= segs["right"][0]["d"] + 1)
-        join_l = bool(segs["left"] and segs["back"] and segs["left"][0]["s0"] <= segs["back"][-1]["d"] + 1
-                      and segs["back"][-1]["s1"] >= lsau - segs["left"][0]["d"] - 1)
-
-        def wall_polys(w: str) -> list[dict[str, Any]]:
-            """Mỗi đoạn -> danh sách (s, d) theo chiều đi, kèm cờ bỏ xử lý đầu ở phía góc."""
-            out: list[dict[str, Any]] = []
-            ss = segs[w]
-            for i, sg in enumerate(ss):
-                prev_n = ss[i - 1] if i > 0 and sg["s0"] - ss[i - 1]["s1"] <= mol.joinGap else None
-                next_n = ss[i + 1] if i + 1 < len(ss) and ss[i + 1]["s0"] - sg["s1"] <= mol.joinGap else None
-                at_corner_start = i == 0 and ((w == "right" and join_r) or (w == "left" and join_l) or (w == "back" and join_r))
-                at_corner_end = (w == "back" and i == len(ss) - 1 and join_l)
-                d = sg["d"]
-                # đầu phía s0
-                if at_corner_start:
-                    other = segs["back"][0]["d"] if w == "right" else segs["right"][0]["d"] if w == "back" else segs["back"][-1]["d"]
-                    start = [(other, d)]
-                else:
-                    dr = None if (sg["s0"] <= 1 and prev_n is None) else _end_depth(sg, prev_n, mol.openEnd)
-                    start = [(sg["s0"], d)] if dr is None or abs(dr - d) < 1 else [(sg["s0"], dr), (sg["s0"], d)]
-                if at_corner_end:
-                    end = [(lsau - segs["left"][0]["d"], d)]
-                else:
-                    dr = _end_depth(sg, next_n, mol.openEnd)
-                    end = [(sg["s1"], d)] if dr is None or abs(dr - d) < 1 else [(sg["s1"], d), (sg["s1"], dr)]
-                pts = start + end  # theo chiều s tăng
-                if w == "right":
-                    pts = pts[::-1]  # tường phải đi về phía góc (s giảm)
-                out.append({"pts": [_wall_pt(w, s, dd, lsau) for s, dd in pts], "mods": sg["mods"], "w": w,
-                            "corner_start": at_corner_start, "corner_end": at_corner_end})
-            return out
-
-        polys = {w: wall_polys(w) for w in ("right", "back", "left")}
-        chains: list[dict[str, Any]] = []
-        if join_r:
-            r_last = polys["right"].pop(0)  # đoạn chạm góc (s nhỏ nhất); theo chiều đi nó kết thúc ở góc
-            b_first = polys["back"].pop(0)
-            chains.append({"pts": r_last["pts"] + b_first["pts"][1:], "mods": r_last["mods"] + b_first["mods"], "w": ["right", "back"],
-                           "tail": b_first})
-        for w in ("right", "back", "left"):
-            for p in polys[w]:
-                chains.append({"pts": p["pts"], "mods": p["mods"], "w": [w], "tail": p})
-        if join_l:
-            # nối chuỗi chứa đoạn cuối tường sau với đoạn đầu tường trái
-            l_first = next(c for c in chains if c["w"] == ["left"])
-            b_last = next(c for c in chains if c["tail"].get("corner_end"))
-            if b_last is not l_first:
-                b_last["pts"] = b_last["pts"] + l_first["pts"][1:]
-                b_last["mods"] += l_first["mods"]
-                b_last["w"] = b_last["w"] + ["left"]
-                chains.remove(l_first)
-        for ch in chains:
-            pts = [p for i, p in enumerate(ch["pts"]) if i == 0 or math.dist(p, ch["pts"][i - 1]) > 0.5]
-            if len(pts) >= 2:
-                runs.append(Run(mol, prof, y, pts, ch["mods"], ch["w"]))
-        if spec.runs:
-            runs.extend(_angled_runs(spec, mol, prof, y if mol.variant == "crown" else 0.0))
-    return runs
+        y = 0.0
+        if mol.variant == "crown":
+            tops = [_top(m) for m in spec.module if m.run and m.storey in ("upper", "loft", "tall", "corner")]
+            if not tops:
+                continue
+            y = max(tops)
+        for run in _angled_runs(spec, mol, prof, y, lsau):
+            out.append(run)
+    return out
 
 
 # ------------------------------------------------------------------ quét mặt cắt

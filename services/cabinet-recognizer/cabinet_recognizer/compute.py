@@ -7,7 +7,9 @@ from __future__ import annotations
 
 from typing import Any
 
+from .compute_openings import place as place_openings
 from .contract import Layout, Policy, Segmentation
+from .contract_openings import OpeningAnswer
 from .errors import invalid
 from .labels_vi import APPLIANCE_NAMES, module_name
 from .numeric import round_half_away, round_int, snap
@@ -69,7 +71,7 @@ def _split(total: int, fractions: list[float], step: int) -> list[int]:
 
 
 def build_spec(measure: dict[str, Any], layout: Layout, seg: Segmentation, policy: Policy,
-               refine: dict[str, list[dict[str, Any]]]) -> dict[str, Any]:
+               refine: dict[str, list[dict[str, Any]]], openings: list[OpeningAnswer] | None = None) -> dict[str, Any]:
     warnings: list[dict[str, Any]] = []
     rows = _rows_px(measure, seg)
     ux, bx = _bounds_px(measure, seg, "upper"), _bounds_px(measure, seg, "base")
@@ -219,6 +221,15 @@ def build_spec(measure: dict[str, Any], layout: Layout, seg: Segmentation, polic
         "module": f"{ID_PREFIX[a['band']]}{a['module'] + 1}", **({"note": a["note"]} if a["note"] else {}),
     } for n, a in enumerate(seg["appliances"])]
 
+    # cửa trên tường sau: mặt tường xa camera gần bằng mặt tủ trên -> tỉ lệ tủ trên; độ cao tính từ mép sau mặt đá (nằm sát tường)
+    def on_wall(wall: str, u: float, v: float) -> tuple[float, float]:
+        return (u - bx[0]) * s_upper * k, worktop + (rows["worktopBack"] - v) * s_upper
+    placed_openings = None
+    if openings is not None:
+        placed_openings = place_openings(openings, on_wall, (measure["imageSize"][0], measure["imageSize"][1]), warnings)
+        if placed_openings:
+            warnings.append({"code": "openings-frontal-approximate"})
+
     return {
         "schema": "cabinet-recognizer/0.1",
         "unit": "mm",
@@ -235,6 +246,7 @@ def build_spec(measure: dict[str, Any], layout: Layout, seg: Segmentation, polic
         },
         "modules": modules,
         "appliances": appliances,
+        **({"openings": placed_openings} if placed_openings is not None else {}),
         "evidence": {
             "region": policy["region"],
             "baseMmPerPx": round_half_away(s_base, 0.001),

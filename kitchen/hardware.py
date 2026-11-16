@@ -39,7 +39,7 @@ def hinges(m: Module, doors: list[tuple[float, float, float, float]]) -> list[st
             elif cnt >= 2:
                 hg = "Left" if pos < cnt / 2 else "Right"
             else:
-                hg = "Right" if (m.blindCorner or m.wall == "right") else "Left"
+                hg = "Right" if m.blindCorner else "Left"
             out[i] = hg
             k += 1
     return [out[i] for i in range(len(doors))]

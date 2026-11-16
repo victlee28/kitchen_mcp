@@ -66,14 +66,21 @@ class TestCloseGapTall(unittest.TestCase):
     def test_removing_a_wall_cabinet_leaves_the_tall_fridge_in_place(self):
         for gone in ("TT2", "TD1", "TT1"):            # the loft, base and wall cabinets stacked left of the fridge TC1
             after = edit.apply_op(self.spec, {"op": "remove", "id": gone})
-            self.assertEqual(after.find("TC1").fromCorner, 1250.0, gone)
+            self.assertEqual(self.x(after), self.x(self.spec), gone)
             self.assertEqual([i["module"] for i in rules.validate(after)["issues"] if i["rule"] == "GEO-COLLISION"], [], gone)
 
     def test_a_tall_cabinet_still_slides_when_the_whole_stack_goes(self):
         after = self.spec
         for gone in ("TT2", "TT1", "TD1"):
             after = edit.apply_op(after, {"op": "remove", "id": gone})
-        self.assertLess(after.find("TC1").fromCorner, 1250.0)
+        self.assertGreater(self.x(after), self.x(self.spec), "towards the corner (x = 0)")
+
+    @staticmethod
+    def x(spec):
+        """World x of the fridge TC1 (the back wall's run, which keeps its end in the corner)."""
+        from kitchen import runs
+        m = spec.find("TC1")
+        return runs.frame_of(spec, m).to_world(m.fromCorner, 0)[0]
 
 
 class TestGeometryEditAdd(unittest.TestCase):

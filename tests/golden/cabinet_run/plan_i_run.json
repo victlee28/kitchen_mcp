@@ -37,7 +37,7 @@
       {
        "op": "add-run",
        "run": {
-        "id": "R1",
+        "id": "R3",
         "x": -1000.0,
         "z": 1600.0,
         "yaw": -180.0
@@ -49,7 +49,7 @@
        "module": {
         "type": "base",
         "wall": "island",
-        "run": "R1",
+        "run": "R3",
         "fromCorner": 0.0,
         "width": 600.0,
         "y": 0.0,
@@ -63,7 +63,7 @@
        "module": {
         "type": "base",
         "wall": "island",
-        "run": "R1",
+        "run": "R3",
         "fromCorner": 600.0,
         "width": 800.0,
         "y": 0.0,
@@ -75,7 +75,7 @@
     },
     "facing": "-z",
     "run": {
-     "id": "R1",
+     "id": "R3",
      "x": -1000.0,
      "z": 1600.0,
      "yaw": -180.0
@@ -87,7 +87,7 @@
      800.0
     ],
     "summary": [
-     "2 tủ dưới, 1400 mm, cánh quay về -z (về phía tường sau) (dãy R1)"
+     "2 tủ dưới, 1400 mm, cánh quay về -z (về phía tường sau) (dãy R3)"
     ]
    }
   },
@@ -127,7 +127,7 @@
       {
        "op": "add-run",
        "run": {
-        "id": "R1",
+        "id": "R3",
         "x": -1000.0,
         "z": 2200.0,
         "yaw": 90.0
@@ -139,7 +139,7 @@
        "module": {
         "type": "base",
         "wall": "island",
-        "run": "R1",
+        "run": "R3",
         "fromCorner": 0.0,
         "width": 600.0,
         "y": 0.0,
@@ -151,7 +151,7 @@
     },
     "facing": "+x",
     "run": {
-     "id": "R1",
+     "id": "R3",
      "x": -1000.0,
      "z": 2200.0,
      "yaw": 90.0
@@ -162,7 +162,7 @@
      600.0
     ],
     "summary": [
-     "1 tủ dưới, 600 mm, cánh quay về +x (dãy R1)"
+     "1 tủ dưới, 600 mm, cánh quay về +x (dãy R3)"
     ]
    }
   },
@@ -198,7 +198,7 @@
       {
        "op": "add-run",
        "run": {
-        "id": "R1",
+        "id": "R3",
         "x": -1000.0,
         "z": 2400.0,
         "yaw": 150.26
@@ -210,7 +210,7 @@
        "module": {
         "type": "base",
         "wall": "island",
-        "run": "R1",
+        "run": "R3",
         "fromCorner": 0.0,
         "width": 600.0,
         "y": 0.0,
@@ -224,7 +224,7 @@
        "module": {
         "type": "base",
         "wall": "island",
-        "run": "R1",
+        "run": "R3",
         "fromCorner": 600.0,
         "width": 600.0,
         "y": 0.0,
@@ -238,7 +238,7 @@
        "module": {
         "type": "base",
         "wall": "island",
-        "run": "R1",
+        "run": "R3",
         "fromCorner": 1200.0,
         "width": 412.0,
         "y": 0.0,
@@ -250,7 +250,7 @@
     },
     "facing": null,
     "run": {
-     "id": "R1",
+     "id": "R3",
      "x": -1000.0,
      "z": 2400.0,
      "yaw": 150.26
@@ -263,7 +263,7 @@
      412.0
     ],
     "summary": [
-     "3 tủ dưới, 1612 mm, dọc cạnh nghiêng 150.26° (dãy R1)"
+     "3 tủ dưới, 1612 mm, dọc cạnh nghiêng 150.26° (dãy R3)"
     ]
    }
   },
@@ -304,7 +304,7 @@
       {
        "op": "add-run",
        "run": {
-        "id": "R1",
+        "id": "R3",
         "x": -1000.0,
         "z": 1600.0,
         "yaw": -180.0
@@ -316,7 +316,7 @@
        "module": {
         "type": "tall",
         "wall": "island",
-        "run": "R1",
+        "run": "R3",
         "fromCorner": 0.0,
         "width": 600.0,
         "y": 0.0,
@@ -330,7 +330,7 @@
        "module": {
         "type": "tall",
         "wall": "island",
-        "run": "R1",
+        "run": "R3",
         "fromCorner": 600.0,
         "width": 800.0,
         "y": 0.0,
@@ -342,7 +342,7 @@
     },
     "facing": "-z",
     "run": {
-     "id": "R1",
+     "id": "R3",
      "x": -1000.0,
      "z": 1600.0,
      "yaw": -180.0
@@ -354,7 +354,7 @@
      800.0
     ],
     "summary": [
-     "2 tủ dưới, 1400 mm, cánh quay về -z (về phía tường sau) (dãy R1)"
+     "2 tủ dưới, 1400 mm, cánh quay về -z (về phía tường sau) (dãy R3)"
     ]
    }
   }

@@ -5,12 +5,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from kitchen import geometry, intent, rules, threejs_export  # noqa: E402
+from kitchen import geometry, intent, rows_to_runs, rules, threejs_export  # noqa: E402
 
 
 def build(prompt):
     t, _ = intent.parse_prompt(prompt)
-    return t, intent.from_template(t)
+    return t, intent.from_template(t, as_rows=True)     # the layout by wall; geometry, file and rules read it as runs
 
 
 class TestLayoutU(unittest.TestCase):
@@ -47,7 +47,8 @@ class TestLayoutU(unittest.TestCase):
         _, s = build("Bếp chữ U 3m")
         sc = geometry.compile_spec(s)
         self.assertEqual(sc.lsau, 3000)
-        self.assertTrue(any(p.wall == "left" and p.type == "door" for p in sc.parts))
+        left = {rows_to_runs.as_runs(s).find(m.id).run for m in s.module if m.wall == "left"}
+        self.assertTrue(any(p.run in left and p.type == "door" for p in sc.parts))
         self.assertIn("left-wall", geometry.default_views(s))
         v = geometry.default_views(s)["perspective"]
         self.assertGreater(v.position[2], sc.lphai / 1000, "camera must stand on the open side")

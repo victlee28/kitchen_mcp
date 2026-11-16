@@ -23,18 +23,23 @@ FRONT_SECTIONS = ("door", "glass-door", "drawer")
 SEMANTIC = {"carcass": "cabinet_body", "side-panel": "cabinet_body", "shelf": "cabinet_body", "plinth": "plinth",
             "door": "cabinet_front", "glass-door": "cabinet_front", "drawer": "cabinet_front",
             "countertop": "countertop", "molding": "decorations", "handle": "hardware", "wall": "room", "floor": "room",
-            "fridge": "appliances", "sink": "appliances", "faucet": "appliances", "cooktop": "appliances", "hood": "appliances", "oven": "appliances"}
+            "fridge": "appliances", "sink": "appliances", "faucet": "appliances", "cooktop": "appliances", "hood": "appliances", "oven": "appliances",
+            "opening-frame": "room_opening", "opening-leaf": "room_opening", "opening-glass": "room_opening", "opening-sweep": "room_opening"}
 
 _PROMPT_ROLES = {  # part kind -> the words of the image prompt (English); the name shown to people is the ``part.<kind>`` key of data/i18n
     "door": "cabinet door front", "glass-door": "glass cabinet door", "drawer": "drawer front", "carcass": "cabinet carcass side",
     "side-panel": "cabinet side panel", "shelf": "open shelf", "plinth": "toe kick plinth", "countertop": "kitchen countertop",
     "molding": "decorative molding", "wall": "wall", "floor": "floor", "fridge": "refrigerator", "sink": "kitchen sink",
     "faucet": "kitchen faucet", "cooktop": "cooktop", "hood": "range hood", "oven": "built-in oven", "handle": "cabinet handle",
+    "opening-frame": "door or window frame and casing", "opening-leaf": "room door leaf", "opening-glass": "window glass",
+    "opening-sweep": "floor in front of a door",
 }
 ROLES = {k: (say(f"part.{k}"), en) for k, en in _PROMPT_ROLES.items()}   # part kind -> (name shown to people, prompt words)
 
 _MATERIALS = defaults.BUILTIN.materials   # finish names drawn where the design names none (data: the ``defaults`` item)
-_DEFAULTS = {k: _MATERIALS[k] for k in ("base", "upper", "carcass", "countertop", "wall", "floor", "plinth")}
+_DEFAULTS = {k: _MATERIALS[k] for k in ("base", "upper", "carcass", "countertop", "wall", "floor", "plinth", "openingFrame", "openingLeaf",
+                                        "openingGlass") if k in _MATERIALS}
+OPENING_KEYS = {"opening-frame": "openingFrame", "opening-leaf": "openingLeaf", "opening-glass": "openingGlass", "opening-sweep": "floor"}
 _APPLIANCES = {"fridge": _MATERIALS["steel"], "sink": _MATERIALS["sink"], "faucet": _MATERIALS["steel"], "cooktop": _MATERIALS["cooktop"],
                "hood": _MATERIALS["steel"], "openings": _MATERIALS["openings"]}
 
@@ -58,6 +63,9 @@ def material_slot(spec: KitchenSpec, module: str | None, type: str) -> tuple[str
         return handles.material_slot(spec, module)
     if type.startswith("structure-"):  # drawn from the imported floorplan: not a material of the kitchen
         return f"structure:{type[len('structure-'):]}", ""
+    if type in OPENING_KEYS:            # room doors and windows the design places: one finish each for frames, leaves, glass
+        key = OPENING_KEYS[type]
+        return f"common:{key}", _vl(spec, key)
     if type in _APPLIANCES:
         return f"appliances:{type}", _APPLIANCES[type]
     if type in ("countertop", "wall", "floor", "plinth"):

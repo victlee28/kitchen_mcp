@@ -291,8 +291,8 @@
        "id": "TT1",
        "type": "upper-hood",
        "name": "Tủ trên hút mùi",
-       "wall": "back",
-       "fromCorner": 0.0,
+       "wall": "island",
+       "fromCorner": 700.0,
        "width": 800.0,
        "y": 1715.0,
        "height": 565.0,
@@ -300,7 +300,8 @@
        "doors": [
         400.0,
         400.0
-       ]
+       ],
+       "run": "R1"
       }
      },
      {

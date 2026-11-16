@@ -27,22 +27,21 @@
       {
        "path": "idCounters.R",
        "old": null,
-       "new": 1
+       "new": 3
       },
       {
-       "path": "runs",
-       "old": [],
-       "new": [
-        {
-         "id": "R1",
-         "x": -1000.0,
-         "z": 2000.0,
-         "yaw": 180.0,
-         "purpose": null,
-         "tvLayout": null,
-         "system": null
-        }
-       ]
+       "path": "runs[R3]",
+       "old": null,
+       "new": {
+        "id": "R3",
+        "x": -1000.0,
+        "z": 2000.0,
+        "yaw": 180.0,
+        "purpose": null,
+        "tvLayout": null,
+        "system": null,
+        "anchor": null
+       }
       }
      ],
      "truncated": false
@@ -50,6 +49,19 @@
     "runs": [
      {
       "id": "R1",
+      "x": -1920.0,
+      "z": 0.0,
+      "yaw": 0.0,
+      "anchor": "end"
+     },
+     {
+      "id": "R2",
+      "x": -0.0,
+      "z": 0.0,
+      "yaw": -90.0
+     },
+     {
+      "id": "R3",
       "x": -1000.0,
       "z": 2000.0,
       "yaw": 180.0

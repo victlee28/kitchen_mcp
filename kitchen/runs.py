@@ -198,7 +198,7 @@ def spot(spec: KitchenSpec, tb: Appliance) -> Spot | None:
         return Spot(row_of(m), tb.center if tb.center is not None else m.fromCorner + m.width / 2, m.id)
     if tb.wall and tb.center is not None:
         return Spot(tb.wall, tb.center, tb.module)
-    if m is None or m.wall == "corner":
+    if m is None or m.storey == "corner":
         return None
     return Spot(row_of(m), m.fromCorner + m.width / 2, m.id)
 
@@ -266,22 +266,20 @@ def run_wall(fr: RunFrame, back_length: float) -> str | None:
     return None
 
 
+def wall_of(spec: KitchenSpec, module: Module, back_length: float) -> str | None:
+    """The wall of the kitchen frame the run of ``module`` stands against (back / right / left), None for a free-standing run."""
+    fr = frame_of(spec, module)
+    return run_wall(fr, back_length) if fr is not None else None
+
+
 def walls_used(spec: KitchenSpec, back_length: float) -> set[str]:
-    """The walls of the kitchen frame that have cabinets: those that follow the wall and explicit runs standing against it."""
-    out = {m.wall for m in spec.module if not m.run and m.wall in ("back", "right", "left")}
+    """The walls of the kitchen frame that have cabinets: the walls the runs stand against."""
+    out: set[str] = set()
     for r in spec.runs:
         wall = run_wall(RunFrame(r.id, r.x, r.z, r.yaw), back_length)
         if wall is not None and any(m.run == r.id for m in spec.module):
             out.add(wall)
     return out
-
-
-def along_wall(fr: RunFrame, wall: str, s0: float, s1: float) -> tuple[float, float]:
-    """The stretch [s0, s1] of a run standing against ``wall``, measured the way that wall is (from the back corner; the back wall from its
-    right-hand end)."""
-    pts = [fr.to_world(s0, 0.0), fr.to_world(s1, 0.0)]
-    vals = [-x for x, _ in pts] if wall == "back" else [z for _, z in pts]
-    return min(vals), max(vals)
 
 
 def frames(spec: KitchenSpec) -> dict[str, RunFrame]:

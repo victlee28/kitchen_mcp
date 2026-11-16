@@ -26,7 +26,11 @@
    "molding": "#a87542",
    "handle": "#2b2b2b",
    "wall-tile": "#dedbd4",
-   "structure-swing": "#9AD9C6"
+   "structure-swing": "#9AD9C6",
+   "opening-frame": "#F0EEE8",
+   "opening-leaf": "#806044",
+   "opening-glass": "#91C8DB",
+   "opening-sweep": "#C8EBE1"
   }
  },
  {
@@ -187,6 +191,26 @@
     154,
     217,
     198
+   ],
+   "opening-frame": [
+    245,
+    245,
+    240
+   ],
+   "opening-leaf": [
+    150,
+    95,
+    60
+   ],
+   "opening-glass": [
+    150,
+    210,
+    235
+   ],
+   "opening-sweep": [
+    200,
+    235,
+    225
    ]
   }
  },

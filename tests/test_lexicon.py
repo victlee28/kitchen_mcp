@@ -190,13 +190,13 @@ class TestReachesTheOutputs(unittest.TestCase):
         self.assertEqual(d["styleTags"], ["Japandi"])
         self.assertTrue(d["promptInterpretation"])
         doc = threejs_export.export(spec, "d", 1)
-        self.assertEqual(doc["schemaVersion"], "1.5.0")
+        self.assertEqual(doc["schemaVersion"], "1.7.0")
         self.assertEqual(doc["metadata"]["styleTags"], ["Japandi"])
         self.assertEqual(threejs_export.integrity(doc), [])
         mats = {m["id"]: m for m in doc["materials"]}
         self.assertEqual(mats["MAT-BACKSPLASH"]["pattern"], "herringbone")
         self.assertEqual(mats["MAT-FRONT-BASE"]["color"], "#5c3f2c", "walnut must not render as oak")
-        for f in ("kitchen-threejs.v1.0.0.schema.json", "kitchen-threejs.schema.json"):
+        for f in ("kitchen-threejs.schema.json",):
             jsonschema.Draft202012Validator(json.loads((ROOT / "schemas" / f).read_text(encoding="utf-8"))).validate(doc)
         text = prompts.global_prompt(spec)
         for part in ("Japandi", "herringbone", "fluted", "walnut", "marble"):

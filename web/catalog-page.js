@@ -8,6 +8,7 @@ import { openTypeEditor } from './cabinet-type-editor.js';
 import { openLayoutEditor } from './layout-template-editor.js';
 import { copyId } from './cabinet-type-logic.js';
 import { diffFields, show } from './catalog-logic.js';
+import { frontRects } from './opening-logic.js';
 let current = null;      // kind shown
 let listing = null;      // its listing from the server
 
@@ -145,8 +146,25 @@ function edit(item) {
     for (const [k, f] of fields) { const v = f.read(); if (v === undefined) delete out[k]; else out[k] = v; }
     return out;
   };
+  const preview = el('div', { className: 'opening-preview' });
+  const showOpening = () => guard(async () => {        // an opening type: how it looks at its standard hole widths, before saving
+    const country = new URLSearchParams(location.search).get('country') || 'VN';
+    const r = await catalog.openingPreview(idInput.value.trim() || 'preview', read(), country);
+    const NS = 'http://www.w3.org/2000/svg';
+    preview.replaceChildren(...r.samples.map((smp) => {
+      if (smp.error) return el('p', { className: 'warn', textContent: `${smp.width}: ${smp.error.message}` });
+      const svg = document.createElementNS(NS, 'svg'); svg.setAttribute('width', '220'); svg.setAttribute('height', '180');
+      for (const q of frontRects(smp)) {
+        const rect = document.createElementNS(NS, 'rect');
+        for (const [a, v] of Object.entries({ x: q.x, y: q.y, width: q.width, height: q.height })) rect.setAttribute(a, String(v));
+        rect.setAttribute('class', `op-${q.kind}`); svg.append(rect);
+      }
+      return el('figure', {}, svg, el('figcaption', { textContent: t('catalog.openingSample', { 0: smp.width, 1: smp.height, 2: smp.clearWidth ?? '—' }) }));
+    }));
+  });
   const form = el('form', { className: 'item' }, el('label', { textContent: t('catalog.id') }), idInput, ...fields.map(([, f]) => f.node), toggle, raw,
-    el('p', { className: 'row' }, el('button', { type: 'submit', textContent: t('catalog.save') }), el('button', { type: 'button', textContent: t('catalog.cancel'), onclick: () => form.remove() })));
+    el('p', { className: 'row' }, el('button', { type: 'submit', textContent: t('catalog.save') }), el('button', { type: 'button', textContent: t('catalog.cancel'), onclick: () => form.remove() }),
+      ...(current === 'opening-type' ? [el('button', { type: 'button', textContent: t('catalog.preview'), onclick: showOpening })] : [])), preview);
   form.onsubmit = (ev) => { ev.preventDefault(); guard(async () => {
     const id = idInput.value.trim();
     await catalog.put(current, id, read());

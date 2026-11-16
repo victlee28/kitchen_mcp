@@ -20,112 +20,112 @@
      [
       "TC1",
       "tall-fridge",
-      "back",
-      1250.0,
+      "island",
+      0.0,
       670.0
      ],
      [
       "TD1",
       "base",
-      "back",
-      550.0,
+      "island",
+      770.0,
       600.0
      ],
      [
       "TT1",
       "upper",
-      "back",
-      610.0,
+      "island",
+      670.0,
       640.0
      ],
      [
       "TT2",
       "upper-loft",
-      "back",
-      610.0,
+      "island",
+      670.0,
       640.0
      ],
      [
       "KG1",
       "corner-shelf",
-      "corner",
-      0.0,
-      0.0
+      "island",
+      1310.0,
+      610.0
      ],
      [
       "TD2",
       "base-corner-sink",
-      "right",
+      "island",
       0.0,
       1440.0
      ],
      [
       "TD3",
       "base",
-      "right",
+      "island",
       1440.0,
       370.0
      ],
      [
       "TD4",
       "base-oven",
-      "right",
+      "island",
       1810.0,
       630.0
      ],
      [
       "TD5",
       "base-end",
-      "right",
+      "island",
       2440.0,
       390.0
      ],
      [
       "TT3",
       "upper-glass",
-      "right",
+      "island",
       630.0,
       780.0
      ],
      [
       "TT4",
       "upper",
-      "right",
+      "island",
       1410.0,
       350.0
      ],
      [
       "TT5",
       "upper-hood",
-      "right",
+      "island",
       1760.0,
       740.0
      ],
      [
       "TT6",
       "upper",
-      "right",
+      "island",
       2500.0,
       330.0
      ],
      [
       "TT7",
       "upper-loft",
-      "right",
+      "island",
       630.0,
       800.0
      ],
      [
       "TT8",
       "upper-loft",
-      "right",
+      "island",
       1430.0,
       690.0
      ],
      [
       "TT9",
       "upper-loft",
-      "right",
+      "island",
       2120.0,
       710.0
      ]
@@ -152,105 +152,105 @@
      [
       "TC1",
       "tall-fridge",
-      "back",
-      1250.0,
+      "island",
+      0.0,
       670.0
      ],
      [
       "TT1",
       "upper",
-      "back",
-      610.0,
+      "island",
+      670.0,
       640.0
      ],
      [
       "TT2",
       "upper-loft",
-      "back",
-      610.0,
+      "island",
+      670.0,
       640.0
      ],
      [
       "KG1",
       "corner-shelf",
-      "corner",
-      0.0,
-      0.0
+      "island",
+      1310.0,
+      610.0
      ],
      [
       "TD2",
       "base-corner-sink",
-      "right",
+      "island",
       0.0,
       1440.0
      ],
      [
       "TD3",
       "base",
-      "right",
+      "island",
       1440.0,
       370.0
      ],
      [
       "TD4",
       "base-oven",
-      "right",
+      "island",
       1810.0,
       630.0
      ],
      [
       "TD5",
       "base-end",
-      "right",
+      "island",
       2440.0,
       390.0
      ],
      [
       "TT3",
       "upper-glass",
-      "right",
+      "island",
       630.0,
       780.0
      ],
      [
       "TT4",
       "upper",
-      "right",
+      "island",
       1410.0,
       350.0
      ],
      [
       "TT5",
       "upper-hood",
-      "right",
+      "island",
       1760.0,
       740.0
      ],
      [
       "TT6",
       "upper",
-      "right",
+      "island",
       2500.0,
       330.0
      ],
      [
       "TT7",
       "upper-loft",
-      "right",
+      "island",
       630.0,
       800.0
      ],
      [
       "TT8",
       "upper-loft",
-      "right",
+      "island",
       1430.0,
       690.0
      ],
      [
       "TT9",
       "upper-loft",
-      "right",
+      "island",
       2120.0,
       710.0
      ]
@@ -278,105 +278,105 @@
      [
       "TC1",
       "tall-fridge",
-      "back",
-      1250.0,
+      "island",
+      0.0,
       670.0
      ],
      [
       "TT1",
       "upper",
-      "back",
-      610.0,
+      "island",
+      670.0,
       640.0
      ],
      [
       "TT2",
       "upper-loft",
-      "back",
-      610.0,
+      "island",
+      670.0,
       640.0
      ],
      [
       "KG1",
       "corner-shelf",
-      "corner",
-      0.0,
-      0.0
+      "island",
+      1310.0,
+      610.0
      ],
      [
       "TD2",
       "base-corner-sink",
-      "right",
+      "island",
       0.0,
       1440.0
      ],
      [
       "TD3",
       "base",
-      "right",
+      "island",
       1440.0,
       370.0
      ],
      [
       "TD4",
       "base-oven",
-      "right",
+      "island",
       1810.0,
       630.0
      ],
      [
       "TD5",
       "base-end",
-      "right",
+      "island",
       2440.0,
       390.0
      ],
      [
       "TT3",
       "upper-glass",
-      "right",
+      "island",
       630.0,
       780.0
      ],
      [
       "TT4",
       "upper",
-      "right",
+      "island",
       1410.0,
       350.0
      ],
      [
       "TT5",
       "upper-hood",
-      "right",
+      "island",
       1760.0,
       740.0
      ],
      [
       "TT6",
       "upper",
-      "right",
+      "island",
       2500.0,
       330.0
      ],
      [
       "TT7",
       "upper-loft",
-      "right",
+      "island",
       630.0,
       800.0
      ],
      [
       "TT8",
       "upper-loft",
-      "right",
+      "island",
       1430.0,
       690.0
      ],
      [
       "TT9",
       "upper-loft",
-      "right",
+      "island",
       2120.0,
       710.0
      ]
@@ -406,120 +406,120 @@
      [
       "TC1",
       "tall-fridge",
-      "back",
-      1700.0,
+      "island",
+      0.0,
       670.0
      ],
      [
       "TD1",
       "base",
-      "back",
-      550.0,
+      "island",
+      670.0,
       700.0
      ],
      [
       "TT1",
       "upper",
-      "back",
-      610.0,
+      "island",
+      1120.0,
       640.0
      ],
      [
       "TT2",
       "upper-loft",
-      "back",
-      610.0,
+      "island",
+      1120.0,
       640.0
      ],
      [
       "KG1",
       "corner-shelf",
-      "corner",
-      0.0,
-      0.0
+      "island",
+      1760.0,
+      610.0
      ],
      [
       "TD2",
       "base-corner-sink",
-      "right",
+      "island",
       0.0,
       1440.0
      ],
      [
       "TD3",
       "base",
-      "right",
+      "island",
       1440.0,
       370.0
      ],
      [
       "TD4",
       "base-oven",
-      "right",
+      "island",
       1810.0,
       630.0
      ],
      [
       "TD5",
       "base-end",
-      "right",
+      "island",
       2440.0,
       390.0
      ],
      [
       "TT3",
       "upper-glass",
-      "right",
+      "island",
       630.0,
       780.0
      ],
      [
       "TT4",
       "upper",
-      "right",
+      "island",
       1410.0,
       350.0
      ],
      [
       "TT5",
       "upper-hood",
-      "right",
+      "island",
       1760.0,
       740.0
      ],
      [
       "TT6",
       "upper",
-      "right",
+      "island",
       2500.0,
       330.0
      ],
      [
       "TT7",
       "upper-loft",
-      "right",
+      "island",
       630.0,
       800.0
      ],
      [
       "TT8",
       "upper-loft",
-      "right",
+      "island",
       1430.0,
       690.0
      ],
      [
       "TT9",
       "upper-loft",
-      "right",
+      "island",
       2120.0,
       710.0
      ],
      [
       "TD6",
       "base",
-      "back",
-      1250.0,
+      "island",
+      1370.0,
       450.0
      ]
     ],
@@ -547,112 +547,112 @@
      [
       "TC1",
       "tall-fridge",
-      "back",
-      1250.0,
+      "island",
+      0.0,
       670.0
      ],
      [
       "TD1",
       "base",
-      "back",
-      550.0,
+      "island",
+      670.0,
       700.0
      ],
      [
       "TT1",
       "upper",
-      "back",
-      610.0,
+      "island",
+      670.0,
       640.0
      ],
      [
       "TT2",
       "upper-loft",
-      "back",
-      610.0,
+      "island",
+      670.0,
       640.0
      ],
      [
       "KG1",
       "corner-shelf",
-      "corner",
-      0.0,
-      0.0
+      "island",
+      1310.0,
+      610.0
      ],
      [
       "TD2",
       "base-corner-sink",
-      "right",
+      "island",
       0.0,
       1440.0
      ],
      [
       "TD3",
       "base",
-      "right",
+      "island",
       1440.0,
       370.0
      ],
      [
       "TD4",
       "base-oven",
-      "right",
+      "island",
       1810.0,
       630.0
      ],
      [
       "TD5",
       "base-end",
-      "right",
+      "island",
       2440.0,
       390.0
      ],
      [
       "TT3",
       "upper-glass",
-      "right",
+      "island",
       630.0,
       780.0
      ],
      [
       "TT4",
       "upper",
-      "right",
+      "island",
       1410.0,
       350.0
      ],
      [
       "TT5",
       "upper-hood",
-      "right",
+      "island",
       1760.0,
       740.0
      ],
      [
       "TT6",
       "upper",
-      "right",
+      "island",
       2500.0,
       330.0
      ],
      [
       "TT7",
       "upper-loft",
-      "right",
+      "island",
       630.0,
       800.0
      ],
      [
       "TT8",
       "upper-loft",
-      "right",
+      "island",
       1430.0,
       690.0
      ],
      [
       "TT9",
       "upper-loft",
-      "right",
+      "island",
       2120.0,
       710.0
      ]
@@ -690,105 +690,105 @@
      [
       "TC1",
       "tall-fridge",
-      "back",
-      1250.0,
+      "island",
+      0.0,
       670.0
      ],
      [
       "TT1",
       "upper",
-      "back",
-      610.0,
+      "island",
+      670.0,
       640.0
      ],
      [
       "TT2",
       "upper-loft",
-      "back",
-      610.0,
+      "island",
+      670.0,
       640.0
      ],
      [
       "KG1",
       "corner-shelf",
-      "corner",
-      0.0,
-      0.0
+      "island",
+      1310.0,
+      610.0
      ],
      [
       "TD2",
       "base-corner-sink",
-      "right",
+      "island",
       0.0,
       1440.0
      ],
      [
       "TD3",
       "base",
-      "right",
+      "island",
       1440.0,
       370.0
      ],
      [
       "TD4",
       "base-oven",
-      "right",
+      "island",
       1810.0,
       630.0
      ],
      [
       "TD5",
       "base-end",
-      "right",
+      "island",
       2440.0,
       390.0
      ],
      [
       "TT3",
       "upper-glass",
-      "right",
+      "island",
       630.0,
       780.0
      ],
      [
       "TT4",
       "upper",
-      "right",
+      "island",
       1410.0,
       350.0
      ],
      [
       "TT5",
       "upper-hood",
-      "right",
+      "island",
       1760.0,
       740.0
      ],
      [
       "TT6",
       "upper",
-      "right",
+      "island",
       2500.0,
       330.0
      ],
      [
       "TT7",
       "upper-loft",
-      "right",
+      "island",
       630.0,
       800.0
      ],
      [
       "TT8",
       "upper-loft",
-      "right",
+      "island",
       1430.0,
       690.0
      ],
      [
       "TT9",
       "upper-loft",
-      "right",
+      "island",
       2120.0,
       710.0
      ]

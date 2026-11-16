@@ -18,7 +18,8 @@ def default_height(rec: dict[str, Any]) -> float:
     if kind in ("wall", "column", "shaft"):
         return DEFAULT_WALL_HEIGHT
     if kind == "opening":
-        return 2200.0
+        from ..openings.types import default_height as opening_height
+        return opening_height("door")      # every drawn opening, windows too: approved images keep their solids
     if kind == "stair":
         return STAIR_RISE
     if kind == "furniture":

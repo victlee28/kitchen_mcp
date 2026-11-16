@@ -31,7 +31,10 @@
      "back": 600.0,
      "right": 600.0
     },
-    "runWalls": {}
+    "runWalls": {
+     "R1": "back",
+     "R2": "right"
+    }
    }
   },
   {
@@ -99,7 +102,10 @@
     "backsplash": {
      "back": 600.0
     },
-    "runWalls": {}
+    "runWalls": {
+     "R1": "back",
+     "R2": "right"
+    }
    }
   }
  ]

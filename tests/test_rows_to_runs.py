@@ -51,7 +51,7 @@ class TestConvert(unittest.TestCase):
         self.assertEqual((b1.fromCorner, b1.doors), (900.0, [400.0, 200.0]), "the back wall is measured from the right: mirrored, doors in reverse")
         r1 = next(m for m in after.module if m.id == "R1x")
         self.assertEqual((r1.fromCorner, r1.hingeSides), (600.0, ["right"]), "the right wall is not mirrored; its lone door keeps the hinge it had")
-        self.assertEqual((after.room.length("back"), after.room.length("right")), geometry.wall_length(before), "the kitchen frame is written down")
+        self.assertEqual((after.room.length("back"), after.room.length("right")), rows_to_runs.row_lengths(before), "the kitchen frame is written down")
 
     def test_a_blind_corner_changes_ends_with_its_row(self):
         mods = [box("B1", "back", 0, 1000, blindCorner=600, doors=[400]), box("B2", "back", 1000, 600), box("R1x", "right", 600, 600, blindCorner=0),
@@ -107,9 +107,10 @@ class TestConvert(unittest.TestCase):
         self.assertIn("GEO-CORNER", {i["rule"] for i in rules.validate(apart)["issues"]})
         alone = spec_of([box("B1", "back", 600, 900),
                          {"id": "KG1", "type": "corner-shelf", "wall": "corner", "y": 1500, "height": 700, "depth": 350, "backLength": 600, "rightLength": 600}])
-        kept, notes = converted(alone)
-        self.assertEqual((next(m for m in kept.module if m.id == "KG1").wall, len(notes)), ("corner", 1))
-        self.assertEqual(rows_to_runs.equivalent(alone, kept), [])
+        kept, notes = converted(alone)          # no cabinet on the right wall: the shelf's second leg gets a run of its own there
+        shelf = next(m for m in kept.module if m.id == "KG1")
+        self.assertEqual((shelf.wall, bool(shelf.run and shelf.turnsInto), notes), ("island", True, []))
+        self.assertTrue(geometry.compile_spec(kept).parts)
 
     def test_a_sink_given_by_wall_and_centre_joins_its_cabinet_and_then_follows_it(self):
         before = spec_of([box("B1", "back", 0, 600), box("B2", "back", 600, 800, "base-sink"), box("B3", "back", 1400, 600)],
@@ -175,6 +176,51 @@ class TestNewKitchens(unittest.TestCase):
         self.assertFalse([i for i in rules.validate(after)["issues"] if i["rule"] == "GEO-COLLISION"])
         gone = self.svc.propose(did, {"op": "remove", "id": new.id}, rev2)
         self.assertTrue(gone["applicable"])
+
+
+class TestReadByRuns(unittest.TestCase):
+    """The wall-row code is gone from what a design is: every design is stored by runs, and a revision saved by walls is read as runs."""
+
+    def setUp(self):
+        import tempfile
+        from kitchen.service import KitchenService
+        self.tmp = Path(tempfile.mkdtemp(prefix="by-runs-"))
+        self.svc = KitchenService(self.tmp / "k.db", self.tmp / "renders")
+
+    def tearDown(self):
+        import shutil
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_a_new_design_is_stored_by_runs(self):
+        did = self.svc.create_from_spec(json.loads(json.dumps(FIX)))["id"]
+        spec, _ = self.svc.store.get(did)
+        self.assertFalse(rows_to_runs.has_rows(spec))
+        self.assertEqual(rows_to_runs.equivalent(KitchenSpec.model_validate(FIX), spec), [])
+
+    def test_an_old_revision_saved_by_walls_is_read_as_runs(self):
+        did = self.svc.create_from_spec(json.loads(json.dumps(FIX)))["id"]
+        with self.svc.store._conn() as c:                      # what a revision saved before runs looks like
+            c.execute("UPDATE revisions SET spec_json=? WHERE design_id=?", (json.dumps(FIX, ensure_ascii=False), did))
+        spec, _ = self.svc.store.get(did)
+        self.assertFalse(rows_to_runs.has_rows(spec))
+        self.assertEqual(rows_to_runs.equivalent(KitchenSpec.model_validate(FIX), spec), [])
+
+    def test_a_cabinet_added_by_wall_joins_the_run_along_that_wall(self):
+        did = self.svc.create_from_spec(json.loads(json.dumps(FIX)))["id"]
+        spec, rev = self.svc.store.get(did)
+        right = next(m for m in spec.module if m.id == "TD2").run           # the right wall's run starts at the corner, as the wall does
+        end = max(m.endAt for m in spec.module if m.run == right and m.storey == "base")
+        self.svc.apply(did, {"op": "add", "module": {"type": "base", "wall": "right", "fromCorner": end, "width": 400, "y": 0, "height": 840,
+                                                     "depth": 550}}, rev)
+        after, _ = self.svc.store.get(did)
+        self.assertEqual(len(after.runs), len(spec.runs), "no second run on the same wall")
+        self.assertTrue(any(m.run == right and abs(m.fromCorner - end) < 0.01 for m in after.module))
+        back = next(m for m in spec.module if m.id == "TD1").run           # the back wall's run is counted from its far end: a cabinet in it joins it
+        self.svc.apply(did, {"op": "add", "module": {"type": "upper", "wall": "back", "fromCorner": 700, "width": 400, "y": 1500,
+                                                     "height": 700, "depth": 350}}, self.svc.store.get(did)[1])
+        again, _ = self.svc.store.get(did)
+        self.assertEqual(len(again.runs), len(spec.runs))
+        self.assertTrue(any(m.run == back and m.storey == "upper" for m in again.module if m.id not in {x.id for x in after.module}))
 
 
 if __name__ == "__main__":

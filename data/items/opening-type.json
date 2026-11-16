@@ -1,0 +1,1059 @@
+[
+ {
+  "id": "door-swing-1",
+  "kind": "door",
+  "operation": "swing",
+  "axesRatio": [],
+  "hAxesFromSill": [],
+  "leaves": [
+   {
+    "cols": [
+     0,
+     1
+    ],
+    "rows": [
+     0,
+     1
+    ],
+    "operation": "swing",
+    "hinge": {
+     "axis": "v",
+     "index": 0
+    },
+    "opens": "in",
+    "active": true
+   }
+  ],
+  "frameFace": 30,
+  "frameDepth": null,
+  "casing": {
+   "width": 50,
+   "thickness": 10
+  },
+  "threshold": 0,
+  "stop": 5,
+  "transom": 40,
+  "leafThickness": 40,
+  "gap": 3,
+  "minLeaf": 200,
+  "openingAngle": 90,
+  "minWidth": 400,
+  "maxWidth": 1400,
+  "defaultWidth": 900,
+  "defaultHeight": 2200,
+  "defaultSill": 0,
+  "sizes": {
+   "VN": {
+    "widths": [
+     700,
+     800,
+     900,
+     1200
+    ],
+    "heights": [
+     2100,
+     2200
+    ]
+   },
+   "US": {
+    "widths": [
+     660,
+     762,
+     813,
+     864,
+     965
+    ],
+    "heights": [
+     2096
+    ]
+   },
+   "CA": {
+    "widths": [
+     660,
+     762,
+     813,
+     864,
+     965
+    ],
+    "heights": [
+     2096
+    ]
+   },
+   "GB": {
+    "widths": [
+     676,
+     752,
+     828,
+     904
+    ],
+    "heights": [
+     2033
+    ]
+   },
+   "IE": {
+    "widths": [
+     676,
+     752,
+     828,
+     904
+    ],
+    "heights": [
+     2033
+    ]
+   },
+   "AU": {
+    "widths": [
+     655,
+     755,
+     805,
+     855,
+     905,
+     955
+    ],
+    "heights": [
+     2080
+    ]
+   },
+   "NZ": {
+    "widths": [
+     745,
+     795,
+     845,
+     895,
+     945
+    ],
+    "heights": [
+     2020
+    ]
+   },
+   "SG": {
+    "widths": [
+     915
+    ],
+    "heights": [
+     2135
+    ]
+   }
+  },
+  "label": {
+   "vi": "Cửa đi một cánh",
+   "en": "Single swing door"
+  },
+  "prompt": "single-leaf hinged door",
+  "sources": [
+   {
+    "country": "US",
+    "kind": "practice",
+    "url": "https://www.bairdbrothers.com/Door-Specifications-and-Terms-W13C101.aspx",
+    "note": "Rough opening = slab width + 2 in, height 82 1/2 in for 80 in slabs (24/28/30/32/36 in slabs)"
+   },
+   {
+    "country": "CA",
+    "kind": "practice",
+    "url": "https://www.bairdbrothers.com/Door-Specifications-and-Terms-W13C101.aspx",
+    "note": "Same imperial slab sizes and rough-opening rule as the US"
+   },
+   {
+    "country": "GB",
+    "kind": "practice",
+    "url": "https://www.buildington.co.uk/blog/uk-standard-door-sizes-what-architects-must-account-for/amp",
+    "note": "Leaves 1981 x 610/686/762/838; structural opening = leaf + lining + 10-15 mm fitting each side (838 leaf ~ 900 x 2060); +66 / 2033 used here"
+   },
+   {
+    "country": "IE",
+    "kind": "practice",
+    "url": "https://www.buildington.co.uk/blog/uk-standard-door-sizes-what-architects-must-account-for/amp",
+    "note": "Same imperial leaf sizes as Great Britain"
+   },
+   {
+    "country": "AU",
+    "kind": "practice",
+    "url": "https://metroll.com.au/wp-content/uploads/metroll_doorframes_meterboxes_April2025.pdf",
+    "note": "Stud wall opening = door + 35 mm width, + 40 mm height (2040 doors, 620-920 wide)"
+   },
+   {
+    "country": "VN",
+    "kind": "practice",
+    "url": "",
+    "note": "VN-DOOR-PRACTICE (knowledge): hole 700-1200 x 2100-2200; decided 13/11/2026 that these are hole sizes"
+   },
+   {
+    "country": "NZ",
+    "kind": "practice",
+    "url": "https://www.mitre10.co.nz/shop/hume-flush-panel-interior-doors-1980-x-760mm-35mm-thick/p/437450",
+    "note": "Hume (NZ maker) leaves 1980 high, 710-910 wide (also 2200/2400 high); NZ timber framing like Australia, so the AU opening rule (+35 width, +40 height) is assumed here - to confirm"
+   },
+   {
+    "country": "SG",
+    "kind": "practice",
+    "url": "https://hdblaminatedoor.blogspot.com/2025/06/standard-door-and-gate-sizes-in.html",
+    "note": "HDB / condo room and toilet doors sold as 3 ft x 7 ft (915 x 2135 mm); used as the wall-hole size (user's decision 16/11/2026)"
+   }
+  ]
+ },
+ {
+  "id": "door-swing-1-transom",
+  "kind": "door",
+  "operation": "swing",
+  "axesRatio": [],
+  "hAxesFromSill": [
+   2100
+  ],
+  "leaves": [
+   {
+    "cols": [
+     0,
+     1
+    ],
+    "rows": [
+     0,
+     1
+    ],
+    "operation": "swing",
+    "hinge": {
+     "axis": "v",
+     "index": 0
+    },
+    "opens": "in",
+    "active": true
+   },
+   {
+    "cols": [
+     0,
+     1
+    ],
+    "rows": [
+     1,
+     2
+    ],
+    "operation": "fixed",
+    "hinge": null,
+    "opens": null,
+    "active": false
+   }
+  ],
+  "frameFace": 30,
+  "frameDepth": null,
+  "casing": {
+   "width": 50,
+   "thickness": 10
+  },
+  "threshold": 0,
+  "stop": 5,
+  "transom": 40,
+  "leafThickness": 40,
+  "gap": 3,
+  "minLeaf": 200,
+  "openingAngle": 90,
+  "minWidth": 400,
+  "maxWidth": 1400,
+  "defaultWidth": 900,
+  "defaultHeight": 2400,
+  "defaultSill": 0,
+  "sizes": {
+   "VN": {
+    "widths": [
+     700,
+     800,
+     900,
+     1200
+    ]
+   }
+  },
+  "label": {
+   "vi": "Cửa đi một cánh có ô thoáng",
+   "en": "Single swing door with transom"
+  },
+  "prompt": "single-leaf hinged door with a fixed glass transom above"
+ },
+ {
+  "id": "door-swing-2",
+  "kind": "door",
+  "operation": "swing",
+  "axesRatio": [
+   0.5
+  ],
+  "hAxesFromSill": [],
+  "leaves": [
+   {
+    "cols": [
+     0,
+     1
+    ],
+    "rows": [
+     0,
+     1
+    ],
+    "operation": "swing",
+    "hinge": {
+     "axis": "v",
+     "index": 0
+    },
+    "opens": "in",
+    "active": true
+   },
+   {
+    "cols": [
+     1,
+     2
+    ],
+    "rows": [
+     0,
+     1
+    ],
+    "operation": "swing",
+    "hinge": {
+     "axis": "v",
+     "index": -1
+    },
+    "opens": "in",
+    "active": false
+   }
+  ],
+  "frameFace": 30,
+  "frameDepth": null,
+  "casing": {
+   "width": 50,
+   "thickness": 10
+  },
+  "threshold": 0,
+  "stop": 5,
+  "transom": 40,
+  "leafThickness": 40,
+  "gap": 3,
+  "minLeaf": 200,
+  "openingAngle": 90,
+  "minWidth": 900,
+  "maxWidth": 2400,
+  "defaultWidth": 1400,
+  "defaultHeight": 2200,
+  "defaultSill": 0,
+  "sizes": {
+   "VN": {
+    "widths": [
+     1200
+    ],
+    "heights": [
+     2100,
+     2200
+    ]
+   },
+   "US": {
+    "widths": [
+     1575,
+     1880
+    ],
+    "heights": [
+     2096
+    ]
+   },
+   "CA": {
+    "widths": [
+     1575,
+     1880
+    ],
+    "heights": [
+     2096
+    ]
+   },
+   "SG": {
+    "widths": [
+     1220
+    ],
+    "heights": [
+     2135
+    ]
+   }
+  },
+  "label": {
+   "vi": "Cửa đi hai cánh đều",
+   "en": "Double swing door"
+  },
+  "prompt": "double-leaf hinged door",
+  "sources": [
+   {
+    "country": "US",
+    "kind": "practice",
+    "url": "https://www.bairdbrothers.com/Door-Specifications-and-Terms-W13C101.aspx",
+    "note": "Double units 60 / 72 in: rough opening 62 / 74 x 82 1/2 in"
+   },
+   {
+    "country": "SG",
+    "kind": "practice",
+    "url": "https://hdblaminatedoor.blogspot.com/2025/06/standard-door-and-gate-sizes-in.html",
+    "note": "double main doors sold as 4 ft x 7 ft (1220 x 2135 mm); used as the wall-hole size (user's decision 16/11/2026)"
+   }
+  ]
+ },
+ {
+  "id": "door-swing-2-transom",
+  "kind": "door",
+  "operation": "swing",
+  "axesRatio": [
+   0.5
+  ],
+  "hAxesFromSill": [
+   2200
+  ],
+  "leaves": [
+   {
+    "cols": [
+     0,
+     1
+    ],
+    "rows": [
+     0,
+     1
+    ],
+    "operation": "swing",
+    "hinge": {
+     "axis": "v",
+     "index": 0
+    },
+    "opens": "in",
+    "active": true
+   },
+   {
+    "cols": [
+     1,
+     2
+    ],
+    "rows": [
+     0,
+     1
+    ],
+    "operation": "swing",
+    "hinge": {
+     "axis": "v",
+     "index": -1
+    },
+    "opens": "in",
+    "active": false
+   },
+   {
+    "cols": [
+     0,
+     2
+    ],
+    "rows": [
+     1,
+     2
+    ],
+    "operation": "fixed",
+    "hinge": null,
+    "opens": null,
+    "active": false
+   }
+  ],
+  "frameFace": 30,
+  "frameDepth": null,
+  "casing": {
+   "width": 50,
+   "thickness": 10
+  },
+  "threshold": 0,
+  "stop": 5,
+  "transom": 40,
+  "leafThickness": 40,
+  "gap": 3,
+  "minLeaf": 200,
+  "openingAngle": 90,
+  "minWidth": 900,
+  "maxWidth": 2400,
+  "defaultWidth": 1650,
+  "defaultHeight": 2700,
+  "defaultSill": 0,
+  "sizes": {
+   "VN": {
+    "widths": [
+     1200
+    ]
+   }
+  },
+  "label": {
+   "vi": "Cửa đi hai cánh có ô thoáng",
+   "en": "Double swing door with transom"
+  },
+  "prompt": "double-leaf hinged door with a fixed glass transom above"
+ },
+ {
+  "id": "door-swing-2-unequal",
+  "kind": "door",
+  "operation": "swing",
+  "axesRatio": [
+   0.75
+  ],
+  "hAxesFromSill": [],
+  "leaves": [
+   {
+    "cols": [
+     0,
+     1
+    ],
+    "rows": [
+     0,
+     1
+    ],
+    "operation": "swing",
+    "hinge": {
+     "axis": "v",
+     "index": 0
+    },
+    "opens": "in",
+    "active": true
+   },
+   {
+    "cols": [
+     1,
+     2
+    ],
+    "rows": [
+     0,
+     1
+    ],
+    "operation": "swing",
+    "hinge": {
+     "axis": "v",
+     "index": -1
+    },
+    "opens": "in",
+    "active": false
+   }
+  ],
+  "frameFace": 30,
+  "frameDepth": null,
+  "casing": {
+   "width": 50,
+   "thickness": 10
+  },
+  "threshold": 0,
+  "stop": 5,
+  "transom": 40,
+  "leafThickness": 40,
+  "gap": 3,
+  "minLeaf": 200,
+  "openingAngle": 90,
+  "minWidth": 900,
+  "maxWidth": 2000,
+  "defaultWidth": 1200,
+  "defaultHeight": 2200,
+  "defaultSill": 0,
+  "sizes": {
+   "VN": {
+    "widths": [
+     1200
+    ],
+    "heights": [
+     2100,
+     2200
+    ]
+   }
+  },
+  "label": {
+   "vi": "Cửa đi hai cánh lệch (mẹ con)",
+   "en": "Unequal double swing door"
+  },
+  "prompt": "unequal double-leaf hinged door"
+ },
+ {
+  "id": "door-sliding-2",
+  "kind": "door",
+  "operation": "sliding",
+  "axesRatio": [
+   0.5
+  ],
+  "hAxesFromSill": [],
+  "leaves": [
+   {
+    "cols": [
+     0,
+     1
+    ],
+    "rows": [
+     0,
+     1
+    ],
+    "operation": "sliding",
+    "hinge": null,
+    "opens": null,
+    "active": true
+   },
+   {
+    "cols": [
+     1,
+     2
+    ],
+    "rows": [
+     0,
+     1
+    ],
+    "operation": "sliding",
+    "hinge": null,
+    "opens": null,
+    "active": false
+   }
+  ],
+  "frameFace": 30,
+  "frameDepth": null,
+  "casing": {
+   "width": 50,
+   "thickness": 10
+  },
+  "threshold": 0,
+  "stop": 0,
+  "transom": 40,
+  "leafThickness": 40,
+  "gap": 3,
+  "minLeaf": 200,
+  "minWidth": 1000,
+  "maxWidth": 4800,
+  "defaultWidth": 1600,
+  "defaultHeight": 2200,
+  "defaultSill": 0,
+  "sizes": {
+   "VN": {
+    "widths": [
+     1200,
+     1600
+    ],
+    "heights": [
+     2100,
+     2200
+    ]
+   }
+  },
+  "label": {
+   "vi": "Cửa đi trượt hai cánh",
+   "en": "Double sliding door"
+  },
+  "prompt": "double sliding door"
+ },
+ {
+  "id": "door-folding-4",
+  "kind": "door",
+  "operation": "folding",
+  "axesRatio": [
+   0.25,
+   0.5,
+   0.75
+  ],
+  "hAxesFromSill": [],
+  "leaves": [
+   {
+    "cols": [
+     0,
+     1
+    ],
+    "rows": [
+     0,
+     1
+    ],
+    "operation": "folding",
+    "hinge": null,
+    "opens": null,
+    "active": true
+   },
+   {
+    "cols": [
+     1,
+     2
+    ],
+    "rows": [
+     0,
+     1
+    ],
+    "operation": "folding",
+    "hinge": null,
+    "opens": null,
+    "active": false
+   },
+   {
+    "cols": [
+     2,
+     3
+    ],
+    "rows": [
+     0,
+     1
+    ],
+    "operation": "folding",
+    "hinge": null,
+    "opens": null,
+    "active": false
+   },
+   {
+    "cols": [
+     3,
+     4
+    ],
+    "rows": [
+     0,
+     1
+    ],
+    "operation": "folding",
+    "hinge": null,
+    "opens": null,
+    "active": false
+   }
+  ],
+  "frameFace": 30,
+  "frameDepth": null,
+  "casing": {
+   "width": 50,
+   "thickness": 10
+  },
+  "threshold": 0,
+  "stop": 0,
+  "transom": 40,
+  "leafThickness": 40,
+  "gap": 3,
+  "minLeaf": 200,
+  "minWidth": 1400,
+  "maxWidth": 6000,
+  "defaultWidth": 2400,
+  "defaultHeight": 2200,
+  "defaultSill": 0,
+  "label": {
+   "vi": "Cửa xếp bốn cánh",
+   "en": "Four-leaf folding door"
+  },
+  "prompt": "four-leaf bi-fold door"
+ },
+ {
+  "id": "passage",
+  "kind": "passage",
+  "operation": "fixed",
+  "axesRatio": [],
+  "hAxesFromSill": [],
+  "leaves": [],
+  "frameFace": 0,
+  "frameDepth": null,
+  "casing": {
+   "width": 0,
+   "thickness": 0
+  },
+  "threshold": 0,
+  "stop": 0,
+  "transom": 0,
+  "leafThickness": 0,
+  "gap": 0,
+  "minLeaf": 0,
+  "minWidth": 400,
+  "maxWidth": 2400,
+  "defaultWidth": 900,
+  "defaultHeight": 2200,
+  "defaultSill": 0,
+  "label": {
+   "vi": "Lỗ thông",
+   "en": "Passage opening"
+  },
+  "prompt": "open passage"
+ },
+ {
+  "id": "window-fixed",
+  "kind": "window",
+  "operation": "fixed",
+  "axesRatio": [],
+  "hAxesFromSill": [],
+  "leaves": [
+   {
+    "cols": [
+     0,
+     1
+    ],
+    "rows": [
+     0,
+     1
+    ],
+    "operation": "fixed",
+    "hinge": null,
+    "opens": null,
+    "active": false
+   }
+  ],
+  "frameFace": 50,
+  "frameDepth": null,
+  "casing": {
+   "width": 40,
+   "thickness": 10
+  },
+  "threshold": 0,
+  "stop": 0,
+  "transom": 50,
+  "leafThickness": 50,
+  "gap": 2,
+  "minLeaf": 200,
+  "minWidth": 200,
+  "maxWidth": 3600,
+  "defaultWidth": 1000,
+  "defaultHeight": 1200,
+  "defaultSill": 900,
+  "label": {
+   "vi": "Cửa sổ cố định",
+   "en": "Fixed window"
+  },
+  "prompt": "fixed picture window"
+ },
+ {
+  "id": "window-swing-2",
+  "kind": "window",
+  "operation": "swing",
+  "axesRatio": [
+   0.5
+  ],
+  "hAxesFromSill": [],
+  "leaves": [
+   {
+    "cols": [
+     0,
+     1
+    ],
+    "rows": [
+     0,
+     1
+    ],
+    "operation": "swing",
+    "hinge": {
+     "axis": "v",
+     "index": 0
+    },
+    "opens": "out",
+    "active": true
+   },
+   {
+    "cols": [
+     1,
+     2
+    ],
+    "rows": [
+     0,
+     1
+    ],
+    "operation": "swing",
+    "hinge": {
+     "axis": "v",
+     "index": -1
+    },
+    "opens": "out",
+    "active": false
+   }
+  ],
+  "frameFace": 50,
+  "frameDepth": null,
+  "casing": {
+   "width": 40,
+   "thickness": 10
+  },
+  "threshold": 0,
+  "stop": 0,
+  "transom": 50,
+  "leafThickness": 50,
+  "gap": 2,
+  "minLeaf": 200,
+  "openingAngle": 90,
+  "minWidth": 600,
+  "maxWidth": 2400,
+  "defaultWidth": 1200,
+  "defaultHeight": 1200,
+  "defaultSill": 900,
+  "label": {
+   "vi": "Cửa sổ mở quay hai cánh",
+   "en": "Double casement window"
+  },
+  "prompt": "double casement window"
+ },
+ {
+  "id": "window-swing-2-top",
+  "kind": "window",
+  "operation": "swing",
+  "axesRatio": [
+   0.5
+  ],
+  "hAxesRatio": [
+   0.7
+  ],
+  "leaves": [
+   {
+    "cols": [
+     0,
+     1
+    ],
+    "rows": [
+     0,
+     1
+    ],
+    "operation": "swing",
+    "hinge": {
+     "axis": "v",
+     "index": 0
+    },
+    "opens": "out",
+    "active": true
+   },
+   {
+    "cols": [
+     1,
+     2
+    ],
+    "rows": [
+     0,
+     1
+    ],
+    "operation": "swing",
+    "hinge": {
+     "axis": "v",
+     "index": -1
+    },
+    "opens": "out",
+    "active": false
+   },
+   {
+    "cols": [
+     0,
+     2
+    ],
+    "rows": [
+     1,
+     2
+    ],
+    "operation": "fixed",
+    "hinge": null,
+    "opens": null,
+    "active": false
+   }
+  ],
+  "frameFace": 50,
+  "frameDepth": null,
+  "casing": {
+   "width": 40,
+   "thickness": 10
+  },
+  "threshold": 0,
+  "stop": 0,
+  "transom": 50,
+  "leafThickness": 50,
+  "gap": 2,
+  "minLeaf": 200,
+  "openingAngle": 90,
+  "minWidth": 600,
+  "maxWidth": 2400,
+  "defaultWidth": 1200,
+  "defaultHeight": 1600,
+  "defaultSill": 800,
+  "label": {
+   "vi": "Cửa sổ mở quay hai cánh, ô fix phía trên",
+   "en": "Double casement window with fixed top light"
+  },
+  "prompt": "double casement window with a fixed top light"
+ },
+ {
+  "id": "window-top-hung",
+  "kind": "window",
+  "operation": "top-hung",
+  "axesRatio": [],
+  "hAxesFromSill": [],
+  "leaves": [
+   {
+    "cols": [
+     0,
+     1
+    ],
+    "rows": [
+     0,
+     1
+    ],
+    "operation": "top-hung",
+    "hinge": {
+     "axis": "h",
+     "index": -1
+    },
+    "opens": "out",
+    "active": true
+   }
+  ],
+  "frameFace": 50,
+  "frameDepth": null,
+  "casing": {
+   "width": 40,
+   "thickness": 10
+  },
+  "threshold": 0,
+  "stop": 0,
+  "transom": 50,
+  "leafThickness": 50,
+  "gap": 2,
+  "minLeaf": 200,
+  "openingAngle": 30,
+  "minWidth": 300,
+  "maxWidth": 1500,
+  "defaultWidth": 600,
+  "defaultHeight": 600,
+  "defaultSill": 1400,
+  "label": {
+   "vi": "Cửa sổ hất",
+   "en": "Top-hung window"
+  },
+  "prompt": "top-hung awning window"
+ },
+ {
+  "id": "window-sliding-2",
+  "kind": "window",
+  "operation": "sliding",
+  "axesRatio": [
+   0.5
+  ],
+  "hAxesFromSill": [],
+  "leaves": [
+   {
+    "cols": [
+     0,
+     1
+    ],
+    "rows": [
+     0,
+     1
+    ],
+    "operation": "sliding",
+    "hinge": null,
+    "opens": null,
+    "active": true
+   },
+   {
+    "cols": [
+     1,
+     2
+    ],
+    "rows": [
+     0,
+     1
+    ],
+    "operation": "sliding",
+    "hinge": null,
+    "opens": null,
+    "active": false
+   }
+  ],
+  "frameFace": 50,
+  "frameDepth": null,
+  "casing": {
+   "width": 40,
+   "thickness": 10
+  },
+  "threshold": 0,
+  "stop": 0,
+  "transom": 50,
+  "leafThickness": 50,
+  "gap": 2,
+  "minLeaf": 200,
+  "minWidth": 600,
+  "maxWidth": 3600,
+  "defaultWidth": 1400,
+  "defaultHeight": 1200,
+  "defaultSill": 900,
+  "label": {
+   "vi": "Cửa sổ trượt hai cánh",
+   "en": "Double sliding window"
+  },
+  "prompt": "double sliding window"
+ }
+]

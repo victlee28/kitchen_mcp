@@ -171,7 +171,7 @@ class TestOpenCorner(unittest.TestCase):
     def test_moldings_turn_it_as_one_piece(self):
         spec = edit.apply_op(self.spec, {"op": "set-moldings", "moldings": [m.model_dump() for m in moldings.default_moldings(True, True)], "style": "Classic"})
         chains = moldings.compute_runs(spec)
-        self.assertEqual(sorted((c.molding.variant, c.wall) for c in chains), [("base", ["R2", "R1"]), ("crown", ["R2", "R1"])])
+        self.assertEqual(sorted((c.molding.variant, c.wall) for c in chains), [("base", ["R2", "back"]), ("crown", ["R2", "back"])], "R1 stands against the back wall")
         crown = next(c for c in chains if c.molding.variant == "crown")
         cross = runs.front_cross(runs.frames(spec)["R1"], 350.0, runs.frames(spec)["R2"], 350.0)
         self.assertIn(tuple(round(v, 3) for v in cross[2]), [tuple(round(v, 3) for v in p) for p in crown.points])

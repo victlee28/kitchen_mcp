@@ -40,7 +40,7 @@ class SyntheticUTruthTest(unittest.TestCase):
 
     def test_u_shape_within_tolerance(self):
         spec, client = run_case("u-frontal-render")
-        self.assertEqual(client.calls, ["scene", "run-back", "run-left", "run-right", "policy"])
+        self.assertEqual(client.calls, ["scene", "openings", "run-back", "run-left", "run-right", "policy"])   # openings: not in this recording
         truth = {  # (wall, storey) -> mép module tính từ góc trong
             ("back", "base"): [0, 900, 1700, 2300, 2700, 3600],
             ("left", "base"): [600, 1200, 1800, 2400],
@@ -107,7 +107,8 @@ class InboxTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             box = Path(d)
             (box / "answers").mkdir()
-            for step in ["scene", "run-back", "run-left", "policy"]:
+            answers["openings"] = {"openings": []}
+            for step in ["scene", "openings", "run-back", "run-left", "policy"]:
                 with self.assertRaises(RecognizerError) as cm:
                     recognize_auto(image, InboxClient(d))
                 self.assertEqual(cm.exception.code, "awaiting-answer")
@@ -115,6 +116,7 @@ class InboxTest(unittest.TestCase):
                 (box / "answers" / f"{step}.json").write_text(json.dumps(answers[step]), encoding="utf-8")
             spec = recognize_auto(image, InboxClient(d))["spec"]
             golden = json.loads((HERE / "golden" / f"{name}.spec.json").read_text(encoding="utf-8"))
+            self.assertEqual(spec.pop("openings"), [])
             self.assertEqual(spec, golden)
 
 
@@ -128,7 +130,8 @@ class WebInboxTest(unittest.TestCase):
             job = web_inbox.create_job(Path(d), (HERE / "data" / "bep-chu-L-trang.png").read_bytes(),
                                        "bếp chữ L", "VN", datetime(2026, 11, 7, 16, 0, 0))
             self.assertEqual(job.name, "20261107-160000")
-            for step in ["scene", "run-back", "run-left", "policy"]:
+            answers["openings"] = {"openings": []}
+            for step in ["scene", "openings", "run-back", "run-left", "policy"]:
                 st = web_inbox.run_job(job)
                 self.assertEqual((st["state"], st["step"]), ("waiting", step))
                 self.assertIn("User notes", (job / "inbox" / "pending" / step / "prompt.txt").read_text(encoding="utf-8"))

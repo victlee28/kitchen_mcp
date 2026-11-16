@@ -15,6 +15,25 @@ Nhận được: dãy thẳng chụp chính diện (nhánh v0.1), dãy thẳng c
 | 4 | Chuẩn kích thước theo vùng: độ lùi chân tủ, chiều sâu, độ dày đá, bước làm tròn, giá trị chuẩn | **AI** (chỉ văn bản, nhận số đo sơ bộ) | `prompts.policy_p_prompt` |
 | 5 | Hình học: điểm tụ dọc tường sau và tường bên (bỏ dần đường lệch), tiêu cự từ 2 điểm tụ; nếu ảnh chính diện chữ U (điểm tụ tường sau ở vô cực) thì dò tiêu cự cho các vật chuẩn ở các tường khác nhau cho cùng tỉ lệ; mặt trước mỗi dãy từ đường chân tủ chạm sàn; tỉ lệ mm từ vật chuẩn; hệ số đứng từ vật chuẩn chiều cao; vị trí dọc tường tính từ góc trong; module góc kéo về góc (`blindWidth`, `blindSide`); kệ góc mở (`legBack`, `legSide`); dãy bên không bắt đầu trước mặt trước dãy sau | code | `persp`, `compute_persp` |
 
+### Cửa đi, cửa sổ (bước `openings`, cả hai nhánh)
+
+Ngay sau bước bố cục, AI chỉ ra các cửa đi / cửa sổ / ô thông trên **các tường có dãy tủ**: 4 góc trên mặt tường, điểm trên các trục đứng
+giữa (đố, khe hai cánh) và trục ngang (đố ngang), mép thấy được là ngoài nẹp hay mép lỗ (`edgesSeen`), kiểu mở, số cánh, mép bị che (`hidden`)
+(`prompts.openings_prompt`, `contract_openings`). Code đổi sang mm bằng đúng camera và tỉ lệ đã dùng cho tủ (`compute_openings`): nhánh phối
+cảnh lấy giao tia với mặt tường; nhánh chính diện dùng tỉ lệ tủ trên và mép sau mặt đá (gần đúng, cảnh báo `openings-frontal-approximate`).
+Ra `openings[]` (`x`, `width`, `axes`, `sill`, `head`, `hAxes`, `unsure`...) cùng gốc với `x` của module; `to_runs` đưa sang từng dãy theo
+dạng `ai` của kitchen (`axes: [{s, confidence}]`, mép bị che có độ tin 0.3). Bản ghi phát lại cũ không có bước này thì kết quả không có
+`openings`; câu trả lời sai hợp đồng sau khi hỏi lại chỉ bỏ phần cửa (`openings-rejected`), không làm hỏng phần tủ.
+
+### Ảnh chỉ có cửa (không có tủ)
+
+Bước bố cục trả `layout: "none"` khi ảnh không có tủ bếp (một bức tường với cửa đi / cửa sổ). Khi đó không có vật chuẩn để đo mm: bước
+`openings` (`prompts.opening_photo_prompt`) chỉ cho loại cửa, số cánh, kiểu mở, mép thấy được; code chiếu tứ giác cửa về hình chữ nhật
+(`compute_openings.photo`) để lấy tỉ lệ cao/rộng và vị trí đố đứng / đố ngang theo tỉ lệ mép (đúng cả khi chụp xiên). Kết quả:
+`photoOpenings: [{kind, style, leaves, edgesSeen, aspect, axesRatio, hAxesRatio, confidence}]`, `modules: []`; `to_runs` mang nó ở mức
+gốc (`runs: []`). Bên kitchen đặt cửa ở điểm người dùng bấm chuột phải, cao theo loại cửa, rộng theo tỉ lệ ảnh (đánh dấu cần kiểm tra).
+Không thấy cả tủ lẫn cửa: lỗi `no-cabinets-no-openings`. Ca phát lại: `tests/data/cua-2-canh-o-fix.*` (job hộp thư 20261113-154907).
+
 Đầu ra `schema: cabinet-recognizer/0.2`: `walls` (chiều dài mỗi dãy, đầu dãy, chiều cao đo được ở từng dãy), `common`, `modules[]` có thêm `wall`, `storey` (`base`/`upper`/`upper-top`/`tall`), `sections` cho tủ cao; `evidence.camera` (điểm tụ, tiêu cự, nguồn tiêu cự), `cameraHeightMm`, `verticalCorrection`, `scaleRefs`; `warnings` (ví dụ `back-vp-treated-infinite`, `scale-references-disagree`, `height-differs-between-walls`, `side-start-clamped`).
 
 ### Kiểm tra độ chính xác

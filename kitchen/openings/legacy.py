@@ -1,8 +1,7 @@
-"""The doors and windows of a kitchen's room in the kitchen frame (mm), for the checks that look at them (``rules_openings``).
+"""World-space opening data extracted from an imported floorplan.
 
-Two sources: the openings of an imported floorplan (``floorplan.structures`` records of kind ``opening``, tag ``door`` / ``window``,
-with the arc a door sweeps when the drawing has one) and the openings written on the walls of a design (``room.wall[].openings``).
-An opening is a convex outline in the wall: ``along`` is the wall's direction, ``normal`` points across it.
+Imported floorplan structures remain rendered as authored. An opening is a convex outline in the wall: ``along`` is the wall's direction,
+``normal`` points across it.
 """
 from __future__ import annotations
 
@@ -10,8 +9,8 @@ from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from typing import Any
 
-from .jsonview import as_dict, as_list
-from .runs import Point, Seat
+from ..jsonview import as_dict, as_list
+from ..runs import Point
 
 ToKitchen = Callable[[float, float], Point]
 
@@ -30,6 +29,8 @@ class Opening:
     height: float
     measured: bool                    # the height was drawn (False: the importer assumed one)
     swing: tuple[Point, ...] = ()     # a door: the floor area it sweeps (hinge, then the arc), kitchen frame
+    clear_width: float | None = None
+    operable: bool = True
 
     def zone(self, depth: float, extra: float = 0.0) -> list[Point]:
         """The rectangle in front of and behind the opening: its width (plus ``extra`` each side) by the wall thickness plus ``depth``
@@ -72,26 +73,6 @@ def from_structures(structures: Iterable[Mapping[str, Any]], to_kitchen: ToKitch
                  if hinge is not None and len(arc) >= 2 and tag == "door" else ())
         out.append(Opening(str(st.get("sourceElement") or st.get("id") or ""), tag, tuple(poly), center, along, normal, width, thick,
                            float(st.get("base") or 0.0), float(st.get("height") or 0.0), st.get("heightSource") == "measured", swing))
-    return out
-
-
-def from_room(room: Mapping[str, Any], seat_of: Callable[[str], Seat | None]) -> list[Opening]:
-    """The openings written on the walls of a design (``room`` as JSON; ``seat_of(wall)`` its seat in the kitchen frame). An
-    ``entrance`` is a door; the wall's thickness is the opening's."""
-    out: list[Opening] = []
-    for w in (as_dict(x) or {} for x in as_list(room.get("wall")) or []):
-        seat = seat_of(str(w.get("id")))
-        if seat is None:
-            continue
-        thick = float(w.get("thickness") or 100.0)
-        for i, o in enumerate(as_dict(x) or {} for x in as_list(w.get("openings")) or []):
-            s0 = float(o.get("fromCorner") or 0.0)
-            s1 = s0 + float(o.get("width") or 0.0)
-            poly = [seat.to_world(s0, -thick), seat.to_world(s1, -thick), seat.to_world(s1, 0.0), seat.to_world(s0, 0.0)]
-            center, along, normal, width, depth = _frame(poly)
-            door = o.get("type") == "entrance"
-            out.append(Opening(f"{w.get('id')}-O{i + 1}", "door" if door else "window", tuple(poly), center, along, normal, width, depth,
-                               0.0 if door else float(o.get("sillHeight") or 0.0), float(o.get("height") or 0.0), True))
     return out
 
 

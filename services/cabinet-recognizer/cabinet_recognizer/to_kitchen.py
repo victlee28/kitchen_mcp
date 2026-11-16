@@ -45,6 +45,9 @@ def _issue(issues: list[dict[str, Any]], code: str, msg: str, module: str | None
 def to_kitchen_spec(rec: dict[str, Any], name: str = "Tủ bếp nhận diện từ ảnh") -> dict[str, Any]:
     """Trả {"spec": KitchenSpec JSON, "issues": [...]} — issues liệt kê thông tin bị mất hoặc bị xấp xỉ."""
     issues: list[dict[str, Any]] = []
+    if rec.get("layout") == "none":         # ảnh chỉ có cửa: không có tủ nào để đổi
+        _issue(issues, "no-cabinets", "ảnh không có tủ bếp; cửa nhận được nằm trong recognized-runs (photoOpenings)")
+        return {"spec": {"schemaVersion": 2, "name": name, "module": []}, "issues": issues}
     c = rec["common"]
     mods = [dict(m) for m in rec["modules"]]
     walls_in = rec.get("walls") or {"back": {"runLength": c.get("runLength", 0)}}

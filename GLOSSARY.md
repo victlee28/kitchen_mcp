@@ -28,7 +28,38 @@ One of the back, right or left walls. The origin of the coordinate system is the
 _Avoid_: side
 
 **Opening**:
-A window or entrance cut into a wall, located by its distance from the corner.
+A door, window or passage through a room wall (contract `kitchen-opening/1`, ADR 0005): on a wall axis at its centre, as wide as the hole in the wall, divided by its own axes into bays and leaves.
+_Avoid_: cabinet door
+
+**Wall axis**:
+The centreline of a whole straight wall (collinear wall segments joined, holes included), the line openings are measured along. Its ends are where it crosses the centrelines of the walls it meets; a wall that runs on past the room into another room carries it along; it runs towards +x (or +z). Code: `kitchen/openings/wall_axes.py`, ids `WA-<wall element>` or back / right / left.
+_Avoid_: wall line (that is the line a run of cabinets stands on, `kitchen/wall_line.py`), grid line
+
+**Wall surface**:
+One flat face of one wall: a side per edge of its floor outline, its top and its bottom (`kitchen/wall_surfaces.py`, three.js `room.surfaces`). Id `<wall>#<face>` (`inside` / `outside` / `side-a` / `side-b` / `start` / `end` / `top` / `bottom`, or `e<k>` for a wall that is not a box), stable while the floorplan stays the same; it carries the room it looks into and the holes openings cut in it. The user picks faces (click, Ctrl/⌘, Shift for a whole room) and gives them a finish (`spec.surfaceMaterials`).
+_Avoid_: wall (the whole solid), face of a cabinet
+
+**Axis** (of an opening):
+A vertical or horizontal line that locates an opening's parts. The main axis is the opening's centre; the outer vertical axes are the hole's edges, the outer horizontal ones its sill and head; the middle ones divide it.
+
+**Bay**:
+The rectangle between two neighbouring vertical and two neighbouring horizontal axes of an opening.
+
+**Leaf** (of an opening):
+What fills one or more bays of an opening: a door leaf, a casement, a sliding panel or fixed glass. It turns about a hinge on one of its axes.
+_Avoid_: panel (that is a cabinet board), door (that is a cabinet front)
+
+**Side** (of a leaf):
+The side of the wall axis a leaf opens to: `+` along the axis normal, `-` against it. In / out is worked out from the side and the kitchen, never stored.
+_Avoid_: swing (as a field name)
+
+**Sweep**:
+The floor area a turning leaf passes through when it opens.
+_Avoid_: swing fan
+
+**Level**:
+The building floor the kitchen is on (`spec.level`: name, elevation). Every height in a design is above the finished floor of its level.
+_Avoid_: storey (that is a cabinet tier), floor
 
 **Common settings**:
 Dimensions and materials shared by the whole kitchen (countertop height, base depth, plinth height, handle style, default materials).
@@ -42,13 +73,13 @@ _Avoid_: cabinet, unit, box
 
 **Storey**:
 The vertical tier a module belongs to: base (lower), upper (wall), loft (above the uppers, up to the ceiling), tall (floor to ceiling) or corner (corner shelf).
-_Avoid_: level, floor, tier (the old three.js export field `tier` is now `storey`)
+_Avoid_: level (that is the building floor), floor, tier (the old three.js export field `tier` is now `storey`)
 
 **Front section**:
 One horizontal band of a base module's front, stacked top to bottom: an empty gap, a drawer or a door.
 
 **Door**:
-The hinged front panel of a module. Its style is flat, framed or glass.
+The hinged front panel of a cabinet module. Its style is flat, framed or glass. In an opening kind, `door` means an entrance through a room wall.
 _Avoid_: shutter, leaf
 
 **Handle**:

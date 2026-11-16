@@ -28,27 +28,6 @@
          "new": 770.0
         }
        ],
-       "TD1": [
-        {
-         "field": "fromCorner",
-         "old": 670.0,
-         "new": 770.0
-        }
-       ],
-       "KG1": [
-        {
-         "field": "fromCorner",
-         "old": 1310.0,
-         "new": 1410.0
-        }
-       ],
-       "TT2": [
-        {
-         "field": "fromCorner",
-         "old": 670.0,
-         "new": 770.0
-        }
-       ],
        "TC1": [
         {
          "field": "doors",
@@ -65,6 +44,27 @@
          "field": "width",
          "old": 670.0,
          "new": 770.0
+        }
+       ],
+       "TD1": [
+        {
+         "field": "fromCorner",
+         "old": 670.0,
+         "new": 770.0
+        }
+       ],
+       "TT2": [
+        {
+         "field": "fromCorner",
+         "old": 670.0,
+         "new": 770.0
+        }
+       ],
+       "KG1": [
+        {
+         "field": "fromCorner",
+         "old": 1310.0,
+         "new": 1410.0
         }
        ]
       }
@@ -83,7 +83,8 @@
       "id": "R1",
       "x": -2020.0,
       "z": 0.0,
-      "yaw": 0.0
+      "yaw": 0.0,
+      "anchor": "end"
      },
      {
       "id": "R2",
@@ -114,22 +115,6 @@
       "added": [],
       "removed": [],
       "changed": {
-       "TT6": [
-        {
-         "field": "doors",
-         "old": [
-          330.0
-         ],
-         "new": [
-          240.0
-         ]
-        },
-        {
-         "field": "width",
-         "old": 330.0,
-         "new": 240.0
-        }
-       ],
        "TT9": [
         {
          "field": "doors",
@@ -144,6 +129,22 @@
          "field": "width",
          "old": 710.0,
          "new": 620.0
+        }
+       ],
+       "TT6": [
+        {
+         "field": "doors",
+         "old": [
+          330.0
+         ],
+         "new": [
+          240.0
+         ]
+        },
+        {
+         "field": "width",
+         "old": 330.0,
+         "new": 240.0
         }
        ],
        "TD5": [
@@ -172,7 +173,8 @@
       "id": "R1",
       "x": -1920.0,
       "z": 0.0,
-      "yaw": 0.0
+      "yaw": 0.0,
+      "anchor": "end"
      },
      {
       "id": "R2",

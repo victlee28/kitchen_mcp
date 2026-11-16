@@ -1,0 +1,356 @@
+{
+  "$defs": {
+    "OpeningAxis": {
+      "additionalProperties": false,
+      "description": "The wall axis an opening sits on (kitchen.openings.wall_axes): its id and, for a floorplan axis, the fingerprint it had when\nthe opening was placed (room frame, mm).",
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "start": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Start"
+        },
+        "dir": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Dir"
+        },
+        "length": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Length"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "OpeningAxis",
+      "type": "object"
+    },
+    "OpeningHinge": {
+      "additionalProperties": false,
+      "properties": {
+        "axis": {
+          "enum": [
+            "v",
+            "h"
+          ],
+          "title": "Axis",
+          "type": "string"
+        },
+        "index": {
+          "minimum": 0,
+          "title": "Index",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "axis",
+        "index"
+      ],
+      "title": "OpeningHinge",
+      "type": "object"
+    },
+    "OpeningLeaf": {
+      "additionalProperties": false,
+      "properties": {
+        "cols": {
+          "items": {
+            "type": "integer"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "title": "Cols",
+          "type": "array"
+        },
+        "rows": {
+          "items": {
+            "type": "integer"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "title": "Rows",
+          "type": "array"
+        },
+        "operation": {
+          "enum": [
+            "swing",
+            "top-hung",
+            "bottom-hung",
+            "tilt-turn",
+            "sliding",
+            "folding",
+            "fixed"
+          ],
+          "title": "Operation",
+          "type": "string"
+        },
+        "hinge": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OpeningHinge"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "side": {
+          "anyOf": [
+            {
+              "enum": [
+                "+",
+                "-"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Side"
+        },
+        "active": {
+          "default": false,
+          "title": "Active",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "cols",
+        "rows",
+        "operation"
+      ],
+      "title": "OpeningLeaf",
+      "type": "object"
+    }
+  },
+  "additionalProperties": true,
+  "description": "A room door, window or passage (contract kitchen-opening/1, ADR 0005): on a wall axis, by its own axes. Checked fully by\nkitchen.openings.normalize; records saved in the first, axis-less form (host + offset) are still read and upgraded there.",
+  "properties": {
+    "id": {
+      "pattern": "^OP[1-9][0-9]*$",
+      "title": "Id",
+      "type": "string"
+    },
+    "kind": {
+      "enum": [
+        "door",
+        "window",
+        "passage"
+      ],
+      "title": "Kind",
+      "type": "string"
+    },
+    "openingType": {
+      "anyOf": [
+        {
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Openingtype"
+    },
+    "wallAxis": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/OpeningAxis"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "center": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "mm along the wall axis from its start to the opening's centre",
+      "title": "Center"
+    },
+    "width": {
+      "anyOf": [
+        {
+          "exclusiveMinimum": 0,
+          "maximum": 12000,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "The hole in the wall, mm",
+      "title": "Width"
+    },
+    "axes": {
+      "anyOf": [
+        {
+          "items": {
+            "type": "number"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Middle vertical axes, mm from the centre; null = as the type",
+      "title": "Axes"
+    },
+    "hAxes": {
+      "anyOf": [
+        {
+          "items": {
+            "type": "number"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Middle horizontal axes, mm above the sill; null = as the type",
+      "title": "Haxes"
+    },
+    "leaves": {
+      "items": {
+        "$ref": "#/$defs/OpeningLeaf"
+      },
+      "title": "Leaves",
+      "type": "array"
+    },
+    "sill": {
+      "default": 0,
+      "description": "mm above the finished floor of the level",
+      "minimum": 0,
+      "title": "Sill",
+      "type": "number"
+    },
+    "height": {
+      "anyOf": [
+        {
+          "exclusiveMinimum": 0,
+          "maximum": 3000,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Height"
+    },
+    "clearWidth": {
+      "anyOf": [
+        {
+          "exclusiveMinimum": 0,
+          "maximum": 12000,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Clearwidth"
+    },
+    "source": {
+      "default": "human",
+      "enum": [
+        "drawn",
+        "ai",
+        "human"
+      ],
+      "title": "Source",
+      "type": "string"
+    },
+    "unsure": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Unsure",
+      "type": "array"
+    },
+    "sourceElement": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Sourceelement"
+    },
+    "removed": {
+      "default": false,
+      "title": "Removed",
+      "type": "boolean"
+    },
+    "oversize": {
+      "default": false,
+      "title": "Oversize",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "id",
+    "kind"
+  ],
+  "title": "Opening",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/opening.schema.json"
+}

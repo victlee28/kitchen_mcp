@@ -2,19 +2,18 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { FIELDS, moduleOrder, moduleLabel, formChanges, moldingsOp, styleHasMoldings, aiExportUrls } from '../../web/design-logic.js';
 
-test('module list order: back, corner, right, left, island; then height; then distance from the corner', () => {
-  const mods = [{ id: 'I', wall: 'island', y: 0 }, { id: 'U', wall: 'back', y: 1450, fromCorner: 0 }, { id: 'B2', wall: 'back', y: 0, fromCorner: 600 },
-    { id: 'B1', wall: 'back', y: 0, fromCorner: 0 }, { id: 'R', wall: 'right', y: 0 }, { id: 'K', wall: 'corner', y: 0 }, { id: 'L', wall: 'left', y: 0 }];
-  assert.deepEqual(moduleOrder(mods).map((m) => m.id), ['B1', 'B2', 'U', 'K', 'R', 'L', 'I']);
+test('module list order: by run, then height, then place along the run', () => {
+  const mods = [{ id: 'I', run: 'R10', y: 0 }, { id: 'U', run: 'R1', y: 1450, fromCorner: 0 }, { id: 'B2', run: 'R1', y: 0, fromCorner: 600 },
+    { id: 'B1', run: 'R1', y: 0, fromCorner: 0 }, { id: 'R', run: 'R2', y: 0 }];
+  assert.deepEqual(moduleOrder(mods).map((m) => m.id), ['B1', 'B2', 'U', 'R', 'I']);
   assert.equal(mods[0].id, 'I', 'the input is not reordered in place');
 });
 
-test('module label shows the distance from the corner and the width (or the back length of a corner unit)', () => {
-  assert.equal(moduleLabel({ type: 'base', wall: 'back', fromCorner: 600, width: 800 }), 'base · back · 600+800');
-  assert.equal(moduleLabel({ type: 'corner-shelf', wall: 'corner', backLength: 900 }), 'corner-shelf · corner · 0+900');
+test('module label shows the run, the place along it and the width', () => {
+  assert.equal(moduleLabel({ type: 'base', run: 'R1', fromCorner: 600, width: 800 }), 'base · R1 · 600+800');
 });
 
-const base = { type: 'base', wall: 'back', fromCorner: 0, width: 600, y: 0, doors: [300, 300] };
+const base = { type: 'base', run: 'R1', fromCorner: 0, width: 600, y: 0, doors: [300, 300] };
 const same = Object.fromEntries(FIELDS.map(([k]) => [k, base[k] === undefined ? '' : String(base[k])]));
 
 test('form diff: untouched form changes nothing; empty numbers are ignored; numbers become numbers', () => {

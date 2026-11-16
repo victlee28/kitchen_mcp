@@ -99,3 +99,6 @@ label.kind{display:inline-flex;align-items:center;gap:4px;margin-right:10px;colo
 #cmdText{flex:1;min-width:0}#recFile{max-width:150px;font-size:11px}#assistResult{margin-top:6px}
 .ctx-cmd{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0}.ctx-cmd input{flex:1;min-width:150px}.ctx-cmd .ctx-msg,.ctx-cmd .chips{width:100%}
 .ctx-cmd select{max-width:96px}.ctx-cmd .ctx-pending{width:100%;display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12px}
+#opForm .unsure{background:#fff3c4;border-color:#d9a400}
+.opening-preview{display:flex;flex-wrap:wrap;gap:8px}.opening-preview figure{margin:0}.opening-preview figcaption{font-size:12px}
+.opening-preview .op-frame{fill:#d9d4c7;stroke:#7a7062}.opening-preview .op-leaf{fill:#b88a5c;stroke:#5e4630}.opening-preview .op-active{fill:#9c6b3f;stroke:#5e4630}.opening-preview .op-glass{fill:#bfe2ef;stroke:#5e8ea3}

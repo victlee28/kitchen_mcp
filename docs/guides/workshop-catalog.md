@@ -35,6 +35,36 @@ stretch (`fill`) so the same kitchen fits other wall lengths; sinks, cooktops, f
 **New design → Shape**, or type "… theo mẫu <name>" when you replace a system (a one-wall template is laid along the run). Cabinets the
 template cannot hold (an island, a run at an angle) are listed when it is saved.
 
+## Room door and window types
+
+Kind `opening-type` (workshop and users) decides how a room opening looks and is measured. A design places an opening by **axes**: its
+centre on a wall axis (the centreline of a whole straight wall), its width the **hole in the wall**, vertical / horizontal axes dividing the
+hole into bays, each leaf covering a block of bays (see `docs/adr/0005-opening-contract.md`).
+
+| Field | Meaning |
+|---|---|
+| `kind`, `operation` | door / window / passage; the main way it opens |
+| `axesRatio` | middle vertical axes as fractions of the hole width (`[0.5]` an even pair, `[0.75]` a 900 + 300 pair in a 1200 hole) |
+| `hAxesFromSill`, `hAxesRatio` | horizontal axes (transom, fixed top light): mm above the sill, or fractions of the height |
+| `leaves` | the leaves: from which axis to which (`cols`, `rows`; negative counts from the last), how it opens, the axis its hinge sits on, in / out seen from the kitchen, the main leaf |
+| `frameFace`, `frameDepth`, `casing`, `transom`, `threshold`, `stop` | frame: face width, depth (empty = the wall's thickness), casing, transom bar, threshold, stop |
+| `leafThickness`, `gap`, `minLeaf`, `openingAngle` | leaves: thickness, gap, narrowest leaf, opening angle (the sweep) |
+| `defaultHeight`, `defaultSill` | hole height and sill when none is given (also the height an imported floorplan opening gets when the drawing has none) |
+| `defaultWidth`, `minWidth`, `maxWidth` | hole width of a new opening when the command gives none; the type's range: a width outside it is asked about before the opening is made ("keep the size" sets `oversize` on the opening, "use the type's size" brings it into the range) |
+| `sizes` | standard **wall-hole** sizes per country (`widths`, `heights`): a size recognized from a photo snaps to the nearest one within 30 mm |
+| `sources` | where each country's sizes come from (kind of source, link, note) |
+
+The clear width is worked out: the main leaf's bay less the frame at the hole's edges less (leaf thickness + stop) for a turning leaf.
+**Preview** draws the type's front view at each standard size of the country (the page's `?country=` parameter) with its clear width, or
+says why the leaves do not tile the bays. Countries that size doors by the leaf (US, GB, AU) are converted to hole sizes as `sources` says.
+
+## Handles and hinges
+
+Kinds `handle` and `hinge` (workshop and users) list the hardware a workshop offers: name, brand, product code, sizes, finish and price
+(`price.amount` + `price.currency`, e.g. `VND`). A handle named in a command ("đổi tay nắm thành tay thanh inox 320") brings its kind,
+length and finish to the cabinets, and the design records which catalog handle it is (`handle.item`); changing the handle by hand
+afterwards forgets the item. Hinges are listed only for now; designs do not use them yet.
+
 ## What happens to existing designs
 
 A design keeps the catalog it was saved with. When the catalog changes, the editor shows a notice (**Catalog updated**) on designs that

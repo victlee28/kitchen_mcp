@@ -1,0 +1,1112 @@
+{
+ "function": "openings.normalize",
+ "cases": [
+  {
+   "name": "AI door: trim edges -> hole, snapped to the 900 standard hole, centre kept",
+   "input": {
+    "source": "ai",
+    "country": "VN",
+    "floorplan": {
+     "outline": [
+      {
+       "x": 0.0,
+       "z": 0.0
+      },
+      {
+       "x": 1800.0,
+       "z": 0.0
+      },
+      {
+       "x": 3600.0,
+       "z": 0.0
+      },
+      {
+       "x": 3600.0,
+       "z": 3000.0
+      },
+      {
+       "x": 0.0,
+       "z": 3000.0
+      }
+     ],
+     "walls": [
+      {
+       "id": "WALL-FP-1",
+       "edge": 0,
+       "thickness": 100.0,
+       "thicknessSource": "measured",
+       "sourceElement": "wall_001",
+       "height": 3000,
+       "start": {
+        "x": 0.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "end": {
+        "x": 1800.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "interiorNormal": {
+        "x": 0.0,
+        "y": 0,
+        "z": 1.0
+       },
+       "openings": []
+      },
+      {
+       "id": "WALL-FP-2",
+       "edge": 1,
+       "thickness": 100.0,
+       "thicknessSource": "measured",
+       "sourceElement": "wall_002",
+       "height": 3000,
+       "start": {
+        "x": 1800.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "end": {
+        "x": 3600.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "interiorNormal": {
+        "x": 0.0,
+        "y": 0,
+        "z": 1.0
+       },
+       "openings": []
+      },
+      {
+       "id": "WALL-FP-3",
+       "edge": 2,
+       "thickness": 200.0,
+       "thicknessSource": "measured",
+       "sourceElement": "wall_003",
+       "height": 3000,
+       "start": {
+        "x": 3600.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "end": {
+        "x": 3600.0,
+        "y": 0,
+        "z": 3000.0
+       },
+       "interiorNormal": {
+        "x": -1.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "openings": []
+      },
+      {
+       "id": "WALL-FP-4",
+       "edge": 3,
+       "thickness": 100.0,
+       "thicknessSource": "measured",
+       "sourceElement": "wall_004",
+       "height": 3000,
+       "start": {
+        "x": 3600.0,
+        "y": 0,
+        "z": 3000.0
+       },
+       "end": {
+        "x": 0.0,
+        "y": 0,
+        "z": 3000.0
+       },
+       "interiorNormal": {
+        "x": 0.0,
+        "y": 0,
+        "z": -1.0
+       },
+       "openings": []
+      },
+      {
+       "id": "WALL-FP-5",
+       "edge": 4,
+       "thickness": 100.0,
+       "thicknessSource": "measured",
+       "sourceElement": "wall_005",
+       "height": 3000,
+       "start": {
+        "x": 0.0,
+        "y": 0,
+        "z": 3000.0
+       },
+       "end": {
+        "x": 0.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "interiorNormal": {
+        "x": 1.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "openings": []
+      }
+     ],
+     "elements": [
+      {
+       "id": "wall_001",
+       "kind": "wall",
+       "tag": "wall",
+       "outline": [
+        {
+         "x": -100.0,
+         "z": -100.0
+        },
+        {
+         "x": 1000.0,
+         "z": -100.0
+        },
+        {
+         "x": 1000.0,
+         "z": 0.0
+        },
+        {
+         "x": -100.0,
+         "z": 0.0
+        }
+       ]
+      },
+      {
+       "id": "wall_002",
+       "kind": "wall",
+       "tag": "wall",
+       "outline": [
+        {
+         "x": 1900.0,
+         "z": -100.0
+        },
+        {
+         "x": 3800.0,
+         "z": -100.0
+        },
+        {
+         "x": 3800.0,
+         "z": 0.0
+        },
+        {
+         "x": 1900.0,
+         "z": 0.0
+        }
+       ]
+      }
+     ],
+     "binding": null
+    },
+    "opening": {
+     "id": "OP1",
+     "kind": "door",
+     "openingType": "door-swing-1",
+     "wallAxis": "WA-wall_001",
+     "axes": [
+      {
+       "s": 1006,
+       "confidence": 0.9
+      },
+      {
+       "s": 1999,
+       "confidence": 0.8
+      }
+     ],
+     "sill": 0,
+     "head": 2110
+    }
+   },
+   "expected": {
+    "opening": {
+     "id": "OP1",
+     "kind": "door",
+     "openingType": "door-swing-1",
+     "wallAxis": {
+      "id": "WA-wall_001",
+      "start": [
+       -50.0,
+       -50.0
+      ],
+      "dir": [
+       1.0,
+       0.0
+      ],
+      "length": 3750.0
+     },
+     "center": 1502.5,
+     "width": 900.0,
+     "axes": null,
+     "hAxes": null,
+     "leaves": [
+      {
+       "cols": [
+        0,
+        1
+       ],
+       "rows": [
+        0,
+        1
+       ],
+       "operation": "swing",
+       "hinge": {
+        "axis": "v",
+        "index": 0
+       },
+       "side": "+",
+       "active": true
+      }
+     ],
+     "sill": 0.0,
+     "height": 2100.0,
+     "clearWidth": 795.0,
+     "source": "ai",
+     "unsure": [
+      "leaves.0.hinge",
+      "leaves.0.side"
+     ],
+     "sourceElement": null,
+     "removed": false
+    },
+    "notes": [
+     "AI width snapped from 893 mm to 900 mm (centre kept).",
+     "AI height snapped from 2110 mm to 2100 mm."
+    ]
+   }
+  },
+  {
+   "name": "AI door outside the size tolerance stays unsure",
+   "input": {
+    "source": "ai",
+    "country": "VN",
+    "room": {},
+    "opening": {
+     "id": "OP1",
+     "kind": "door",
+     "wallAxis": "back",
+     "center": 1500,
+     "width": 840,
+     "height": 2100
+    }
+   },
+   "expected": {
+    "opening": {
+     "id": "OP1",
+     "kind": "door",
+     "openingType": "door-swing-1",
+     "wallAxis": {
+      "id": "back"
+     },
+     "center": 1500.0,
+     "width": 840.0,
+     "axes": null,
+     "hAxes": null,
+     "leaves": [
+      {
+       "cols": [
+        0,
+        1
+       ],
+       "rows": [
+        0,
+        1
+       ],
+       "operation": "swing",
+       "hinge": {
+        "axis": "v",
+        "index": 0
+       },
+       "side": "-",
+       "active": true
+      }
+     ],
+     "sill": 0.0,
+     "height": 2100.0,
+     "clearWidth": 735.0,
+     "source": "ai",
+     "unsure": [
+      "width",
+      "leaves.0.hinge",
+      "leaves.0.side"
+     ],
+     "sourceElement": null,
+     "removed": false
+    },
+    "notes": []
+   }
+  },
+  {
+   "name": "user door measured from the inner corner, hinge on the left, opening into the kitchen",
+   "input": {
+    "source": "human",
+    "floorplan": {
+     "outline": [
+      {
+       "x": 0.0,
+       "z": 0.0
+      },
+      {
+       "x": 1800.0,
+       "z": 0.0
+      },
+      {
+       "x": 3600.0,
+       "z": 0.0
+      },
+      {
+       "x": 3600.0,
+       "z": 3000.0
+      },
+      {
+       "x": 0.0,
+       "z": 3000.0
+      }
+     ],
+     "walls": [
+      {
+       "id": "WALL-FP-1",
+       "edge": 0,
+       "thickness": 100.0,
+       "thicknessSource": "measured",
+       "sourceElement": "wall_001",
+       "height": 3000,
+       "start": {
+        "x": 0.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "end": {
+        "x": 1800.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "interiorNormal": {
+        "x": 0.0,
+        "y": 0,
+        "z": 1.0
+       },
+       "openings": []
+      },
+      {
+       "id": "WALL-FP-2",
+       "edge": 1,
+       "thickness": 100.0,
+       "thicknessSource": "measured",
+       "sourceElement": "wall_002",
+       "height": 3000,
+       "start": {
+        "x": 1800.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "end": {
+        "x": 3600.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "interiorNormal": {
+        "x": 0.0,
+        "y": 0,
+        "z": 1.0
+       },
+       "openings": []
+      },
+      {
+       "id": "WALL-FP-3",
+       "edge": 2,
+       "thickness": 200.0,
+       "thicknessSource": "measured",
+       "sourceElement": "wall_003",
+       "height": 3000,
+       "start": {
+        "x": 3600.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "end": {
+        "x": 3600.0,
+        "y": 0,
+        "z": 3000.0
+       },
+       "interiorNormal": {
+        "x": -1.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "openings": []
+      },
+      {
+       "id": "WALL-FP-4",
+       "edge": 3,
+       "thickness": 100.0,
+       "thicknessSource": "measured",
+       "sourceElement": "wall_004",
+       "height": 3000,
+       "start": {
+        "x": 3600.0,
+        "y": 0,
+        "z": 3000.0
+       },
+       "end": {
+        "x": 0.0,
+        "y": 0,
+        "z": 3000.0
+       },
+       "interiorNormal": {
+        "x": 0.0,
+        "y": 0,
+        "z": -1.0
+       },
+       "openings": []
+      },
+      {
+       "id": "WALL-FP-5",
+       "edge": 4,
+       "thickness": 100.0,
+       "thicknessSource": "measured",
+       "sourceElement": "wall_005",
+       "height": 3000,
+       "start": {
+        "x": 0.0,
+        "y": 0,
+        "z": 3000.0
+       },
+       "end": {
+        "x": 0.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "interiorNormal": {
+        "x": 1.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "openings": []
+      }
+     ],
+     "elements": [
+      {
+       "id": "wall_001",
+       "kind": "wall",
+       "tag": "wall",
+       "outline": [
+        {
+         "x": -100.0,
+         "z": -100.0
+        },
+        {
+         "x": 1000.0,
+         "z": -100.0
+        },
+        {
+         "x": 1000.0,
+         "z": 0.0
+        },
+        {
+         "x": -100.0,
+         "z": 0.0
+        }
+       ]
+      },
+      {
+       "id": "wall_002",
+       "kind": "wall",
+       "tag": "wall",
+       "outline": [
+        {
+         "x": 1900.0,
+         "z": -100.0
+        },
+        {
+         "x": 3800.0,
+         "z": -100.0
+        },
+        {
+         "x": 3800.0,
+         "z": 0.0
+        },
+        {
+         "x": 1900.0,
+         "z": 0.0
+        }
+       ]
+      }
+     ],
+     "binding": null
+    },
+    "opening": {
+     "id": "OP2",
+     "kind": "door",
+     "wallAxis": "WA-wall_001",
+     "fromEdge": {
+      "at": "start",
+      "distance": 1000
+     },
+     "width": 900,
+     "height": 2100,
+     "hinge": "left",
+     "opens": "in"
+    }
+   },
+   "expected": {
+    "opening": {
+     "id": "OP2",
+     "kind": "door",
+     "openingType": "door-swing-1",
+     "wallAxis": {
+      "id": "WA-wall_001",
+      "start": [
+       -50.0,
+       -50.0
+      ],
+      "dir": [
+       1.0,
+       0.0
+      ],
+      "length": 3750.0
+     },
+     "center": 1500.0,
+     "width": 900.0,
+     "axes": null,
+     "hAxes": null,
+     "leaves": [
+      {
+       "cols": [
+        0,
+        1
+       ],
+       "rows": [
+        0,
+        1
+       ],
+       "operation": "swing",
+       "hinge": {
+        "axis": "v",
+        "index": 0
+       },
+       "side": "+",
+       "active": true
+      }
+     ],
+     "sill": 0.0,
+     "height": 2100.0,
+     "clearWidth": 795.0,
+     "source": "human",
+     "unsure": [],
+     "sourceElement": null,
+     "removed": false
+    },
+    "notes": []
+   }
+  },
+  {
+   "name": "door with a transom: horizontal axis 2100 above the sill",
+   "input": {
+    "source": "human",
+    "room": {},
+    "opening": {
+     "id": "OP3",
+     "kind": "door",
+     "openingType": "door-swing-1-transom",
+     "wallAxis": "back",
+     "center": 1000,
+     "width": 900,
+     "height": 2400
+    }
+   },
+   "expected": {
+    "opening": {
+     "id": "OP3",
+     "kind": "door",
+     "openingType": "door-swing-1-transom",
+     "wallAxis": {
+      "id": "back"
+     },
+     "center": 1000.0,
+     "width": 900.0,
+     "axes": null,
+     "hAxes": null,
+     "leaves": [
+      {
+       "cols": [
+        0,
+        1
+       ],
+       "rows": [
+        0,
+        1
+       ],
+       "operation": "swing",
+       "hinge": {
+        "axis": "v",
+        "index": 0
+       },
+       "side": "-",
+       "active": true
+      },
+      {
+       "cols": [
+        0,
+        1
+       ],
+       "rows": [
+        1,
+        2
+       ],
+       "operation": "fixed",
+       "hinge": null,
+       "side": null,
+       "active": false
+      }
+     ],
+     "sill": 0.0,
+     "height": 2400.0,
+     "clearWidth": 795.0,
+     "source": "human",
+     "unsure": [],
+     "sourceElement": null,
+     "removed": false
+    },
+    "notes": []
+   }
+  },
+  {
+   "name": "window with a fixed top light: horizontal axis from the type's ratio",
+   "input": {
+    "source": "human",
+    "room": {},
+    "opening": {
+     "id": "OP4",
+     "kind": "window",
+     "openingType": "window-swing-2-top",
+     "wallAxis": "back",
+     "center": 1800,
+     "width": 1200,
+     "height": 1600,
+     "sill": 800
+    }
+   },
+   "expected": {
+    "opening": {
+     "id": "OP4",
+     "kind": "window",
+     "openingType": "window-swing-2-top",
+     "wallAxis": {
+      "id": "back"
+     },
+     "center": 1800.0,
+     "width": 1200.0,
+     "axes": null,
+     "hAxes": null,
+     "leaves": [
+      {
+       "cols": [
+        0,
+        1
+       ],
+       "rows": [
+        0,
+        1
+       ],
+       "operation": "swing",
+       "hinge": {
+        "axis": "v",
+        "index": 0
+       },
+       "side": "+",
+       "active": true
+      },
+      {
+       "cols": [
+        1,
+        2
+       ],
+       "rows": [
+        0,
+        1
+       ],
+       "operation": "swing",
+       "hinge": {
+        "axis": "v",
+        "index": 2
+       },
+       "side": "+",
+       "active": false
+      },
+      {
+       "cols": [
+        0,
+        2
+       ],
+       "rows": [
+        1,
+        2
+       ],
+       "operation": "fixed",
+       "hinge": null,
+       "side": null,
+       "active": false
+      }
+     ],
+     "sill": 800.0,
+     "height": 1600.0,
+     "clearWidth": null,
+     "source": "human",
+     "unsure": [],
+     "sourceElement": null,
+     "removed": false
+    },
+    "notes": []
+   }
+  },
+  {
+   "name": "first axis-less record is upgraded",
+   "input": {
+    "source": "human",
+    "floorplan": {
+     "outline": [
+      {
+       "x": 0.0,
+       "z": 0.0
+      },
+      {
+       "x": 1800.0,
+       "z": 0.0
+      },
+      {
+       "x": 3600.0,
+       "z": 0.0
+      },
+      {
+       "x": 3600.0,
+       "z": 3000.0
+      },
+      {
+       "x": 0.0,
+       "z": 3000.0
+      }
+     ],
+     "walls": [
+      {
+       "id": "WALL-FP-1",
+       "edge": 0,
+       "thickness": 100.0,
+       "thicknessSource": "measured",
+       "sourceElement": "wall_001",
+       "height": 3000,
+       "start": {
+        "x": 0.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "end": {
+        "x": 1800.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "interiorNormal": {
+        "x": 0.0,
+        "y": 0,
+        "z": 1.0
+       },
+       "openings": []
+      },
+      {
+       "id": "WALL-FP-2",
+       "edge": 1,
+       "thickness": 100.0,
+       "thicknessSource": "measured",
+       "sourceElement": "wall_002",
+       "height": 3000,
+       "start": {
+        "x": 1800.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "end": {
+        "x": 3600.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "interiorNormal": {
+        "x": 0.0,
+        "y": 0,
+        "z": 1.0
+       },
+       "openings": []
+      },
+      {
+       "id": "WALL-FP-3",
+       "edge": 2,
+       "thickness": 200.0,
+       "thicknessSource": "measured",
+       "sourceElement": "wall_003",
+       "height": 3000,
+       "start": {
+        "x": 3600.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "end": {
+        "x": 3600.0,
+        "y": 0,
+        "z": 3000.0
+       },
+       "interiorNormal": {
+        "x": -1.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "openings": []
+      },
+      {
+       "id": "WALL-FP-4",
+       "edge": 3,
+       "thickness": 100.0,
+       "thicknessSource": "measured",
+       "sourceElement": "wall_004",
+       "height": 3000,
+       "start": {
+        "x": 3600.0,
+        "y": 0,
+        "z": 3000.0
+       },
+       "end": {
+        "x": 0.0,
+        "y": 0,
+        "z": 3000.0
+       },
+       "interiorNormal": {
+        "x": 0.0,
+        "y": 0,
+        "z": -1.0
+       },
+       "openings": []
+      },
+      {
+       "id": "WALL-FP-5",
+       "edge": 4,
+       "thickness": 100.0,
+       "thicknessSource": "measured",
+       "sourceElement": "wall_005",
+       "height": 3000,
+       "start": {
+        "x": 0.0,
+        "y": 0,
+        "z": 3000.0
+       },
+       "end": {
+        "x": 0.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "interiorNormal": {
+        "x": 1.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "openings": []
+      }
+     ],
+     "elements": [
+      {
+       "id": "wall_001",
+       "kind": "wall",
+       "tag": "wall",
+       "outline": [
+        {
+         "x": -100.0,
+         "z": -100.0
+        },
+        {
+         "x": 1000.0,
+         "z": -100.0
+        },
+        {
+         "x": 1000.0,
+         "z": 0.0
+        },
+        {
+         "x": -100.0,
+         "z": 0.0
+        }
+       ]
+      },
+      {
+       "id": "wall_002",
+       "kind": "wall",
+       "tag": "wall",
+       "outline": [
+        {
+         "x": 1900.0,
+         "z": -100.0
+        },
+        {
+         "x": 3800.0,
+         "z": -100.0
+        },
+        {
+         "x": 3800.0,
+         "z": 0.0
+        },
+        {
+         "x": 1900.0,
+         "z": 0.0
+        }
+       ]
+      }
+     ],
+     "binding": null
+    },
+    "opening": {
+     "id": "OP5",
+     "kind": "door",
+     "openingType": "door-swing-1",
+     "host": {
+      "element": "WALL-FP-1"
+     },
+     "offset": 1000,
+     "width": 900,
+     "height": 2100,
+     "hinge": "end",
+     "swing": "out"
+    }
+   },
+   "expected": {
+    "opening": {
+     "id": "OP5",
+     "kind": "door",
+     "openingType": "door-swing-1",
+     "wallAxis": {
+      "id": "WA-wall_001",
+      "start": [
+       -50.0,
+       -50.0
+      ],
+      "dir": [
+       1.0,
+       0.0
+      ],
+      "length": 3750.0
+     },
+     "center": 1500.0,
+     "width": 900.0,
+     "axes": null,
+     "hAxes": null,
+     "leaves": [
+      {
+       "cols": [
+        0,
+        1
+       ],
+       "rows": [
+        0,
+        1
+       ],
+       "operation": "swing",
+       "hinge": {
+        "axis": "v",
+        "index": 1
+       },
+       "side": "-",
+       "active": true
+      }
+     ],
+     "sill": 0.0,
+     "height": 2100.0,
+     "clearWidth": 795.0,
+     "source": "human",
+     "unsure": [],
+     "sourceElement": null,
+     "removed": false
+    },
+    "notes": [
+     "Opening OP5 upgraded from the axis-less form."
+    ]
+   }
+  },
+  {
+   "name": "leaves overlapping are refused",
+   "input": {
+    "source": "human",
+    "room": {},
+    "opening": {
+     "id": "OP6",
+     "kind": "door",
+     "openingType": "door-swing-2",
+     "wallAxis": "back",
+     "center": 1500,
+     "width": 1200,
+     "height": 2100,
+     "leaves": [
+      {
+       "cols": [
+        0,
+        2
+       ],
+       "rows": [
+        0,
+        1
+       ],
+       "operation": "fixed"
+      },
+      {
+       "cols": [
+        1,
+        2
+       ],
+       "rows": [
+        0,
+        1
+       ],
+       "operation": "fixed"
+      }
+     ]
+    }
+   },
+   "error": {
+    "kind": "validation",
+    "code": "opening-leaves-overlap"
+   }
+  },
+  {
+   "name": "a removed floorplan opening",
+   "input": {
+    "source": "human",
+    "room": {},
+    "opening": {
+     "id": "OP7",
+     "kind": "door",
+     "sourceElement": "opening_001",
+     "removed": true
+    }
+   },
+   "expected": {
+    "opening": {
+     "id": "OP7",
+     "kind": "door",
+     "openingType": "door-swing-1",
+     "wallAxis": {
+      "id": ""
+     },
+     "center": 0.0,
+     "width": 0.0,
+     "axes": null,
+     "hAxes": null,
+     "leaves": [],
+     "sill": 0.0,
+     "height": 0.0,
+     "clearWidth": null,
+     "source": "human",
+     "unsure": [],
+     "sourceElement": "opening_001",
+     "removed": true
+    },
+    "notes": []
+   }
+  }
+ ]
+}

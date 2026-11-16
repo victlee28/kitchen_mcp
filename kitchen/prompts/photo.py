@@ -12,7 +12,7 @@ from __future__ import annotations
 from .. import builtin, vocab
 from ..catalog import Catalog
 from ..i18n import pick
-from ..jsonview import as_list
+from ..jsonview import as_dict, as_list
 from ..spec import KitchenSpec
 
 def lighting(catalog: Catalog = builtin.CATALOG) -> dict[str, str]:
@@ -41,8 +41,14 @@ LIGHTING_VI = lighting_names()
 NEGATIVE_PHOTO = words("negative-photo")
 
 
-def _has_window(spec: KitchenSpec) -> bool:
-    return bool(spec.room and any(openings.type == "window" for t in spec.room.wall for openings in t.openings))
+def _has_window(spec: KitchenSpec, catalog: Catalog = builtin.CATALOG) -> bool:
+    """A window the design places, or one of the imported floorplan's (an opening the design removes does not count)."""
+    removed = {o.sourceElement for o in spec.openings if o.removed}
+    if any(o.kind == "window" and not o.removed for o in spec.openings):
+        return True
+    fp = as_dict(spec.floorplan) or {}
+    elements = [e for e in (as_dict(x) for x in as_list(fp.get("elements")) or []) if e is not None]
+    return any(e.get("tag") == "window" and e.get("kind") == "opening" and bool(e.get("attached")) and e.get("id") not in removed for e in elements)
 
 
 def _material_name(spec: KitchenSpec) -> list[str]:
@@ -90,7 +96,7 @@ def _lights(spec: KitchenSpec, light: str, catalog: Catalog = builtin.CATALOG) -
     table = lighting(catalog)
     lighting_id = light
     out = [table.get(lighting_id) or table.get("daylight") or LIGHTING["daylight"]]
-    if _has_window(spec) and lighting_id != "dim-evening":
+    if _has_window(spec, catalog) and lighting_id != "dim-evening":
         out.append("daylight enters through the window as the key light, brightest near it, with a natural exposure that keeps "
                    "the window view slightly bright but not blown out")
     if any(m.storey in ("upper", "loft") for m in spec.module):

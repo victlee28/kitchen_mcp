@@ -14,8 +14,7 @@ from itertools import combinations
 from . import builtin
 from .catalog import Catalog
 from . import appliance_models, knowledge_seed, moldings, regions, rules_kb, runs, tv_system, words
-from .errors import require
-from .jsonview import as_dict
+from .jsonview import as_dict, as_list
 from .spec import KitchenSpec
 
 TOL = 1.0  # mm
@@ -31,9 +30,8 @@ def _issue(code: str, level: str, mods: Iterable[str], key: str, params: dict[st
 
 
 def _envelopes(spec: KitchenSpec) -> list[tuple[str, tuple[Any, ...], tuple[Any, ...]]]:
-    """Khối bao của từng module (corner-shelf tách 2 cánh) trong toạ độ thế giới."""
+    """Khối bao của từng module (corner-shelf tách 2 cánh) trong toạ độ thế giới. Every cabinet stands in a run (``rows_to_runs``)."""
     out: list[tuple[str, tuple[Any, ...], tuple[Any, ...]]] = []
-    lsau = (spec.room.length("back") if spec.room else None) or max([m.endAt for m in spec.module if m.wall == "back"] + [0]) + 600
     for m in spec.module:
         y0, y1 = m.y, m.y + m.height
         fr = runs.frame_of(spec, m)
@@ -44,14 +42,6 @@ def _envelopes(spec: KitchenSpec) -> list[tuple[str, tuple[Any, ...], tuple[Any,
             if other is not None and m.rightLength:      # a corner shelf by runs: its second leg, at the start of the run it turns into
                 (ax, az), (bx, bz) = runs.aabb(other.footprint(0.0, m.rightLength, 0.0, m.depth))
                 out.append((m.id, (ax, y0, az), (bx, y1, bz)))
-        elif m.type == "corner-shelf":
-            out.append((m.id, (-require(m.backLength, f"{m.id}.backLength"), y0, 0), (0, y1, m.depth)))
-            out.append((m.id, (-m.depth, y0, 0), (0, y1, require(m.rightLength, f"{m.id}.rightLength"))))
-        else:                          # a wall's row or a legacy free run: its seat (an unknown wall name is read as the left wall, as before)
-            seat = runs.seat_of(m, lsau) or runs.wall_seat("left", lsau)
-            assert seat is not None
-            mn, mx = seat.box(m.fromCorner, m.endAt, 0, m.depth, y0, y1)
-            out.append((m.id, mn, mx))
     return out
 
 
@@ -93,10 +83,6 @@ def check_geometry(spec: KitchenSpec) -> list[dict[str, Any]]:
             if abs(total - m.width) > TOL:
                 issues.append(_issue("GEO-DOOR", "warning", [m.id],
                                      "finding.door-sum", {"id": m.id, "total": total, "width": m.width}, total, m.width))
-        if spec.room and m.wall in ("back", "right", "left"):
-            L = spec.room.length(m.wall)
-            if L and m.endAt > L + TOL:
-                issues.append(_issue("GEO-WALL", "error", [m.id], "finding.past-wall", {"id": m.id, "wall": m.wall, "end": m.endAt, "length": L}, m.endAt, L))
     if spec.room and not isinstance(getattr(spec, "floorplan", None), dict):      # explicit runs against the drawn room (an imported plan has its own walls)
         back = spec.room.length("back")
         for m in spec.module:
@@ -116,16 +102,6 @@ def check_geometry(spec: KitchenSpec) -> list[dict[str, Any]]:
         issues.append(_issue("GEO-CEILING", "error", [], "finding.above-ceiling", {"top": c.cabinetTop, "ceiling": c.ceiling}, c.cabinetTop, c.ceiling))
     if abs(c.countertop - (c.baseTop + c.countertopThickness)) > TOL:
         issues.append(_issue("GEO-COUNTERTOP", "warning", [], "finding.countertop-sum", {"countertop": c.countertop, "sum": c.baseTop + c.countertopThickness}))
-    # khe hở giữa các module liền kề trong cùng tường/tầng
-    for wall in ("back", "right", "left"):
-        for storey in ("base", "upper", "loft"):
-            ms = sorted((m for m in spec.module if m.wall == wall and m.storey in (storey, "tall")), key=lambda m: m.fromCorner)
-            for a, b in zip(ms, ms[1:]):
-                if a.storey == b.storey == "tall":
-                    continue
-                gap = b.fromCorner - a.endAt
-                if gap > TOL:
-                    issues.append(_issue("GEO-GAPS", "info", [a.id, b.id], "finding.gap-wall", {"gap": gap, "a": a.id, "b": b.id, "wall": wall}, gap))
     for r in spec.runs:                # gaps inside an explicit run, per storey
         for storey in ("base", "upper", "loft"):
             ms = sorted((m for m in spec.module if m.run == r.id and m.storey in (storey, "tall")), key=lambda m: m.fromCorner)
@@ -165,6 +141,8 @@ def validate(spec: KitchenSpec, kb_rules: list[dict[str, Any]] | None = None, co
              region: str | None = None, catalog: Catalog = builtin.CATALOG) -> dict[str, Any]:
     """kb_rules: các dòng tri thức kind rule/standard đang active (đã parse metadata); None -> kho nền.
     Quốc gia/khu vực: tham số > spec.quocGia/spec.khuVuc > không chỉ định (ưu tiên mục toàn cầu, rồi nguồn mạnh nhất)."""
+    from .rows_to_runs import as_runs
+    spec = as_runs(spec, catalog)
     qg, kv = regions.normalize(country or spec.country, region or spec.region, catalog)
     rows = default_rows() if kb_rules is None else kb_rules
     sel = rules_kb.select(rows, qg, kv, catalog)
@@ -172,6 +150,7 @@ def validate(spec: KitchenSpec, kb_rules: list[dict[str, Any]] | None = None, co
     issues = check_geometry(spec) + rules_kb.check(kitchen, sel, catalog) + moldings.check(spec) + appliance_models.check(kitchen, catalog)
     if not (qg or kv):
         issues.append(words.finding("VUNG", "info", [], "finding.no-region"))
+    issues += orphaned_surface_finishes(spec, catalog)
     order = {"error": 0, "warning": 1, "info": 2}
     issues.sort(key=lambda i: order[i["severity"]])
     dem = {k: sum(i["severity"] == k for i in issues) for k in order}
@@ -179,3 +158,18 @@ def validate(spec: KitchenSpec, kb_rules: list[dict[str, Any]] | None = None, co
     chua = [r["code"] for r in rows if not (as_dict(r.get("metadata")) or {}).get("validation")]
     return {"valid": dem["error"] == 0, "dem": dem, "issues": issues, "country": qg, "region": kv,
             "appliedRules": dung, "unchecked": chua}
+
+
+def orphaned_surface_finishes(spec: KitchenSpec, catalog: Catalog = builtin.CATALOG) -> list[dict[str, Any]]:
+    """A warning for finishes given to wall faces the design no longer has (``spec.surfaceMaterials``: the floorplan changed, a wall
+    went): they are kept, and come back if the face does, but nothing shows them."""
+    finishes = spec.surfaceMaterials or {}
+    if not finishes:
+        return []
+    from .threejs_export import export
+    room = as_dict(export(spec, catalog=catalog).get("room")) or {}
+    known = {str(sf.get("id")) for sf in (as_dict(x) for x in as_list(room.get("surfaces")) or []) if sf is not None}
+    lost = sorted(k for k in finishes if k not in known)
+    if not lost:
+        return []
+    return [words.finding("SURFACE", "warning", [], "finding.surface-orphaned", n=len(lost), ids=", ".join(lost[:6]))]

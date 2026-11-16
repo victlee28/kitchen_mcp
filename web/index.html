@@ -64,6 +64,44 @@
           <button id="fpShowAll" type="button" hidden>Show all</button>
         </div>
       </section>
+      <section id="openingPanel">
+        <h2><span data-i18n="ui.opening.title">Cửa &amp; cửa sổ</span></h2>
+        <ul id="opList" class="pick small"></ul>
+        <div class="row">
+          <button id="opAddDoor" type="button"><span data-i18n="ui.opening.add-door">+ Cửa đi</span></button>
+          <button id="opAddWindow" type="button"><span data-i18n="ui.opening.add-window">+ Cửa sổ</span></button>
+          <button id="opAdopt" type="button" class="ghost" hidden title="Cửa của mặt bằng thành cửa của thiết kế: vẽ có khung, cánh; ảnh đã duyệt của góc thấy cửa sẽ thành cũ" data-i18n-attr="title:ui.opening.adopt-title"><span data-i18n="ui.opening.adopt">Đổi cửa mặt bằng sang dạng mới</span></button>
+        </div>
+        <form id="opForm" hidden>
+          <h3 id="opTitle"></h3>
+          <div class="grid2">
+            <label><span data-i18n="ui.opening.type">Loại</span><select id="op_openingType"></select></label>
+            <label><span data-i18n="ui.opening.wall-axis">Trục tường</span><select id="op_wallAxis"></select></label>
+            <label><span data-i18n="ui.opening.center">Tim cửa (mm từ đầu trục)</span><input id="op_center" type="number" step="1"></label>
+            <label><span data-i18n="ui.opening.from-edge">Hoặc: góc → mép lỗ (mm)</span><input id="op_fromEdge" type="number" step="1"></label>
+            <label><span data-i18n="ui.opening.from-edge-at">Đo từ góc</span><select id="op_fromEdgeAt"><option value="start" data-i18n="ui.opening.at-start">đầu trục</option><option value="end" data-i18n="ui.opening.at-end">cuối trục</option></select></label>
+            <label><span data-i18n="ui.opening.width">Rộng lỗ (mm)</span><input id="op_width" type="number" step="1" list="opWidths"></label>
+            <label><span data-i18n="ui.opening.height">Cao lỗ (mm)</span><input id="op_height" type="number" step="1"></label>
+            <label><span data-i18n="ui.opening.sill">Bậu (mm)</span><input id="op_sill" type="number" step="1"></label>
+            <label><span data-i18n="ui.opening.axes">Trục đứng giữa (mm từ tim)</span><input id="op_axes" type="text"></label>
+            <label><span data-i18n="ui.opening.h-axes">Trục ngang (mm từ bậu)</span><input id="op_hAxes" type="text"></label>
+            <label><span data-i18n="ui.opening.hinge">Bản lề (nhìn từ bếp)</span><select id="op_hinge"><option value=""></option><option value="left" data-i18n="ui.opening.left">trái</option><option value="right" data-i18n="ui.opening.right">phải</option></select></label>
+            <label><span data-i18n="ui.opening.opens">Chiều mở</span><select id="op_opens"><option value=""></option><option value="in" data-i18n="ui.opening.in">vào bếp</option><option value="out" data-i18n="ui.opening.out">ra ngoài</option></select></label>
+            <label><span data-i18n="ui.opening.clear">Thông thủy (mm)</span><input id="op_clearWidth" type="number" step="1"></label>
+          </div>
+          <datalist id="opWidths"></datalist>
+          <p class="muted small"><span data-i18n="ui.opening.hint">Ô vàng: số chưa chắc (từ ảnh hoặc bản vẽ thiếu), cần xem lại. Bỏ trống trục giữa = theo loại cửa.</span></p>
+          <div class="row">
+            <button id="opShow" type="button"><span data-i18n="ui.xem-truoc">Xem trước</span></button>
+            <button type="submit"><span data-i18n="ui.ap-dung">Áp dụng</span></button>
+            <button id="opReset" type="button" class="ghost" hidden><span data-i18n="ui.opening.reset">Trả về như bản vẽ</span></button>
+            <button id="opRemove" type="button" class="danger" hidden><span data-i18n="ui.xoa-5">Xóa</span></button>
+            <button id="opCancel" type="button" class="ghost"><span data-i18n="ui.opening.cancel">Đóng</span></button>
+          </div>
+          <ul id="opPreview" class="ctx-preview"></ul>
+        </form>
+        <p id="opNote" class="muted small"></p>
+      </section>
       <section id="aiExport">
         <h2><span data-i18n="ui.xuat-cho-ai-tao-anh">Xuất cho AI tạo ảnh</span></h2>
         <p id="aiInfo" class="muted small"><span data-i18n="ui.chua-co-thiet-ke-2">Chưa có thiết kế</span></p>

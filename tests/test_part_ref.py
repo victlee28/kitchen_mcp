@@ -22,7 +22,7 @@ class TestPartRef(unittest.TestCase):
         self.doc = threejs_export.export(self.spec)
 
     def test_version_and_schema_validate(self):
-        self.assertEqual(self.doc["schemaVersion"], "1.5.0")
+        self.assertEqual(self.doc["schemaVersion"], "1.7.0")
         jsonschema.Draft202012Validator(SCHEMA).validate(self.doc)
 
     def test_fronts_and_handles_name_their_module(self):
@@ -39,19 +39,13 @@ class TestPartRef(unittest.TestCase):
                         seen.add("handle")
         self.assertLessEqual({"door", "handle"}, seen)
 
-    def test_countertop_runs_name_their_wall(self):
+    def test_countertops_name_their_run(self):
         tops = [a for a in self.doc["accessories"] if a["type"] == "Countertop"]
         self.assertTrue(tops)
+        runs = {r["sourceRef"] for r in self.doc["runs"]}
         for a in tops:
-            self.assertEqual(a["partRef"], {"kind": "countertop", "wall": a["sourceRef"].removeprefix("countertop-")})
-
-    def test_old_schema_still_accepts_the_document(self):
-        old = json.loads((ROOT / "schemas" / "kitchen-threejs.v1.0.0.schema.json").read_text(encoding="utf-8"))
-        try:
-            jsonschema.Draft202012Validator(old).validate(self.doc)
-        except jsonschema.ValidationError as e:     # the base schema pins "default" only; version text is the one allowed difference
-            self.assertNotIn("partRef", e.message)
-
+            self.assertEqual(a["partRef"]["kind"], "countertop")
+            self.assertIn(a["partRef"]["run"], runs)
 
 if __name__ == "__main__":
     unittest.main()

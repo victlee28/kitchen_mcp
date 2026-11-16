@@ -43,20 +43,78 @@ export function buildKitchen(doc, THREE, opts = {}) {
 
   // phòng
   const room = new THREE.Group(); room.name = 'room'; root.add(room);
+  // v1.7 wall surfaces: every flat face of a wall is its own mesh (userData.surfaceId), so a click picks that face whatever triangles it has
+  const surfaces = new Map(); const surfacePickables = []; const surfacesOf = new Map();   // id -> { record, mesh }; wall / structure -> records
+  for (const sf of doc.room?.surfaces || []) {
+    const key = sf.structure || sf.wall;
+    if (!surfacesOf.has(key)) surfacesOf.set(key, []);
+    surfacesOf.get(key).push(sf);
+  }
+  const faceMats = new Map();       // a face's own finish, made like the wall's: see-through when the walls are
+  function faceMaterial(sf, wallMat) {
+    if (!sf.materialId || !mats.has(sf.materialId)) return wallMat;
+    const k = `${sf.materialId}|${wallMat.transparent ? wallMat.opacity : 1}|${wallMat.side}`;
+    if (!faceMats.has(k)) { const m = mats.get(sf.materialId).clone(); m.transparent = wallMat.transparent; m.opacity = wallMat.opacity; m.side = wallMat.side; faceMats.set(k, m); }
+    return faceMats.get(k);
+  }
+  function wallFaces(list, wallMat, info) {
+    return list.map((sf) => {
+      const mesh = new THREE.Mesh(surfaceGeometry(sf, s, THREE), faceMaterial(sf, wallMat));
+      mesh.userData = { ...info, surfaceId: sf.id, wallId: sf.wall, face: sf.face, room: sf.room ?? null };
+      mesh.receiveShadow = true; mesh.castShadow = info.type === 'structure';
+      if (drawEdges) mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry), edgeMat));
+      surfaces.set(sf.id, { record: sf, mesh }); surfacePickables.push(mesh);
+      return mesh;
+    });
+  }
   for (const w of doc.room?.walls || []) {
-    if (w.visible === false) continue;
     const a = w.start, b = w.end;
     const len = Math.hypot(b.x - a.x, b.z - a.z);
-    const n = w.interiorNormal || { x: 0, y: 0, z: 1 };
-    const wallMat = material_text(w.materialId).clone();
-    if (!opts.opaqueWalls) { wallMat.transparent = true; wallMat.opacity = 0.35; }
-    const geo = new THREE.BoxGeometry(len * s, w.height * s, w.thickness * s);
-    const mesh = new THREE.Mesh(geo, wallMat);
     const ang = Math.atan2(-(b.z - a.z), b.x - a.x);
-    mesh.rotation.y = ang;
-    mesh.position.set(((a.x + b.x) / 2 - n.x * w.thickness / 2) * s, w.height * s / 2, ((a.z + b.z) / 2 - n.z * w.thickness / 2) * s);
-    mesh.userData = { type: 'wall', wallId: w.id }; mesh.receiveShadow = true;
-    room.add(mesh);
+    const n = w.interiorNormal || { x: Math.sin(ang), z: Math.cos(ang) };
+    if (w.visible !== false && surfacesOf.has(w.id)) {
+      const wallMat = material_text(w.materialId).clone();
+      if (!opts.opaqueWalls) { wallMat.transparent = true; wallMat.opacity = 0.35; }
+      room.add(...wallFaces(surfacesOf.get(w.id), wallMat, { type: 'wall' }));
+    } else if (w.visible !== false) {
+      const wallMat = material_text(w.materialId).clone();
+      if (!opts.opaqueWalls) { wallMat.transparent = true; wallMat.opacity = 0.35; }
+      const geo = new THREE.BoxGeometry(len * s, w.height * s, w.thickness * s);
+      const mesh = new THREE.Mesh(geo, wallMat);
+      mesh.rotation.y = ang;
+      mesh.position.set(((a.x + b.x) / 2 - n.x * w.thickness / 2) * s, w.height * s / 2, ((a.z + b.z) / 2 - n.z * w.thickness / 2) * s);
+      mesh.userData = { type: 'wall', wallId: w.id }; mesh.receiveShadow = true;
+      room.add(mesh);
+    }
+
+    // openings the design places (ADR 0005): frame and leaf boxes; x along the wall from offset, y above the sill, z across from the wall centreline towards the room
+    for (const opening of w.openings || []) {
+      if (!opening.openingType || !(Array.isArray(opening.frame) || Array.isArray(opening.leaves)) || !(len > 0)) continue;
+      const alongX = (b.x - a.x) / len, alongZ = (b.z - a.z) / len;
+      const t = w.thickness || 100;
+      const group = new THREE.Group();
+      group.name = opening.id;
+      group.position.set((a.x + alongX * opening.offset - n.x * t / 2) * s, (opening.sillHeight || 0) * s, (a.z + alongZ * opening.offset - n.z * t / 2) * s);
+      group.rotation.y = ang;
+      const frameMaterial = new THREE.MeshStandardMaterial({ color: 0xf0eee8, roughness: 0.72 });
+      const leafMaterial = new THREE.MeshStandardMaterial({ color: 0x806044, roughness: 0.68 });
+      const glassMaterial = new THREE.MeshPhysicalMaterial({ color: 0x91c8db, roughness: 0.18, metalness: 0.05, transparent: true, opacity: 0.58, side: THREE.DoubleSide });
+      // after the rotation the group's local +z is (-dz, dx) of the wall; the box z values point towards the room (interiorNormal)
+      const flip = ((-alongZ) * n.x + alongX * n.z) >= 0 ? 1 : -1;
+      const piece = (name, bx, material, role) => {
+        const sx = bx.x1 - bx.x0, sy = bx.y1 - bx.y0, sz = bx.z1 - bx.z0;
+        if (!(sx > 0 && sy > 0 && sz > 0)) return;
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(sx * s, sy * s, sz * s), material);
+        mesh.name = name;
+        mesh.position.set((bx.x0 + sx / 2) * s, (bx.y0 + sy / 2) * s, flip * (bx.z0 + sz / 2) * s);
+        mesh.castShadow = mesh.receiveShadow = true;
+        mesh.userData = { type: 'opening', openingId: opening.id, role };
+        group.add(mesh);
+      };
+      (opening.frame || []).forEach((bx) => piece(`frame-${bx.part}`, bx, frameMaterial, 'opening-frame'));
+      (opening.leaves || []).forEach((bx, i) => piece(`leaf-${i + 1}`, bx, bx.glass ? glassMaterial : leafMaterial, bx.glass ? 'opening-glass' : 'opening-leaf'));
+      room.add(group);
+    }
   }
   if (doc.room?.floor?.outline?.length >= 3) {
     const shape = new THREE.Shape();
@@ -98,6 +156,10 @@ export function buildKitchen(doc, THREE, opts = {}) {
         step.rotation.y = Math.atan2(-d.z, d.x);
         step.position.set((d.x * ac + q.x * cc) * s, (st.base + h / 2) * s, (d.z * ac + q.z * cc) * s);
       }
+      continue;
+    }
+    if (st.kind === 'wall' && surfacesOf.has(st.id)) {       // drawn face by face: each face can be picked, lit and finished on its own
+      for (const mesh of wallFaces(surfacesOf.get(st.id), mat, info)) { const face = mesh.userData; add(mesh).userData = { ...info, ...face }; }
       continue;
     }
     const shape = new THREE.Shape();
@@ -226,7 +288,33 @@ export function buildKitchen(doc, THREE, opts = {}) {
       position: [c.position.x * s, c.position.y * s, c.position.z * s], target: [c.target.x * s, c.target.y * s, c.target.z * s],
       up: c.up ? [c.up.x, c.up.y, c.up.z] : [0, 1, 0], hide: c.hide || [] };
   }
-  return { root, lights, cameras, byModule, runGroups, pickables, structures, structurePickables: [...structures.values()].flatMap((e) => e.meshes) };
+  return { root, lights, cameras, byModule, runGroups, pickables, structures, structurePickables: [...structures.values()].flatMap((e) => e.meshes),
+    surfaces, surfacePickables };
+}
+
+/**
+ * The geometry of one wall surface (schema 1.7 room.surfaces), in scene units. A side: the rectangle `width` x `height` with its holes, laid
+ * on the wall by its basis (u to the right seen from in front, y up, normal towards the viewer); a top or bottom: the outline at height `y`.
+ */
+export function surfaceGeometry(sf, s, THREE) {
+  if (sf.outline) {
+    const shape = new THREE.Shape();
+    sf.outline.forEach((p, i) => i ? shape.lineTo(p.x * s, sf.face === 'bottom' ? p.z * s : -p.z * s) : shape.moveTo(p.x * s, sf.face === 'bottom' ? p.z * s : -p.z * s));
+    const g = new THREE.ShapeGeometry(shape);
+    g.rotateX(sf.face === 'bottom' ? Math.PI / 2 : -Math.PI / 2);         // the shape's +z normal turns to +y on top, -y below
+    g.translate(0, sf.y * s, 0);
+    return g;
+  }
+  const w = sf.width * s, h = sf.height * s;
+  const shape = new THREE.Shape([new THREE.Vector2(0, 0), new THREE.Vector2(w, 0), new THREE.Vector2(w, h), new THREE.Vector2(0, h)]);
+  for (const [u0, u1, v0, v1] of sf.holes || []) {
+    shape.holes.push(new THREE.Path([new THREE.Vector2(u0 * s, v0 * s), new THREE.Vector2(u0 * s, v1 * s), new THREE.Vector2(u1 * s, v1 * s), new THREE.Vector2(u1 * s, v0 * s)]));
+  }
+  const g = new THREE.ShapeGeometry(shape);
+  const basis = new THREE.Matrix4().makeBasis(new THREE.Vector3(sf.u[0], 0, sf.u[1]), new THREE.Vector3(0, 1, 0), new THREE.Vector3(sf.normal[0], sf.normal[1], sf.normal[2]));
+  basis.setPosition(sf.origin[0] * s, sf.origin[1] * s, sf.origin[2] * s);
+  g.applyMatrix4(basis);
+  return g;
 }
 
 // Vòng đỉnh tại mỗi đỉnh đường chạy — cùng thuật toán với kitchen/moldings.py sweep_rings (test so khớp).

@@ -62,7 +62,7 @@ def material_ops(spec: KitchenSpec, scene: Scene, part_ids: list[str], material:
     covered: set[str] = set()
     ops: list[dict[str, Any]] = []
     if chosen_modules == all_modules:
-        changes["handle"] = {**to_data(spec.common.handle), "material": material}
+        changes["handle"] = {**{k: v for k, v in to_data(spec.common.handle).items() if k != "item"}, "material": material}   # no catalog handle any more
         for k in list(by_storey):
             by_storey[k].pop("material", None)
             if not by_storey[k]:

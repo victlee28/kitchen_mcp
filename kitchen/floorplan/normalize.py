@@ -14,6 +14,7 @@ from .document import REGION_MARGIN_MM, as_dict, as_list, document_hash, element
 from .geom import Poly, Pt, angle_between, area2, boundary_dist, long_dir, point_in_poly, poly_dist, polys_cross, self_intersects, vcross, vdot, vsub
 from .regions import list_rooms, parse_region
 from .trim import trim_room
+from ..openings import types as opening_types
 
 
 # ---------------------------------------------------------------- normalize
@@ -302,6 +303,6 @@ def _attach_opening(e: dict[str, Any], pts: Poly | None, rec: dict[str, Any], ed
     _, i, along = cands[0]
     el: dict[str, Any] = rec.get("elev") or {}
     entry: dict[str, Any] = {"id": f"{walls[i]['id']}-FP-{rec['id']}", "type": tag, "offset": round_half_away(max(0.0, along - width / 2), 3), "width": round_half_away(width, 3),
-             "height": el.get("height") or (2200.0 if tag == "door" else 1200.0), "sillHeight": el.get("base") or 0.0, "sourceElement": rec["id"]}
+             "height": el.get("height") or opening_types.default_height("door" if tag == "door" else "window"), "sillHeight": el.get("base") or 0.0, "sourceElement": rec["id"]}
     walls[i]["openings"].append(entry)
     return {"wall": walls[i]["id"], "edge": i, "offset": entry["offset"], "width": entry["width"]}

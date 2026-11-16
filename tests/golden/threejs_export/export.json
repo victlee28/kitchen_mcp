@@ -9,7 +9,7 @@
     }
    },
    "expected": {
-    "schemaVersion": "1.5.0",
+    "schemaVersion": "1.7.0",
     "room": [
      2520.0,
      2640.0,
@@ -582,7 +582,7 @@
     ]
    },
    "expected": {
-    "schemaVersion": "1.5.0",
+    "schemaVersion": "1.7.0",
     "room": [
      2520.0,
      2640.0,

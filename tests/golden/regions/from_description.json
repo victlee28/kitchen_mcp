@@ -70,6 +70,26 @@
     "country": "IT",
     "region": "EU"
    }
+  },
+  {
+   "name": "a country by its English name",
+   "input": {
+    "text": "standard for Spain"
+   },
+   "expected": {
+    "country": "ES",
+    "region": "EU"
+   }
+  },
+  {
+   "name": "a country by its Vietnamese name with no keyword",
+   "input": {
+    "text": "theo chuẩn Hà Lan"
+   },
+   "expected": {
+    "country": "NL",
+    "region": "EU"
+   }
   }
  ]
 }

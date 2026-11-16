@@ -41,6 +41,7 @@ from .runs import RunFrame
 INPUTS = {"back": expr.NUM, "right": expr.NUM, "left": expr.NUM, "g": expr.NUM, "upperDepth": expr.NUM, "fridge": expr.BOOL, "lr": expr.NUM,
           "islandLength": expr.NUM, "aisle": expr.NUM}
 STEPS = ("base-run", "cabinets", "corner-base", "corner-shelf", "upper-run")
+PLAIN_UPPER = ("upper", "upper-hood", "upper-loft")    # wall cabinets a template lays out again from the base cabinets below (``upper-run``)
 GAP = "gap"   # an item of a ``cabinets`` step that is empty room, not a cabinet
 
 
@@ -468,11 +469,30 @@ def template_from_design(spec: Mapping[str, Any], label: str, storey_of: Callabl
                 used.add(str(m.get("id")))
             steps.append({"do": "cabinets", "wall": wall, "start": _mm(start), "length": _minus(wall, start, wall_len - at), "items": items})
         high = [m for m in on if storey_of(str(m.get("type"))) in ("upper", "loft")]
-        if high:
+        if high and not any(str(m.get("type")) not in PLAIN_UPPER for m in high):
             a = min(float(m.get("fromCorner") or 0) for m in high)
             b = max(end_of(m) for m in high)
             uppers.append({"do": "upper-run", "wall": wall, "start": _mm(a), "end": _minus(wall, wall_len - b)})
             used.update(str(m.get("id")) for m in high)
+        elif high:            # glass doors, open shelves...: each wall-cabinet row as it is, in order (plain ones stretch with the wall)
+            for row in ("upper", "loft"):
+                cells = [m for m in high if storey_of(str(m.get("type"))) == row]
+                if not cells:
+                    continue
+                start, at = float(cells[0].get("fromCorner") or 0), float(cells[0].get("fromCorner") or 0)
+                row_items: list[dict[str, Any]] = []
+                for m in cells:
+                    s0 = float(m.get("fromCorner") or 0)
+                    if s0 - at >= 0.5:
+                        row_items.append({"type": GAP, "width": _mm(s0 - at)})
+                    kind = str(m.get("type"))
+                    cell: dict[str, Any] = {"type": kind, "width": _mm(float(m.get("width") or 0))}
+                    if kind in ("upper", "upper-loft"):
+                        cell["fill"] = True
+                    row_items.append(cell)
+                    at = max(at, end_of(m))
+                    used.add(str(m.get("id")))
+                uppers.append({"do": "cabinets", "wall": wall, "start": _mm(start), "length": _minus(wall, start, wall_len - at), "items": row_items})
     shelf = [m for m in mods if m.get("type") == "corner-shelf"]
     if shelf:
         steps.append({"do": "corner-shelf"})

@@ -5,13 +5,15 @@ chỉ cần (min, max). Mỗi chi tiết mang `module` để chọn/tô mask the
 """
 from __future__ import annotations
 
+import math
 from collections.abc import Callable
 from typing import Any
 
 from dataclasses import dataclass, field
 
 from .numeric import round_half_away
-from . import builtin, cabinet_types, camera_plan, openings as room_openings, roomctx, runs as runmod, structure_mesh, tv_system
+from .jsonview import as_dict, as_list
+from . import builtin, cabinet_types, camera_plan, openings as room_openings, roomctx, runs as runmod, structure_mesh, tv_system, wall_surfaces
 from .catalog import Catalog
 from .spec import ViewAngle, KitchenSpec, Module, effective_handle, to_data
 from .errors import InvalidInput, require
@@ -102,21 +104,15 @@ def backsplash_height(spec: KitchenSpec, wall: str, run: str | None = None) -> f
         return max(50.0, c.ceiling - c.countertop)
     if c.backsplashHeight != "to-upper":
         return BACKSPLASH_STANDARD
-    upper_edge = min((m.y for m in spec.module if m.wall == wall and (m.run or None) == run and m.storey == "upper"), default=c.upperBottom)   # of that row only
+    upper_edge = min((m.y for m in spec.module if (m.run or None) == run and m.storey == "upper"), default=c.upperBottom)   # of that run only
     return max(50.0, upper_edge - c.countertop)
 
 
 def wall_length(spec: KitchenSpec) -> tuple[float, float]:
-    def endAt(wall: str) -> float:
-        vals = [m.endAt for m in spec.module if m.wall == wall]
-        if wall == "back":
-            vals += [m.backLength or 0 for m in spec.module if m.type == "corner-shelf" and not m.run]
-        if wall == "right":
-            vals += [m.rightLength or 0 for m in spec.module if m.type == "corner-shelf" and not m.run]
-        return max(vals, default=0)
+    """(back wall, right wall) lengths of the default room: the room's own, else as far as the runs reach (the back wall 600 mm past them)."""
     reach_x, reach_z = _run_reach(spec)
-    lsau = (spec.room.length("back") if spec.room else None) or max(endAt("back") + 600, reach_x)
-    lphai = (spec.room.length("right") if spec.room else None) or max(endAt("right"), endAt("left"), reach_z, *[m.offset + m.depth for m in spec.module if m.wall == "island" and not m.run and (m.facing or "-z") in ("-z", "+z")], 0) + 600
+    lsau = (spec.room.length("back") if spec.room else None) or max(600.0, reach_x)
+    lphai = (spec.room.length("right") if spec.room else None) or max(reach_z, 0.0) + 600
     return lsau, lphai
 
 
@@ -134,12 +130,9 @@ def run_wall(fr: "runmod.RunFrame", lsau: float) -> str | None:
 
 
 def wall_reach(spec: KitchenSpec, lsau: float) -> dict[str, float]:
-    """How far the cabinets reach along each wall that has any, measured from the back corner as the walls are (mm): the cabinets that follow the
-    wall and those of explicit runs standing against it."""
+    """How far the cabinets reach along each wall that has any, measured from the back corner as the walls are (mm): those of the runs standing
+    against it."""
     out: dict[str, float] = {}
-    for m in spec.module:
-        if m.wall in ("back", "right", "left"):
-            out[m.wall] = max(out.get(m.wall, 0.0), m.endAt)
     for m in spec.module:
         fr = runmod.frame_of(spec, m)
         wall = run_wall(fr, lsau) if fr is not None else None
@@ -185,27 +178,25 @@ class _Emit:
 class _Builder:
     def __init__(self, spec: KitchenSpec, catalog: Catalog = builtin.CATALOG):
         self.spec = spec
+        self.catalog = catalog
         self.types = cabinet_types.table(catalog)
         self.c = spec.common
         self.lsau, self.lphai = wall_length(spec)
         self.parts: list[Part] = []
         self._n: dict[str, int] = {}
-        self._isl = {m.id: (m.offset, m.depth, m.facing or "-z") for m in spec.module if m.wall == "island" and not m.run}  # free run: (door face position, depth, facing)
         self._run = {m.id: fr for m in spec.module if (fr := runmod.frame_of(spec, m)) is not None}
         self._joints = runmod.corner_joints(spec)   # explicit run frames by module (or appliance) id
 
     # ---- row coordinates (s, d) -> world
-    def seat(self, wall: str, module: str | None = None, isl: tuple[float, float, str] | None = None) -> "runmod.Seat":
-        """The seat of an axis-aligned row: a wall's, or a legacy free run's (``isl`` = (door face position, depth, facing), else that of ``module``)."""
-        if wall == "island":
-            return runmod.free_seat(*(isl or self._isl[require(module, "island part module")]))
+    def seat(self, wall: str) -> "runmod.Seat":
+        """The seat along a wall of the room: its own boxes (the wall), and a worktop device placed by wall and centre. Cabinets stand in runs."""
         seat = runmod.wall_seat(wall, self.lsau)
         if seat is None:
             raise InvalidInput(f"No seat on wall {wall!r}", code="bad-wall", params={"wall": wall})
         return seat
 
     def box(self, module: str | None, type: str, wall: str, s0: float, s1: float, d0: float, d1: float, y0: float, y1: float,
-            isl: tuple[float, float, str] | None = None, fr: "runmod.RunFrame | None" = None) -> None:
+            fr: "runmod.RunFrame | None" = None) -> None:
         if s1 - s0 <= 0.01 or d1 - d0 <= 0.01 or y1 - y0 <= 0.01:
             return
         fr = fr or self._run.get(module or "")
@@ -217,12 +208,11 @@ class _Builder:
             self._n[key] = self._n.get(key, 0) + 1
             self.parts.append(Part(f"{key}-{self._n[key]}", module, type, (ax, y0, az), (bx, y1, bz), wall, frame=(fr.x, fr.z, fr.yaw), lmin=lmn, lmax=lmx, run=fr.id))
             return
-        seat = self.seat(wall, module, isl)
+        seat = self.seat(wall)
         mn, mx = seat.box(s0, s1, d0, d1, y0, y1)
-        face = seat.front if wall == "island" else None
         key = f"{module or 'room'}-{type}"
         self._n[key] = self._n.get(key, 0) + 1
-        self.parts.append(Part(f"{key}-{self._n[key]}", module, type, mn, mx, wall, face=face if wall == "island" else None))
+        self.parts.append(Part(f"{key}-{self._n[key]}", module, type, mn, mx, wall))
 
     def wall_behind(self, fr: "runmod.RunFrame") -> str | None:
         return run_wall(fr, self.lsau)
@@ -277,19 +267,15 @@ class _Builder:
             self.box(m.id, "side-panel", m.wall, m.fromCorner + bp.s0, m.fromCorner + bp.s1, 0, tv_system.PANEL_THICKNESS_MM, bp.y0, bp.y1)
 
     def corner_shelf(self, m: Module):
-        """Open shelves round an inside corner: two legs, each with its boards and a side panel at the end away from the corner. On the walls
-        the legs lie along the back and the right wall from their corner; by runs, the first leg is the cabinet's own place at the end of its
-        run and the second lies at the start of the run it turns into."""
+        """Open shelves round an inside corner: two legs, each with its boards and a side panel at the end away from the corner. The first leg
+        is the cabinet's own place at the end of its run, the second lies at the start of the run it turns into."""
         dc = self.c.doorThickness
         n = max(1, m.shelfCount)
         legs: list[tuple[str, float, float, bool, "runmod.RunFrame | None"]] = []     # (wall, s0, s1, panel at the low end, run frame)
-        if m.run:
-            other = runmod.frames(self.spec).get(m.turnsInto or "")
-            legs.append(("island", m.fromCorner, m.endAt, True, self._run.get(m.id)))
-            if other is not None:
-                legs.append(("island", 0.0, require(m.rightLength, f"{m.id}.rightLength"), False, other))
-        else:
-            legs = [("back", 0, require(m.backLength, f"{m.id}.backLength"), False, None), ("right", 0, require(m.rightLength, f"{m.id}.rightLength"), False, None)]
+        other = runmod.frames(self.spec).get(m.turnsInto or "")
+        legs.append(("island", m.fromCorner, m.endAt, True, self._run.get(m.id)))
+        if other is not None:
+            legs.append(("island", 0.0, require(m.rightLength, f"{m.id}.rightLength"), False, other))
         for wall, s0, s1, low, fr in legs:
             for i in range(n + 1):
                 yb = m.y + i * (m.height - dc) / n
@@ -301,39 +287,25 @@ class _Builder:
 
     def countertop(self):
         c = self.c
-        groups: list[tuple[str, tuple[float, str] | str | None]] = [(w, None) for w in ("back", "right", "left")]
-        for key in sorted({(m.offset, m.facing or "-z") for m in self.spec.module if m.wall == "island" and not m.run and m.storey == "base"}):
-            groups.append(("island", key))
         for r in self.spec.runs:
             if tv_system.is_tv_run(r):      # a TV unit: its console has its own top, no worktop and no wall tile
                 continue
-            if any(m.run == r.id and m.storey == "base" for m in self.spec.module):
-                groups.append(("island", r.id))
-        for wall, z in groups:
-            if isinstance(z, str):          # an explicit run: one countertop per continuous stretch, in the run frame
-                ms = sorted((m for m in self.spec.module if m.run == z and m.storey == "base"), key=lambda m: m.fromCorner)
-            else:
-                ms = sorted((m for m in self.spec.module if m.wall == wall and not m.run and m.storey == "base" and (z is None or (m.offset, m.facing or "-z") == z)), key=lambda m: m.fromCorner)
-            run: list[list[float]] = []
+            ms = sorted((m for m in self.spec.module if m.run == r.id and m.storey == "base"), key=lambda m: m.fromCorner)
+            if not ms:
+                continue
+            run: list[list[float]] = []     # one countertop per continuous stretch, in the run frame
             for m in ms:
                 if run and m.fromCorner <= run[-1][1] + 1:
                     run[-1][1] = max(run[-1][1], m.endAt)
                     run[-1][2] = max(run[-1][2], m.depth)
                 else:
                     run.append([m.fromCorner, m.endAt, m.depth])
-            if isinstance(z, str) and run:
-                self._close_corner(z, run)
+            self._close_corner(r.id, run)
+            fr = self._run[ms[0].id]
             for s0, s1, depth in run:
-                if isinstance(z, str):
-                    fr = self._run[ms[0].id]
-                    self.box(None, "countertop", wall, s0, s1, 0, depth + c.countertopOverhang, c.baseTop, c.countertop, fr=fr)
-                    if c.material.get("wallTile") and self.wall_behind(fr):     # a run standing against a wall of the room is tiled like a wall row
-                        self.box(None, "wall-tile", wall, s0, s1, 0, 8, c.countertop, c.countertop + backsplash_height(self.spec, wall, fr.id), fr=fr)
-                    continue
-                self.box(None, "countertop", wall, s0, s1, 0, depth + c.countertopOverhang,
-                         c.baseTop, c.countertop, isl=(z[0], depth, z[1]) if z is not None else None)
-                if c.material.get("wallTile") and wall != "island":  # an island has no wall behind it
-                    self.box(None, "wall-tile", wall, s0, s1, 0, 8, c.countertop, c.countertop + backsplash_height(self.spec, wall))
+                self.box(None, "countertop", "island", s0, s1, 0, depth + c.countertopOverhang, c.baseTop, c.countertop, fr=fr)
+                if c.material.get("wallTile") and self.wall_behind(fr):     # a run standing against a wall of the room is tiled; a free one is not
+                    self.box(None, "wall-tile", "island", s0, s1, 0, 8, c.countertop, c.countertop + backsplash_height(self.spec, "island", fr.id), fr=fr)
 
     def _close_corner(self, run_id: str, stretches: list[list[float]]) -> None:
         """Where this run ends in an inside corner with another run (``runs.corner_joints``) and neither run's cabinets fill the corner, the
@@ -367,14 +339,16 @@ class _Builder:
             end, start = a[-1].endAt, b[0].fromCorner
             da, db = a[-1].depth + c.countertopOverhang, b[0].depth + c.countertopOverhang
             cross = runmod.front_cross(fa, da, fb, db)
-            if cross is None or end > cross[0] + 1 or start < cross[1] - 1:       # the two worktops already run into each other
-                continue
-            poly = [fa.to_world(end, 0.0), fa.to_world(end, da), cross[2], fb.to_world(start, db), fb.to_world(start, 0.0), fb.to_world(0.0, 0.0)]
-            poly = [p for k, p in enumerate(poly) if all(abs(p[0] - q[0]) + abs(p[1] - q[1]) > 0.5 for q in poly[:k])]
-            if len(poly) < 3:
-                continue
-            verts, faces = structure_mesh.prism(poly, c.baseTop, c.countertop)
-            out.append(MeshPart(f"room-countertop-corner-{len(out) + 1}", f"countertop-{joint.a}-{joint.b}", "countertop", verts, faces))
+            if cross is not None and end <= cross[0] + 1 and start >= cross[1] - 1:
+                pieces = [[fa.to_world(end, 0.0), fa.to_world(end, da), cross[2], fb.to_world(start, db), fb.to_world(start, 0.0), fb.to_world(0.0, 0.0)]]
+            else:      # the front edges cross inside a worktop (a sharp corner, or runs joined by ``run_join``): fill the gap, chamfered
+                pieces = _corner_gap(fa.to_world(end, 0.0), fa.to_world(end, da), fb.to_world(start, db), fb.to_world(start, 0.0), fb.to_world(0.0, 0.0))
+            for poly in pieces:
+                poly = [p for k, p in enumerate(poly) if all(abs(p[0] - q[0]) + abs(p[1] - q[1]) > 0.5 for q in poly[:k])]
+                if len(poly) < 3 or _area(poly) < CORNER_GAP_MIN_MM2:
+                    continue
+                verts, faces = structure_mesh.prism(poly, c.baseTop, c.countertop)
+                out.append(MeshPart(f"room-countertop-corner-{len(out) + 1}", f"countertop-{joint.a}-{joint.b}", "countertop", verts, faces))
         return out
 
     def appliance(self):
@@ -425,34 +399,39 @@ class _Builder:
                 d0 = tv_system.PANEL_THICKNESS_MM + 2      # in front of the panel behind it, if any
                 self.box(tb.id, "tv", m.wall, sc - w / 2, sc + w / 2, d0, d0 + d, y0, y0 + h)
             elif tb.type in ("sink", "cooktop", "faucet") and (at := runmod.spot(self.spec, tb)) is not None:
-                host = m if tb.wall is None else None                      # placed by its module: it stands in that module's row
-                wall = tb.wall or (host.wall if host else "back")
-                isl = self._isl.get(host.id) if host is not None else None
+                wall = tb.wall or "back"                                   # placed by its module: it stands in that module's run (its frame)
                 dmat = c.baseDepth + c.countertopOverhang
                 if tb.type == "faucet":
                     h = k[0] if k else 300
-                    self.box(tb.id, "faucet", wall, at.center - 20, at.center + 20, 40, 80, c.countertop, c.countertop + h, isl=isl)
+                    self.box(tb.id, "faucet", wall, at.center - 20, at.center + 20, 40, 80, c.countertop, c.countertop + h)
                 elif len(k) >= 2:
                     w, d = k[:2]
                     dc_ = dmat / 2 + 20
                     height = 4 if tb.type == "sink" else 6
                     self.box(tb.id, tb.type, wall, at.center - w / 2, at.center + w / 2, dc_ - d / 2, dc_ + d / 2,
-                             c.countertop, c.countertop + height, isl=isl)
+                             c.countertop, c.countertop + height)
 
-    def structures(self) -> list[Any]:
-        """Meshes of the imported floorplan's elements in the kitchen frame (none without a floorplan or when the kitchen fits no wall)."""
+    def structures(self, holes: list[Any] | None = None) -> list[Any]:
+        """Meshes of the imported floorplan's elements in the kitchen frame (none without a floorplan or when the kitchen fits no wall).
+        ``holes``: the holes the design's own openings cut in the floorplan walls; a floorplan opening the design replaces or removes
+        is not drawn as imported."""
         try:
             ctx = roomctx.for_spec(self.spec, self.lsau, self.lphai)
         except ValueError:
             return []
-        return structure_mesh.meshes(ctx.structures, ctx.placement.to_kitchen) if ctx else []
+        if not ctx:
+            return []
+        hidden = {o.sourceElement for o in self.spec.openings if o.sourceElement}
+        infill = room_openings.infill_structures(to_data(self.spec), self.catalog, opening_axes(self.spec, Scene(self.parts, self.lsau, self.lphai))) \
+            if any(o.removed for o in self.spec.openings) else []
+        return structure_mesh.meshes([*ctx.structures, *infill], ctx.placement.to_kitchen, holes or [], hidden)
 
     def room(self):
         ceiling = self.c.ceiling
         if not isinstance(getattr(self.spec, "floorplan", None), dict):  # an imported plan brings its own (real) walls
             self.box(None, "wall", "back", -100, self.lsau, -100, 0, 0, ceiling)
             self.box(None, "wall", "right", 0, self.lphai, -100, 0, 0, ceiling)
-            if any(m.wall == "left" for m in self.spec.module) or any(self.wall_behind(fr) == "left" for fr in runmod.frames(self.spec).values()):
+            if any(self.wall_behind(fr) == "left" for fr in runmod.frames(self.spec).values()):
                 self.box(None, "wall", "left", 0, self.lphai, -100, 0, 0, ceiling)
         self.parts.append(Part("room-floor-1", None, "floor", (-self.lsau - 100, -40, -100), (100, 0, self.lphai + 1500)))
 
@@ -509,15 +488,49 @@ class _Builder:
         self.room()
         from .moldings import meshes as molding_meshes
         meshes = molding_meshes(self.spec) if self.spec.moldings else []
-        return Scene(self.parts, self.lsau, self.lphai, meshes + self.corner_tops() + self.structures())
+        holes, doors = self.openings()
+        return Scene(self.parts, self.lsau, self.lphai, meshes + self.corner_tops() + self.structures(holes) + doors)
+
+    def openings(self) -> tuple[list[room_openings.meshes.Hole], list[Any]]:
+        """The openings the design places (ADR 0005): their frames, leaves and sweeps, and the holes they cut. The default walls are
+        cut here; floorplan walls are cut where their solids are made (``structures``). Nothing changes without such openings."""
+        if not self.spec.openings:
+            return [], []
+        placed = design_openings(self.spec, Scene(self.parts, self.lsau, self.lphai), self.catalog)
+        holes = [room_openings.meshes.hole(o, axis) for o, axis in placed]
+        out: list[Any] = []
+        for o, axis in placed:
+            out += room_openings.meshes.meshes(o, axis, room_openings.types.get(self.catalog, o.opening_type))
+        kept: list[Part] = []
+        for part in self.parts:
+            pieces: list[tuple[tuple[float, float, float], tuple[float, float, float]]] | None = None
+            if part.type == "wall":
+                for h in holes:
+                    cut = room_openings.meshes.cut_box(part.min, part.max, h) if pieces is None else None
+                    if cut is not None:
+                        pieces = cut
+                    elif pieces is not None:
+                        nxt: list[tuple[tuple[float, float, float], tuple[float, float, float]]] = []
+                        for lo, hi in pieces:
+                            more = room_openings.meshes.cut_box(lo, hi, h)
+                            nxt += more if more is not None else [(lo, hi)]
+                        pieces = nxt
+            if pieces is None:
+                kept.append(part)
+            else:
+                kept += [Part(f"{part.id}-{k}", part.module, part.type, lo, hi, part.wall) for k, (lo, hi) in enumerate(pieces, 1)]
+        self.parts = kept
+        return holes, out
 
 
 def compile_spec(spec: KitchenSpec, catalog: Catalog = builtin.CATALOG) -> Scene:
-    return _Builder(spec, catalog).build()
+    """The boxes and meshes of a kitchen; cabinets still given by wall are read as runs first (``rows_to_runs.as_runs``)."""
+    from .rows_to_runs import as_runs
+    return _Builder(as_runs(spec, catalog), catalog).build()
 
 
 def cabinet_faces(spec: KitchenSpec, scene: Scene) -> list[camera_plan.Face]:
-    """The front of every run of cabinets (wall runs and explicit runs) in the kitchen frame, for the camera planner."""
+    """The front of every run of cabinets in the kitchen frame, for the camera planner (a run against a wall is named after that wall)."""
     faces: list[camera_plan.Face] = []
 
     def face(key: str, name: str, mods: list[Any], center: Callable[[float, float, float], tuple[float, float]], normal: tuple[float, float],
@@ -525,12 +538,6 @@ def cabinet_faces(spec: KitchenSpec, scene: Scene) -> list[camera_plan.Face]:
         lo, hi = min(m.fromCorner for m in mods), max(m.endAt for m in mods)
         faces.append(camera_plan.Face(key, name, center(lo, hi, max(m.depth for m in mods)), normal, hi - lo, max(m.y + m.height for m in mods), owner))
 
-    for wall in ("back", "right", "left"):
-        name = say(f"name.view.{wall}-wall")
-        mods = [m for m in spec.module if m.wall == wall]
-        seat = runmod.wall_seat(wall, scene.lsau)
-        if mods and seat is not None:
-            face(f"{wall}-wall", name, mods, lambda lo, hi, d, seat=seat: seat.to_world((lo + hi) / 2, d), seat.normal(), wall)
     for run in spec.runs:
         mods = [m for m in spec.module if m.run == run.id and m.storey != "corner"]      # a corner shelf is not a front
         if mods:
@@ -556,19 +563,59 @@ def cabinet_bodies(spec: KitchenSpec) -> list[camera_plan.Obstacle]:
     return out
 
 
-def openings_and_bodies(spec: KitchenSpec, scene: Scene) -> tuple[list[room_openings.Opening], list[dict[str, Any]]]:
+def design_surfaces(spec: KitchenSpec, scene: Scene, catalog: Catalog = builtin.CATALOG, walls: list[dict[str, Any]] | None = None,
+                    structures: list[dict[str, Any]] | None = None) -> list[wall_surfaces.Surface]:
+    """Every face of every wall of the design (``wall_surfaces``), in the frame of the three.js document: the floorplan's room frame (its
+    wall elements, ``structures`` as the export draws them), else the kitchen frame (the default walls, ``walls`` as exported). Rooms: the
+    kitchen (the floorplan's room, or ``kitchen`` without one) and the floorplan's other rooms; the holes: the openings the design places."""
+    axes = opening_axes(spec, scene)
+    holes: list[wall_surfaces.Hole] = []
+    for o, _ in design_openings(spec, scene, catalog):
+        axis = room_openings.wall_axes.find(o.wall_axis, axes)
+        if axis is not None:
+            half = axis.thickness_at(o.center) / 2
+            holes.append(wall_surfaces.Hole(axis.start, axis.dir, o.center - o.width / 2, o.center + o.width / 2, o.sill, o.sill + o.height,
+                                            half + wall_surfaces.HOLE_REACH_MM))
+
+    def pts(value: Any) -> list[tuple[float, float]]:
+        return [(float(p.get("x") or 0.0), float(p.get("z") or 0.0)) for p in (as_dict(q) for q in as_list(value) or []) if p is not None]
+    out: list[wall_surfaces.Surface] = []
+    fp = as_dict(spec.floorplan)
+    if fp is not None and structures is not None:
+        kitchen = str(fp.get("roomId") or "kitchen")
+        rooms: list[tuple[str, list[tuple[float, float]]]] = [(kitchen, pts(fp.get("outline")))]
+        rooms += [(str(e.get("id")), pts(e.get("outline"))) for e in (as_dict(x) for x in as_list(fp.get("elements")) or [])
+                  if e is not None and e.get("kind") == "area" and e.get("tag") == "room" and e.get("outline")]
+        for st in structures:
+            if st.get("kind") != "wall" or not st.get("outline") or not st.get("height"):
+                continue
+            base = float(st.get("base") or 0.0)
+            out += wall_surfaces.of_wall(str(st.get("sourceElement") or st["id"]), pts(st["outline"]), base, base + float(st["height"]), rooms,
+                                         kitchen, holes, str(st["id"]))
+        return out
+    room = [(0.0, 0.0), (-scene.lsau, 0.0), (-scene.lsau, scene.lphai), (0.0, scene.lphai)]
+    for w in walls or []:
+        start, end, normal = (pts([w.get(k)])[0] for k in ("start", "end", "interiorNormal"))
+        out += wall_surfaces.of_wall(str(w["id"]), wall_surfaces.box_outline(start, end, normal, float(w["thickness"])), 0.0, float(w["height"]),
+                                     [("kitchen", room)], "kitchen", holes)
+    return out
+
+
+def openings_and_bodies(spec: KitchenSpec, scene: Scene, catalog: Catalog = builtin.CATALOG) -> tuple[list[room_openings.WorldOpening], list[dict[str, Any]]]:
     """The doors and windows of the room (``openings``: the imported floorplan's and the design's walls'), and the bodies the checks of
-    ``rules_openings`` hold against them: each cabinet's floor footprint (hull of its parts) with its heights (a base cabinet up to the
+    ``openings.checks`` hold against them: each cabinet's floor footprint (hull of its parts) with its heights (a base cabinet up to the
     worktop), each cooktop's. Kitchen frame, mm."""
-    found: list[room_openings.Opening] = []
+    found: list[room_openings.WorldOpening] = []
     try:
         ctx = roomctx.for_spec(spec, scene.lsau, scene.lphai)
     except ValueError:
         ctx = None
     if ctx is not None:
         found += room_openings.from_structures(ctx.structures, ctx.placement.to_kitchen)
-    if spec.room is not None:
-        found += room_openings.from_room(to_data(spec.room), lambda wall: runmod.wall_seat(wall, scene.lsau))
+    overridden = {o.sourceElement for o in spec.openings if o.sourceElement}
+    found = [item for item in found if item.id not in overridden]          # floorplan openings the design replaces or removes
+    for opening, axis in design_openings(spec, scene, catalog, ctx):
+        found.append(room_openings.world_opening(opening, axis, catalog.data("opening-type", opening.opening_type)))
     storey = {m.id: m.storey for m in spec.module}
     cooktops = {t.id for t in spec.appliances if t.type == "cooktop"}
     pts: dict[str, list[tuple[float, float]]] = {}
@@ -590,18 +637,53 @@ def openings_and_bodies(spec: KitchenSpec, scene: Scene) -> tuple[list[room_open
     return found, bodies
 
 
+def opening_axes(spec: KitchenSpec, scene: Scene, ctx: Any = None) -> list[room_openings.WallAxis]:
+    """The design's wall axes in the frame openings are stored in: the floorplan's room frame, or the kitchen frame without one."""
+    return room_openings.wall_axes.for_spec(to_data(spec), scene.lsau, scene.lphai)
+
+
+def design_openings(spec: KitchenSpec, scene: Scene, catalog: Catalog = builtin.CATALOG, ctx: Any = None
+                    ) -> list[tuple[room_openings.Opening, room_openings.WallAxis]]:
+    """The openings the design itself places (its own and its overrides of floorplan openings; floorplan openings it leaves alone
+    keep their drawn shape), each with its wall axis in the kitchen frame. An opening whose axis cannot be placed is left out."""
+    if not spec.openings:
+        return []
+    if spec.floorplan is not None and ctx is None:
+        try:
+            ctx = roomctx.for_spec(spec, scene.lsau, scene.lphai)
+        except ValueError:
+            return []
+    if spec.floorplan is not None and ctx is None:
+        return []
+    axes = opening_axes(spec, scene, ctx)
+    own = {o.id for o in spec.openings} | {o.sourceElement for o in spec.openings if o.sourceElement}
+    out: list[tuple[room_openings.Opening, room_openings.WallAxis]] = []
+    for opening in room_openings.effective(to_data(spec), catalog, axes, spec.country):
+        if opening.id not in own and (opening.source_element or "") not in own:
+            continue
+        axis = room_openings.wall_axes.find(opening.wall_axis, axes)
+        if axis is None:
+            continue
+        out.append((opening, axis.in_kitchen(ctx.placement.to_kitchen) if axis.frame == "room" and ctx is not None else axis))
+    return out
+
+
 def room_solids(spec: KitchenSpec, scene: Scene) -> tuple[list[tuple[float, float]] | None, list[camera_plan.Obstacle]]:
     """The room's floor outline and the solids of the imported floorplan that are not cabinets, in the kitchen frame; ``(None, [])`` without a floorplan."""
     try:
         ctx = roomctx.for_spec(spec, scene.lsau, scene.lphai)
     except ValueError:
         ctx = None
+    doors = [camera_plan.Obstacle(o.id, "room-opening", tuple(room_openings.shape(o, axis, room_openings.types.get(builtin.CATALOG, o.opening_type))["hole"]),
+                                  o.sill, o.sill + o.height) for o, axis in design_openings(spec, scene, builtin.CATALOG, ctx)]   # their frames and leaves hide cabinets too
     if ctx is None:   # no floorplan: the room is the box the floor of the scene covers (walls behind the cabinets, open on the viewer's side)
-        return [(-scene.lsau, 0.0), (0.0, 0.0), (0.0, scene.lphai + 3000.0), (-scene.lsau, scene.lphai + 3000.0)], []
+        return [(-scene.lsau, 0.0), (0.0, 0.0), (0.0, scene.lphai + 3000.0), (-scene.lsau, scene.lphai + 3000.0)], doors
     to_kitchen = ctx.placement.to_kitchen
     room = [to_kitchen(float(q["x"]), float(q["z"])) for q in ctx.floorplan.get("outline", [])]
-    solids: list[camera_plan.Obstacle] = []
-    for st in ctx.structures:
+    solids: list[camera_plan.Obstacle] = list(doors)
+    hidden = {o.sourceElement for o in spec.openings if o.sourceElement}
+    infill = room_openings.infill_structures(to_data(spec), builtin.CATALOG, opening_axes(spec, scene)) if any(o.removed for o in spec.openings) else []
+    for st in [*(x for x in ctx.structures if str(x.get("sourceElement") or x.get("id")) not in hidden), *infill]:
         outline = tuple(to_kitchen(float(p["x"]), float(p["z"])) for p in st["outline"])
         if len(outline) >= 3 and float(st.get("height") or 0) > 0:
             base = float(st.get("base") or 0.0)
@@ -612,6 +694,8 @@ def room_solids(spec: KitchenSpec, scene: Scene) -> tuple[list[tuple[float, floa
 def default_views(spec: KitchenSpec, scene: Scene | None = None, catalog: Catalog = builtin.CATALOG) -> dict[str, ViewAngle]:
     """Bộ góc nhìn chuẩn khi spec chưa khai báo gocNhin (m). Camera ở độ cao mắt 1,6 m; khi có mặt bằng hoặc dãy tủ tự do thì mỗi dãy có góc chính
     diện + góc chéo đặt trong phòng, và những vật thể không phải tủ (tường, cột, đồ) chắn giữa camera và tủ nằm trong ``hide`` của góc đó."""
+    from .rows_to_runs import as_runs
+    spec = as_runs(spec, catalog)
     scene = scene or compile_spec(spec, catalog)
     openings, hi = scene.bounds()
     cx, cz = (openings[0] + hi[0]) / 2000, (openings[2] + hi[2]) / 2000
@@ -661,6 +745,8 @@ def views_of(spec: KitchenSpec, catalog: Catalog = builtin.CATALOG) -> dict[str,
 
 
 def scene_json(spec: KitchenSpec, catalog: Catalog = builtin.CATALOG) -> dict[str, Any]:
+    from .rows_to_runs import as_runs
+    spec = as_runs(spec, catalog)
     sc = compile_spec(spec, catalog)
     openings, hi = sc.bounds()
     return {
@@ -668,6 +754,67 @@ def scene_json(spec: KitchenSpec, catalog: Catalog = builtin.CATALOG) -> dict[st
         "parts": [p.to_json() for p in sc.parts],
         "bounds": {"min": openings, "max": hi},
         "views": {k: to_data(v) for k, v in default_views(spec, sc, catalog).items()} if not spec.cameraViews else {k: to_data(v) for k, v in spec.cameraViews.items()},
-        "modules": [{"id": m.id, "name": m.name, "type": m.type, "wall": m.wall} for m in spec.module],
+        "modules": [{"id": m.id, "name": m.name, "type": m.type, "run": m.run} for m in spec.module],
         "moldings": [{"id": m.id, "molding": m.module, "vertices": len(m.vertices), "faces": len(m.faces)} for m in sc.meshes],
     }
+
+
+CORNER_GAP_MIN_MM2 = 20000.0          # a gap at a corner smaller than this (2 x 100 mm) is left open
+
+
+def _hull(points: list[tuple[float, float]]) -> list[tuple[float, float]]:
+    """Convex hull of plane points, counter-clockwise (monotone chain)."""
+    pts = sorted(set((round_half_away(x, 3), round_half_away(z, 3)) for x, z in points))
+    if len(pts) < 3:
+        return pts
+    def cross(o: tuple[float, float], a: tuple[float, float], b: tuple[float, float]) -> float:
+        return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+    lower: list[tuple[float, float]] = []
+    for p in pts:
+        while len(lower) >= 2 and cross(lower[-2], lower[-1], p) <= 0:
+            lower.pop()
+        lower.append(p)
+    upper: list[tuple[float, float]] = []
+    for p in reversed(pts):
+        while len(upper) >= 2 and cross(upper[-2], upper[-1], p) <= 0:
+            upper.pop()
+        upper.append(p)
+    return lower[:-1] + upper[:-1]
+
+
+def _area(poly: list[tuple[float, float]]) -> float:
+    return abs(sum(poly[i][0] * poly[(i + 1) % len(poly)][1] - poly[(i + 1) % len(poly)][0] * poly[i][1] for i in range(len(poly)))) / 2 if len(poly) >= 3 else 0.0
+
+
+def _simple(poly: list[tuple[float, float]]) -> bool:
+    """No two non-adjacent edges of the closed polygon cross."""
+    n = len(poly)
+    if n < 3:
+        return False
+    def orient(a: tuple[float, float], b: tuple[float, float], c: tuple[float, float]) -> float:
+        return (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
+    for i in range(n):
+        a, b = poly[i], poly[(i + 1) % n]
+        for j in range(i + 2, n):
+            if (j + 1) % n == i:
+                continue
+            c, d = poly[j], poly[(j + 1) % n]
+            if orient(a, b, c) * orient(a, b, d) < -1e-6 and orient(c, d, a) * orient(c, d, b) < -1e-6:
+                return False
+    return True
+
+
+def _corner_gap(a0: tuple[float, float], a1: tuple[float, float], b1: tuple[float, float], b0: tuple[float, float],
+                p: tuple[float, float]) -> list[list[tuple[float, float]]]:
+    """The worktop that fills a corner between the end of run a (back ``a0``, front ``a1``) and the start of run b (front ``b1``, back ``b0``),
+    ``p`` the corner of the two walls: one polygon a0-a1-b1-b0-p; when a's front corner lies on b's wall (a sharp corner trimmed by
+    ``run_join``) that polygon pinches there, so it is two: the dead corner a0-a1-p and the front triangle a1-b1-b0."""
+    ex, ez = p[0] - b0[0], p[1] - b0[1]
+    length = math.hypot(ex, ez)
+    if length > 1.0:
+        off = abs((a1[0] - b0[0]) * ez - (a1[1] - b0[1]) * ex) / length
+        along = ((a1[0] - b0[0]) * ex + (a1[1] - b0[1]) * ez) / (length * length)
+        if off <= 5.0 and 0.0 < along < 1.0:
+            return [[a0, a1, p], [a1, b1, b0]]
+    gap = [a0, a1, b1, b0, p]
+    return [gap if _simple(gap) else _hull(gap)]

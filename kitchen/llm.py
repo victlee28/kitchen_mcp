@@ -47,7 +47,7 @@ def edit_operation_llm(text: str, spec: KitchenSpec, config: Config) -> tuple[di
     key = config.deepseek_api_key
     if not key:
         return None, {"status": "skipped", "reason": "DEEPSEEK_API_KEY chưa được cấu hình"}
-    modules = [{"id": m.id, "type": m.type, "wall": m.wall, "width": m.width, "storey": m.storey} for m in spec.module]
+    modules = [{"id": m.id, "type": m.type, "run": m.run, "fromCorner": m.fromCorner, "width": m.width, "storey": m.storey} for m in spec.module]
     system = ("Chuyển câu lệnh sửa tủ bếp thành MỘT thao tác JSON. Chỉ dùng: "
               '{"op":"add","module":{"type","width"},"afterModule":id} | {"op":"remove","id"} | {"op":"update","id","changes":{...}} | '
               '{"op":"common","changes":{...}} | {"op":"multi","ops":[...]}. Đơn vị mm. Không rõ thì trả {"op":"none"}.\nModule: '

@@ -22,11 +22,14 @@ def opt(schema: dict, desc: str) -> dict:
 def main():
     base = json.loads((HERE / "kitchen-threejs.v1.0.0.schema.json").read_text(encoding="utf-8"))
     s = copy.deepcopy(base)
-    s["$id"] = "https://example.com/schemas/kitchen-threejs-full.v1.5.0.schema.json"
-    s["title"] = base["title"] + " (v1.5)"
-    s["description"] = base["description"] + " v1.1 thêm trường tùy chọn cho tủ tham số, vùng tiêu chuẩn và ảnh điều khiển AI; v1.2 thêm phong cách phụ, gợi ý ảnh AI và bảng diễn giải mô tả; v1.3 thêm nguồn độ dày tường và thông tin mặt bằng nhập vào; v1.4 thêm partRef (chi tiết nào bị chọn: cánh, ngăn kéo, tay nắm, mặt bàn); v1.5 thêm runs[] (dãy tủ có hướng bất kỳ: gốc + góc xoay), module.placement.runId và module.localTransform (vị trí trong khung dãy); tương thích ngược v1.0.0."
+    s["$id"] = "https://example.com/schemas/kitchen-threejs-full.v1.7.0.schema.json"
+    s["title"] = base["title"] + " (v1.6)"
+    s["description"] = base["description"] + " v1.1 thêm trường tùy chọn cho tủ tham số, vùng tiêu chuẩn và ảnh điều khiển AI; v1.2 thêm phong cách phụ, gợi ý ảnh AI và bảng diễn giải mô tả; v1.3 thêm nguồn độ dày tường và thông tin mặt bằng nhập vào; v1.4 thêm partRef (chi tiết nào bị chọn: cánh, ngăn kéo, tay nắm, mặt bàn); v1.5 thêm runs[] (dãy tủ có hướng bất kỳ: gốc + góc xoay), module.placement.runId và module.localTransform (vị trí trong khung dãy); v1.6 thêm level (tầng nhà, cao độ sàn) và cửa phòng theo trục (room.walls[].openings[]: wallAxis, center, frame, leaves); tương thích ngược v1.0.0."
     P, D = s["properties"], s["$defs"]
-    P["schemaVersion"]["default"] = "1.5.0"
+    P["schemaVersion"]["default"] = "1.7.0"
+    P["metadata"]["properties"]["level"] = {"type": "object", "required": ["name", "elevation"], "additionalProperties": False,
+                  "properties": {"name": {"type": "string"}, "elevation": {"type": "number", "description": "mm, mặt sàn hoàn thiện của tầng so với cốt 0 của nhà"}},
+                  "description": "[Bổ sung v1.6 (VicKitchenCabinet)] Tầng nhà của bếp: mọi cao độ trong cảnh tính từ sàn tầng này; tuyệt đối = elevation + cao độ"}
 
     D["vec2"] = {"type": "object", "required": ["u", "v"], "properties": {"u": {"type": "number"}, "v": {"type": "number"}},
                  "description": f"[{ADD}] Véc-tơ 2D cho lặp texture"}
@@ -72,8 +75,21 @@ def main():
                                                                     "type": {"type": "string", "enum": ["window", "door", "pass_through"]},
                                                                     "offset": {"type": "number", "description": "từ start dọc tường"},
                                                                     "width": {"type": "number"}, "height": {"type": "number"},
-                                                                    "sillHeight": {"type": "number", "default": 0}}}},
+                                                                    "sillHeight": {"type": "number", "default": 0},
+                                                                    "openingType": {"type": "string", "description": "[v1.6, ADR 0005] Catalog opening type of an opening the design places"},
+                                                                    "wallAxis": {"type": "string", "description": "[v1.6, ADR 0005] Wall axis the opening is measured along"},
+                                                                    "center": {"type": "number", "description": "[v1.6, ADR 0005] Centre along the wall axis, mm from its start"},
+                                                                    "frame": {"type": "array", "description": "[v1.6, ADR 0005] Frame boxes: x along the wall from offset, y above the sill, z across from the wall centreline towards the room (mm)",
+                                                                              "items": {"type": "object", "required": ["part", "x0", "x1", "y0", "y1", "z0", "z1"],
+                                                                                        "properties": {"part": {"type": "string"}, **{k: {"type": "number"} for k in ("x0", "x1", "y0", "y1", "z0", "z1")}}}},
+                                                                    "leaves": {"type": "array", "description": "[v1.6, ADR 0005] Closed leaves, same box coordinates as frame",
+                                                                               "items": {"type": "object", "required": ["operation", "x0", "x1", "y0", "y1", "z0", "z1"],
+                                                                                         "properties": {"operation": {"type": "string"}, "glass": {"type": "boolean"},
+                                                                                                        **{k: {"type": "number"} for k in ("x0", "x1", "y0", "y1", "z0", "z1")}}}},
+                                                                    "sourceElement": {"type": "string", "description": "[v1.6] Floorplan element of the opening"}}}},
                         "Cửa sổ / cửa đi trên tường (cần cho quy tắc không đặt bếp dưới cửa sổ, và cho ảnh)")
+    w["sourceElement"] = opt({"type": "string"}, "[v1.5] Floorplan wall element this scene wall comes from")
+    w["floorplanWallId"] = opt({"type": "string"}, "[v1.5] Imported floorplan wall record (WALL-FP-n)")
     w["visible"] = {"type": "boolean", "default": True, "description": "[Bổ sung v1.3 (VicKitchenCabinet)] false = chỉ là dữ liệu (neo tủ, lỗ cửa), không dựng khối; tường thật của mặt bằng nằm trong room.structures"}
     w["thicknessSource"] = {"type": "string", "enum": ["measured", "assumed"],
                             "description": "[Bổ sung v1.3 (VicKitchenCabinet)] Độ dày đo từ mặt bằng (measured) hay giả định (assumed)"}
@@ -99,6 +115,22 @@ def main():
                                  "hinge": {"$ref": "#/$defs/vec3"},
                                  "arrow": {"type": "array", "items": {"$ref": "#/$defs/vec3"}, "description": "Cầu thang: từ chân lên đỉnh"},
                                  "steps": {"type": "integer", "description": "Số bậc cầu thang (độ cao đo tổng = height)"}}}}
+    P["room"]["properties"]["surfaces"] = {
+        "type": "array", "description": "[Bổ sung v1.7 (VicKitchenCabinet)] Mọi mặt phẳng của mọi tường (kitchen.wall_surfaces): mặt bên theo từng "
+        "cạnh đường viền (hình chữ nhật origin + u + width + height, có lỗ cửa holes), mặt trên / dưới (outline ở cao độ y). id ổn định "
+        "<tường>#<mặt>; room = phòng mặt đó nhìn vào (null: không thuộc phòng nào). Toạ độ như phần còn lại của tài liệu (mm)",
+        "items": {"type": "object", "required": ["id", "wall", "face", "normal", "room"],
+                  "properties": {"id": {"type": "string"}, "wall": {"type": "string"}, "structure": {"type": "string"},
+                                 "face": {"type": "string", "description": "inside | outside | side-a | side-b | start | end | top | bottom | e<k>"},
+                                 "normal": {"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3},
+                                 "room": {"type": ["string", "null"]},
+                                 "origin": {"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3},
+                                 "u": {"type": "array", "items": {"type": "number"}, "minItems": 2, "maxItems": 2},
+                                 "width": {"type": "number"}, "height": {"type": "number"},
+                                 "holes": {"type": "array", "items": {"type": "array", "items": {"type": "number"}, "minItems": 4, "maxItems": 4},
+                                           "description": "[u0, u1, v0, v1] trên mặt, v từ chân mặt lên"},
+                                 "y": {"type": "number"}, "outline": {"type": "array", "minItems": 3, "items": xz},
+                                 "materialId": {"type": "string", "description": "Vật liệu riêng của mặt (gán theo mặt); không có = vật liệu tường"}}}}
     P["room"]["properties"]["floor"]["properties"]["outline"] = opt(
         {"type": "array", "minItems": 3, "items": {"type": "object", "required": ["x", "z"],
                                                        "properties": {"x": {"type": "number"}, "z": {"type": "number"}}}},
@@ -264,6 +296,15 @@ def main():
     out = HERE / "kitchen-threejs.schema.json"
     out.write_text(json.dumps(s, ensure_ascii=False, indent=2), encoding="utf-8")
     print("đã ghi", out)
+    import sys
+    sys.path.insert(0, str(HERE.parent))
+    from kitchen.spec import Opening
+    opening_schema = Opening.model_json_schema(mode="validation")
+    opening_schema["$schema"] = "https://json-schema.org/draft/2020-12/schema"
+    opening_schema["$id"] = "https://example.com/schemas/opening.schema.json"
+    opening_out = HERE / "opening.schema.json"
+    opening_out.write_text(json.dumps(opening_schema, ensure_ascii=False, indent=2), encoding="utf-8")
+    print("wrote", opening_out)
 
 
 if __name__ == "__main__":

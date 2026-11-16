@@ -12,7 +12,7 @@ from .contract import (APPLIANCE_KINDS, END_KINDS, BandAnswer, Box, Line, _band,
                        _int, _int_list, _num, _obj, _text)
 from .errors import invalid
 
-LAYOUTS: tuple[str, ...] = ("straight", "l-shape", "u-shape")
+LAYOUTS: tuple[str, ...] = ("straight", "l-shape", "u-shape", "none")      # none: no cabinets in the picture (a wall with a door or window)
 VIEWS: tuple[str, ...] = ("frontal", "perspective")
 WALLS: tuple[str, ...] = ("left", "back", "right")
 STOREYS: tuple[str, ...] = ("base", "upper", "upper-top")
@@ -106,6 +106,10 @@ def _seg(v: Any, what: str) -> tuple[Pt, Pt]:
 def parse_scene(data: Any) -> Scene:
     d = _obj(data, "scene")
     layout = _enum(d.get("layout"), LAYOUTS, "layout")
+    if layout == "none":                  # ảnh không có tủ (chỉ tường + cửa): không có dãy để dựng camera
+        mats = d.get("materials", {})
+        return {"layout": "none", "view": _enum(d.get("view", "frontal"), VIEWS, "view"), "runs": [],
+                "materials": dict(sorted({str(k): str(v) for k, v in mats.items()}.items())) if isinstance(mats, dict) else {}}
     view = _enum(d.get("view"), VIEWS, "view")
     raw = d.get("runs")
     if not isinstance(raw, list) or not raw:

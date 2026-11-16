@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { isClick, pickTarget, actionsFor, buildOp, layerFor, describeProposal, menuPosition, selectionEffect, sceneToMm, lineTemplate, floorPoint, dragChange, runModulesOf } from '../../web/menu-logic.js';
+import { isClick, pickTarget, actionsFor, buildOp, layerFor, describeProposal, menuPosition, selectionEffect, sceneToMm, lineTemplate, floorPoint, dragChange, runModulesOf, openingCommand, cabinetTypeChoices } from '../../web/menu-logic.js';
 
 const spec = { module: [{ id: 'TD1', type: 'base', wall: 'back', y: 0, height: 720, depth: 560, fromCorner: 0, width: 600, material: 'Trắng mờ' }, { id: 'KG1', type: 'corner-shelf', wall: 'corner' }] };
 const hit = (userData, visible = true) => ({ object: { userData, visible } });
@@ -18,6 +18,76 @@ test('the nearest module or visible structure wins; empty space and unknown mesh
   assert.deepEqual(pickTarget([hit({ structureId: 'STRUCT-w1' }, false), hit({ module: 'TD1' })], ['TD1']), { kind: 'module', id: 'TD1' });
   assert.equal(pickTarget([hit({ module: 'molding-1' })], ['TD1']), null);
   assert.equal(pickTarget([], ['TD1']), null);
+  assert.deepEqual(pickTarget([{ ...hit({ module: 'TD1' }), point: { x: 1, z: 2 } }], ['TD1']),
+    { kind: 'module', id: 'TD1', point: { x: 1, z: 2 } });
+});
+
+test('right-click door commands place an opening on the nearest wall at the clicked position', () => {
+  const doc = { room: { walls: [{ id: 'WALL-BACK', start: { x: 0, z: 0 }, end: { x: -4000, z: 0 } }] } };
+  const target = { kind: 'floor', point: { x: -2000, z: 100 } };
+  const result = openingCommand('tạo cửa đi rộng 80 cm ở vị trí này', target, spec, doc);
+  assert.deepEqual(result.operation, {
+    op: 'add-opening',
+    opening: { kind: 'door', openingType: 'door-swing-1', point: { x: -2000, z: 100 },
+      width: 800, height: 2100, sill: 0, opens: 'in', source: 'human' },
+  });
+  assert.match(result.summary, /800 mm/);
+  assert.equal(openingCommand('đổi màu tủ này', target, spec, doc), null);
+});
+
+test('door command can replace the selected cabinet as one atomic preview operation', () => {
+  const doc = { room: { walls: [{ id: 'WALL-BACK', start: { x: 0, z: 0 }, end: { x: -4000, z: 0 } }] } };
+  const result = openingCommand('thay thế vật đang chọn bằng cửa đi ở vị trí này',
+    { kind: 'module', id: 'TD1', point: { x: -300, z: 500 } }, spec, doc);
+  assert.deepEqual(result.operation, { op: 'multi', ops: [
+    { op: 'remove', id: 'TD1', closeGap: false },
+    { op: 'add-opening', opening: { kind: 'door', openingType: 'door-swing-1', point: { x: -300, z: 500 },
+      width: 600, height: 720, sill: 0, opens: 'in', source: 'human' } },
+  ] });
+});
+
+test('door replacement uses the nearest wall even when the selected object is over 900 mm away', () => {
+  const doc = { room: { walls: [{ id: 'WALL-BACK', start: { x: 0, z: 0 }, end: { x: -4000, z: 0 } }] } };
+  const result = openingCommand('thay thế vật đang chọn bằng cửa đi ở vị trí này',
+    { kind: 'module', id: 'TD1', point: { x: -2000, z: 1200 } }, spec, doc);
+  assert.equal(result.operation.ops[1].op, 'add-opening');
+  assert.deepEqual(result.operation.ops[1].opening.point, { x: -2000, z: 1200 });
+  assert.equal(result.warning, 'Không tìm thấy tường đủ gần vị trí đã chọn để đặt cửa.');
+});
+
+test('door replacement uses the selected floorplan object width without losing the wall endpoints', () => {
+  const floorplan = { binding: { back: 'edge-1' },
+    walls: [{ id: 'wall-1', sourceElement: 'wall_001', edge: 'edge-1' }],
+    elements: [{ id: 'opening-object' }] };
+  const imported = { ...spec, floorplan };
+  const doc = { metadata: { floorplan: { binding: { back: 'edge-1' } } },
+    room: { walls: [{ id: 'WALL-BACK', start: { x: 0, z: 0 }, end: { x: -4000, z: 0 } }],
+      structures: [{ id: 'STRUCT-opening-object', sourceElement: 'opening-object', kind: 'furniture',
+        outline: [{ x: -1374, z: 100 }, { x: -626, z: 100 }, { x: -626, z: 500 }, { x: -1374, z: 500 }], height: 2100 }] } };
+  const result = openingCommand('thay thế vật đang chọn bằng cửa đi ở vị trí này',
+    { kind: 'structure', id: 'STRUCT-opening-object', point: { x: -1000, z: 100 } }, imported, doc);
+  assert.equal(result.operation.ops[1].opening.width, 748);
+  assert.equal(result.operation.ops[1].opening.height, 2100);
+  assert.deepEqual(result.operation.ops[1].opening.point, { x: -1000, z: 0 });          // the middle of the replaced object, on the wall
+});
+
+test('door commands leave the wall axis to the server: the clicked point goes as it is', () => {
+  const imported = { floorplan: { walls: [{ id: 'wall-1', sourceElement: 'wall_006', edge: 0 }], elements: [] } };
+  const doc = { room: { walls: [{ id: 'WALL-BACK', start: { x: 0, z: 0 }, end: { x: -4000, z: 0 } }] } };
+  const result = openingCommand('tạo cửa đi ở vị trí này', { kind: 'floor', point: { x: -2000.4, z: 0 } }, imported, doc);
+  assert.deepEqual(result.operation.opening.point, { x: -2000, z: 0 });
+  assert.equal(result.operation.opening.width, 900);
+  assert.equal(result.operation.opening.host, undefined);
+});
+
+test('door commands require a clicked point, warn but continue when far from a wall, and require a replacement target', () => {
+  const doc = { room: { walls: [{ id: 'WALL-BACK', start: { x: 0, z: 0 }, end: { x: -4000, z: 0 } }] } };
+  assert.throws(() => openingCommand('tạo cửa đi ở vị trí này', { kind: 'floor' }, spec, doc), Error);
+  const far = openingCommand('tạo cửa đi ở vị trí này', { kind: 'floor', point: { x: 0, z: 2000 } }, spec, doc);
+  assert.equal(far.operation.op, 'add-opening');
+  assert.equal(far.warning, 'Không tìm thấy tường đủ gần vị trí đã chọn để đặt cửa.');
+  assert.throws(() => openingCommand('thay thế vật đang chọn bằng cửa đi ở vị trí này',
+    { kind: 'floor', point: { x: -2000, z: 0 } }, spec, doc), Error);
 });
 
 test('actions: modules get design and image actions, structures only view actions, corner modules cannot take a neighbour', () => {
@@ -39,8 +109,7 @@ test('buildOp makes structured operations and refuses incomplete or pointless fo
   const after = buildOp('add', 'TD1', { side: 'after', width: '450', closeGap: true }, spec);
   assert.deepEqual(after, { op: 'add', module: { width: 450 }, afterModule: 'TD1', closeGap: true });
   const before = buildOp('add', 'TD1', { side: 'before', width: 450, closeGap: true }, spec);
-  assert.equal(before.module.fromCorner, 0);
-  assert.equal(before.afterModule, undefined);
+  assert.deepEqual(before, { op: 'add', module: { width: 450 }, beforeModule: 'TD1', closeGap: true });
   assert.throws(() => buildOp('add', 'TD1', { side: 'after', width: 50 }, spec), /Chiều rộng/);
   assert.throws(() => buildOp('add', 'KG1', { side: 'after', width: 400 }, spec));
   assert.throws(() => buildOp('remove', 'GONE', {}, spec), /Không còn module/);
@@ -142,8 +211,7 @@ test('run operations: moving is told along the run and towards the room, whateve
 
 test('a cabinet added to the left of one in a run joins that run', () => {
   const op = buildOp('add', 'A1', { side: 'before', width: 400, closeGap: true }, byRuns);
-  assert.equal(op.module.run, 'R1');
-  assert.equal(op.module.wall, 'island');
+  assert.deepEqual(op, { op: 'add', module: { width: 400 }, beforeModule: 'A1', closeGap: true }, 'the server places it in the run of A1');
 });
 
 test('drawing a run on the floor: the floor is the target where nothing else is, two points and a side make the template', () => {
@@ -173,6 +241,22 @@ test('dragging a run handle: ends stretch along the run, the middle moves the ru
   assert.deepEqual(buildOp(made.action, 'A1', made.form, byRuns), { op: 'move-run', id: 'R1', changes: { x: -2800, z: 0 } });
 });
 
+test('dragging the turn ring: the run turns about its origin by the angle the pointer went round, snapped near 45° steps', async () => {
+  const { dragTurn, runOf } = await import('../../web/menu-logic.js');
+  const o = { x: 0, z: 0 };
+  assert.equal(dragTurn(o, { x: 1, z: 0 }, { x: 0, z: -1 }), 90, 'from +x round to -z: counter-clockwise, as yaw counts');
+  assert.equal(dragTurn(o, { x: 1, z: 0 }, { x: 1, z: 0.3 }), -17);
+  assert.equal(dragTurn(o, { x: 1, z: 0 }, { x: 1, z: -0.98 }), 45, 'within 3° of 45: 45');
+  assert.equal(dragTurn(o, { x: 1, z: 0 }, { x: 1, z: 0.001 }), null, 'a twitch is nothing');
+  assert.equal(dragTurn(o, { x: 1, z: 0 }, { x: -1, z: 0.01 }), 180);
+  assert.deepEqual(dragChange('turn', 0, 0, 30), { action: 'runMove', form: { along: 0, out: 0, turn: 30, free: true } });
+  assert.equal(dragChange('turn', 0, 0, null), null);
+  const run = runOf(byRuns, 'A1');
+  const op = buildOp('runMove', 'A1', { along: 0, out: 0, turn: 30, free: true }, byRuns);
+  assert.deepEqual(op, { op: 'move-run', id: 'R1', changes: { yaw: ((run.yaw + 30 + 180) % 360 + 360) % 360 - 180 } });
+  assert.throws(() => buildOp('runMove', 'A1', { turn: 30 }, byRuns), 'a free angle only from a drag');
+});
+
 test('a drawn line along a wall needs no "which side" question', async () => {
   const { lineAlongWall, wallSegments } = await import('../../web/menu-logic.js');
   const doc = { room: { structures: [{ kind: 'wall', outline: [{ x: 0, z: 0 }, { x: 4000, z: 0 }, { x: 4000, z: -120 }, { x: 0, z: -120 }] }] } };
@@ -180,4 +264,15 @@ test('a drawn line along a wall needs no "which side" question', async () => {
   assert.equal(lineAlongWall({ x: 500, z: 80 }, { x: 3000, z: 90 }, walls), true);
   assert.equal(lineAlongWall({ x: 500, z: 600 }, { x: 3000, z: 600 }, walls), false);      // in the middle of the room
   assert.equal(lineAlongWall({ x: 500, z: 80 }, { x: 500, z: 2500 }, walls), false);       // square to the wall
+});
+
+test('a cabinet added beside another can take any type of the same storey', () => {
+  const items = [{ id: 'base', data: { storey: 'base', label: { vi: 'Tủ dưới' } } }, { id: 'base-drawers', data: { storey: 'base', label: { vi: 'Tủ ngăn kéo' } } },
+    { id: 'upper', data: { storey: 'upper', label: { vi: 'Tủ trên' } } }];
+  assert.deepEqual(cabinetTypeChoices(items, { type: 'base-drawers' }).map((c) => c.id), ['base-drawers', 'base']);
+  assert.deepEqual(cabinetTypeChoices(items, { type: 'nope' }), []);
+  const m = { id: 'TD1', type: 'base', wall: 'back', width: 600, y: 0, height: 720, depth: 560, fromCorner: 0 };
+  const spec = { module: [m] };
+  assert.equal(buildOp('add', 'TD1', { width: 600, side: 'after', type: 'base-drawers' }, spec).module.type, 'base-drawers');
+  assert.equal(buildOp('add', 'TD1', { width: 600, side: 'after', type: 'base' }, spec).module.type, undefined);
 });

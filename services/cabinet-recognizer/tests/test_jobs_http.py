@@ -17,7 +17,7 @@ from cabinet_recognizer.vision import ReplayClient
 HERE = Path(__file__).parent
 NAME = "bep-chu-L-trang"
 IMAGE = (HERE / "data" / f"{NAME}.png").read_bytes()
-ANSWERS = json.loads((HERE / "data" / f"{NAME}.answers.json").read_text(encoding="utf-8"))
+ANSWERS = {**json.loads((HERE / "data" / f"{NAME}.answers.json").read_text(encoding="utf-8")), "openings": {"openings": []}}
 
 
 class JobsTest(unittest.TestCase):

@@ -1,0 +1,8 @@
+{
+ "scene": {"layout": "none", "view": "frontal", "runs": [], "materials": {"wall": "white plaster", "floor": "light oak boards", "door": "black aluminium, clear glass"}},
+ "openings": {"openings": [
+  {"kind": "door", "corners": {"topLeft": [0.231, 0.081], "topRight": [0.722, 0.081], "bottomRight": [0.722, 0.879], "bottomLeft": [0.231, 0.879]},
+   "edgesSeen": "hole", "style": "swing", "leaves": 2, "verticals": [[0.478, 0.55]], "horizontals": [[0.476, 0.226]], "hidden": [],
+   "confidence": 0.85, "note": "two equal swing leaves, fixed glass transom above, black aluminium frame"}
+ ]}
+}

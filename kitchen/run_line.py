@@ -179,7 +179,8 @@ def back_wall_line(spec: KitchenSpec, runs: list[dict[str, Any]]) -> Line:
 def plan_runs(spec: KitchenSpec, line: Line, runs: list[dict[str, Any]], joints: list[tuple[str, str]], clear: list[str] | None = None,
               system: str | None = None) -> dict[str, Any]:
     """The operation that puts a whole recognised kitchen (one run, an L or a U) on ``line``: one explicit run per recognised run, see ``run_lines``.
-    ``clear``: ids of cabinets to remove first. Returns what ``plan_on_line`` returns, plus ``runs`` (``[{"source", "run"}]``)."""
+    ``clear``: ids of cabinets to remove first. Returns what ``plan_on_line`` returns, plus ``runs`` (``[{"source", "run"}]``) and ``lines``
+    (run id -> the ``Line`` it stands on: where the doors and windows seen on that run go)."""
     if not runs:
         raise InvalidInput("No run to place", code="no-run")
     placed, skipped = run_lines(line, runs, joints)
@@ -195,7 +196,8 @@ def plan_runs(spec: KitchenSpec, line: Line, runs: list[dict[str, Any]], joints:
         current = apply_op(current, {"op": "add-run", "run": plan["run"]})      # so the next run gets the next id
     if skipped:
         summary.append(said("summary.runs-left-out", ids=', '.join(skipped)))
-    return {"operation": combine_ops(ops), "run": made[0]["run"], "runs": made, "length": float(placed[0][0]["length"]), "summary": summary}
+    return {"operation": combine_ops(ops), "run": made[0]["run"], "runs": made, "length": float(placed[0][0]["length"]), "summary": summary,
+            "lines": {run["id"]: at for run, at in placed}}
 
 
 ANCHOR_KINDS = ("furniture", "column", "wall", "shaft")     # floorplan elements a run can stand against (not openings, stairs, areas)

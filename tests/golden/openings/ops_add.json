@@ -1,0 +1,48 @@
+{
+ "function": "openings.ops.add",
+ "cases": [
+  {
+   "name": "append opening to spec data",
+   "input": {
+    "spec": {
+     "openings": []
+    },
+    "opening": {
+     "id": "OP1",
+     "kind": "door",
+     "width": 900
+    }
+   },
+   "expected": {
+    "openings": [
+     {
+      "id": "OP1",
+      "kind": "door",
+      "width": 900
+     }
+    ]
+   }
+  },
+  {
+   "name": "reject a duplicate opening id",
+   "input": {
+    "spec": {
+     "openings": [
+      {
+       "id": "OP1"
+      }
+     ]
+    },
+    "opening": {
+     "id": "OP1",
+     "kind": "door",
+     "width": 900
+    }
+   },
+   "error": {
+    "kind": "validation",
+    "code": "opening-id-duplicate"
+   }
+  }
+ ]
+}

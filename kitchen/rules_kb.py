@@ -106,7 +106,8 @@ def _plan_point(spec: KitchenSpec, row: str, s: float, d: float) -> tuple[float,
         fr = runs.frames(spec).get(row[4:])
         if fr is not None:
             return fr.to_world(s, d)
-    lsau = (spec.room.length("back") if spec.room else None) or max([m.endAt for m in spec.module if m.wall == "back"] + [0]) + 600
+    from .geometry import wall_length
+    lsau = wall_length(spec)[0]               # a device placed by wall and centre, with no cabinet under it
     seat = runs.wall_seat(row, lsau) or runs.wall_seat("left", lsau)
     assert seat is not None
     return seat.to_world(s, d)
@@ -272,15 +273,15 @@ OPENING_TOPICS = ("doorway-width", "doorway-width-accessible", "doorway-height",
 
 
 def _openings(ctx: _Ctx, spec: KitchenSpec, catalog: Catalog) -> None:
-    """The checks against the room's doors and windows (``rules_openings``). A cabinet standing in a doorway is always a warning."""
+    """The checks against the room's doors and windows (``openings.checks``). A cabinet standing in a doorway is always a warning."""
     params = {t: ctx.p(t) or {} for t in OPENING_TOPICS if t in ctx.sel}
     if not params:
         return
-    from . import geometry, rules_openings
-    found, bodies = geometry.openings_and_bodies(spec, geometry.compile_spec(spec, catalog))
+    from . import geometry
+    from .openings import checks as rules_openings
+    found, bodies = geometry.openings_and_bodies(spec, geometry.compile_spec(spec, catalog), catalog)
     for f in rules_openings.check(found, bodies, params, defaults.of(catalog).openings):
         ctx.add(f.topic, f.modules, f.key, dict(f.params), f.measured, f.limit)
         if f.topic == "doorway-blocked":                 # always a warning: never an error, never only for reference
             ctx.out[-1]["severity"] = "warning"
             ctx.out[-1].pop("reference", None)
-

@@ -35,10 +35,12 @@ def room_section(fp: dict[str, Any], binding: dict[str, Any] | None, wall_materi
     walls: list[dict[str, Any]] = []
     for w in fp["walls"]:
         wid = names.get(w["edge"], w["id"])
-        walls.append({"id": wid, "start": _v3(w["start"]), "end": _v3(w["end"]), "height": w["height"], "thickness": w["thickness"],
+        walls.append({"id": wid, "floorplanWallId": w["id"], **({"sourceElement": w["sourceElement"]} if w.get("sourceElement") else {}),
+                      "start": _v3(w["start"]), "end": _v3(w["end"]), "height": w["height"], "thickness": w["thickness"],
                       "thicknessSource": w["thicknessSource"], "visible": False, "materialId": wall_material, "interiorNormal": _v3(w["interiorNormal"]),
                       "openings": [{"id": f"{wid}-O{i + 1}", "type": "window" if o.get("type") == "window" else "door", "offset": o["offset"],
-                                    "width": o["width"], "height": o["height"], "sillHeight": o.get("sillHeight", 0)} for i, o in enumerate(w["openings"])]})
+                                    "width": o["width"], "height": o["height"], "sillHeight": o.get("sillHeight", 0),
+                                    **({"sourceElement": o["sourceElement"]} if o.get("sourceElement") else {})} for i, o in enumerate(w["openings"])]})
     out_structs: list[dict[str, Any]] = []
     for st in (structs if structs is not None else structures(fp)):
         d = dict(st)

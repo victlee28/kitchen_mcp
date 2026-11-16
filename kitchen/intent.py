@@ -213,7 +213,7 @@ def _merge_notes(items: list[dict], notes: list[dict]) -> list[dict]:
 
 
 def from_template(color: KitchenTemplate, name: str = "", rows: list[dict] | None = None,
-                  catalog: Catalog = builtin.CATALOG) -> KitchenSpec:
+                  catalog: Catalog = builtin.CATALOG, as_rows: bool = False) -> KitchenSpec:
     """Sinh spec từ mẫu. Kích thước không được chỉ định lấy theo tiêu chuẩn ưu tiên của mau.quocGia/khuVuc; các kích thước chung còn lại
     (dày cánh, khe, mặt đá, đỉnh tủ trên khi câu không nói) lấy từ danh mục ``defaults`` của xưởng."""
     new = defaults.of(catalog).new_design
@@ -317,6 +317,18 @@ def from_template(color: KitchenTemplate, name: str = "", rows: list[dict] | Non
                                    height=c.cabinetTop, depth=fr.get("depth", 640), doors=[w / 2, w / 2], niche=fr.get("niche", 1650)))
                 tb.append(Appliance(id=f"TB{len(tb)+1}", type="fridge", name=say("name.appliance.fridge"), dimensions=str(fr.get("dimensions", "")),
                                     module=mods[-1].id))
+            elif cabinet_types.storey_of(type, catalog) in ("upper", "loft"):      # a saved row of wall cabinets: each at its own type
+                loft = cabinet_types.storey_of(type, catalog) == "loft"
+                if loft and c.cabinetTop - c.upperTierSplit < 1:       # no top-cabinet row in this kitchen (as with ``upper-run``)
+                    s += w
+                    continue
+                y = c.upperTierSplit if loft else (max(c.upperBottom + 150, y_hood) if type == "upper-hood" else c.upperBottom)
+                mods.append(Module(id=id("TN" if loft else "TT"), type=type, name=cabinet_types.label_of(type, catalog), wall=wall, fromCorner=s,
+                                   width=w, y=y, height=(c.cabinetTop if loft else c.upperTierSplit) - y, depth=upper_depth,
+                                   doors=[w / 2, w / 2] if w >= rules.double_door_from else [w]))
+                if type == "upper-hood":
+                    tb.append(Appliance(id=f"TB{len(tb)+1}", type="hood", name=say("name.appliance.hood"),
+                                        dimensions=f"{min(w - 40, 730):g} × {rules.hood_height:g}", module=mods[-1].id))
             else:
                 tall = cabinet_types.storey_of(type, catalog) == "tall"
                 mods.append(Module(id=id("TC" if tall else "TD"), type=type, name=cabinet_types.label_of(type, catalog), wall=wall, fromCorner=s,
@@ -452,4 +464,8 @@ def from_template(color: KitchenTemplate, name: str = "", rows: list[dict] | Non
                        moldingProfiles=_mol.embedded([p for p, on in ((color.crownMoldingProfile, crown_molding), (color.baseMoldingProfile, base_molding)) if on], [],
                                                      catalog),
                        source="Sinh từ mẫu; kích thước theo: " + ", ".join(f"{k}={v}" for k, v in check_source.items()))
-    return KitchenSpec.model_validate(spec.model_dump(mode="json"))
+    laid = KitchenSpec.model_validate(spec.model_dump(mode="json"))
+    if as_rows:                     # the layout as laid out: cabinets by wall (``fromCorner`` from the corner), for checking the layout itself
+        return laid
+    from .rows_to_runs import as_runs
+    return as_runs(laid, catalog)   # laid out by wall, a design is by runs
