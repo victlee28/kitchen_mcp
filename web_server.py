@@ -27,6 +27,7 @@ API:
   GET  /api/designs/<id>/history         lịch sử
   POST /api/designs/<id>/opening-command {"prompt", "point", "structureId"?, "module"?, "baseRev"?}: câu lệnh về cửa đi / cửa sổ ở điểm bấm chuột phải (xem trước), hoặc "lưu vào database" cửa / hệ tủ vừa bấm
   POST /api/designs/<id>/command        {"text", "place"?: {kind, id, part?, point?, structureId?, module?, modules?, surfaces?, title?}, "baseRev"?, "lang"?}: câu lệnh chuột phải gửi vào hộp thư của Claude (KITCHEN_MENU_COMMANDS=inbox); 201 bản ghi lệnh
+  GET  /api/model-usage[?day=YYYY-MM-DD]  lời gọi model trong ngày: số lần, token, USD (khi có giá), theo hãng; hạn mức
   GET  /api/command-inbox[?design=&status=]  {"mode": "inbox"|"direct", "commands": [...]}: các lệnh trong hộp thư (cũ nhất trước)
   GET  /api/command-inbox/<mã>           một lệnh;  POST /api/command-inbox/<mã>/drop: rút lại lệnh chưa làm
   POST /api/designs/<id>/layout-template {"label"?, "id"?, "system"?, "rev"?, "save"?: true} hệ tủ của thiết kế thành một mẫu bố trí (lưu vào danh mục)
@@ -241,6 +242,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(200, s.check_request(str(self._body(MAX_IMAGE_BODY).get("text", ""))))
         if p == "/api/image-backends" and method == "GET":
             return self._json(200, s.image_backends())
+        if p == "/api/model-usage" and method == "GET":
+            return self._json(200, s.model_usage(q.get("day") or None))
         if p == "/api/command-inbox" and method == "GET":
             return self._json(200, {"mode": s.command_mode(), "commands": s.command_list(q.get("status") or None, q.get("design") or None)})
         m = re.fullmatch(r"/api/command-inbox/(\d{8}-\d{6}-[a-z0-9]{4})(?:/(drop))?", p)
@@ -530,6 +533,10 @@ if __name__ == "__main__":
     port = int(os.getenv("KITCHEN_PORT", "8080"))
     srv = make_server(port)
     print(f"Web editor: http://localhost:{port}/web/", flush=True)
+    assert SVC is not None
+    worker = SVC.start_inbox_worker()     # KITCHEN_INBOX_WORKER=on: a model carries out the right-click command inbox
+    print("Command inbox: " + (f"carried out by {worker['provider']}" if worker["started"] else f"waiting for Claude by chat ({worker['why']})"),
+          flush=True)
     try:
         srv.serve_forever()
     except KeyboardInterrupt:

@@ -272,12 +272,12 @@ class TestBackendsFromTheCatalog(unittest.TestCase):
 
     def test_hide_rename_and_no_new_ones(self):
         s = self.s
-        self.assertEqual(list(s.image_backends()["backends"]), ["recolor", "job-package", "gemini"])
+        self.assertEqual(list(s.image_backends()["backends"]), ["recolor", "job-package", "gemini", "openai"])
         s.catalog_put("backend", "recolor", {}, "workshop", disabled=True)
         b = s.catalog().data("backend", "gemini")
         s.catalog_put("backend", "gemini", {**b, "name": {"vi": "Gemini của xưởng"}, "rank": 0}, "workshop")
         offered = s.image_backends()["backends"]
-        self.assertEqual(list(offered), ["gemini", "job-package"])
+        self.assertEqual(list(offered), ["gemini", "job-package", "openai"])
         self.assertEqual(offered["gemini"]["name"], "Gemini của xưởng")
         with self.assertRaises(InvalidInput) as e:
             s.catalog_put("backend", "midjourney", {"name": {"vi": "MJ"}, "kind": ["edit"]}, "workshop")

@@ -4,6 +4,7 @@
 - `job-package`: export prompts and images for a person or external chat model; import the result with `submit_image_result`.
 - `gemini`: call the Gemini image API. Credentials and model settings use `GEMINI_API_KEY`, `GEMINI_IMAGE_MODEL`,
   or a separate environment file via `GEMINI_ENV_FILE`.
+- `openai`: call the OpenAI image edit API (the reference image + instruction): `OPENAI_API_KEY`, `OPENAI_IMAGE_MODEL`.
 """
 from __future__ import annotations
 
@@ -29,8 +30,8 @@ class BackendError(ValueError):
         self.code = code  # thieu-anh | khong-ho-tro | qua-tai | het-gio | sinh-that-bai
 
 
-ASYNC = frozenset({"gemini"})      # backends that answer later (a worker thread waits for the model)
-CODED = ("recolor", "job-package", "gemini")      # the adapters this module implements (catalog kind ``backend`` is closed to others)
+ASYNC = frozenset({"gemini", "openai"})      # backends that answer later (a worker thread waits for the model)
+CODED = ("recolor", "job-package", "gemini", "openai")      # the adapters this module implements (catalog kind ``backend`` is closed to others)
 
 
 def _rank(value: Any) -> float:
@@ -126,3 +127,62 @@ class Gemini:
         reason = (cands[0].get("finishReason") if cands else None) or (data.get("promptFeedback") or {}).get("blockReason")
         text_out = " ".join(p.get("text", "") for c in cands for p in (c.get("content") or {}).get("parts") or [])[:300]
         raise BackendError("generation-failed", f"Gemini không trả ảnh (lý do: {reason or 'không rõ'}) {text_out}".strip())
+
+
+# ------------------------------------------------------------------ OpenAI images
+OPENAI_SIZES = {"1:1": "1024x1024", "3:2": "1536x1024", "2:3": "1024x1536"}      # the sizes the image API makes; the result is fitted later
+OPENAI_DEFAULT_MODEL = "gpt-image-1"
+
+
+def openai_size(w: int, h: int) -> str:
+    r = w / h
+    return OPENAI_SIZES["3:2"] if r >= 1.2 else OPENAI_SIZES["2:3"] if r <= 1 / 1.2 else OPENAI_SIZES["1:1"]
+
+
+def multipart(fields: list[tuple[str, str]], files: list[tuple[str, str, bytes, str]], boundary: str) -> bytes:
+    """A multipart/form-data body: text ``fields`` (name, value) and ``files`` (name, filename, bytes, content type)."""
+    out = bytearray()
+    for name, value in fields:
+        out += f'--{boundary}\r\nContent-Disposition: form-data; name="{name}"\r\n\r\n{value}\r\n'.encode()
+    for name, filename, data, ctype in files:
+        out += f'--{boundary}\r\nContent-Disposition: form-data; name="{name}"; filename="{filename}"\r\nContent-Type: {ctype}\r\n\r\n'.encode()
+        out += data + b"\r\n"
+    out += f"--{boundary}--\r\n".encode()
+    return bytes(out)
+
+
+class OpenAIImages:
+    """The OpenAI image edit endpoint: the job's images (reference first) and the same instruction text as Gemini get."""
+
+    def __init__(self, config: Config, opener=urllib.request.urlopen):
+        if not config.openai_api_key:
+            raise BackendError("unsupported", "No OPENAI_API_KEY (set it in .env)")
+        self.key, self.model = config.openai_api_key, config.openai_image_model or OPENAI_DEFAULT_MODEL
+        self.base, self.timeout, self.opener = "https://api.openai.com/v1", config.gemini_timeout, opener
+
+    def generate(self, text: str, images: list[Path], out_path: Path, size: tuple[int, int]) -> dict:
+        boundary = "kitchen" + base64.b16encode(Path(images[0]).name.encode()[:8]).decode() if images else "kitchenboundary"
+        body = multipart([("model", self.model), ("prompt", text), ("size", openai_size(*size)), ("n", "1")],
+                         [("image[]", Path(p).name, Path(p).read_bytes(), "image/png") for p in images], boundary)
+        req = urllib.request.Request(f"{self.base}/images/edits", data=body, method="POST",
+                                     headers={"Authorization": f"Bearer {self.key}", "Content-Type": f"multipart/form-data; boundary={boundary}"})
+        t0 = time.monotonic()
+        try:
+            with self.opener(req, timeout=self.timeout) as r:
+                data = json.loads(r.read())
+        except urllib.error.HTTPError as e:
+            msg = e.read()[:600].decode("utf-8", "replace")
+            if e.code in (429, 503):
+                raise BackendError("overloaded", f"OpenAI is busy or over quota ({e.code}): {msg}")
+            raise BackendError("generation-failed", f"OpenAI answered {e.code}: {msg}")
+        except TimeoutError:
+            raise BackendError("timeout", f"OpenAI did not answer within {self.timeout:.0f} s")
+        except (urllib.error.URLError, ConnectionError) as e:
+            raise BackendError("overloaded", f"Cannot reach OpenAI: {getattr(e, 'reason', e)}")
+        items = data.get("data") or []
+        if items and items[0].get("b64_json"):
+            out_path.write_bytes(base64.b64decode(items[0]["b64_json"]))
+            usage = data.get("usage") or {}
+            return {"model": self.model, "size": openai_size(*size), "seconds": round(time.monotonic() - t0, 1),
+                    **({"tokens": usage.get("total_tokens")} if usage.get("total_tokens") else {})}
+        raise BackendError("generation-failed", f"OpenAI returned no image: {json.dumps(data)[:300]}")

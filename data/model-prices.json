@@ -1,0 +1,7 @@
+{
+ "_note": "Giá USD trên 1 triệu token, theo bảng giá của từng hãng: {\"<provider>\": {\"<model>\": {\"inputPerMTok\": số, \"outputPerMTok\": số}}}. Mô hình không có giá ở đây: vẫn đếm token, không tính tiền.",
+ "anthropic": {},
+ "openai": {},
+ "deepseek": {},
+ "openrouter": {}
+}

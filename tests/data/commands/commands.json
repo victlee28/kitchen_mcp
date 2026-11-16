@@ -1,0 +1,830 @@
+{
+ "schema": "command-cases/1",
+ "design": {
+  "template": {
+   "geometry_edit": "I",
+   "backWallLength": 3600
+  }
+ },
+ "note": "Câu lệnh mẫu và kết quả đúng (theo ý câu, không theo luật hiện có). expect: tập con của thao tác (chuỗi so khớp 'chứa', không phân biệt hoa thường; số sai lệch ≤ 1), hoặc 'clarify' / 'unsupported'. scope: tủ vừa bấm. place: điểm bấm chuột phải (câu về cửa). setup: thao tác dựng trước.",
+ "cases": [
+  {
+   "text": "xóa TD3",
+   "expect": {
+    "op": "remove",
+    "id": "TD3"
+   }
+  },
+  {
+   "text": "xóa tủ này",
+   "scope": [
+    "TD4"
+   ],
+   "expect": {
+    "op": "remove",
+    "id": "TD4"
+   }
+  },
+  {
+   "text": "bỏ TD5 đi",
+   "expect": {
+    "op": "remove",
+    "id": "TD5"
+   }
+  },
+  {
+   "text": "delete TD1",
+   "expect": {
+    "op": "remove",
+    "id": "TD1"
+   }
+  },
+  {
+   "text": "xóa TT4",
+   "expect": {
+    "op": "remove",
+    "id": "TT4"
+   }
+  },
+  {
+   "text": "xóa tủ chậu",
+   "expect": {
+    "op": "remove",
+    "id": "TD2"
+   }
+  },
+  {
+   "text": "xóa TD1 và TD2",
+   "expect": {
+    "op": "multi"
+   },
+   "note": "hai thao tác xóa"
+  },
+  {
+   "text": "xóa hết tủ trên",
+   "expect": {
+    "op": "multi"
+   },
+   "note": "xóa TT1..TT6"
+  },
+  {
+   "text": "rộng 800",
+   "scope": [
+    "TD1"
+   ],
+   "expect": {
+    "op": "update",
+    "id": "TD1",
+    "changes": {
+     "width": 800
+    }
+   }
+  },
+  {
+   "text": "TD3 rộng 700",
+   "expect": {
+    "op": "update",
+    "id": "TD3",
+    "changes": {
+     "width": 700
+    }
+   }
+  },
+  {
+   "text": "cho tủ này rộng 90cm",
+   "scope": [
+    "TD5"
+   ],
+   "expect": {
+    "op": "update",
+    "id": "TD5",
+    "changes": {
+     "width": 900
+    }
+   }
+  },
+  {
+   "text": "make it 500 wide",
+   "scope": [
+    "TD5"
+   ],
+   "expect": {
+    "op": "update",
+    "id": "TD5",
+    "changes": {
+     "width": 500
+    }
+   }
+  },
+  {
+   "text": "TD2 rộng 900",
+   "expect": {
+    "op": "update",
+    "id": "TD2",
+    "changes": {
+     "width": 900
+    }
+   }
+  },
+  {
+   "text": "tủ chậu rộng 900",
+   "expect": {
+    "op": "update",
+    "id": "TD2",
+    "changes": {
+     "width": 900
+    }
+   }
+  },
+  {
+   "text": "tủ bếp nấu rộng 900",
+   "expect": {
+    "op": "update",
+    "id": "TD4",
+    "changes": {
+     "width": 900
+    }
+   }
+  },
+  {
+   "text": "đổi TD6 sang 400",
+   "expect": {
+    "op": "update",
+    "id": "TD6",
+    "changes": {
+     "width": 400
+    }
+   }
+  },
+  {
+   "text": "đổi cánh sang kính",
+   "scope": [
+    "TT2"
+   ],
+   "expect": {
+    "op": "update",
+    "id": "TT2",
+    "changes": {
+     "doorStyle": "glass"
+    }
+   }
+  },
+  {
+   "text": "tủ trên cánh kính",
+   "scope": [
+    "TT3"
+   ],
+   "expect": {
+    "op": "update",
+    "id": "TT3",
+    "changes": {
+     "doorStyle": "glass"
+    }
+   }
+  },
+  {
+   "text": "glass doors",
+   "scope": [
+    "TT5"
+   ],
+   "expect": {
+    "op": "update",
+    "id": "TT5",
+    "changes": {
+     "doorStyle": "glass"
+    }
+   }
+  },
+  {
+   "text": "cánh phẳng",
+   "scope": [
+    "TT2"
+   ],
+   "expect": {
+    "op": "update",
+    "id": "TT2",
+    "changes": {
+     "doorStyle": "flat"
+    }
+   }
+  },
+  {
+   "text": "cánh khung",
+   "scope": [
+    "TD3"
+   ],
+   "expect": {
+    "op": "update",
+    "id": "TD3",
+    "changes": {
+     "doorStyle": "frame"
+    }
+   }
+  },
+  {
+   "text": "đổi tay nắm sang núm tròn",
+   "scope": [
+    "TD2"
+   ],
+   "expect": {
+    "op": "update",
+    "id": "TD2",
+    "changes": {
+     "handle": {
+      "variant": "knob"
+     }
+    }
+   }
+  },
+  {
+   "text": "tay nắm âm",
+   "scope": [
+    "TD3"
+   ],
+   "expect": {
+    "op": "update",
+    "id": "TD3",
+    "changes": {
+     "handle": {
+      "variant": "concealed"
+     }
+    }
+   }
+  },
+  {
+   "text": "thay bằng tủ ngăn kéo",
+   "scope": [
+    "TD3"
+   ],
+   "expect": {
+    "op": "update",
+    "id": "TD3",
+    "changes": {
+     "type": "base-drawer"
+    }
+   }
+  },
+  {
+   "text": "đổi TD5 thành tủ ngăn kéo",
+   "expect": {
+    "op": "update",
+    "id": "TD5",
+    "changes": {
+     "type": "base-drawer"
+    }
+   }
+  },
+  {
+   "text": "TT2 cao 800",
+   "expect": {
+    "op": "update",
+    "id": "TT2",
+    "changes": {
+     "height": 800
+    }
+   }
+  },
+  {
+   "text": "đổi màu cánh tủ này sang gỗ sồi",
+   "scope": [
+    "TD3"
+   ],
+   "expect": {
+    "op": "update",
+    "id": "TD3",
+    "changes": {
+     "material": "sồi"
+    }
+   },
+   "note": "không được đọc thành xóa"
+  },
+  {
+   "text": "thêm tủ dưới rộng 600 sau TD2",
+   "expect": {
+    "op": "add",
+    "module": {
+     "type": "base",
+     "width": 600
+    },
+    "afterModule": "TD2"
+   }
+  },
+  {
+   "text": "thêm một tủ 450 sau TD5",
+   "expect": {
+    "op": "add",
+    "module": {
+     "width": 450
+    },
+    "afterModule": "TD5"
+   }
+  },
+  {
+   "text": "add a 600 base cabinet after TD1",
+   "expect": {
+    "op": "add",
+    "module": {
+     "width": 600
+    },
+    "afterModule": "TD1"
+   }
+  },
+  {
+   "text": "thêm tủ",
+   "expect": "clarify",
+   "note": "thiếu bề rộng: phải hỏi lại"
+  },
+  {
+   "text": "đổi màu tủ dưới sang trắng",
+   "expect": {
+    "op": "common",
+    "changes": {
+     "material": {
+      "base": "trắng"
+     }
+    }
+   }
+  },
+  {
+   "text": "tủ trên màu xám",
+   "expect": {
+    "op": "common",
+    "changes": {
+     "material": {
+      "upper": "xám"
+     }
+    }
+   }
+  },
+  {
+   "text": "mặt đá màu đen",
+   "expect": {
+    "op": "common",
+    "changes": {
+     "material": {
+      "countertop": "đen"
+     }
+    }
+   }
+  },
+  {
+   "text": "hạ mặt bếp xuống 850",
+   "expect": {
+    "op": "common",
+    "changes": {
+     "countertop": 850
+    }
+   }
+  },
+  {
+   "text": "mặt bàn cao 900",
+   "expect": {
+    "op": "common",
+    "changes": {
+     "countertop": 900
+    }
+   }
+  },
+  {
+   "text": "trần cao 2700",
+   "expect": {
+    "op": "common",
+    "changes": {
+     "ceiling": 2700
+    }
+   }
+  },
+  {
+   "text": "bỏ phào",
+   "expect": {
+    "op": "set-moldings"
+   },
+   "note": "tắt phào"
+  },
+  {
+   "text": "thêm phào chân",
+   "expect": {
+    "op": "set-moldings"
+   },
+   "note": "bật phào chân"
+  },
+  {
+   "text": "cho cái tủ này to ra một chút",
+   "scope": [
+    "TD1"
+   ],
+   "expect": "clarify",
+   "note": "mơ hồ: phải hỏi bao nhiêu"
+  },
+  {
+   "text": "xin chào",
+   "expect": "unsupported"
+  },
+  {
+   "text": "xóa cánh cửa",
+   "scope": [
+    "TD3"
+   ],
+   "expect": "clarify",
+   "note": "cánh tủ, không phải cửa phòng; mơ hồ"
+  },
+  {
+   "text": "tạo cửa sổ",
+   "place": {
+    "point": {
+     "x": -1500,
+     "z": -50
+    }
+   },
+   "expect": {
+    "op": "add-opening",
+    "opening": {
+     "kind": "window",
+     "sill": 900
+    }
+   }
+  },
+  {
+   "text": "tạo cửa sổ 1200x1400 cách sàn 1000",
+   "place": {
+    "point": {
+     "x": -1500,
+     "z": -50
+    }
+   },
+   "expect": {
+    "op": "add-opening",
+    "opening": {
+     "kind": "window",
+     "width": 1200,
+     "height": 1400,
+     "sill": 1000
+    }
+   }
+  },
+  {
+   "text": "thêm cửa đi",
+   "place": {
+    "point": {
+     "x": -1500,
+     "z": -50
+    }
+   },
+   "expect": {
+    "op": "add-opening",
+    "opening": {
+     "kind": "door",
+     "sill": 0
+    }
+   }
+  },
+  {
+   "text": "tạo cửa đi hai cánh rộng 1400",
+   "place": {
+    "point": {
+     "x": -1500,
+     "z": -50
+    }
+   },
+   "expect": {
+    "op": "add-opening",
+    "opening": {
+     "openingType": "door-swing-2",
+     "width": 1400
+    }
+   }
+  },
+  {
+   "text": "thêm cửa sổ lùa 1600x1200",
+   "place": {
+    "point": {
+     "x": -1500,
+     "z": -50
+    }
+   },
+   "expect": {
+    "op": "add-opening",
+    "opening": {
+     "openingType": "window-sliding-2",
+     "width": 1600,
+     "height": 1200
+    }
+   }
+  },
+  {
+   "text": "tạo lối đi rộng 900",
+   "place": {
+    "point": {
+     "x": -1500,
+     "z": -50
+    }
+   },
+   "expect": {
+    "op": "add-opening",
+    "opening": {
+     "kind": "passage",
+     "width": 900
+    }
+   }
+  },
+  {
+   "text": "add a window 1000 wide",
+   "place": {
+    "point": {
+     "x": -1500,
+     "z": -50
+    }
+   },
+   "expect": {
+    "op": "add-opening",
+    "opening": {
+     "kind": "window",
+     "width": 1000
+    }
+   }
+  },
+  {
+   "text": "tạo cửa sổ cao 1200 bậu 1100",
+   "place": {
+    "point": {
+     "x": -1500,
+     "z": -50
+    }
+   },
+   "expect": {
+    "op": "add-opening",
+    "opening": {
+     "kind": "window",
+     "height": 1200,
+     "sill": 1100
+    }
+   }
+  },
+  {
+   "text": "lắp cửa sổ gỗ",
+   "place": {
+    "point": {
+     "x": -1500,
+     "z": -50
+    }
+   },
+   "expect": {
+    "op": "add-opening",
+    "opening": {
+     "kind": "window"
+    }
+   }
+  },
+  {
+   "text": "tạo cửa chính",
+   "place": {
+    "point": {
+     "x": -1500,
+     "z": -50
+    }
+   },
+   "expect": {
+    "op": "add-opening",
+    "opening": {
+     "kind": "door"
+    }
+   }
+  },
+  {
+   "text": "window 1200 wide, 1000 off the floor",
+   "place": {
+    "point": {
+     "x": -1500,
+     "z": -50
+    }
+   },
+   "expect": {
+    "op": "add-opening",
+    "opening": {
+     "kind": "window",
+     "width": 1200,
+     "sill": 1000
+    }
+   }
+  },
+  {
+   "text": "xóa cửa sổ này",
+   "place": {
+    "point": {
+     "x": -1500,
+     "z": -50
+    }
+   },
+   "setup": [
+    {
+     "op": "add-opening",
+     "opening": {
+      "kind": "window",
+      "openingType": "window-swing-2",
+      "source": "human",
+      "point": {
+       "x": -1500,
+       "z": -50
+      },
+      "width": 1200,
+      "height": 1200,
+      "sill": 900
+     }
+    }
+   ],
+   "expect": {
+    "op": "remove-opening"
+   }
+  },
+  {
+   "text": "bỏ cửa sổ",
+   "place": {
+    "point": {
+     "x": -1500,
+     "z": -50
+    }
+   },
+   "setup": [
+    {
+     "op": "add-opening",
+     "opening": {
+      "kind": "window",
+      "openingType": "window-swing-2",
+      "source": "human",
+      "point": {
+       "x": -1500,
+       "z": -50
+      },
+      "width": 1200,
+      "height": 1200,
+      "sill": 900
+     }
+    }
+   ],
+   "expect": {
+    "op": "remove-opening"
+   }
+  },
+  {
+   "text": "nâng cửa sổ lên 1100",
+   "place": {
+    "point": {
+     "x": -1500,
+     "z": -50
+    }
+   },
+   "setup": [
+    {
+     "op": "add-opening",
+     "opening": {
+      "kind": "window",
+      "openingType": "window-swing-2",
+      "source": "human",
+      "point": {
+       "x": -1500,
+       "z": -50
+      },
+      "width": 1200,
+      "height": 1200,
+      "sill": 900
+     }
+    }
+   ],
+   "expect": {
+    "op": "update-opening",
+    "changes": {
+     "sill": 1100
+    }
+   }
+  },
+  {
+   "text": "sửa cửa sổ rộng 1500",
+   "place": {
+    "point": {
+     "x": -1500,
+     "z": -50
+    }
+   },
+   "setup": [
+    {
+     "op": "add-opening",
+     "opening": {
+      "kind": "window",
+      "openingType": "window-swing-2",
+      "source": "human",
+      "point": {
+       "x": -1500,
+       "z": -50
+      },
+      "width": 1200,
+      "height": 1200,
+      "sill": 900
+     }
+    }
+   ],
+   "expect": {
+    "op": "update-opening",
+    "changes": {
+     "width": 1500
+    }
+   }
+  },
+  {
+   "text": "chỉnh lại cửa sổ cách sàn 950",
+   "place": {
+    "point": {
+     "x": -1500,
+     "z": -50
+    }
+   },
+   "setup": [
+    {
+     "op": "add-opening",
+     "opening": {
+      "kind": "window",
+      "openingType": "window-swing-2",
+      "source": "human",
+      "point": {
+       "x": -1500,
+       "z": -50
+      },
+      "width": 1200,
+      "height": 1200,
+      "sill": 900
+     }
+    }
+   ],
+   "expect": {
+    "op": "update-opening",
+    "changes": {
+     "sill": 950
+    }
+   }
+  },
+  {
+   "text": "đổi thành cửa sổ lật",
+   "place": {
+    "point": {
+     "x": -1500,
+     "z": -50
+    }
+   },
+   "setup": [
+    {
+     "op": "add-opening",
+     "opening": {
+      "kind": "window",
+      "openingType": "window-swing-2",
+      "source": "human",
+      "point": {
+       "x": -1500,
+       "z": -50
+      },
+      "width": 1200,
+      "height": 1200,
+      "sill": 900
+     }
+    }
+   ],
+   "expect": {
+    "op": "update-opening",
+    "changes": {
+     "openingType": "window-top-hung"
+    }
+   }
+  },
+  {
+   "text": "đổi thành cửa đi",
+   "place": {
+    "point": {
+     "x": -1500,
+     "z": -50
+    }
+   },
+   "setup": [
+    {
+     "op": "add-opening",
+     "opening": {
+      "kind": "window",
+      "openingType": "window-swing-2",
+      "source": "human",
+      "point": {
+       "x": -1500,
+       "z": -50
+      },
+      "width": 1200,
+      "height": 1200,
+      "sill": 900
+     }
+    }
+   ],
+   "expect": {
+    "op": "update-opening",
+    "changes": {
+     "kind": "door",
+     "sill": 0
+    }
+   }
+  }
+ ]
+}

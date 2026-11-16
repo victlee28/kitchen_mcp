@@ -60,6 +60,34 @@ class KitchenService:
         self.opening_service = OpeningService(self.store, self.catalog, self.catalog_for_revision)
         from .command_inbox import CommandInbox
         self.commands = CommandInbox(self.config.command_inbox or Path(self.store.path).parent / "command-inbox", self.clock)
+        from .model_gateway import ModelGateway
+        prices_file = Path(data_dir or self.config.data_dir or Path(__file__).resolve().parent.parent / "data") / "model-prices.json"
+        self.models = ModelGateway(self.config, Path(self.store.path).parent / "logs" / "model-usage.jsonl",
+                                   json.loads(prices_file.read_text(encoding="utf-8")) if prices_file.exists() else {}, clock=self.clock)
+
+    def inbox_worker(self):
+        """The model that carries out the command inbox without a chat (``KITCHEN_INBOX_WORKER=on``); its instructions are the catalog
+        text ``prompt-text/inbox-worker``."""
+        from .inbox_worker import InboxWorker
+        from .prompts import photo as prompt_texts
+        return InboxWorker(self, self.config.inbox_provider, lambda: prompt_texts.text('inbox-worker', self.catalog()))
+
+    def start_inbox_worker(self, every: float = 5.0) -> dict:
+        """Start the worker when the settings ask for it and a model is set: ``{"started", "provider", "why"?}``."""
+        provider = self.config.inbox_provider or self.models.primary()
+        if self.config.inbox_worker != 'on':
+            return {'started': False, 'provider': provider, 'why': 'KITCHEN_INBOX_WORKER is off'}
+        if not self.models.available(self.config.inbox_provider):
+            return {'started': False, 'provider': provider,
+                    'why': 'no model for the inbox worker (KITCHEN_INBOX_PROVIDER / KITCHEN_LLM_PROVIDER and its API key)'}
+        self._worker = self.inbox_worker()
+        self._worker.start(every)
+        return {'started': True, 'provider': provider}
+
+    def model_usage(self, day: str | None = None) -> dict:
+        """Model calls of one day (UTC): calls, tokens, dollars where a price is known, per provider; and the budget set."""
+        return {**self.models.usage(day), "budgetTokens": self.config.model_budget_tokens, "budgetUsd": self.config.model_budget_usd,
+                "provider": self.models.primary(), "fallback": self.config.llm_fallback}
 
     # ---------- the command inbox: right-click sentences Claude carries out (KITCHEN_MENU_COMMANDS=inbox)
     def command_mode(self) -> str:
@@ -637,7 +665,7 @@ class KitchenService:
         name = legacy.pop('name', name)
         if legacy:
             raise TypeError(f"Unexpected options: {', '.join(legacy)}")
-        template, llm_result = llm.parse_prompt_llm(prompt, self.config)
+        template, llm_result = llm.parse_prompt_llm(prompt, self.models)
         notes: list[str] = []
         parser_source = 'deepseek'
         if template is None:
@@ -699,7 +727,7 @@ class KitchenService:
             return {'id': design_id, 'baseRev': current, **result, 'proposal': self.propose(design_id, result['operation'], current, None, country)}
         result = edit_intent.interpret_edit(spec, text, scope, self.catalog())
         if result['status'] == 'unsupported' and use_llm:
-            guess, status = llm.edit_operation_llm(text, spec, self.config)
+            guess, status = llm.edit_operation_llm(text, spec, self.models)
             result = edit_intent.check_operation(guess) if guess else {**result, 'llm': status}
         if result['status'] != 'ok':
             return {'id': design_id, 'baseRev': current, **result}

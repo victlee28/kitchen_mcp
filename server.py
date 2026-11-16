@@ -234,11 +234,11 @@ def get_view_status(design_id: str, rev: int | None=None) -> dict[str, Any]:
     """Per view: does the approved image still match the design (current / stale-appearance / stale-geometry / unknown / none)?"""
     return _call(lambda: {'views': svc().images.view_status(design_id, rev)})
 
-def regenerate_stale_views(design_id: str, views: list[str] | None=None, backend: Literal['recolor', 'job-package', 'gemini']='recolor', base_rev: int | None=None) -> dict[str, Any]:
+def regenerate_stale_views(design_id: str, views: list[str] | None=None, backend: Literal['recolor', 'job-package', 'gemini', 'openai']='recolor', base_rev: int | None=None) -> dict[str, Any]:
     """Prepare review jobs (not sent) that re-apply changed materials onto the approved images of the stale views."""
     return _call(svc().images.regenerate_stale, design_id, views, backend, base_rev)
 
-def create_image_job(design_id: str, view: str, target_layer: str | None=None, instruction: str='', mode: Literal['quick', 'design']='quick', material: str | None=None, backend: Literal['recolor', 'job-package', 'gemini']='recolor', kind: Literal['edit', 'gen0', 'geometry_edit']='edit', reference: str | None=None, base_rev: int | None=None, seed: int | None=None, tasks: list[dict[str, Any]] | None=None, preview_only: bool=False, image_changes: list[dict[str, Any]] | None=None, operation: Literal['change-material', 'replace-item', 'remove-item', 'add-item', 'change-style'] | None=None, lighting: Literal['daylight', 'late-afternoon', 'dim-evening'] | None=None, style_from: str | None=None) -> dict[str, Any]:
+def create_image_job(design_id: str, view: str, target_layer: str | None=None, instruction: str='', mode: Literal['quick', 'design']='quick', material: str | None=None, backend: Literal['recolor', 'job-package', 'gemini', 'openai']='recolor', kind: Literal['edit', 'gen0', 'geometry_edit']='edit', reference: str | None=None, base_rev: int | None=None, seed: int | None=None, tasks: list[dict[str, Any]] | None=None, preview_only: bool=False, image_changes: list[dict[str, Any]] | None=None, operation: Literal['change-material', 'replace-item', 'remove-item', 'add-item', 'change-style'] | None=None, lighting: Literal['daylight', 'late-afternoon', 'dim-evening'] | None=None, style_from: str | None=None) -> dict[str, Any]:
     """Create an image-generation or image-editing job. style_from: 'auto' or a view name whose approved image guides materials and light (automatic for a first image; 'none' turns it off)."""
     return _slim_job(_call(svc().images.create, design_id, view, target_layer, instruction=instruction, mode=mode, material=material, backend=backend, reference=reference, base_rev=base_rev, kind=kind, seed=seed, tasks=tasks, preview=preview_only, geometry_items=image_changes, operation=operation, lighting=lighting, style_from=style_from))
 
@@ -317,7 +317,12 @@ def opening_command(design_id: str, text: str, place: dict[str, Any], base_rev: 
     """
     return _call(svc().opening_command, design_id, text, place, 'user', base_rev, country)
 
-TOOLS = [list_menu_commands, get_menu_command, answer_menu_command, opening_command, apply_change, create_design, list_floorplan_rooms, import_floorplan, bind_floorplan, design_kitchen, list_designs, get_design, design_history, list_openings, opening_types, propose_opening, add_module, update_module, remove_module, update_global, set_moldings, list_molding_profiles, apply_action, propose_change, interpret_edit, recognize_design, propose_template, save_layout_template, revert_design, validate_design, get_scene, export_threejs, render_views, search_knowledge, list_regions, add_knowledge, export_ai_package, list_layers, get_view_status, regenerate_stale_views, create_image_job, get_image_job, list_image_jobs, submit_image_result, import_base_image, accept_image_job, reject_image_job, regenerate_image_job, send_image_job]
+def model_usage(day: str | None = None) -> dict[str, Any]:
+    """Language-model calls of the app on one day (UTC YYYY-MM-DD, default today): calls, failures, tokens, dollars where a price is
+    known (data/model-prices.json), per provider; the daily budget and the providers set."""
+    return _call(svc().model_usage, day)
+
+TOOLS = [list_menu_commands, model_usage, get_menu_command, answer_menu_command, opening_command, apply_change, create_design, list_floorplan_rooms, import_floorplan, bind_floorplan, design_kitchen, list_designs, get_design, design_history, list_openings, opening_types, propose_opening, add_module, update_module, remove_module, update_global, set_moldings, list_molding_profiles, apply_action, propose_change, interpret_edit, recognize_design, propose_template, save_layout_template, revert_design, validate_design, get_scene, export_threejs, render_views, search_knowledge, list_regions, add_knowledge, export_ai_package, list_layers, get_view_status, regenerate_stale_views, create_image_job, get_image_job, list_image_jobs, submit_image_result, import_base_image, accept_image_job, reject_image_job, regenerate_image_job, send_image_job]
 for tool_function in TOOLS:
     mcp.add_tool(tool_function, name=tool_function.__name__, description=(tool_function.__doc__ or '').strip(), structured_output=False if tool_function is render_views else None)
 

@@ -73,7 +73,7 @@ class TestImagesPackage(unittest.TestCase):
         self.assertEqual(j["status"], "error:unsupported", "no key in the Config means no key, whatever the process environment holds")
 
     def test_only_supported_image_backends_are_exposed(self):
-        self.assertEqual(set(self.svc.image_backends()["backends"]), {"recolor", "job-package", "gemini"})
+        self.assertEqual(set(self.svc.image_backends()["backends"]), {"recolor", "job-package", "gemini", "openai"})
 
     def test_every_stored_request_has_the_core_keys_of_job_request(self):
         im = self.svc.images

@@ -47,7 +47,7 @@ VIETNAMESE_BASELINE: dict[str, int] = {
     "kitchen/images/runners.py": 2,
     "kitchen/imaging.py": 4,
     "kitchen/knowledge_seed.py": 1,
-    "kitchen/llm.py": 6,
+    "kitchen/llm.py": 2,
     "kitchen/render.py": 3,
     "kitchen/request_check.py": 33,
     "kitchen/spec.py": 37,

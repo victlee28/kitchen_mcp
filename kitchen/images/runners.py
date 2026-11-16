@@ -45,7 +45,7 @@ class Runners(Component):
                 return self.results.finish(jid, {"backend": {"name": "recolor", "color": used}})
             if b == "job-package":
                 return self.packages.export_package(jid, jdir, req)
-            if b == "gemini":
+            if b in ("gemini", "openai"):
                 fn = self._run_gemini
                 t = threading.Thread(target=self._run_guarded, args=(fn, jid, jdir, req), daemon=True, name=jid)
                 self.env.threads[jid] = t
@@ -56,14 +56,16 @@ class Runners(Component):
         raise InvalidInput(b)
 
     def _run_gemini(self, jid: str, jdir: Path, req: JobRequest):
+        """An image model that takes the reference image + an instruction: Gemini, or OpenAI's image edit (the job's backend)."""
+        name = self.store.get_job(jid)["backend"]
         try:
-            cli = backends.Gemini(self.config)
+            cli = backends.OpenAIImages(self.config) if name == "openai" else backends.Gemini(self.config)
             job = self.store.get_job(jid)
             text, named = self.packages.ai_input(job, jdir, req)
             images = [p for _, p in named]
             self.store.update_job(jid, result={"geminiPrompt": text})
             info = cli.generate(text, images, jdir / "raw.png", size_of(req))
-            self.results.finish(jid, {"backend": {"name": "gemini", **info}})
+            self.results.finish(jid, {"backend": {"name": name, **info}})
         except BackendError as e:
             self.store.update_job(jid, f"error:{e.code}", error=str(e))
 

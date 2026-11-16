@@ -182,7 +182,7 @@ class ImageJobs:
             W, H = job["request"]["size"]
             if render.render_key(geometry.compile_spec(spec, dc), views[job["view"]], W, H) != job["render_key"]:
                 raise InvalidInput("The design's geometry or view changed after the job was made; its masks no longer fit", code="job-stale")
-        if job["backend"] in ("gemini", "job-package"):  # model nhận chỉ dẫn: request phải đủ ảnh, đúng kích thước
+        if job["backend"] in ("gemini", "openai", "job-package"):  # model nhận chỉ dẫn: request phải đủ ảnh, đúng kích thước
             kt = json.loads(self.packages.export_request(jid).read_text(encoding="utf-8")).get("validation") or {}
             if not kt.get("ok", True):
                 failed = "; ".join(map(str, cast(list[Any], kt.get("errors", []))))

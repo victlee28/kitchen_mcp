@@ -32,6 +32,19 @@ class Config:
     default_recognizer: str | None = None          # name used when a request names none (see recognition.choose_recognizer)
     data_dir: Path | None = None                   # the builtin catalog layer and wording (data/); None: <root>/data
     fixed_role: str | None = None                  # KITCHEN_FIXED_ROLE: every request acts as this catalog role (see kitchen.identity)
+    llm_provider: str | None = None                # KITCHEN_LLM_PROVIDER: anthropic | openai | deepseek | openrouter | ollama (None: deepseek when its key is set)
+    llm_model: str | None = None                   # KITCHEN_LLM_MODEL: the model of that provider (None: its default, when it has one)
+    llm_base_url: str | None = None                # KITCHEN_LLM_BASE_URL: another endpoint of the same wire format (a proxy, a LAN server)
+    llm_fallback: str | None = None                # KITCHEN_LLM_FALLBACK: provider[:model] tried when the first one fails
+    llm_timeout: float = 60.0                      # KITCHEN_LLM_TIMEOUT (s)
+    anthropic_api_key: str | None = None
+    openai_api_key: str | None = None
+    openrouter_api_key: str | None = None
+    model_budget_tokens: int = 0                   # KITCHEN_MODEL_BUDGET_TOKENS: tokens per day for all model calls (0 = no limit)
+    model_budget_usd: float = 0.0                  # KITCHEN_MODEL_BUDGET_USD: dollars per day, counted with data/model-prices.json (0 = no limit)
+    inbox_worker: str = "off"                      # KITCHEN_INBOX_WORKER: off | on (the model of KITCHEN_INBOX_PROVIDER, else KITCHEN_LLM_PROVIDER, carries out the command inbox)
+    inbox_provider: str | None = None              # KITCHEN_INBOX_PROVIDER: provider[:model] for the inbox worker
+    openai_image_model: str | None = None          # OPENAI_IMAGE_MODEL: the image backend "openai"
     menu_commands: str = "inbox"                   # KITCHEN_MENU_COMMANDS: inbox (right-click sentences go to Claude's command inbox) | direct
     command_inbox: Path | None = None              # KITCHEN_COMMAND_INBOX: the inbox folder; None: command-inbox/ beside the database
 
@@ -51,5 +64,17 @@ class Config:
                    default_recognizer=(env.get("KITCHEN_RECOGNIZER") or "").strip() or None,
                    data_dir=Path(env.get("KITCHEN_DATA") or root / "data"),
                    fixed_role=(env.get("KITCHEN_FIXED_ROLE") or "").strip().lower() or None,
+                   llm_provider=(env.get("KITCHEN_LLM_PROVIDER") or "").strip().lower() or None,
+                   llm_model=(env.get("KITCHEN_LLM_MODEL") or "").strip() or None,
+                   llm_base_url=(env.get("KITCHEN_LLM_BASE_URL") or "").strip().rstrip("/") or None,
+                   llm_fallback=(env.get("KITCHEN_LLM_FALLBACK") or "").strip() or None,
+                   llm_timeout=float(env.get("KITCHEN_LLM_TIMEOUT") or 60),
+                   anthropic_api_key=env.get("ANTHROPIC_API_KEY") or None, openai_api_key=env.get("OPENAI_API_KEY") or None,
+                   openrouter_api_key=env.get("OPENROUTER_API_KEY") or None,
+                   model_budget_tokens=int(float(env.get("KITCHEN_MODEL_BUDGET_TOKENS") or 0)),
+                   model_budget_usd=float(env.get("KITCHEN_MODEL_BUDGET_USD") or 0),
+                   inbox_worker="on" if (env.get("KITCHEN_INBOX_WORKER") or "").strip().lower() in ("on", "1", "true", "yes") else "off",
+                   inbox_provider=(env.get("KITCHEN_INBOX_PROVIDER") or "").strip() or None,
+                   openai_image_model=(env.get("OPENAI_IMAGE_MODEL") or "").strip() or None,
                    menu_commands="direct" if (env.get("KITCHEN_MENU_COMMANDS") or "").strip().lower() == "direct" else "inbox",
                    command_inbox=Path(env["KITCHEN_COMMAND_INBOX"]) if env.get("KITCHEN_COMMAND_INBOX") else None)
