@@ -136,6 +136,9 @@ def _clause(spec: KitchenSpec, f: str, ids: list[str], catalog: Catalog) -> dict
     if _says(f, "remove", catalog) and not _says(f, "handle", catalog):
         if not ids:
             return _clarify(said("edit.ask.remove"), [m.id for m in spec.module])
+        whole = say("edit.choice.remove-whole")
+        if _says(f, "door", catalog) and not _has(f, fold(whole)):   # "xóa cánh cửa": the cabinet's door, not the cabinet: ask before removing it
+            return _clarify(said("edit.ask.remove-part", ids=", ".join(ids)), [whole])
         ops = [{"op": "remove", "id": i} for i in ids]
         return combine_ops(ops), said("summary.edit.remove", ids=", ".join(ids))
     if _says(f, "handle", catalog):

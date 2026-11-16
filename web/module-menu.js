@@ -37,8 +37,8 @@ export function createModuleMenu(ctx) {
   let lastAppliance = null;   // the appliance model being previewed: once applied, the image tab opens on it      // first point of a run being drawn on the floor (mm); survives closing the menu, the second right click ends the line
   box.setAttribute('role', 'dialog'); box.hidden = true;
   // the command inbox (server setting KITCHEN_MENU_COMMANDS=inbox): sentences typed here go to Claude, who carries them out by MCP
-  let inboxMode = false; let sent = readSent(); let waitingNow = []; let lastTitle = ''; let poller = null;
-  request('/api/command-inbox?status=pending').then(({ data }) => { inboxMode = data?.mode === 'inbox'; if (sent.length) watchInbox(); }).catch(() => { /* old server: direct */ });
+  let inboxMode = false; let inboxWorker = false; let sent = readSent(); let waitingNow = []; let lastTitle = ''; let poller = null;   // inboxWorker: a model carries the inbox out (else Claude by chat)
+  request('/api/command-inbox?status=pending').then(({ data }) => { inboxMode = data?.mode === 'inbox'; inboxWorker = !!data?.worker; if (sent.length) watchInbox(); }).catch(() => { /* old server: direct */ });
 
   function watchInbox() {
     if (poller || !sent.length) return;
@@ -53,6 +53,7 @@ export function createModuleMenu(ctx) {
     let data;
     try { ({ data } = await request(`/api/command-inbox?design=${encodeURIComponent(id)}`)); } catch { return; }
     const commands = Array.isArray(data?.commands) ? data.commands : [];
+    inboxWorker = !!data?.worker;
     const { waiting, news } = inboxNews(commands, sent.filter((c) => c.designId === id).map((c) => c.id));
     const gone = new Set([...news.map((c) => c.id), ...sent.filter((c) => c.designId === id && !commands.some((x) => x.id === c.id)).map((c) => c.id)]);
     const before = waitingNow.length;
@@ -75,7 +76,7 @@ export function createModuleMenu(ctx) {
       if (!data || data.error || status !== 201) return redraw(text, data?.error || tx('ui.loi', { 0: status }));
       sent = [...sent, { id: data.id, text: data.text, designId: id }]; keepSent(sent);
       waitingNow = [...waitingNow, data];
-      const line = tx('ui.command.sent', { 0: data.id });
+      const line = tx(inboxWorker ? 'ui.command.sent-worker' : 'ui.command.sent', { 0: data.id });
       ctx.setStatus(line, 'ok');
       redraw('', line);
       watchInbox();

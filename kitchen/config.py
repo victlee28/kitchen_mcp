@@ -42,7 +42,7 @@ class Config:
     openrouter_api_key: str | None = None
     model_budget_tokens: int = 0                   # KITCHEN_MODEL_BUDGET_TOKENS: tokens per day for all model calls (0 = no limit)
     model_budget_usd: float = 0.0                  # KITCHEN_MODEL_BUDGET_USD: dollars per day, counted with data/model-prices.json (0 = no limit)
-    inbox_worker: str = "off"                      # KITCHEN_INBOX_WORKER: off | on (the model of KITCHEN_INBOX_PROVIDER, else KITCHEN_LLM_PROVIDER, carries out the command inbox)
+    inbox_worker: str = "auto"                     # KITCHEN_INBOX_WORKER: auto (a model carries out the command inbox when one is set, else Claude by chat) | on | off
     inbox_provider: str | None = None              # KITCHEN_INBOX_PROVIDER: provider[:model] for the inbox worker
     openai_image_model: str | None = None          # OPENAI_IMAGE_MODEL: the image backend "openai"
     menu_commands: str = "inbox"                   # KITCHEN_MENU_COMMANDS: inbox (right-click sentences go to Claude's command inbox) | direct
@@ -73,7 +73,8 @@ class Config:
                    openrouter_api_key=env.get("OPENROUTER_API_KEY") or None,
                    model_budget_tokens=int(float(env.get("KITCHEN_MODEL_BUDGET_TOKENS") or 0)),
                    model_budget_usd=float(env.get("KITCHEN_MODEL_BUDGET_USD") or 0),
-                   inbox_worker="on" if (env.get("KITCHEN_INBOX_WORKER") or "").strip().lower() in ("on", "1", "true", "yes") else "off",
+                   inbox_worker={"on": "on", "1": "on", "true": "on", "yes": "on", "off": "off", "0": "off", "false": "off", "no": "off"}.get(
+                       (env.get("KITCHEN_INBOX_WORKER") or "").strip().lower(), "auto"),
                    inbox_provider=(env.get("KITCHEN_INBOX_PROVIDER") or "").strip() or None,
                    openai_image_model=(env.get("OPENAI_IMAGE_MODEL") or "").strip() or None,
                    menu_commands="direct" if (env.get("KITCHEN_MENU_COMMANDS") or "").strip().lower() == "direct" else "inbox",

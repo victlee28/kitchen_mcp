@@ -49,6 +49,18 @@ class TestCases(unittest.TestCase):
         if result["right"] > BASELINE["rulesRight"]:
             print(f"\nThe rules read {result['right']} sentences right: raise rulesRight in tests/data/commands/baseline.json")
 
+    def test_no_sentence_that_does_not_say_remove_removes_a_cabinet(self):
+        """Words that only look like "gỡ" / "loại" without their accents (gỗ, loại tủ) and the door of a cabinet ("xóa cánh cửa") once
+        removed the whole cabinet."""
+        for text in ("đổi màu cánh tủ này sang gỗ sồi", "cánh gỗ óc chó", "đổi loại tủ sang ngăn kéo", "xóa cánh cửa"):
+            with self.subTest(text=text):
+                result = mcmd.measure(self.svc, {**CASES, "cases": [{"text": text, "scope": ["TD3"], "expect": "clarify"}]}, use_llm=False)
+                row = result["rows"][0]
+                self.assertFalse(row["kind"] == "ok" and (row["operation"] or {}).get("op") == "remove", row)
+        result = mcmd.measure(self.svc, {**CASES, "cases": [{"text": "xóa cánh cửa xóa cả tủ", "scope": ["TD3"], "expect": {"op": "remove", "id": "TD3"}}]},
+                              use_llm=False)
+        self.assertTrue(result["rows"][0]["right"], "the answer to the question removes it")
+
     def test_a_model_is_asked_only_for_what_the_rules_cannot_read(self):
         from test_models import FakeTransport, openai_reply   # noqa: E402  (tests folder on the path when run by unittest/pytest)
         replies = [openai_reply('{"op": "update", "id": "TT2", "changes": {"height": 800}}') for _ in range(5)]

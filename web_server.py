@@ -245,7 +245,8 @@ class Handler(BaseHTTPRequestHandler):
         if p == "/api/model-usage" and method == "GET":
             return self._json(200, s.model_usage(q.get("day") or None))
         if p == "/api/command-inbox" and method == "GET":
-            return self._json(200, {"mode": s.command_mode(), "commands": s.command_list(q.get("status") or None, q.get("design") or None)})
+            return self._json(200, {"mode": s.command_mode(), "worker": s.command_worker(),
+                                    "commands": s.command_list(q.get("status") or None, q.get("design") or None)})
         m = re.fullmatch(r"/api/command-inbox/(\d{8}-\d{6}-[a-z0-9]{4})(?:/(drop))?", p)
         if m:
             cid, sub = m.groups()

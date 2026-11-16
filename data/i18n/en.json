@@ -1268,5 +1268,8 @@
  "ui.command.done": "Claude did \"{0}\".",
  "ui.command.failed": "Claude could not do \"{0}\":",
  "ui.command.question": "Claude asks about \"{0}\":",
- "ui.command.send": "Send to Claude"
+ "ui.command.send": "Send to Claude",
+ "edit.ask.remove-part": "Remove the whole cabinet {ids}? The sentence names its door: to remove only the door, say so, e.g. \"open cabinet\".",
+ "edit.choice.remove-whole": "remove the whole cabinet",
+ "ui.command.sent-worker": "Command {0} sent: the AI is carrying it out, the result shows here in a few seconds."
 }

@@ -113,20 +113,33 @@ class TestWorker(unittest.TestCase):
         (asked,) = self.use("openai", [("answer", {"status": "question", "reply": "Rộng thêm bao nhiêu mm?"})]).run_once()
         self.assertEqual((asked["status"], asked["reply"]), ("question", "Rộng thêm bao nhiêu mm?"))
         self.assertEqual(self.svc.command_list("pending"), [], "a question is not pending: the user answers it")
-        self.svc.command_put(self.did, "xóa TD3", {}, rev, "vi")
-        (failed,) = self.use("openai", [mc.ModelError("down", code="model-http")]).run_once()
-        self.assertEqual(failed["status"], "failed")
+        waiting = self.svc.command_put(self.did, "xóa TD3", {}, rev, "vi")
+        worker = self.use("openai", [mc.ModelError("down", code="model-http")])
+        self.assertEqual(worker.run_once(), [], "the model could not answer: nothing closed")
+        self.assertEqual(self.svc.command_get(waiting["id"])["status"], "pending", "left for Claude by chat")
+        self.assertEqual(worker.run_once(), [], "and the worker waits before asking the model again")
+        self.svc.command_drop(waiting["id"])
         self.svc.command_put(self.did, "xóa TD3", {}, rev, "vi")
         (looped,) = self.use("openai", [("get_design", {})] * 8).run_once()
         self.assertEqual((looped["status"], looped["reply"]), ("failed", "No answer after 8 steps"))
         self.assertEqual(self.svc.get(self.did)["rev"], rev)
         self.assertEqual(self.svc.command_get(cmd["id"])["status"], "question")
 
-    def test_it_starts_only_when_asked_and_a_model_is_set(self):
-        self.assertIn("off", self.svc.start_inbox_worker()["why"])
-        self.svc.config = replace(self.svc.config, inbox_worker="on")
+    def test_it_starts_by_itself_when_a_model_is_set_else_claude_by_chat(self):
+        self.assertEqual(self.svc.config.inbox_worker, "auto")
         self.svc.models.config = replace(self.svc.models.config, llm_provider=None, deepseek_api_key=None)
         self.assertIn("no model", self.svc.start_inbox_worker()["why"])
+        self.assertFalse(self.svc.command_worker(), "no API: the inbox waits for Claude by chat")
+        self.svc.config = replace(self.svc.config, inbox_worker="off")
+        self.svc.models.config = replace(self.svc.models.config, llm_provider="anthropic", anthropic_api_key="k")
+        self.assertIn("off", self.svc.start_inbox_worker()["why"])
+        self.svc.config = replace(self.svc.config, inbox_worker="auto")
+        started = self.svc.start_inbox_worker(every=3600)
+        try:
+            self.assertEqual((started["started"], started["provider"]), (True, "anthropic"))
+            self.assertTrue(self.svc.command_worker())
+        finally:
+            self.svc._worker.stop()
 
 
 if __name__ == "__main__":

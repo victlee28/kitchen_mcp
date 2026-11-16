@@ -75,7 +75,7 @@ class KitchenService:
     def start_inbox_worker(self, every: float = 5.0) -> dict:
         """Start the worker when the settings ask for it and a model is set: ``{"started", "provider", "why"?}``."""
         provider = self.config.inbox_provider or self.models.primary()
-        if self.config.inbox_worker != 'on':
+        if self.config.inbox_worker == 'off':
             return {'started': False, 'provider': provider, 'why': 'KITCHEN_INBOX_WORKER is off'}
         if not self.models.available(self.config.inbox_provider):
             return {'started': False, 'provider': provider,
@@ -90,6 +90,11 @@ class KitchenService:
                 "provider": self.models.primary(), "fallback": self.config.llm_fallback}
 
     # ---------- the command inbox: right-click sentences Claude carries out (KITCHEN_MENU_COMMANDS=inbox)
+    def command_worker(self) -> bool:
+        """Whether a model carries out the command inbox now (else the commands wait for Claude by chat)."""
+        worker = getattr(self, '_worker', None)
+        return worker is not None and worker.running()
+
     def command_mode(self) -> str:
         """``inbox`` (the menu sends sentences to Claude) or ``direct`` (the server reads them at once, as before)."""
         return self.config.menu_commands

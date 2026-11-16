@@ -7,7 +7,9 @@ The guard rails do not depend on the model:
 * only the listed tools exist; arguments are checked by the service as for any caller;
 * ``apply_change`` saves only an operation previewed in THIS command (its ``opHash``), exactly as previewed — the model cannot write
   anything else, and every save can be undone (revert);
-* at most ``MAX_STEPS`` model turns per command; a model error, the daily budget or too many steps close the command as ``failed``;
+* at most ``MAX_STEPS`` model turns per command (then ``failed``);
+* the model cannot be reached (no key, network, the daily budget): the command stays pending for Claude by chat, and the worker waits
+  ``PAUSE_S`` before trying the model again;
 * the command is closed with ``answer``: done (with the revision), question (the user must say more) or failed.
 """
 from __future__ import annotations
@@ -15,6 +17,7 @@ from __future__ import annotations
 import json
 import logging
 import threading
+import time
 from collections.abc import Callable, Mapping
 from typing import Any
 
@@ -25,6 +28,7 @@ from .jsonview import as_dict
 logger = logging.getLogger("kitchen.inbox_worker")
 
 MAX_STEPS = 8
+PAUSE_S = 300.0              # after the model could not be reached
 RESULT_CHARS = 6000          # a tool result longer than this is cut (the model sees that it was)
 
 
@@ -63,6 +67,11 @@ class InboxWorker:
         self.instructions = instructions or (lambda: "")
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
+        self._paused_until = 0.0
+
+    def running(self) -> bool:
+        """Started, not stopped, and not waiting after the model could not be reached."""
+        return self._thread is not None and not self._stop.is_set() and time.monotonic() >= self._paused_until
 
     # ---------------------------------------------------------------- the loop
     def start(self, every: float = 5.0) -> None:
@@ -83,10 +92,21 @@ class InboxWorker:
         self._stop.set()
 
     def run_once(self) -> list[dict[str, Any]]:
-        return [self.handle(c) for c in self.svc.command_list("pending")]
+        """Carry out the pending commands; stop at the first one the model cannot be reached for (it stays pending)."""
+        if time.monotonic() < self._paused_until:
+            return []
+        done = []
+        for c in self.svc.command_list("pending"):
+            out = self.handle(c)
+            if out is None:
+                self._paused_until = time.monotonic() + PAUSE_S
+                break
+            done.append(out)
+        return done
 
     # ---------------------------------------------------------------- one command
-    def handle(self, command: Mapping[str, Any]) -> dict[str, Any]:
+    def handle(self, command: Mapping[str, Any]) -> dict[str, Any] | None:
+        """The command closed (done / question / failed), or None when the model could not be reached and nothing was saved yet."""
         cid, did = str(command["id"]), str(command["designId"])
         place = dict(command.get("place") or {})
         previews: dict[str, tuple[dict[str, Any], int]] = {}
@@ -99,6 +119,9 @@ class InboxWorker:
                 reply = self.svc.models.ask(mc.ModelRequest(self.instructions(), tuple(messages), TOOLS, max_tokens=1500, task="inbox"),
                                             self.provider)
             except mc.ModelError as error:
+                if state["revision"] is None:          # nothing saved: leave it for Claude by chat, try the model again later
+                    logger.warning("[INBOX] %s left pending, the model could not answer: %s", cid, error)
+                    return None
                 return self._close(cid, "failed", f"Model: {error}", state["revision"])
             messages.append(reply.as_message())
             if not reply.calls:

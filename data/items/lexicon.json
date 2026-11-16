@@ -1479,9 +1479,11 @@
   "aliases": {
    "vi": [
     "xóa",
+    "xoá",
     "bỏ",
-    "gỡ",
-    "loại"
+    "gỡ bỏ",
+    "tháo bỏ",
+    "loại bỏ"
    ],
    "en": [
     "remove",
