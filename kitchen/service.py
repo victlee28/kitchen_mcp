@@ -363,13 +363,13 @@ class KitchenService:
                 request['rightWallLength'] = self.LAYOUT_PREVIEW_SIDE
             if 'left' in walls:
                 request['leftWallLength'] = self.LAYOUT_PREVIEW_SIDE
-            spec = intent.from_template(KitchenTemplate.model_validate(request), '', None, trial, as_rows=True)
+            spec = intent.from_template(KitchenTemplate.model_validate(request), '', None, trial)
             scene = geometry.compile_spec(spec, trial)
             storey = {m.id: m.storey for m in spec.module}
             parts = [{'module': p.module, 'type': p.type, 'storey': storey.get(p.module or ''), 'x': [p.min[0], p.max[0]], 'z': [p.min[2], p.max[2]]}
                      for p in scene.parts if p.module in storey and p.type in ('carcass', 'side-panel', 'shelf')]
             samples.append({'back': back, 'request': request, 'parts': parts,
-                            'modules': [{'id': m.id, 'type': m.type, 'wall': m.wall, 'fromCorner': m.fromCorner, 'width': m.width, 'storey': m.storey}
+                            'modules': [{'id': m.id, 'type': m.type, 'run': m.run, 'fromCorner': m.fromCorner, 'width': m.width, 'storey': m.storey}
                                         for m in spec.module],
                             'notes': [n for n in (spec.promptInterpretation or []) if n.get('message')]})
         return {'id': id, 'samples': samples}
@@ -891,8 +891,9 @@ class KitchenService:
         ctx = roomctx.for_spec(spec, scene.lsau, scene.lphai)
         if ctx is not None and system is not None:
             kind = next((st['kind'] for st in ctx.structures if st.get('sourceElement') == system), None)
+        walls = self._walls(ctx, ctx.placement) if ctx is not None and ctx.placement is not None else None   # the side runs follow the real walls
         if kind != 'furniture' or ctx is None:
-            return run_line.plan_runs(spec, run_line.edge_line(outline, click), found, joints, clear, system)
+            return run_line.plan_runs(spec, run_line.edge_line(outline, click), found, joints, clear, system, walls)
         place = ctx.placement
         where = wall_line.replace_lines(outline, self._walls(ctx, place) if place is not None else [])
         if where['status'] == 'ok' and where['runs']:
@@ -903,7 +904,7 @@ class KitchenService:
             line = run_line.Line(line.a, line.b, (-line.normal[0], -line.normal[1]))     # still into the object, not away from it
         by_system = runs.systems(spec)
         old = [m.id for m in spec.module if by_system.get(m.id) == system and m.id not in (clear or [])]
-        plan = run_line.plan_runs(spec, line, found, joints, [*(clear or []), *old], system)
+        plan = run_line.plan_runs(spec, line, found, joints, [*(clear or []), *old], system, walls)
         operation = edit.combine_ops([plan['operation'], {'op': 'replace-element', 'id': system, 'replaced': True}])
         return {**plan, 'operation': operation, 'summary': [*plan['summary'], words.said('summary.replaced-by-recognised', id=system)]}
 
@@ -1315,8 +1316,9 @@ class KitchenService:
     def _place_layout(self, design_id: str, spec: Any, current: int, out: dict[str, Any], name: str, draft: Any, layout: Any, country: str | None,
                       anchor: dict[str, Any] | None, mode: str, seen: tuple[list, list[dict[str, Any]]] = ([], [])) -> dict:
         """A kitchen recognised BY RUNS: its main run along the edge the user picked (no edge picked: along the back wall of the kitchen frame,
-        instead of the cabinets already there), the runs joined to it square to it."""
-        runs = [{'id': r.id, 'length': r.length, 'modules': list(r.modules)} for r in layout.runs]
+        instead of the cabinets already there), the runs joined to it at the angle the photo showed (on a floorplan: along its walls), a
+        free-standing run (an island) where it stood in front of the main run, a peninsula against the run it touches."""
+        runs = [r.to_data() for r in layout.runs]
         joints = list(layout.joints)
         place: dict[str, Any] = {}
         if anchor is None:

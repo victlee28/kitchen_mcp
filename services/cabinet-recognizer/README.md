@@ -9,11 +9,11 @@ Nhận được: dãy thẳng chụp chính diện (nhánh v0.1), dãy thẳng c
 
 | # | Bước | Ai làm | File |
 |---|---|---|---|
-| 1 | Bố cục (straight/l-shape/u-shape), kiểu ảnh, mỗi dãy: tường (back/left/right), vùng ảnh, 2 điểm trên mỗi đường ngang (upperTop, upperSplit, upperBottom, worktopFront, frontsBottom, plinthBottom, tallTop) | **AI** | `prompts.scene_prompt`, `contract_persp.parse_scene` |
+| 1 | Bố cục (straight/l-shape/u-shape), kiểu ảnh, mỗi dãy: tường (back/left/right) hoặc `island` (dãy đứng tự do song song dãy sau, cánh quay về camera: đảo, mặt trước bán đảo; `touches: left|right` khi một đầu chạm dãy bên — bán đảo song song dãy sau); dãy bên có `peninsula: true` khi không có tường sau lưng (bán đảo vuông góc dãy sau, chạm nó, nhìn từ cạnh; tính vào bố cục như dãy bên), vùng ảnh, 2 điểm trên mỗi đường ngang (upperTop, upperSplit, upperBottom, worktopFront, frontsBottom, plinthBottom, tallTop) | **AI** | `prompts.scene_prompt`, `contract_persp.parse_scene` |
 | 2 | Bám chính xác từng đường xiên (gradient + khớp đường có loại ngoại lệ); đường ứng viên dọc theo từng tầng trong dải xiên; ảnh đánh số cho từng dãy | code | `pixels_persp` |
 | 3 | Mỗi dãy: ranh giới module theo tầng (base, upper, upper-top; tủ cao là module tầng base loại tall-*), loại module, các đoạn trong tủ cao, **vật chuẩn** bề rộng (máy rửa bát 600, lò 600, tủ lạnh side-by-side ~910) và chiều cao | **AI** | `prompts.run_prompt`, `contract_persp.parse_run` |
 | 4 | Chuẩn kích thước theo vùng: độ lùi chân tủ, chiều sâu, độ dày đá, bước làm tròn, giá trị chuẩn | **AI** (chỉ văn bản, nhận số đo sơ bộ) | `prompts.policy_p_prompt` |
-| 5 | Hình học: điểm tụ dọc tường sau và tường bên (bỏ dần đường lệch), tiêu cự từ 2 điểm tụ; nếu ảnh chính diện chữ U (điểm tụ tường sau ở vô cực) thì dò tiêu cự cho các vật chuẩn ở các tường khác nhau cho cùng tỉ lệ; mặt trước mỗi dãy từ đường chân tủ chạm sàn; tỉ lệ mm từ vật chuẩn; hệ số đứng từ vật chuẩn chiều cao; vị trí dọc tường tính từ góc trong; module góc kéo về góc (`blindWidth`, `blindSide`); kệ góc mở (`legBack`, `legSide`); dãy bên không bắt đầu trước mặt trước dãy sau | code | `persp`, `compute_persp` |
+| 5 | Hình học: điểm tụ dọc tường sau và tường bên (bỏ dần đường lệch), tiêu cự từ 2 điểm tụ — trừ khi có vật chuẩn trên ≥ 2 dãy cho thấy góc trong không vuông: khi đó dò tiêu cự cho các vật chuẩn cùng tỉ lệ, hướng tường bên lấy thẳng từ điểm tụ của nó, ra `walls.<bên>.angleDeg` + cảnh báo `corner-not-square` (lệch ≤ 3° hoặc không rõ hơn hẳn thì vẫn coi là vuông); dãy `island` đo từ đường chân của chính nó, ra `walls.island.offsetMm` (từ tường sau tới lưng đảo); nếu ảnh chính diện chữ U (điểm tụ tường sau ở vô cực) thì dò tiêu cự cho các vật chuẩn ở các tường khác nhau cho cùng tỉ lệ; mặt trước mỗi dãy từ đường chân tủ chạm sàn; tỉ lệ mm từ vật chuẩn; hệ số đứng từ vật chuẩn chiều cao; vị trí dọc tường tính từ góc trong; module góc kéo về góc (`blindWidth`, `blindSide`); kệ góc mở (`legBack`, `legSide`); dãy bên không bắt đầu trước mặt trước dãy sau | code | `persp`, `compute_persp` |
 
 ### Cửa đi, cửa sổ (bước `openings`, cả hai nhánh)
 
@@ -136,11 +136,20 @@ Ngoài `spec` (toạ độ theo tường) và `kitchen` (KitchenSpec kiểu tư�
  "joints": [{"a": "left", "b": "back", "angle": 90}], "common": {}, "issues": []}
 ```
 
-- Thứ tự dãy: `left`, `back`, `right`. `s` đo dọc dãy **từ đầu bên trái của người đứng nhìn vào cánh tủ**; không còn khái niệm tường hay góc gốc.
+- Thứ tự dãy: `left`, `back`, `right`, `island`. Dãy `island` không nối với dãy nào, mang `free: {"from": "back", "offset": mm (tường sau → lưng đảo), "s": mm (dọc dãy sau), "touches"?: "left" | "right"}` (bán đảo: đầu đó chạm mặt trước dãy bên). Dãy bên là bán đảo mang `peninsula: true` (vẫn nối với dãy sau; bên nhận không áp nó vào tường mặt bằng). Ảnh có dãy bán đảo không hỏi cửa trên dãy đó.
+- `joints[].angle`: góc trong đo được (90 khi vuông hoặc không đo được). `s` đo dọc dãy **từ đầu bên trái của người đứng nhìn vào cánh tủ**; không còn khái niệm tường hay góc gốc.
 - `joints[{a, b}]`: **cuối** dãy `a` gặp **đầu** dãy `b` ở góc trong 90°.
 - Mỗi module mang đủ `doors`, `frontSections`, `blindCorner`, `niche`, `doorStyle`, `shelfCount`, `appliances`.
 - Ô góc mù luôn nằm ở **đầu** một dãy (phía `s` nhỏ); ô góc mù nhận ra ở cuối dãy được chuyển sang tủ đầu của dãy kề, không chuyển được thì ghi `corner-gap` trong `issues`.
 - Code: `cabinet_recognizer/to_runs.py` (`to_runs`, `check_runs`), thuần lõi. Test: `tests/test_to_runs.py`; ba tài liệu mẫu dùng chung với kitchen ở `tests/data/recognized_runs/` (gốc repo) — service phải sinh ra đúng chúng, kitchen phải đọc được chúng.
+
+## Đo sai số
+
+`tests/data/truth/<ca>.truth.json` ghi điều biết chắc về một ảnh (mép module theo từng dãy/tầng, chiều dài dãy, chiều cao, góc trong,
+chiều cao camera, tiêu cự — xem `cabinet_recognizer/accuracy.py`). `python tools/measure_accuracy.py` chạy lại mọi ca có file đó bằng câu
+trả lời đã ghi và in sai số; `--answers-dir <thư mục>` dùng câu trả lời khác (model khác, phiên chat khác, cùng tên file) để so A/B.
+`tests/test_accuracy.py` giữ giới hạn: mép module ≤ 5 % chiều dài dãy, chiều dài dãy ≤ 7 %. Hiện có: ảnh U dựng bằng three.js (4,4 %),
+ảnh L thật đo tay (6,3 % ở dãy trái). Thêm ca: ảnh + answers (từ `tools/jobs_to_cases.py`) + file truth đo bằng thước.
 
 ## Ca thử từ job thật
 
@@ -159,7 +168,7 @@ Ngoài `spec` (toạ độ theo tường) và `kitchen` (KitchenSpec kiểu tư�
 ## Giới hạn hiện tại
 
 - Nhánh v0.1 chỉ cho dãy thẳng chính diện; ảnh khác đi nhánh phối cảnh.
-- Nhánh phối cảnh giả định camera đặt ngang (cạnh đứng của tủ thẳng đứng trên ảnh), điểm chính ở tâm ảnh; chưa có đảo bếp, bán đảo, tủ góc chéo; cần ít nhất một vật chuẩn bề rộng (không có thì lấy chiều cao mặt bếp chuẩn, kém chính xác hơn); ảnh chữ U chính diện cần vật chuẩn ở hai tường khác nhau để giải tiêu cự.
+- Nhánh phối cảnh giả định camera đặt ngang (cạnh đứng của tủ thẳng đứng trên ảnh), điểm chính ở tâm ảnh; đảo chỉ khi song song dãy sau (chưa có bán đảo vuông góc, tủ góc chéo); góc trong không vuông chỉ đo được khi có vật chuẩn ở hai dãy, hai tường bên coi như song song; cần ít nhất một vật chuẩn bề rộng (không có thì lấy chiều cao mặt bếp chuẩn, kém chính xác hơn); ảnh chữ U chính diện cần vật chuẩn ở hai tường khác nhau để giải tiêu cự.
 - Chia ngăn kéo trong nhánh phối cảnh đang chia đều; chiều cao máy hút mùi chưa đo.
 - Không có vật chuẩn trong ảnh nên kích thước tuyệt đối dựa vào chiều cao mặt bếp AI chọn theo vùng: sai số khoảng ±5–10%.
 - Ranh giới module phải trùng một đường ứng viên; mép mờ có thể lệch vài px (ảnh mẫu: mép trái tủ giá bát lấy ở x=80 thay vì 77), phần căn với tủ dưới sẽ bù lại.

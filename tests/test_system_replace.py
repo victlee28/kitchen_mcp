@@ -112,7 +112,7 @@ class TestFridgeSide(unittest.TestCase):
             self.assertEqual(fridge["s"], 3970 - 700 if side == "right" else 0.0, text)
             sink = next(m for m in mods if m["type"] == "base-sink")
             on = next(a for a in sink["appliances"] if a["type"] == "sink")
-            self.assertTrue(sink["s"] <= on["center"] <= sink["s"] + sink["width"], "the sink stays over its cabinet when mirrored")
+            self.assertNotIn("center", on, "the sink stands on its cabinet (over its middle), mirrored or not")
 
 
 class TestWebStyles(unittest.TestCase):

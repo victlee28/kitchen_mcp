@@ -31,7 +31,7 @@ from .numeric import round_int
 from .to_kitchen import APPLIANCE_MAP, TYPE_MAP, oven_niche
 
 SCHEMA = "recognized-runs/1"
-ORDER = ("left", "back", "right")
+ORDER = ("left", "back", "right", "island")      # island: a run standing free, parallel to the back run (``free`` says where)
 APPROXIMATED = ("upper-dish-rack", "upper-lift-up", "tall-display", "tall-oven", "base-open-shelf", "filler", "other")
 MIN_LEG = 150      # nhánh kệ góc ngắn hơn mức này thì bỏ (bên nhận không nhận tủ hẹp hơn)
 
@@ -123,7 +123,14 @@ def to_runs(rec: dict[str, Any]) -> dict[str, Any]:
     def extent(wall: str) -> int:
         return max((int(m["x"] + m["width"]) for m in src if m["wall"] == wall), default=0)
 
-    length = {w: max(int(walls_in.get(w, {}).get("runLength") or (c.get("runLength") if w == "back" else 0) or 0), extent(w)) for w in present}
+    shift = {w: 0 for w in present}               # a free run starts at its first cabinet; ``free.s`` says where that is along the back run
+    if "island" in present:
+        shift["island"] = min(int(m["x"]) for m in src if m["wall"] == "island")
+        for m in src:
+            if m["wall"] == "island":
+                m["x"] = int(m["x"]) - shift["island"]
+    length = {w: max(int(walls_in.get(w, {}).get("runLength") or (c.get("runLength") if w == "back" else 0) or 0) - shift[w], extent(w))
+              for w in present}
     appliances_of: dict[str, list[dict[str, Any]]] = {}
     for a in rec.get("appliances", []):
         item = {"type": APPLIANCE_MAP.get(a.get("kind", "other"), "other"), "name": a.get("name", "")}
@@ -205,10 +212,24 @@ def to_runs(rec: dict[str, Any]) -> dict[str, Any]:
     for mods in runs.values():
         mods.sort(key=lambda n: (n["y"], n["s"]))
     ends = {w: (walls_in.get(w, {}).get("end") or (rec.get("rightEnd") if w == "back" else None) or "open") for w in present}
-    joints = [{"a": a, "b": b, "angle": 90} for a, b in (("left", "back"), ("back", "right")) if a in runs and b in runs]
+    def angle(a: str, b: str) -> float:           # góc trong đo được ở tường bên (cabinet-recognizer/0.2 ``walls.<bên>.angleDeg``), else vuông
+        side = a if a != "back" else b
+        v = walls_in.get(side, {}).get("angleDeg")
+        return float(v) if isinstance(v, (int, float)) else 90
+    joints = [{"a": a, "b": b, "angle": angle(a, b)} for a, b in (("left", "back"), ("back", "right")) if a in runs and b in runs]
     openings = _openings(rec, present, length) if "openings" in rec else None
+    def free(w: str) -> dict[str, Any]:
+        """Where a run with no wall behind it stands. The island: parallel to the back run, its back ``offset`` mm in front of the back wall,
+        starting at ``s`` along the back run (the back run's own s); ``touches``: the side run one of its ends reaches (a peninsula parallel
+        to the back run). A side run marked ``peninsula``: it leaves the back run like a side run but stands in the room, no wall behind."""
+        if w != "island":
+            return {"peninsula": True} if walls_in.get(w, {}).get("peninsula") is True else {}
+        touches = walls_in.get("island", {}).get("touches")
+        return {"free": {"from": "back", "offset": int(walls_in.get("island", {}).get("offsetMm") or 0), "s": shift["island"],
+                         **({"touches": touches} if touches in present and touches != "back" else {})}}
     return {"schema": SCHEMA, "unit": "mm", "layout": rec.get("layout", "straight"),
-            "runs": [{"id": w, "length": length[w], "end": ends[w], "modules": runs[w], **({"openings": openings[w]} if openings is not None else {})}
+            "runs": [{"id": w, "length": length[w], "end": ends[w], "modules": runs[w], **free(w),
+                      **({"openings": openings[w]} if openings is not None and w in openings else {})}
                      for w in present],
             "joints": joints, "common": common, "issues": issues}
 

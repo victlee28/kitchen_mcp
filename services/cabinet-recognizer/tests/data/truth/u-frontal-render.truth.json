@@ -1,0 +1,12 @@
+{
+ "case": "u-frontal-render",
+ "source": "three.js render of a known kitchen (camera 1450 mm high, vertical field of view 55 degrees, image 1200 x 900)",
+ "edges": {
+  "back/base": [0, 900, 1700, 2300, 2700, 3600],
+  "left/base": [600, 1200, 1800, 2400],
+  "right/base": [600, 1300, 2200],
+  "back/upper": [0, 800, 1700, 2300, 3000, 3600]
+ },
+ "cameraHeightMm": 1450,
+ "focalPx": 864.4
+}

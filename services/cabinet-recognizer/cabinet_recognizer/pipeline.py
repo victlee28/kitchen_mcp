@@ -112,7 +112,7 @@ def recognize_auto(image: bytes, client: VisionClient, *, region: str = "VN",
         return {"spec": {"schema": "cabinet-recognizer/0.2", "unit": "mm", "layout": "none", "modules": [], "appliances": [],
                          "photoOpenings": found, "materials": scene["materials"], "warnings": late}, "answers": raw}
     frontal = scene["layout"] == "straight" and scene["view"] == "frontal"
-    openings = _openings(client, image, ["back"] if frontal else [r["wall"] for r in scene["runs"]], retries, raw, late)
+    openings = _openings(client, image, ["back"] if frontal else [r["wall"] for r in scene["runs"] if r["wall"] != "island" and not r.get("peninsula")], retries, raw, late)
     if frontal:
         res = recognize(image, client, region=region, retries=retries, debug=debug, openings=openings)
         res["answers"] = {"scene": raw["scene"], **({"openings": raw["openings"]} if "openings" in raw else {}), **res["answers"]}

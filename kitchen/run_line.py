@@ -16,6 +16,7 @@ from .catalog import Catalog
 from .edit import apply_op, combine_ops, next_run_id
 from .errors import InvalidInput
 from .floorplan.geom import point_in_poly
+from .jsonview import as_dict
 from .numeric import round_half_away
 from .spec import KitchenSpec, LaidModule
 
@@ -136,17 +137,62 @@ def plan_on_line(spec: KitchenSpec, line: Line, modules: list[LaidModule], clear
     return {"operation": combine_ops(ops), "run": run, "length": reach, "summary": summary}
 
 
-def run_lines(line: Line, runs: list[dict[str, Any]], joints: list[tuple[str, str]]) -> tuple[list[tuple[dict[str, Any], Line]], list[str]]:
+Joint = tuple[str, str] | tuple[str, str, float]
+SNAP_ANGLE_DEG = 9.0           # a wall of the floorplan this close in direction to a run beside the corner is the wall it stands against
+SNAP_DISTANCE = 400.0          # ...and whose line passes this close to the corner
+
+
+def _rot(u: Pt, n: Pt, angle: float) -> Pt:
+    """The unit vector at ``angle`` degrees from ``u`` turned towards ``n``."""
+    c, s = math.cos(math.radians(angle)), math.sin(math.radians(angle))
+    return (u[0] * c + n[0] * s, u[1] * c + n[1] * s)
+
+
+def _snap(corner: Pt, d: Pt, walls: list[tuple[Pt, Pt]] | None) -> tuple[Pt, bool]:
+    """The direction a run leaving ``corner`` along ``d`` really takes: along the floorplan wall that runs the same way (within
+    ``SNAP_ANGLE_DEG``) and passes near the corner (``SNAP_DISTANCE``). ``(direction, found)``; no walls: ``(d, True)``."""
+    if walls is None:
+        return d, True
+    best: tuple[float, Pt] | None = None
+    for a, b in walls:
+        ex, ez = b[0] - a[0], b[1] - a[1]
+        length = math.hypot(ex, ez)
+        if length < MIN_LENGTH:
+            continue
+        ex, ez = ex / length, ez / length
+        if ex * d[0] + ez * d[1] < 0:
+            ex, ez = -ex, -ez
+        off = math.degrees(math.acos(max(-1.0, min(1.0, ex * d[0] + ez * d[1]))))
+        dist = abs((corner[0] - a[0]) * ez - (corner[1] - a[1]) * ex)            # from the corner to the wall's line
+        if off <= SNAP_ANGLE_DEG and dist <= SNAP_DISTANCE and (best is None or off < best[0]):
+            best = (off, (ex, ez))
+    return (best[1], True) if best is not None else (d, False)
+
+
+def run_lines(line: Line, runs: list[dict[str, Any]], joints: list[Joint],
+              walls: list[tuple[Pt, Pt]] | None = None) -> tuple[list[tuple[dict[str, Any], Line]], list[str]]:
     """Where each run of a recognised kitchen stands when its MAIN run (``back``, else the first) stands on ``line``: ``([(run, line)], skipped ids)``.
 
-    ``runs``: ``[{"id", "length", "modules"}]``; a joint ``(a, b)`` = the end of run ``a`` meets the start of run ``b`` at a right angle in an inside
-    corner. A run joined to the main run's START stands square to it at the line's start and reaches into the room; one joined to its END stands at
-    the main run's end. With only an end corner the main run is pushed to the far end of the line, so the corner sits where the edge ends.
-    Runs not joined to the main run have no place and are skipped."""
+    ``runs``: ``[{"id", "length", "modules", "free"?}]``; a joint ``(a, b[, angle])`` = the end of run ``a`` meets the start of run ``b`` in an
+    inside corner of ``angle`` degrees (90 when not given). A run joined to the main run's START leaves the line's start at that angle and
+    reaches into the room; one joined to its END leaves the main run's end. With only an end corner the main run is pushed to the far end of the
+    line, so the corner sits where the edge ends. ``walls`` (the floorplan's wall edges, kitchen frame): a run leaving a corner follows the wall
+    it stands against instead of the angle seen in the photo; ``run["unsure"] = True`` when no such wall is there. A free run (``free:
+    {"from": main, "offset", "s"}``) stands parallel to the main run, ``offset`` in front of it, from ``s`` along it; with ``touches`` (a
+    side run's id) it is a peninsula and moves along the main run until its end on that side meets the side run's front. A side run marked
+    ``peninsula`` stands in the room (no wall behind it): it keeps the angle seen and never follows a floorplan wall. Other runs have no place
+    and are skipped."""
     by_id = {r["id"]: r for r in runs}
     main = by_id.get("back") or runs[0]
-    before = next((by_id[a] for a, b in joints if b == main["id"] and a in by_id and a != main["id"]), None)
-    after = next((by_id[b] for a, b in joints if a == main["id"] and b in by_id and b != main["id"]), None)
+
+    def joint(a: str, b: str) -> tuple[dict[str, Any], float] | None:
+        for j in joints:
+            if j[0] == a and j[1] == b and a in by_id and b in by_id and a != b:
+                return by_id[a] if b == main["id"] else by_id[b], float(j[2]) if len(j) > 2 else 90.0   # type: ignore[misc]
+        return None
+
+    before = next((joint(j[0], main["id"]) for j in joints if j[1] == main["id"] and j[0] != main["id"]), None)
+    after = next((joint(main["id"], j[1]) for j in joints if j[0] == main["id"] and j[1] != main["id"]), None)
     frame = run_frame(line)
     nx, nz = line.normal
     ux, uz = nz, -nx                                              # the main run's s direction
@@ -154,14 +200,76 @@ def run_lines(line: Line, runs: list[dict[str, Any]], joints: list[tuple[str, st
     p0 = (frame["x"] + ux * offset, frame["z"] + uz * offset)
     p1 = (p0[0] + ux * float(main["length"]), p0[1] + uz * float(main["length"]))
     placed: list[tuple[dict[str, Any], Line]] = [(main, Line(p0, p1, (nx, nz)))]
-    if before is not None:                                        # its doors look along the main run; its s runs towards the corner
-        reach = float(before["length"])
-        placed.append((before, Line((p0[0] + nx * reach, p0[1] + nz * reach), p0, (ux, uz))))
-    if after is not None:                                         # its doors look back along the main run; its s runs away from the corner
-        reach = float(after["length"])
-        placed.append((after, Line(p1, (p1[0] + nx * reach, p1[1] + nz * reach), (-ux, -uz))))
+    if before is not None:                                        # it leaves the main run's start into the room; its s runs towards the corner
+        run, angle = before
+        d, found = _snap(p0, _rot((ux, uz), (nx, nz), angle), None if run.get("peninsula") else walls)
+        reach = float(run["length"])
+        placed.append(({**run, **({} if found else {"unsure": True})},
+                       Line((p0[0] + d[0] * reach, p0[1] + d[1] * reach), p0, _toward(d, (ux, uz)))))
+    if after is not None:                                         # it leaves the main run's end into the room; its s runs away from the corner
+        run, angle = after
+        d, found = _snap(p1, _rot((-ux, -uz), (nx, nz), angle), None if run.get("peninsula") else walls)
+        reach = float(run["length"])
+        placed.append(({**run, **({} if found else {"unsure": True})},
+                       Line(p1, (p1[0] + d[0] * reach, p1[1] + d[1] * reach), _toward(d, (-ux, -uz)))))
+    for run in runs:                                              # a free run (an island): parallel to the main run, in front of it
+        free = as_dict(run.get("free"))
+        if run is main or free is None or free.get("from") != main["id"]:
+            continue
+        off, at = float(free["offset"]), float(free["s"])
+        a = (p0[0] + ux * at + nx * off, p0[1] + uz * at + nz * off)
+        b = (a[0] + ux * float(run["length"]), a[1] + uz * float(run["length"]))
+        side = next((at_ for r, at_ in placed if r["id"] == free.get("touches") and r is not main), None)
+        if side is not None:                                      # a peninsula: the end on that side meets the side run's front
+            shift = _to_front((a if _start_side(side, (ux, uz)) else b), (ux, uz), side, _depth(by_id[str(free["touches"])]))
+            a, b = (a[0] + ux * shift, a[1] + uz * shift), (b[0] + ux * shift, b[1] + uz * shift)
+        placed.append((run, Line(a, b, (nx, nz))))
     used = {r["id"] for r, _ in placed}
     return placed, [r["id"] for r in runs if r["id"] not in used]
+
+
+def _depth(run: dict[str, Any]) -> float:
+    """How far the front of a run stands from its back line: its deepest floor cabinet (a base or tall one), else the usual base depth."""
+    deep = [float(m.get("depth") or 0) for m in run.get("modules", []) if str(m.get("type", "")).startswith(("base", "tall"))]
+    return max(deep, default=0.0) or 600.0
+
+
+def _start_side(side: Line, u: Pt) -> bool:
+    """Whether a run along ``u`` meets ``side`` with its START (``side`` lies towards -u, where s is small)."""
+    mid = ((side.a[0] + side.b[0]) / 2, (side.a[1] + side.b[1]) / 2)
+    other = ((side.a[0] + side.b[0]) / 2 + side.normal[0], (side.a[1] + side.b[1]) / 2 + side.normal[1])
+    return (other[0] - mid[0]) * u[0] + (other[1] - mid[1]) * u[1] > 0    # its doors look along +u: it stands at the -u end
+
+
+def _to_front(p: Pt, u: Pt, side: Line, depth: float) -> float:
+    """How far along ``u`` the point ``p`` moves to reach the front of the run on ``side`` (its back line moved ``depth`` along its normal)."""
+    nx, nz = side.normal
+    k = u[0] * nx + u[1] * nz
+    if abs(k) < 1e-9:
+        return 0.0
+    f = (side.a[0] + nx * depth, side.a[1] + nz * depth)
+    return ((f[0] - p[0]) * nx + (f[1] - p[1]) * nz) / k
+
+
+def _angle(a: Line, b: Line) -> float:
+    """The inside angle (degrees) between two lines meeting at an end: 180 minus the angle between their directions away from the corner."""
+    da = (a.b[0] - a.a[0], a.b[1] - a.a[1])
+    db = (b.b[0] - b.a[0], b.b[1] - b.a[1])
+    la, lb = math.hypot(*da), math.hypot(*db)
+    if la < MIN_LENGTH or lb < MIN_LENGTH:
+        return 90.0
+    return math.degrees(math.acos(max(-1.0, min(1.0, abs(da[0] * db[0] + da[1] * db[1]) / (la * lb)))))
+
+
+def _meets(a: Line, b: Line) -> bool:
+    """Whether two lines share an end point (a corner between two runs; a free run meets nothing)."""
+    return any(math.hypot(p[0] - q[0], p[1] - q[1]) <= 1.0 for p in (a.a, a.b) for q in (b.a, b.b))
+
+
+def _toward(d: Pt, side: Pt) -> Pt:
+    """The unit normal of a line along ``d`` on the side of ``side`` (where the doors look)."""
+    n1 = (-d[1], d[0])
+    return n1 if n1[0] * side[0] + n1[1] * side[1] >= 0 else (d[1], -d[0])
 
 
 def back_wall_line(spec: KitchenSpec, runs: list[dict[str, Any]]) -> Line:
@@ -176,14 +284,16 @@ def back_wall_line(spec: KitchenSpec, runs: list[dict[str, Any]]) -> Line:
     return Line((-length, 0.0), (0.0, 0.0), (0.0, 1.0))
 
 
-def plan_runs(spec: KitchenSpec, line: Line, runs: list[dict[str, Any]], joints: list[tuple[str, str]], clear: list[str] | None = None,
-              system: str | None = None) -> dict[str, Any]:
-    """The operation that puts a whole recognised kitchen (one run, an L or a U) on ``line``: one explicit run per recognised run, see ``run_lines``.
-    ``clear``: ids of cabinets to remove first. Returns what ``plan_on_line`` returns, plus ``runs`` (``[{"source", "run"}]``) and ``lines``
-    (run id -> the ``Line`` it stands on: where the doors and windows seen on that run go)."""
+def plan_runs(spec: KitchenSpec, line: Line, runs: list[dict[str, Any]], joints: list[Joint], clear: list[str] | None = None,
+              system: str | None = None, walls: list[tuple[Pt, Pt]] | None = None) -> dict[str, Any]:
+    """The operation that puts a whole recognised kitchen (one run, an L or a U, an island) on ``line``: one explicit run per recognised run,
+    see ``run_lines`` (``walls``: the floorplan's walls the runs beside a corner follow). A corner that is not square is then joined
+    (``run_join``: the cabinets meeting in it are cut back so none crosses the other run). ``clear``: ids of cabinets to remove first.
+    Returns what ``plan_on_line`` returns, plus ``runs`` (``[{"source", "run"}]``) and ``lines`` (run id -> the ``Line`` it stands on:
+    where the doors and windows seen on that run go)."""
     if not runs:
         raise InvalidInput("No run to place", code="no-run")
-    placed, skipped = run_lines(line, runs, joints)
+    placed, skipped = run_lines(line, runs, joints, walls)
     ops: list[dict[str, Any]] = []
     summary: list[Said] = []
     made: list[dict[str, Any]] = []
@@ -196,6 +306,27 @@ def plan_runs(spec: KitchenSpec, line: Line, runs: list[dict[str, Any]], joints:
         current = apply_op(current, {"op": "add-run", "run": plan["run"]})      # so the next run gets the next id
     if skipped:
         summary.append(said("summary.runs-left-out", ids=', '.join(skipped)))
+    run_of = {m["source"]: m["run"]["id"] for m in made}
+    lines = [at for _, at in placed]
+    square = all(abs(_angle(lines[0], at) - 90.0) <= 0.5 for at in lines[1:] if _meets(lines[0], at))
+    if not square:                                   # the cabinets in a corner that is not square: cut back where they cross
+        from .run_join import plan_join
+        laid = apply_op(spec, combine_ops(ops))
+        main = run_of[placed[0][0]["id"]]
+        for run, at in placed[1:]:
+            if _meets(lines[0], at) and abs(_angle(lines[0], at) - 90.0) > 0.5:
+                try:
+                    join = plan_join(laid, main, run_of[run["id"]])
+                except InvalidInput:
+                    continue
+                if join["operation"] is not None:
+                    ops.append(join["operation"])
+                    laid = apply_op(laid, join["operation"])
+                    summary.append(said("summary.join.done", angle=round_half_away(join["angle"]), a=main, b=run_of[run["id"]],
+                                        n=len(join["touched"])))
+    for run, _ in placed:
+        if run.get("unsure"):
+            summary.append(said("summary.run-unsure", id=run["id"]))
     return {"operation": combine_ops(ops), "run": made[0]["run"], "runs": made, "length": float(placed[0][0]["length"]), "summary": summary,
             "lines": {run["id"]: at for run, at in placed}}
 

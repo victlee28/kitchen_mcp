@@ -157,7 +157,7 @@ class TestAnchoredLayout(unittest.TestCase):
         self.assertEqual(len(r["runs"]), len(self.doc["runs"]))
         kinds = [o["op"] for o in ops_of(r["operation"])]
         self.assertEqual((kinds.count("add-run"), kinds.count("add")), (len(self.doc["runs"]), self.total))
-        self.assertEqual(r["layout"]["joints"], [["left", "back"]] if self.doc["joints"][0]["a"] == "left" else [["back", "right"]])
+        self.assertEqual(r["layout"]["joints"], [["left", "back", 90.0]] if self.doc["joints"][0]["a"] == "left" else [["back", "right", 90.0]])
         self.assertEqual(self.svc.store.get(self.did)[1], rev)
         self.assertTrue(r["proposal"]["applicable"])
         self.svc.apply(self.did, r["operation"], r["baseRev"], "test", r["proposal"]["opHash"])
@@ -195,7 +195,7 @@ class TestAnchoredLayout(unittest.TestCase):
                 self.assertEqual([run["id"] for run in r["layout"]["runs"]], ["left", "back", "right"])
                 back = next(run for run in r["layout"]["runs"] if run["id"] == "back")
                 self.assertEqual(sorted((m["s"], m["width"]) for m in back["modules"]), [(0.0, 900.0), (900.0, 600.0)], "mirrored: fromCorner 0 is the right-hand end")
-                self.assertEqual(r["layout"]["joints"], [["left", "back"], ["back", "right"]])
+                self.assertEqual(r["layout"]["joints"], [["left", "back", 90.0], ["back", "right", 90.0]])
                 self.assertEqual(sum(1 for o in r["operation"]["ops"] if o["op"] == "add"), 4)
 
     def test_replacing_takes_the_levels_ceiling_and_materials_that_were_seen(self):
@@ -209,6 +209,119 @@ class TestAnchoredLayout(unittest.TestCase):
         self.assertNotIn("plinthHeight", first["changes"])
         added = self.svc.recognize(self.did, self.source, "fake", anchor=self.anchor)
         self.assertFalse([o for o in added["operation"]["ops"] if o["op"] == "common"], "adding beside the cabinets already there changes no level")
+
+
+class TestAngledAndFree(unittest.TestCase):
+    """A corner that is not square, a free-standing run, and the walls of a floorplan."""
+    LINE = run_line.Line((-3000.0, 0.0), (0.0, 0.0), (0.0, 1.0))
+
+    def doc(self, angle, island=False):
+        d = fixture("l-shape")
+        d = json.loads(json.dumps(d))
+        for j in d["joints"]:
+            j["angle"] = angle
+        if island:
+            mods = [{"type": "base", "s": s, "width": 600, "y": 0, "height": 840, "depth": 600, "doors": [600]} for s in (0, 600)]
+            d["runs"].append({"id": "island", "length": 1200, "modules": mods, "free": {"from": "back", "offset": 1600, "s": 500}})
+        return d
+
+    def runs(self, layout):
+        return [r.to_data() for r in layout.runs]
+
+    def test_the_side_run_leaves_the_corner_at_the_angle_seen(self):
+        from kitchen import edit, runs as runmod
+        for angle in (100.0, 80.0):
+            with self.subTest(angle=angle):
+                layout = build_layout(self.doc(angle))
+                self.assertEqual([j[2] for j in layout.joints], [angle])
+                p = run_line.plan_runs(KitchenSpec(), self.LINE, self.runs(layout), list(layout.joints))
+                spec = edit.apply_op(KitchenSpec(), p["operation"])
+                yaws = sorted(round((r.yaw + 360) % 360, 1) for r in spec.runs)
+                self.assertIn(round(abs(yaws[0] - yaws[1]) % 180, 1), (angle % 180, (180 - angle) % 180))
+                geometry.compile_spec(spec)
+                for a in spec.module:                   # the corner was joined: no cabinet of one run crosses the other's
+                    for b in spec.module:
+                        if a.run != b.run and a.storey == b.storey == "base":
+                            fa, fb = runmod.frame_of(spec, a), runmod.frame_of(spec, b)
+                            pa, pb = runmod.module_footprint(fa, a), runmod.module_footprint(fb, b)
+                            self.assertFalse(_overlap(pa, pb), (a.id, b.id))
+
+    def test_an_island_stands_in_front_of_the_main_run(self):
+        from kitchen import edit, runs as runmod
+        layout = build_layout(self.doc(90.0, island=True))
+        self.assertEqual(next(r for r in layout.runs if r.id == "island").free, ("back", 1600.0, 500.0))
+        p = run_line.plan_runs(KitchenSpec(), self.LINE, self.runs(layout), list(layout.joints))
+        spec = edit.apply_op(KitchenSpec(), p["operation"])
+        island = [m for m in spec.module if m.run == p["runs"][-1]["run"]["id"]]
+        self.assertEqual(len(island), 2)
+        fr = runmod.frame_of(spec, island[0])
+        x, z = fr.to_world(min(m.fromCorner for m in island), 0.0)
+        self.assertAlmostEqual(z, 1600.0, delta=0.5, msg="its back 1600 mm in front of the back wall")
+        self.assertAlmostEqual(x, -3000.0 + 500.0, delta=0.5, msg="500 mm along the main run")
+        self.assertAlmostEqual(fr.yaw % 360, runmod.frame_of(spec, next(m for m in spec.module if m.run == p["run"]["id"])).yaw % 360)
+
+    def test_on_a_floorplan_the_side_run_follows_the_wall(self):
+        layout = build_layout(self.doc(97.0))
+        walls = [((-3000.0, 0.0), (-3000.0, 4000.0))]            # the left wall of the room, square to the back wall
+        placed, _ = run_line.run_lines(self.LINE, self.runs(layout), list(layout.joints), walls)
+        side = next(at for run, at in placed if run["id"] == "left")
+        dx, dz = side.b[0] - side.a[0], side.b[1] - side.a[1]
+        self.assertAlmostEqual(dx, 0.0, delta=0.01, msg="along the wall, not at the 97 degrees seen")
+        self.assertFalse(any(run.get("unsure") for run, _ in placed))
+        placed, _ = run_line.run_lines(self.LINE, self.runs(layout), list(layout.joints), [((0.0, 5000.0), (5000.0, 5000.0))])
+        self.assertTrue(next(run for run, _ in placed if run["id"] == "left").get("unsure"), "no wall there: to be checked")
+
+    def test_a_wall_further_off_than_nine_degrees_is_not_followed(self):
+        layout = build_layout(self.doc(100.0))
+        walls = [((-3000.0, 0.0), (-3000.0, 4000.0))]
+        placed, _ = run_line.run_lines(self.LINE, self.runs(layout), list(layout.joints), walls)
+        left = next((run, at) for run, at in placed if run["id"] == "left")
+        self.assertTrue(left[0].get("unsure"))
+        self.assertNotAlmostEqual(left[1].b[0] - left[1].a[0], 0.0, delta=1.0, msg="it keeps the 100 degrees seen")
+
+    def test_a_peninsula_side_run_keeps_its_angle(self):
+        d = self.doc(97.0)
+        next(r for r in d["runs"] if r["id"] == "left")["peninsula"] = True
+        layout = build_layout(d)
+        self.assertTrue(next(r for r in layout.runs if r.id == "left").peninsula)
+        self.assertIs(layout.to_data()["runs"][0 if layout.runs[0].id == "left" else 1]["peninsula"], True)
+        walls = [((-3000.0, 0.0), (-3000.0, 4000.0))]
+        placed, _ = run_line.run_lines(self.LINE, self.runs(layout), list(layout.joints), walls)
+        run, at = next((run, at) for run, at in placed if run["id"] == "left")
+        self.assertFalse(run.get("unsure"), "no wall behind it: nothing to check")
+        self.assertNotAlmostEqual(at.b[0] - at.a[0], 0.0, delta=1.0, msg="it stands at the 97 degrees seen, not along the wall")
+
+    def test_a_free_run_touching_a_side_run_meets_its_front(self):
+        from kitchen import edit, runs as runmod
+        d = self.doc(90.0, island=True)
+        d["runs"][-1]["free"]["touches"] = "left"
+        layout = build_layout(d)
+        self.assertEqual(next(r for r in layout.runs if r.id == "island").touches, "left")
+        p = run_line.plan_runs(KitchenSpec(), self.LINE, self.runs(layout), list(layout.joints))
+        spec = edit.apply_op(KitchenSpec(), p["operation"])
+        left = [m for m in spec.module if m.run == next(x["run"]["id"] for x in p["runs"] if x["source"] == "left") and m.storey == "base"]
+        depth = max(m.depth for m in left)
+        island = [m for m in spec.module if m.run == p["runs"][-1]["run"]["id"]]
+        fr = runmod.frame_of(spec, island[0])
+        x, z = fr.to_world(min(m.fromCorner for m in island), 0.0)
+        self.assertAlmostEqual(z, 1600.0, delta=0.5)
+        self.assertAlmostEqual(x, -3000.0 + depth, delta=0.5, msg="its start meets the left run's front")
+        d["runs"][-1]["free"]["touches"] = "back"
+        self.assertIsNone(next(r for r in build_layout(d).runs if r.id == "island").touches, "only a side run")
+
+
+def _overlap(a, b):
+    """Whether two convex footprints overlap by more than a sliver (separating axis test, 1 mm)."""
+    for poly in (a, b):
+        for i in range(len(poly)):
+            p, q = poly[i], poly[(i + 1) % len(poly)]
+            nx, nz = q[1] - p[1], p[0] - q[0]
+            pa = [x * nx + z * nz for x, z in a]
+            pb = [x * nx + z * nz for x, z in b]
+            n = (nx * nx + nz * nz) ** 0.5
+            if min(pa) >= max(pb) - n or min(pb) >= max(pa) - n:
+                return False
+    return True
 
 
 if __name__ == "__main__":

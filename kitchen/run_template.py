@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from . import builtin
+from . import builtin, runs
 from .catalog import Catalog
 from .intent import KitchenTemplate, from_template
 from .spec import Module
@@ -23,14 +23,14 @@ def _device(t: Any) -> dict[str, Any]:
     return entry
 
 
-def _module(m: Module, length: float) -> dict[str, Any]:
-    """One back-wall cabinet as a run cabinet. The back wall counts ``fromCorner`` from its right-hand end, a run counts ``s`` from its left-hand
-    end, so positions are mirrored and the door list is read the other way round."""
-    entry: dict[str, Any] = {"type": m.type, "width": m.width, "s": length - m.fromCorner - m.width, "y": m.y, "height": m.height, "depth": m.depth}
+def _module(m: Module, length: float, x0: float) -> dict[str, Any]:
+    """One cabinet of the run along the back wall as a cabinet of a run ``length`` long that ends where the back wall does: ``x0`` is where
+    the cabinet starts (world x; the back wall runs from x = -length to its right-hand corner at x = 0)."""
+    entry: dict[str, Any] = {"type": m.type, "width": m.width, "s": length + x0, "y": m.y, "height": m.height, "depth": m.depth}
     if m.name:
         entry["name"] = m.name
     if m.doors:
-        entry["doors"] = list(reversed(m.doors))
+        entry["doors"] = list(m.doors)
     if m.frontSections:
         entry["frontSections"] = [{"type": s.type, "height": s.height} for s in m.frontSections]
     if m.niche:
@@ -52,16 +52,14 @@ def run_from_template(color: KitchenTemplate, length: float, catalog: Catalog = 
     one_wall = templates(catalog).get(color.geometry_edit)
     layout = color.geometry_edit if one_wall is not None and one_wall.walls == ("back",) else "I"    # a one-wall template (a saved run) is kept
     t = color.model_copy(update={"geometry_edit": layout, "island": False, "peninsula": False, "backWallLength": float(length)})
-    spec = from_template(t, catalog=catalog, as_rows=True)        # the layout by wall: its back row is the run
-    back = [m for m in spec.module if m.wall == "back"]
-    entries = {m.id: _module(m, length) for m in back}
+    spec = from_template(t, catalog=catalog)
+    frames = runs.frames(spec)
+    run = next((r for r in spec.runs if runs.run_wall(frames[r.id], float(length)) == "back"), None)     # the leg along the back wall
+    back = [m for m in spec.module if run is not None and m.run == run.id]
+    entries = {m.id: _module(m, length, frames[m.run].to_world(m.fromCorner, 0.0)[0]) for m in back if m.run}
     for tb in spec.appliances:
-        if tb.module in entries:                                  # a fridge or a hood stands in its cabinet
+        if tb.module in entries:                                  # a fridge, a hood, a sink, a hob or a tap stands in / on its cabinet
             entries[tb.module].setdefault("appliances", []).append(_device(tb))
-        elif tb.wall == "back" and tb.center is not None:        # a sink / hob / tap stands on the worktop above the cabinet under its centre
-            hit = next((m for m in back if m.storey == "base" and m.fromCorner <= tb.center < m.endAt), None)
-            if hit:
-                entries[hit.id].setdefault("appliances", []).append({**_device(tb), "wall": "back", "center": length - tb.center})
     common: dict[str, Any] = {}
     if color.material:
         common["material"] = dict(color.material)

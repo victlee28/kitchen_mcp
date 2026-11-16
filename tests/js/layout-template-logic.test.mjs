@@ -27,3 +27,23 @@ test('top view fits the parts, back wall at the top', () => {
   assert.equal(v.height, Math.round(8 + 2400 * v.scale));
   assert.deepEqual(topView([]).rects, []);
 });
+
+test('drag and drop: moving, dropping and inserting steps and cabinets', async () => {
+  const { moveTo, dropIndex, insertStep, itemsOf, withItems, newItem, itemLabel, NEW_STEP } = await import('../../web/layout-template-logic.js');
+  assert.deepEqual(moveTo(['a', 'b', 'c', 'd'], 0, 3), ['b', 'c', 'a', 'd'], 'dropped before d');
+  assert.deepEqual(moveTo(['a', 'b', 'c', 'd'], 3, 0), ['d', 'a', 'b', 'c']);
+  assert.deepEqual(moveTo(['a', 'b'], 0, 2), ['b', 'a'], 'dropped after the last');
+  assert.deepEqual(moveTo(['a', 'b'], 5, 0), ['a', 'b']);
+  assert.equal(dropIndex([10, 30, 50], 5), 0);
+  assert.equal(dropIndex([10, 30, 50], 35), 2);
+  assert.equal(dropIndex([10, 30, 50], 99), 3);
+  const rows = insertStep(rowsOf(STEPS), 'cabinets', 1);
+  assert.equal(rows.length, 5);
+  assert.deepEqual(rows[1], { do: 'cabinets', ...NEW_STEP.cabinets });
+  assert.deepEqual(stepOf(rows[1]), { do: 'cabinets', wall: 'back', start: '0', length: 'back', items: [] }, 'a new step saves as a step');
+  const filled = withItems(rows[1], [newItem('base-sink', 800), { type: 'base', width: '600', fill: true }]);
+  assert.deepEqual(itemsOf(filled), [{ type: 'base-sink', width: '800' }, { type: 'base', width: '600', fill: true }]);
+  assert.equal(itemLabel(itemsOf(filled)[1]), 'base · 600 ∗');
+  assert.equal(itemsOf({ items: '[oops' }), null, 'not a list: the editor shows the text');
+  assert.deepEqual(itemsOf({ items: '' }), []);
+});

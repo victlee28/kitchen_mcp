@@ -249,6 +249,7 @@
  "summary.line-run": "{n} cabinets, {length:g} mm, along an edge at {yaw:g}° (run {run})",
  "summary.prefixed": "{id}: {text}",
  "summary.runs-left-out": "Runs not joined to the main run were left out: {ids}",
+ "summary.run-unsure": "Run {id}: no wall of the floorplan matches the direction seen in the photo — check where it stands",
  "summary.run-filled": "Run {run}: {n} cabinets over {length:g} mm",
  "summary.corner-shelf-again": "Corner shelf {id} built again between runs {a} and {b}",
  "summary.left-out-corner": "{n} new cabinets left out where the corner shelf stands",
@@ -1241,5 +1242,16 @@
  "summary.join.not-a-run": "Right-click a cabinet of the run to join (cabinets along the old walls cannot be joined yet)",
  "summary.join.no-corner": "No run meets run {run} in a corner nearby",
  "summary.join.already": "Runs {a} and {b} already meet cleanly at {angle}°",
- "summary.join.done": "Join run {a} to {b} at {angle}°: {n} cabinets by the corner changed (run {a} keeps the corner)"
+ "summary.join.done": "Join run {a} to {b} at {angle}°: {n} cabinets by the corner changed (run {a} keeps the corner)",
+ "catalog.layout.palette": "Drag a step into the table:",
+ "catalog.layout.cabinets": "Drag a cabinet into a «cabinets» step:",
+ "catalog.layout.dragHint": "Drag ⠿ to reorder the steps; drag a cabinet chip to move it within its step; click a chip to set its width (empty = remove), double-click to switch «fill what is left» (∗). The samples are redrawn after each change.",
+ "catalog.layout.dropHere": "⇢ drop cabinets here",
+ "catalog.layout.itemHint": "Drag to move · click: width · double-click: fill what is left",
+ "catalog.layout.moveHint": "Drag to reorder",
+ "catalog.layout.do.base-run": "base run",
+ "catalog.layout.do.cabinets": "cabinets",
+ "catalog.layout.do.corner-base": "corner cabinet",
+ "catalog.layout.do.corner-shelf": "corner shelf",
+ "catalog.layout.do.upper-run": "wall cabinet run"
 }

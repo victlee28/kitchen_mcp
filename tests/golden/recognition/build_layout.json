@@ -214,7 +214,8 @@
      "joints": [
       [
        "left",
-       "back"
+       "back",
+       90.0
       ]
      ],
      "rejected": [],
@@ -223,7 +224,7 @@
    }
   },
   {
-   "name": "nothing trusted: bad cabinets rejected with reasons, unknown/repeated runs ignored, a non-right corner is not joined, bad doors dropped",
+   "name": "nothing trusted: bad cabinets rejected with reasons, unknown/repeated runs ignored, an unbelievable corner (200 degrees) is not joined, bad doors dropped",
    "input": {
     "raw": {
      "schema": "recognized-runs/1",
@@ -307,7 +308,7 @@
       {
        "a": "back",
        "b": "right",
-       "angle": 120
+       "angle": 200
       },
       {
        "a": "back",
@@ -384,7 +385,7 @@
      "notes": [
       "run 'attic' was ignored (unknown id, repeated, or no usable length)",
       "run 'back' was ignored (unknown id, repeated, or no usable length)",
-      "the corner between back and right is not a right angle (120.0); the two runs are not joined"
+      "the corner between back and right is not believable (200.0 degrees); the two runs are not joined"
      ]
     }
    }
@@ -1035,7 +1036,8 @@
      "joints": [
       [
        "left",
-       "back"
+       "back",
+       90.0
       ]
      ],
      "rejected": [],

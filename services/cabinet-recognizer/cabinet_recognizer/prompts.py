@@ -118,7 +118,13 @@ Return:
   "layout": "straight" | "l-shape" | "u-shape" | "none",   // none = no kitchen cabinets at all (e.g. only a wall with a door or window): then "runs": []
   "view": "frontal" | "perspective",   // frontal = a single run seen square-on with horizontal edges; anything else = perspective
   "runs": [ {{
-     "wall": "back" | "left" | "right",   // back = wall facing the camera; left/right = side walls
+     "wall": "back" | "left" | "right" | "island",   // back = wall facing the camera; left/right = side walls;
+                                        // island = a run standing free in the room (no wall behind it), parallel to the back run,
+                                        // its doors facing the camera (an island or the front of a peninsula); at most one
+     "peninsula": true,                 // only on left/right, only when there is NO wall behind that run: it stands in the room,
+                                        // perpendicular to the back run and touching it (a peninsula seen from its side); count it in layout
+                                        // like a side run (back + peninsula = l-shape)
+     "touches": "left" | "right",       // only on island, only when one end of it touches that side run (a peninsula parallel to the back run)
      "end": "open" | "wall" | "tall",     // what is at the far end of the run (away from the inner corner)
      "box": {{"left":f,"right":f,"top":f,"bottom":f}},   // image region of the whole run incl. wall and tall cabinets
      "lines": {{   // each line = two points [[x1,y1],[x2,y2]] lying ON that edge, spread as far apart as the edge is visible

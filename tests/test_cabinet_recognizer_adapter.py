@@ -182,7 +182,7 @@ class TestEndToEnd(unittest.TestCase):
         self.assertEqual(r["status"], "ok")
         layout = r["layout"]
         self.assertEqual([run["id"] for run in layout["runs"]], ["left", "back"])
-        self.assertEqual(layout["joints"], [["left", "back"]])
+        self.assertEqual(layout["joints"], [["left", "back", 90.0]])
         total = sum(len(run["modules"]) for run in layout["runs"])
         ops = r["operation"]["ops"]
         adds = [o["module"] for o in ops if o["op"] == "add"]

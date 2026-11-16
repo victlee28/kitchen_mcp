@@ -14,9 +14,9 @@ from typing import Any, Literal, cast
 
 from pydantic import BaseModel, Field, ValidationError
 
-from . import builtin, cabinet_types, defaults, layout_solver, lexicon, regions
+from . import builtin, cabinet_types, defaults, layout_solver, legs, lexicon, regions
 from .catalog import Catalog
-from .spec import Appliance, Common, FrontSection, Handle, KitchenSpec, Module, Room, Wall
+from .spec import Appliance, Common, FrontSection, Handle, KitchenSpec, Module, Room, Wall, from_data, to_data
 from .words import say
 from .words import said
 
@@ -213,7 +213,7 @@ def _merge_notes(items: list[dict], notes: list[dict]) -> list[dict]:
 
 
 def from_template(color: KitchenTemplate, name: str = "", rows: list[dict] | None = None,
-                  catalog: Catalog = builtin.CATALOG, as_rows: bool = False) -> KitchenSpec:
+                  catalog: Catalog = builtin.CATALOG) -> KitchenSpec:
     """Sinh spec từ mẫu. Kích thước không được chỉ định lấy theo tiêu chuẩn ưu tiên của mau.quocGia/khuVuc; các kích thước chung còn lại
     (dày cánh, khe, mặt đá, đỉnh tủ trên khi câu không nói) lấy từ danh mục ``defaults`` của xưởng."""
     new = defaults.of(catalog).new_design
@@ -248,19 +248,35 @@ def from_template(color: KitchenTemplate, name: str = "", rows: list[dict] | Non
     tb: list[Appliance] = []
     upper_depth = c.upperDepth
     n = {"TD": 0, "TT": 0, "TC": 0, "TN": 0}
+    lay = legs.Legs()                 # every leg of the template is laid straight into its own run
+
+    def put(leg: legs.Leg, f: float, width: float, doors: list[float] | None = None, **kw: Any) -> Module:
+        """A cabinet at ``f`` along ``leg``, ``width`` wide: made in the leg's run (``legs.Leg.at``), its doors listed as the run lists them."""
+        m = Module(wall="island", run=leg.run, fromCorner=leg.at(f, width), width=width, doors=leg.doors(doors or []), **kw)
+        mods.append(m)
+        return m
+
+    def along(leg: legs.Leg, m: Module) -> tuple[float, float]:
+        """(start, end) of a cabinet of ``leg``'s run, along the leg."""
+        f = leg.f_of(m.fromCorner, m.width)
+        return f, f + m.width
+
+    def host_center(leg: legs.Leg, t: Appliance) -> float | None:
+        host = next((m for m in mods if m.id == t.module and m.run == leg.run), None)
+        return sum(along(leg, host)) / 2 if host is not None else None
 
     def id(p):
         n[p] += 1
         return f"{p}{n[p]}"
 
-    def extra(wall: WallSide, at: float, e: dict[str, Any]) -> float:
+    def extra(leg: legs.Leg, at: float, e: dict[str, Any]) -> float:
         """A cabinet the template asks for at the start / end of a run (``extras``): its width."""
         w = float(e["width"])
-        mods.append(Module(id=id("TD"), type=str(e["type"]), name=cabinet_types.label_of(str(e["type"]), catalog), wall=wall, fromCorner=at, width=w, y=0,
-                           height=c.baseTop, depth=c.baseDepth, doors=[w / 2, w / 2] if w >= rules.double_door_from else [w]))
+        put(leg, at, w, [w / 2, w / 2] if w >= rules.double_door_from else [w], id=id("TD"), type=str(e["type"]),
+            name=cabinet_types.label_of(str(e["type"]), catalog), y=0, height=c.baseTop, depth=c.baseDepth)
         return w
 
-    def thickness(wall: WallSide, start: float, length: float, appliance: list[str], front: float = 450, fridge_at_end: bool = False,
+    def thickness(leg: legs.Leg, start: float, length: float, appliance: list[str], front: float = 450, fridge_at_end: bool = False,
                   extras: list[dict[str, Any]] | None = None):
         """Bố trí một dãy tủ dưới: [khoảng trước] + thiết bị xen khoảng 600 + [khoảng sau 450] (``layout_solver.base_plan``).
         Khoảng trống là mặt bàn thao tác (NKBA-10/14/15); thiếu chỗ thì co về 300 rồi bỏ."""
@@ -268,14 +284,13 @@ def from_template(color: KitchenTemplate, name: str = "", rows: list[dict] | Non
         if fridge_at_end:
             fr = rules.fridge
             width = float(fr.get("width", 700))
-            mods.append(Module(id=id("TC"), type="tall-fridge", name=say("name.cabinet.tall-fridge"), wall=wall, fromCorner=start + length - width,
-                               width=width, y=0, height=c.cabinetTop, depth=fr.get("depth", 640), doors=list(fr.get("doors", [350, 350])),
-                               niche=fr.get("niche", 1650)))
+            put(leg, start + length - width, width, list(fr.get("doors", [350, 350])), id=id("TC"), type="tall-fridge",
+                name=say("name.cabinet.tall-fridge"), y=0, height=c.cabinetTop, depth=fr.get("depth", 640), niche=fr.get("niche", 1650))
             tb.append(Appliance(id=f"TB{len(tb)+1}", type="fridge", name=say("name.appliance.fridge"), dimensions=str(fr.get("dimensions", "")),
                                 module=mods[-1].id))
             length -= width
         for e in (x for x in extras or [] if x["at"] == "start"):
-            w = extra(wall, s, e)
+            w = extra(leg, s, e)
             s += w
             length -= w
         ends = [x for x in extras or [] if x["at"] == "end"]
@@ -285,24 +300,23 @@ def from_template(color: KitchenTemplate, name: str = "", rows: list[dict] | Non
         length -= sum(float(e["width"]) for e in ends)
         plan = layout_solver.base_plan(length, appliance, rules, front, toward_end=fridge_at_end)   # với tủ lạnh: chậu (cuối danh sách) sát tủ lạnh
         for w, type in plan:
-            base_cabinet(wall, s, w, type)
+            base_cabinet(leg, s, w, type)
             s += w
         for e in ends:
-            tail += extra(wall, tail, e)
+            tail += extra(leg, tail, e)
 
-    def base_cabinet(wall: WallSide, s: float, w: float, type: str) -> None:
-        """A plain, sink or cooktop base cabinet at ``s`` with the sink and tap / the cooktop on the worktop above it."""
+    def base_cabinet(leg: legs.Leg, s: float, w: float, type: str) -> None:
+        """A plain, sink or cooktop base cabinet at ``s`` with the sink and tap / the cooktop on the worktop above it (over its middle)."""
         doors = [w / 2, w / 2] if w >= rules.double_door_from else [w]
-        mods.append(Module(id=id("TD"), type=type, name=say(f"name.cabinet.{type if type in ('base-sink', 'base-cooktop') else 'base'}"),
-                           wall=wall, fromCorner=s, width=w, y=0, height=c.baseTop, depth=c.baseDepth, doors=doors,
-                           frontSections=_drawers(rules) if type == "base-cooktop" else []))
+        m = put(leg, s, w, doors, id=id("TD"), type=type, name=say(f"name.cabinet.{type if type in ('base-sink', 'base-cooktop') else 'base'}"),
+                y=0, height=c.baseTop, depth=c.baseDepth, frontSections=_drawers(rules) if type == "base-cooktop" else [])
         if type == "base-sink":
-            tb.append(Appliance(id=f"TB{len(tb)+1}", type="sink", name=say("name.appliance.sink"), dimensions=f"{min(780, w - 40):g} × 430", wall=wall, center=s + w / 2))
-            tb.append(Appliance(id=f"TB{len(tb)+1}", type="faucet", name=say("name.appliance.faucet"), dimensions="cao 300", wall=wall, center=s + w / 2))
+            tb.append(Appliance(id=f"TB{len(tb)+1}", type="sink", name=say("name.appliance.sink"), dimensions=f"{min(780, w - 40):g} × 430", module=m.id))
+            tb.append(Appliance(id=f"TB{len(tb)+1}", type="faucet", name=say("name.appliance.faucet"), dimensions="cao 300", module=m.id))
         if type == "base-cooktop":
-            tb.append(Appliance(id=f"TB{len(tb)+1}", type="cooktop", name=say("name.appliance.cooktop"), dimensions=f"{min(730, w - 10):g} × 430", wall=wall, center=s + w / 2))
+            tb.append(Appliance(id=f"TB{len(tb)+1}", type="cooktop", name=say("name.appliance.cooktop"), dimensions=f"{min(730, w - 10):g} × 430", module=m.id))
 
-    def cabinets(wall: WallSide, start: float, length: float, items: list[dict[str, Any]]) -> None:
+    def cabinets(leg: legs.Leg, start: float, length: float, items: list[dict[str, Any]]) -> None:
         """The cabinets of a ``cabinets`` step in order (``layout_solver.fit_items``): base ones as a run makes them, the fridge cabinet
         with its fridge, any other type at its storey's height."""
         s = start
@@ -310,11 +324,11 @@ def from_template(color: KitchenTemplate, name: str = "", rows: list[dict] | Non
             if type == layout_solver.GAP:
                 pass
             elif type in ("base", "base-sink", "base-cooktop"):
-                base_cabinet(wall, s, w, type)
+                base_cabinet(leg, s, w, type)
             elif type == "tall-fridge":
                 fr = rules.fridge
-                mods.append(Module(id=id("TC"), type="tall-fridge", name=say("name.cabinet.tall-fridge"), wall=wall, fromCorner=s, width=w, y=0,
-                                   height=c.cabinetTop, depth=fr.get("depth", 640), doors=[w / 2, w / 2], niche=fr.get("niche", 1650)))
+                put(leg, s, w, [w / 2, w / 2], id=id("TC"), type="tall-fridge", name=say("name.cabinet.tall-fridge"), y=0,
+                    height=c.cabinetTop, depth=fr.get("depth", 640), niche=fr.get("niche", 1650))
                 tb.append(Appliance(id=f"TB{len(tb)+1}", type="fridge", name=say("name.appliance.fridge"), dimensions=str(fr.get("dimensions", "")),
                                     module=mods[-1].id))
             elif cabinet_types.storey_of(type, catalog) in ("upper", "loft"):      # a saved row of wall cabinets: each at its own type
@@ -323,25 +337,24 @@ def from_template(color: KitchenTemplate, name: str = "", rows: list[dict] | Non
                     s += w
                     continue
                 y = c.upperTierSplit if loft else (max(c.upperBottom + 150, y_hood) if type == "upper-hood" else c.upperBottom)
-                mods.append(Module(id=id("TN" if loft else "TT"), type=type, name=cabinet_types.label_of(type, catalog), wall=wall, fromCorner=s,
-                                   width=w, y=y, height=(c.cabinetTop if loft else c.upperTierSplit) - y, depth=upper_depth,
-                                   doors=[w / 2, w / 2] if w >= rules.double_door_from else [w]))
+                put(leg, s, w, [w / 2, w / 2] if w >= rules.double_door_from else [w], id=id("TN" if loft else "TT"), type=type,
+                    name=cabinet_types.label_of(type, catalog), y=y, height=(c.cabinetTop if loft else c.upperTierSplit) - y, depth=upper_depth)
                 if type == "upper-hood":
                     tb.append(Appliance(id=f"TB{len(tb)+1}", type="hood", name=say("name.appliance.hood"),
                                         dimensions=f"{min(w - 40, 730):g} × {rules.hood_height:g}", module=mods[-1].id))
             else:
                 tall = cabinet_types.storey_of(type, catalog) == "tall"
-                mods.append(Module(id=id("TC" if tall else "TD"), type=type, name=cabinet_types.label_of(type, catalog), wall=wall, fromCorner=s,
-                                   width=w, y=0, height=c.cabinetTop if tall else c.baseTop, depth=c.baseDepth,
-                                   doors=[w / 2, w / 2] if w >= rules.double_door_from else [w]))
+                put(leg, s, w, [w / 2, w / 2] if w >= rules.double_door_from else [w], id=id("TC" if tall else "TD"), type=type,
+                    name=cabinet_types.label_of(type, catalog), y=0, height=c.cabinetTop if tall else c.baseTop, depth=c.baseDepth)
             s += w
 
-    def upper(wall: WallSide, start: float, end: float):
-        """Tủ trên chia theo đúng ranh giới tủ dưới bên dưới; ô ngay trên bếp thành tủ hút mùi."""
-        cooktop_centers = [t.center for t in tb if t.type == "cooktop" and t.wall == wall and t.center is not None]
-        talls = [(m.fromCorner, m.endAt) for m in mods if m.wall == wall and m.storey == "tall"]    # no wall cabinet in front of a tall one
-        cuts = sorted({start, end, *[m.fromCorner for m in mods if m.wall == wall and m.storey in ("base", "tall") and start < m.fromCorner < end],
-                       *[m.endAt for m in mods if m.wall == wall and m.storey in ("base", "tall") and start < m.endAt < end]})
+    def upper(leg: legs.Leg, start: float, end: float):
+        """Tủ trên chia theo đúng ranh giới tủ dưới bên dưới; ô ngay trên bếp thành tủ hút mùi. Positions along the leg."""
+        cooktop_centers = [x for t in tb if t.type == "cooktop" and (x := host_center(leg, t)) is not None]
+        mine = [along(leg, m) + (m.storey,) for m in mods if m.run == leg.run]
+        talls = [(a, b) for a, b, st in mine if st == "tall"]    # no wall cabinet in front of a tall one
+        cuts = sorted({start, end, *[a for a, _, st in mine if st in ("base", "tall") and start < a < end],
+                       *[b for _, b, st in mine if st in ("base", "tall") and start < b < end]})
         segs = [(a, b) for a, b in zip(cuts, cuts[1:]) if b - a >= 1 and not any(t0 <= (a + b) / 2 < t1 for t0, t1 in talls)]
         merged: list[list[float]] = []
         for a, b in segs:  # gộp ô quá hẹp vào ô bên cạnh
@@ -354,8 +367,8 @@ def from_template(color: KitchenTemplate, name: str = "", rows: list[dict] | Non
             type = "upper-hood" if any(a <= t < b for t in cooktop_centers) else "upper"
             y = max(c.upperBottom + 150, y_hood) if type == "upper-hood" else c.upperBottom
             two = w >= rules.double_door_from
-            mods.append(Module(id=id("TT"), type=type, name=say("name.cabinet.upper-hood" if type == "upper-hood" else "name.cabinet.upper"), wall=wall,
-                               fromCorner=a, width=w, y=y, height=c.upperTierSplit - y, depth=upper_depth, doors=[w / 2, w / 2] if two else [w]))
+            put(leg, a, w, [w / 2, w / 2] if two else [w], id=id("TT"), type=type,
+                name=say("name.cabinet.upper-hood" if type == "upper-hood" else "name.cabinet.upper"), y=y, height=c.upperTierSplit - y, depth=upper_depth)
             if type == "upper-hood":
                 tb.append(Appliance(id=f"TB{len(tb)+1}", type="hood", name=say("name.appliance.hood"),
                                     dimensions=f"{min(w - 40, 730):g} × {rules.hood_height:g}", module=mods[-1].id))
@@ -363,29 +376,33 @@ def from_template(color: KitchenTemplate, name: str = "", rows: list[dict] | Non
                 # có phào nóc: cánh nóc mở ngang thay vì lật lên để không chạm phào (MOLDING-CANH-LAT-001)
                 hinge: list[Literal["left", "right", "upper", "base"]] = ["left", "right"] if (h_loft and two) else ["left"] if h_loft else []
                 loft_door = [w / 2, w / 2] if (h_loft and two) else [w]
-                mods.append(Module(id=id("TN"), type="upper-loft", name=say("name.cabinet.top"), wall=wall, fromCorner=a, width=w, y=c.upperTierSplit,
-                                   height=c.cabinetTop - c.upperTierSplit, depth=upper_depth, doors=loft_door, hingeSides=hinge))
+                put(leg, a, w, loft_door, id=id("TN"), type="upper-loft", name=say("name.cabinet.top"), y=c.upperTierSplit,
+                    height=c.cabinetTop - c.upperTierSplit, depth=upper_depth, hingeSides=hinge)
 
-    def corner_base(wall: WallSide, type: str, width: float, blind: float, doors: list[float]):
-        mods.append(Module(id=id("TD"), type=type, name=say("name.cabinet.blind-corner"), wall=wall, fromCorner=0, width=width, y=0,
-                           height=c.baseTop, depth=c.baseDepth, doors=doors, blindCorner=blind))
+    def corner_base(leg: legs.Leg, type: str, width: float, blind: float, doors: list[float]):
+        put(leg, 0, width, doors, id=id("TD"), type=type, name=say("name.cabinet.blind-corner"), y=0, height=c.baseTop, depth=c.baseDepth,
+            blindCorner=blind, blindSide=leg.corner_end())
 
     def corner_shelf():
+        """Open shelves round the back-right corner: the first leg at the corner end of the back wall's run, the second at the start of the
+        right wall's run (which is made for it if the right wall has nothing else)."""
         cs = rules.corner_shelf
-        mods.append(Module(id="KG1", type="corner-shelf", name=say("name.cabinet.corner-shelf"), wall="corner", backLength=cs.get("back", 600),
-                           rightLength=cs.get("right", 600), y=c.upperBottom, height=c.upperTierSplit - c.upperBottom, depth=upper_depth,
-                           shelfCount=int(cs.get("shelfCount", 3))))
+        back, right = lay.wall("back"), lay.wall("right")
+        leg_b, leg_r = float(cs.get("back", 600)), float(cs.get("right", 600))
+        right.ends.append(leg_r)
+        put(back, 0, leg_b, id="KG1", type="corner-shelf", name=say("name.cabinet.corner-shelf"), turnsInto=right.run, rightLength=leg_r,
+            y=c.upperBottom, height=c.upperTierSplit - c.upperBottom, depth=upper_depth, shelfCount=int(cs.get("shelfCount", 3)))
 
     def step(do: str, v: dict[str, Any]) -> None:
-        wall = cast(WallSide, v.get("wall", "back"))
+        leg = lay.wall(cast(WallSide, v.get("wall", "back")))
         if do == "base-run":
-            thickness(wall, v["start"], v["length"], v["appliances"], v["front"], v["fridgeAtEnd"], v.get("extras"))
+            thickness(leg, v["start"], v["length"], v["appliances"], v["front"], v["fridgeAtEnd"], v.get("extras"))
         elif do == "cabinets":
-            cabinets(wall, v["start"], v["length"], v["items"])
+            cabinets(leg, v["start"], v["length"], v["items"])
         elif do == "corner-base":
-            corner_base(wall, v["type"], v["width"], v["blind"], v["doors"])
+            corner_base(leg, v["type"], v["width"], v["blind"], v["doors"])
         elif do == "upper-run":
-            upper(wall, v["start"], v["end"])
+            upper(leg, v["start"], v["end"])
         else:
             corner_shelf()
 
@@ -406,16 +423,16 @@ def from_template(color: KitchenTemplate, name: str = "", rows: list[dict] | Non
     Wback = float(env.get("W", color.backWallLength))
 
     def free_run(label: str, z: float, start: float, length: float, blind: float = 0) -> bool:
-        """Dãy đặt rời (đảo / bán đảo) song song tường sau, mặt cánh hướng về tường sau."""
+        """Dãy đặt rời (đảo / bán đảo) song song tường sau, mặt cánh hướng về tường sau (door face at ``z``)."""
+        leg = lay.free(z, g)
         s = start
         if blind:  # đầu sát tường phải: phần góc khuất không cánh để không đụng tủ bên cạnh
-            mods.append(Module(id=id("TD"), type="base-drawers", name=label, wall="island", offset=z, fromCorner=s, width=blind + 450, y=0,
-                               height=c.baseTop, depth=g, blindCorner=blind, frontSections=_drawers(rules)))
+            put(leg, s, blind + 450, id=id("TD"), type="base-drawers", name=label, y=0, height=c.baseTop, depth=g, blindCorner=blind,
+                blindSide=leg.corner_end(), frontSections=_drawers(rules))
             s += blind + 450
             length -= blind + 450
         for w in layout_solver.split(length, rules) if length >= rules.min_width else []:
-            mods.append(Module(id=id("TD"), type="base-drawers", name=label, wall="island", offset=z, fromCorner=s, width=w, y=0,
-                               height=c.baseTop, depth=g, frontSections=_drawers(rules)))
+            put(leg, s, w, id=id("TD"), type="base-drawers", name=label, y=0, height=c.baseTop, depth=g, frontSections=_drawers(rules))
             s += w
         return length >= rules.min_width
 
@@ -443,7 +460,9 @@ def from_template(color: KitchenTemplate, name: str = "", rows: list[dict] | Non
     if color.openShelf:
         sink = next((t for t in tb if t.type == "sink"), None)
         ups = [m for m in mods if m.type == "upper"]
-        pick = next((m for m in ups if sink and m.wall == sink.wall and sink.center is not None and m.fromCorner <= sink.center < m.endAt), None) or (ups[-1] if ups else None)
+        host = next((m for m in mods if sink and m.id == sink.module), None)
+        mid = host.fromCorner + host.width / 2 if host else None
+        pick = next((m for m in ups if host and m.run == host.run and mid is not None and m.fromCorner <= mid < m.endAt), None) or (ups[-1] if ups else None)
         if pick:
             pick.type, pick.doors, pick.shelfCount, pick.name = "upper-open", [], 3, say("name.cabinet.open-shelf")
             notes_built.append({"term": "kệ mở", "canonical": "openShelf", "scope": ["upper"], "target": pick.id, "status": "built",
@@ -456,7 +475,11 @@ def from_template(color: KitchenTemplate, name: str = "", rows: list[dict] | Non
         ds = color.doorStyle.get(tier.get(m.storey, ""))
         if ds and m.doors and m.type not in ("upper-hood", "corner-shelf"):
             m.doorStyle = ds
-    spec = KitchenSpec(name=name or say("name.design"), common=c, module=mods, room=room, appliances=tb, country=color.country, region=color.region, style=color.style,
+    lsau, lphai = lay.lengths(room.length("back") if room else None, None)
+    room = Room(wall=[Wall(id="back", length=lsau), Wall(id="right", length=lphai)])      # the kitchen frame, written down
+    made = lay.place(mods, lsau)
+    _hinge_on_the_right(lay, mods, c, catalog)
+    spec = KitchenSpec(name=name or say("name.design"), common=c, module=mods, runs=made, room=room, appliances=tb, country=color.country, region=color.region, style=color.style,
                        styleTags=color.styleTags or None, aiHints=list(dict.fromkeys(color.aiHints)) or None,
                        renderPreferences=list(dict.fromkeys(color.renderPreferences)),
                        promptInterpretation=_merge_notes(color.promptInterpretation, notes_built) or None,
@@ -464,8 +487,21 @@ def from_template(color: KitchenTemplate, name: str = "", rows: list[dict] | Non
                        moldingProfiles=_mol.embedded([p for p, on in ((color.crownMoldingProfile, crown_molding), (color.baseMoldingProfile, base_molding)) if on], [],
                                                      catalog),
                        source="Sinh từ mẫu; kích thước theo: " + ", ".join(f"{k}={v}" for k, v in check_source.items()))
-    laid = KitchenSpec.model_validate(spec.model_dump(mode="json"))
-    if as_rows:                     # the layout as laid out: cabinets by wall (``fromCorner`` from the corner), for checking the layout itself
-        return laid
-    from .rows_to_runs import as_runs
-    return as_runs(laid, catalog)   # laid out by wall, a design is by runs
+    return KitchenSpec.model_validate(spec.model_dump(mode="json"))
+
+
+def _hinge_on_the_right(lay: legs.Legs, mods: list[Module], c: Common, catalog: Catalog) -> None:
+    """A door alone in its row, in a cabinet along the right wall, hinges on the right (on the corner side it would hit the run along the
+    back wall): written down as ``hingeSides``, since a run's own default is the left."""
+    from . import geometry
+    right = lay.legs.get("right")
+    if right is None:
+        return
+    want = [m for m in mods if m.run == right.run and m.doors and not m.blindCorner and not m.hingeSides]
+    if not want:
+        return
+    scene = geometry.compile_spec(from_data(KitchenSpec, {"common": to_data(c), "module": [to_data(m) for m in want],
+                                                          "runs": [{"id": right.run, "x": 0, "z": 0, "yaw": right.yaw}]}), catalog)
+    from .rows_to_runs import lone_doors_right
+    for m in want:
+        m.hingeSides = cast(Any, lone_doors_right(m, scene))       # hinge side names ("left" / "right"), as Module.hingeSides takes them

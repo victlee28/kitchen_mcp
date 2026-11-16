@@ -5,12 +5,17 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from kitchen import geometry, intent, rows_to_runs, rules, threejs_export  # noqa: E402
+from kitchen import geometry, intent, rules, runs, threejs_export  # noqa: E402
 
 
 def build(prompt):
     t, _ = intent.parse_prompt(prompt)
-    return t, intent.from_template(t, as_rows=True)     # the layout by wall; geometry, file and rules read it as runs
+    return t, intent.from_template(t)
+
+
+def wall(s, m):
+    """The wall the run of ``m`` stands against ("corner" for the shelf turning the back-right corner)."""
+    return "corner" if m.turnsInto else runs.wall_of(s, m, s.room.length("back"))
 
 
 class TestLayoutU(unittest.TestCase):
@@ -24,10 +29,11 @@ class TestLayoutU(unittest.TestCase):
 
     def test_three_walls_with_a_blind_corner_each_side(self):
         _, s = build("Bếp chữ U 3m, tủ lạnh")
-        walls = {m.wall for m in s.module}
+        walls = {wall(s, m) for m in s.module}
         self.assertEqual(walls, {"back", "right", "left", "corner"})
+        self.assertEqual(len(s.runs), 3, "one run per leg")
         corners = [m for m in s.module if m.blindCorner]
-        self.assertEqual(sorted(m.wall for m in corners), ["left", "right"])
+        self.assertEqual(sorted(wall(s, m) for m in corners), ["left", "right"])
         self.assertTrue(any(m.type == "tall-fridge" for m in s.module))
         self.assertEqual(s.room.length("back"), 3000)
 
@@ -41,13 +47,13 @@ class TestLayoutU(unittest.TestCase):
     def test_width_is_never_narrower_than_the_two_corner_cabinets(self):
         t, s = build("Bếp chữ U 1m")
         self.assertGreaterEqual(s.room.length("back"), 2 * s.common.baseDepth + 900)
-        self.assertTrue(any(m.wall == "back" and m.storey == "base" for m in s.module))
+        self.assertTrue(any(wall(s, m) == "back" and m.storey == "base" for m in s.module))
 
     def test_left_wall_exists_in_the_scene_and_views(self):
         _, s = build("Bếp chữ U 3m")
         sc = geometry.compile_spec(s)
         self.assertEqual(sc.lsau, 3000)
-        left = {rows_to_runs.as_runs(s).find(m.id).run for m in s.module if m.wall == "left"}
+        left = {m.run for m in s.module if wall(s, m) == "left"}
         self.assertTrue(any(p.run in left and p.type == "door" for p in sc.parts))
         self.assertIn("left-wall", geometry.default_views(s))
         v = geometry.default_views(s)["perspective"]

@@ -11,7 +11,7 @@ from .compute_persp import band_lines
 from .errors import RecognizerError
 from .pixels import load_gray, _peaks
 
-PREFIX = {"back": "B", "left": "L", "right": "R"}
+PREFIX = {"back": "B", "left": "L", "right": "R", "island": "I"}
 STOREY_LETTER = {"base": "D", "upper": "U", "upper-top": "T"}
 BAND_ROWS = {"base": (0.20, 0.85), "upper": (0.15, 0.75), "upper-top": (0.20, 0.80)}
 

@@ -48,3 +48,52 @@ export function topView(parts, size = 260, margin = 8) {
     w: Math.max(0.5, (p.x[1] - p.x[0]) * scale), h: Math.max(0.5, (p.z[1] - p.z[0]) * scale) }));
   return { rects, scale, width: size, height: Math.round(2 * margin + (z1 - z0) * scale) };
 }
+
+// --- drag and drop: the steps of a template and the cabinets of a "cabinets" step, reordered and added by dragging
+
+/** What a step of each kind holds when it is dropped in from the palette. */
+export const NEW_STEP = {
+  'base-run': { wall: 'back', start: '0', length: 'back', appliances: '[{"items": ["sink", "cooktop"]}]', fridgeAtEnd: 'fridge' },
+  'cabinets': { wall: 'back', start: '0', length: 'back', items: '[]' },
+  'corner-base': { wall: 'right', type: 'base-corner', width: 'g + 450', blind: 'g', doors: '450' },
+  'corner-shelf': {},
+  'upper-run': { wall: 'back', start: '0', end: 'back' },
+};
+
+/** ``list`` with the element at ``from`` moved so it ends up at index ``to`` of the new list (a new array; out of range: unchanged). */
+export function moveTo(list, from, to) {
+  if (from < 0 || from >= list.length || to < 0 || to > list.length) return list.slice();
+  const out = list.slice();
+  const [x] = out.splice(from, 1);
+  out.splice(Math.min(to > from ? to - 1 : to, out.length), 0, x);
+  return out;
+}
+
+/** Where a dragged row lands: the index of the first row whose middle lies below the pointer (``mids``: the rows' middles, top to bottom). */
+export function dropIndex(mids, y) {
+  const i = mids.findIndex((m) => y < m);
+  return i < 0 ? mids.length : i;
+}
+
+/** ``rows`` with a new step of ``kind`` at index ``at`` (a new array). */
+export function insertStep(rows, kind, at) {
+  const out = rows.slice();
+  out.splice(Math.max(0, Math.min(at, out.length)), 0, { do: kind, ...(NEW_STEP[kind] || {}) });
+  return out;
+}
+
+/** The cabinets of a "cabinets" row (its ``items`` field, JSON): a list, or null while the text does not parse as one. */
+export function itemsOf(row) {
+  const text = String(row.items ?? '').trim();
+  if (!text) return [];
+  try { const v = JSON.parse(text); return Array.isArray(v) ? v : null; } catch { return null; }
+}
+
+/** The row with these cabinets written back into its ``items`` field. */
+export const withItems = (row, items) => ({ ...row, items: JSON.stringify(items) });
+
+/** A cabinet dropped in from the palette: its type and a width (``fill``: shares what is left of the stretch). */
+export const newItem = (type, width = 600) => ({ type, width: String(width) });
+
+/** A cabinet's chip text: type, width, and ∗ when it fills. */
+export const itemLabel = (item) => `${item.type} · ${item.width ?? 600}${item.fill ? ' ∗' : ''}${item.when ? ' ?' : ''}`;

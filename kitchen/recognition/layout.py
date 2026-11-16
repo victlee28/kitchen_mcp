@@ -2,7 +2,9 @@
 
 A run is a straight row of cabinets; each cabinet has ``s`` = its distance from the LEFT end of the run as seen by someone standing in front of
 the doors (the same ``s`` as ``runs.RunFrame`` and ``run_line``). A joint ``(a, b)`` says: the END of run ``a`` meets the START of run ``b`` in an
-inside corner of the room. That is all a line needs: put the main run on a line and the others follow (``run_line.plan_runs``); no wall names,
+inside corner of the room, at ``angle`` degrees (90 unless the photo showed otherwise). A free run (``free: {"from", "offset", "s"}``,
+an island) stands parallel to run ``from``, its back ``offset`` mm in front of that run's back, starting at ``s`` along it; ``touches`` names
+the side run one of its ends meets (a peninsula). A side run with ``peninsula: true`` has no wall behind it. That is all a line needs: put the main run on a line and the others follow (``run_line.plan_runs``); no wall names,
 no origin, no mirroring. Unlike the flat ``Draft`` this keeps what the photo showed of each cabinet: doors, drawers, the blind part in a corner,
 glass, the appliances standing in it.
 """
@@ -18,14 +20,16 @@ from .draft import MAX_MODULES, MIN_CONFIDENCE, DraftModule, confidence_of, numb
 from .operation import fridge_bay
 
 SCHEMA = "recognized-runs/1"
-RUN_IDS = ("left", "back", "right")
+RUN_IDS = ("left", "back", "right", "island")
 MIN_WIDTH, MAX_WIDTH = 150.0, 2000.0          # a blind-corner cabinet runs into the corner, so it may be wider than a free-standing one
 MAX_LENGTH = 12000.0
 SECTION_TYPES = ("niche", "drawer", "door")
 DOOR_STYLES = ("flat", "frame", "glass")
 APPLIANCE_TYPES = ("fridge", "sink", "faucet", "cooktop", "hood", "oven", "light", "other")
 MAX_APPLIANCES = 4
-RIGHT_ANGLE_TOLERANCE = 1.0
+RIGHT_ANGLE_TOLERANCE = 1.0     # a measured corner this close to 90 degrees is square
+MIN_ANGLE, MAX_ANGLE = 45.0, 160.0       # a corner outside this is not believed: the two runs are not joined
+MAX_OFFSET = 8000.0
 
 
 @dataclass(frozen=True)
@@ -33,12 +37,24 @@ class LayoutRun:
     id: str
     length: float
     modules: tuple[dict[str, Any], ...]       # each ready for ``run_line.plan_on_line``: type, width, s, y, height, depth + what the cabinet carries
+    free: tuple[str, float, float] | None = None   # (run it stands parallel to, offset of its back from that run's back, s along it)
+    touches: str | None = None                # a free run: the side run one of its ends meets (a peninsula parallel to the main run)
+    peninsula: bool = False                   # a side run with no wall behind it (a peninsula leaving the main run)
+
+    def to_data(self) -> dict[str, Any]:
+        """The run as ``run_line.run_lines`` takes it."""
+        out: dict[str, Any] = {"id": self.id, "length": self.length, "modules": [dict(m) for m in self.modules]}
+        if self.free:
+            out["free"] = {"from": self.free[0], "offset": self.free[1], "s": self.free[2], **({"touches": self.touches} if self.touches else {})}
+        if self.peninsula:
+            out["peninsula"] = True
+        return out
 
 
 @dataclass(frozen=True)
 class Layout:
     runs: tuple[LayoutRun, ...]
-    joints: tuple[tuple[str, str], ...]       # (a, b): the end of run a meets the start of run b at a right angle
+    joints: tuple[tuple[str, str, float], ...]   # (a, b, angle): the end of run a meets the start of run b, inside corner of ``angle`` degrees
     rejected: tuple[dict[str, Any], ...]      # [{"run", "index", "reason"}]
     notes: tuple[str, ...]
     levels: tuple[tuple[str, float], ...] = ()   # the recognised kitchen's own levels (``LEVELS`` of spec.Common), when the recognizer gives them
@@ -48,7 +64,7 @@ class Layout:
         return sum(len(r.modules) for r in self.runs)
 
     def to_data(self) -> dict[str, Any]:
-        return {"runs": [{"id": r.id, "length": r.length, "modules": [dict(m) for m in r.modules]} for r in self.runs],
+        return {"runs": [r.to_data() for r in self.runs],
                 "joints": [list(j) for j in self.joints], "rejected": list(self.rejected), "notes": list(self.notes),
                 **({"levels": dict(self.levels)} if self.levels else {})}
 
@@ -228,20 +244,30 @@ def build_layout(raw: Any) -> Layout | None:
             else:
                 modules.append(module)
                 budget -= 1
+        free, touches = None, None
+        if rid == "island":                    # where it stands, against the run it is parallel to; without it there is no place for it
+            fv = as_dict(item.get("free")) or {}
+            off, at = number(fv.get("offset")), number(fv.get("s"))
+            if fv.get("from") != "back" or off is None or at is None or not 0 < off <= MAX_OFFSET or abs(at) > MAX_LENGTH:
+                notes.append("the free-standing run was ignored (no usable place)")
+                continue
+            free = ("back", round_half_away(off), round_half_away(at))
+            touches = fv.get("touches") if fv.get("touches") in ("left", "right") else None
         if modules:
-            runs.append(LayoutRun(str(rid), float(length), tuple(sorted(modules, key=lambda m: (m["y"], m["s"])))))
+            runs.append(LayoutRun(str(rid), float(length), tuple(sorted(modules, key=lambda m: (m["y"], m["s"]))), free,
+                                  touches if rid == "island" else None, rid in ("left", "right") and item.get("peninsula") is True))
     if not runs:
         return None
     have = {r.id for r in runs}
-    joints: list[tuple[str, str]] = []
+    joints: list[tuple[str, str, float]] = []
     for jv in as_list(doc.get("joints")) or []:
         joint = as_dict(jv) or {}
         a, b = joint.get("a"), joint.get("b")
         angle = number(joint.get("angle"))
-        if a not in have or b not in have or a == b or (str(a), str(b)) in joints:
+        if a not in have or b not in have or a == b or "island" in (a, b) or any(j[:2] == (str(a), str(b)) for j in joints):
             continue
-        if angle is None or abs(angle - 90.0) > RIGHT_ANGLE_TOLERANCE:
-            notes.append(f"the corner between {a} and {b} is not a right angle ({angle!r}); the two runs are not joined")
+        if angle is None or not MIN_ANGLE <= angle <= MAX_ANGLE:
+            notes.append(f"the corner between {a} and {b} is not believable ({angle!r} degrees); the two runs are not joined")
             continue
-        joints.append((str(a), str(b)))
+        joints.append((str(a), str(b), 90.0 if abs(angle - 90.0) <= RIGHT_ANGLE_TOLERANCE else round_half_away(angle, 1)))
     return Layout(tuple(runs), tuple(joints), tuple(rejected), tuple(notes), _levels(doc.get("common")))

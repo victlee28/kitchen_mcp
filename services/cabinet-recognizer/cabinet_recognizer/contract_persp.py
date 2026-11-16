@@ -14,7 +14,7 @@ from .errors import invalid
 
 LAYOUTS: tuple[str, ...] = ("straight", "l-shape", "u-shape", "none")      # none: no cabinets in the picture (a wall with a door or window)
 VIEWS: tuple[str, ...] = ("frontal", "perspective")
-WALLS: tuple[str, ...] = ("left", "back", "right")
+WALLS: tuple[str, ...] = ("left", "back", "right", "island")     # island: a run standing free, parallel to the back run, doors to the camera
 STOREYS: tuple[str, ...] = ("base", "upper", "upper-top")
 LINE_KEYS_REQUIRED: tuple[str, ...] = ("worktopFront", "frontsBottom", "plinthBottom")
 LINE_KEYS_OPTIONAL: tuple[str, ...] = ("upperBottom", "upperTop", "upperSplit", "tallTop")
@@ -23,11 +23,13 @@ PLANES: tuple[str, ...] = ("base", "upper")
 Pt = tuple[float, float]
 
 
-class RunHint(TypedDict):
+class RunHint(TypedDict, total=False):
     wall: str
     end: str
     box: Box
     lines: dict[str, tuple[Pt, Pt]]   # tỉ lệ 0..1 của ảnh
+    peninsula: bool                   # left/right: no wall behind it — a peninsula leaving the back run, seen from its side
+    touches: str                      # island: the side run ("left" | "right") one of its ends touches — a peninsula parallel to the back run
 
 
 class Scene(TypedDict):
@@ -127,21 +129,30 @@ def parse_scene(data: Any) -> Scene:
         for k in LINE_KEYS_OPTIONAL:
             if lines_raw.get(k) is not None:
                 lines[k] = _seg(lines_raw[k], f"{w}.lines.{k}")
-        runs.append({"wall": _enum(ro.get("wall"), WALLS, f"{w}.wall"),
-                     "end": _enum(ro.get("end", "open"), END_KINDS, f"{w}.end"),
-                     "box": _box(ro.get("box"), f"{w}.box"), "lines": lines})
+        hint: RunHint = {"wall": _enum(ro.get("wall"), WALLS, f"{w}.wall"),
+                         "end": _enum(ro.get("end", "open"), END_KINDS, f"{w}.end"),
+                         "box": _box(ro.get("box"), f"{w}.box"), "lines": lines}
+        if ro.get("peninsula") is True and hint["wall"] in ("left", "right"):
+            hint["peninsula"] = True
+        if hint["wall"] == "island" and ro.get("touches") is not None:
+            hint["touches"] = _enum(ro.get("touches"), ("left", "right"), f"{w}.touches")
+        runs.append(hint)
     if not any("upperBottom" in r["lines"] for r in runs):
         raise invalid("no-upper-line", "cần đường upperBottom ở ít nhất một dãy")
     walls = sorted(r["wall"] for r in runs)
     if len(set(walls)) != len(walls):
         raise invalid("duplicate-wall", "mỗi tường chỉ có một dãy")
+    walls = [x for x in walls if x != "island"]          # a free-standing run comes with any layout
     expected = {"straight": [["back"]], "l-shape": [["back", "left"], ["back", "right"]],
                 "u-shape": [["back", "left", "right"]]}[layout]
     if sorted(walls) not in [sorted(e) for e in expected]:
         raise invalid("layout-walls", f"layout {layout} cần các dãy {expected}, nhận {walls}")
+    for r in runs:
+        if r.get("touches") and r["touches"] not in walls:
+            raise invalid("touches-missing", f"island.touches = {r['touches']} nhưng không có dãy đó")
     mats = d.get("materials", {})
     materials = {str(k): str(v) for k, v in mats.items()} if isinstance(mats, dict) else {}
-    order = {w: i for i, w in enumerate(("back", "left", "right"))}
+    order = {w: i for i, w in enumerate(("back", "left", "right", "island"))}
     runs.sort(key=lambda r: order[r["wall"]])
     return {"layout": layout, "view": view, "runs": runs, "materials": dict(sorted(materials.items()))}
 

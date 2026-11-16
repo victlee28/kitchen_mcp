@@ -40,8 +40,9 @@ def _wall_run(spec: KitchenSpec, scene: Any, wall: str) -> tuple[str, float, boo
 _SIDE = {"Left": "left", "Right": "right", "Top": "upper", "Bottom": "base"}
 
 
-def _hinge_sides(m: Module, scene: Any) -> list[str]:
-    """The hinge side every door of a cabinet has now, in the order ``Module.hingeSides`` counts doors (rows from the bottom, left to right)."""
+def lone_doors_right(m: Module, scene: Any) -> list[str]:
+    """``Module.hingeSides`` (rows from the bottom, left to right) of a cabinet against the right wall, whose doors alone in their row hinge
+    on the right as they always did there; ``scene``: a compiled kitchen holding the cabinet (in its run)."""
     doors = [p for p in scene.parts if p.module == m.id and p.type in ("door", "glass-door")]
     boxes: list[tuple[float, float, float, float]] = []
     for p in doors:                              # the run's local box: s along the row, y up
@@ -225,7 +226,7 @@ def convert(spec: KitchenSpec, catalog: Catalog = builtin.CATALOG) -> tuple[dict
             notes.append(f"hinge sides of {', '.join(m.id for m in hinge_fix)} not kept: {error}")
             return data, notes
         for m in hinge_fix:
-            sides = _hinge_sides(m, built)
+            sides = lone_doors_right(m, built)
             if sides:
                 by_id[m.id]["hingeSides"] = sides
     return data, notes

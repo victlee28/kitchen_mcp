@@ -52,11 +52,20 @@ def _line(lines: dict[str, list[float]], key: str) -> tuple[float, float]:
 
 
 class Geometry:
-    """Camera + mặt phẳng các dãy (đơn vị: chiều cao camera = 1)."""
+    """Camera + mặt phẳng các dãy (đơn vị: chiều cao camera = 1).
 
-    def __init__(self, cam: Camera, meas: dict[str, Any], scene: Scene, policy: PolicyP) -> None:
+    Mỗi tường là một mặt phẳng đứng, viết trên sàn (x, z): hướng dọc tường ``t`` (từ góc trong ra) và pháp tuyến ``n`` (từ tường vào
+    phòng). Tường sau: t = +x, n = +z. Tường bên: t theo điểm tụ của nó (về phía camera), n vuông góc t hướng vào phòng — tường bên vuông
+    góc tường sau thì t = +z, n = ±x như trước; lệch thì góc trong khác 90° (``corner_angle``). Vị trí một mặt phẳng là ``c`` với
+    dot((x, z), n) = c."""
+
+    def __init__(self, cam: Camera, meas: dict[str, Any], scene: Scene, policy: PolicyP,
+                 side_dir: tuple[float, float] = (0.0, 1.0)) -> None:
         self.cam, self.meas, self.scene, self.policy = cam, meas, scene, policy
         self.walls = [r["wall"] for r in scene["runs"]]
+        sx, sz = side_dir
+        self.t: dict[str, tuple[float, float]] = {"back": (1.0, 0.0), "left": (sx, sz), "right": (sx, sz), "island": (1.0, 0.0)}
+        self.n: dict[str, tuple[float, float]] = {"back": (0.0, 1.0), "left": (sz, -sx), "right": (-sz, sx), "island": (0.0, 1.0)}
         self.floor_front: dict[str, float] = {}
         for wall in self.walls:
             rm = meas["runs"][wall]
@@ -66,45 +75,87 @@ class Geometry:
             for i in range(9):
                 u = x0 + (x1 - x0) * (i + 0.5) / 9
                 p = cam.on_floor(u, line_y(pb, u))
-                vals.append(p[2] if wall == "back" else p[0])
+                vals.append(self._c(wall, p))
             self.floor_front[wall] = _median(vals)
         self.scale = 1500.0  # mm / đơn vị (đoán ban đầu: camera cao ~1,5 m; tinh lại từ vật chuẩn)
+
+    def _c(self, wall: str, p: tuple[float, float, float]) -> float:
+        n = self.n[wall]
+        return p[0] * n[0] + p[2] * n[1]
 
     def mm(self, value_mm: float) -> float:
         return value_mm / self.scale
 
     def front(self, wall: str) -> float:
-        r = self.mm(self.policy["plinthRecessMm"])
-        f = self.floor_front[wall]
-        return f + r if wall in ("back", "left") else f - r
+        """``c`` của mặt trước tủ dưới: đường chân tủ chạm sàn lùi ra phòng thêm độ lùi chân tủ."""
+        return self.floor_front[wall] + self.mm(self.policy["plinthRecessMm"])
 
     def wall_pos(self, wall: str) -> float:
-        d = self.mm(self.policy["baseDepthMm"])
-        f = self.front(wall)
-        return f - d if wall in ("back", "left") else f + d
+        """``c`` của mặt tường (lưng tủ)."""
+        return self.front(wall) - self.mm(self.policy["baseDepthMm"])
 
     def plane(self, wall: str, storey: str) -> float:
         if storey in ("upper", "upper-top"):
-            du = self.mm(self.policy["upperDepthMm"])
-            w = self.wall_pos(wall)
-            return w + du if wall in ("back", "left") else w - du
+            return self.wall_pos(wall) + self.mm(self.policy["upperDepthMm"])
         if storey == "tall":
-            dt = self.mm(self.policy["tallDepthMm"])
-            w = self.wall_pos(wall)
-            return w + dt if wall in ("back", "left") else w - dt
+            return self.wall_pos(wall) + self.mm(self.policy["tallDepthMm"])
         return self.front(wall)
 
+    def on(self, wall: str, c: float, u: float, v: float) -> tuple[float, float, float]:
+        """Giao tia qua pixel với mặt phẳng đứng dot((x, z), n_wall) = c."""
+        n = self.n[wall]
+        if abs(n[1]) < 1e-12:
+            return self.cam.on_plane(u, v, "x", c / n[0])
+        if abs(n[0]) < 1e-12:
+            return self.cam.on_plane(u, v, "z", c / n[1])
+        w = self.cam.ray(u, v)
+        k = w[0] * n[0] + w[2] * n[1]
+        if abs(k) < 1e-9:
+            raise invalid("parallel-ray", "tia song song với mặt phẳng")
+        t = c / k
+        if t <= 0:
+            raise invalid("behind-camera", "mặt phẳng nằm sau camera")
+        return (t * w[0], t * w[1], t * w[2])
+
     def point(self, wall: str, storey: str, u: float, v: float) -> tuple[float, float, float]:
-        axis = "z" if wall == "back" else "x"
-        return self.cam.on_plane(u, v, axis, self.plane(wall, storey))
+        return self.on(wall, self.plane(wall, storey), u, v)
+
+    def corner(self, wall: str) -> tuple[float, float] | None:
+        """Góc trong mà vị trí dọc ``wall`` tính từ đó, trên sàn (x, z): giao đường tường này với tường sau (tường bên) hoặc với tường trái
+        (tường sau). Tường sau không có tường trái: không có góc (vị trí là x). Dãy đứng tự do (đảo) đo cùng gốc với dãy sau."""
+        if wall == "island":
+            o = self.corner("back")
+            return (o[0], 0.0) if o is not None else None
+        other = "left" if wall == "back" else "back"
+        if other not in self.walls:
+            return None
+        a, b = self.n[wall], self.n[other]
+        ca, cb = self.wall_pos(wall), self.wall_pos(other)
+        det = a[0] * b[1] - a[1] * b[0]
+        if abs(det) < 1e-9:
+            raise invalid("parallel-walls", f"{wall} song song với {other}")
+        return ((ca * b[1] - cb * a[1]) / det, (a[0] * cb - b[0] * ca) / det)
 
     def along(self, wall: str, p: tuple[float, float, float]) -> float:
         """Khoảng cách (đơn vị) dọc tường tính từ góc trong."""
-        if wall == "back":
-            if "left" in self.walls:
-                return p[0] - self.wall_pos("left")
-            return p[0]
-        return p[2] - self.wall_pos("back")
+        t = self.t[wall]
+        o = self.corner(wall) or (0.0, 0.0)
+        return (p[0] - o[0]) * t[0] + (p[2] - o[1]) * t[1]
+
+    def wall_xyz(self, wall: str, along: float, y: float) -> tuple[float, float, float]:
+        """Điểm trên mặt tường ở ``along`` (đơn vị, từ góc trong) và độ cao ``y`` (đơn vị camera): phép ngược của ``along``."""
+        t, n = self.t[wall], self.n[wall]
+        o = self.corner(wall)
+        if o is None or wall == "island":        # đo theo x (cùng gốc với dãy sau), trên mặt phẳng của nó
+            c = self.wall_pos(wall)
+            return ((o[0] if o else 0.0) + along, y, c / n[1])
+        return (o[0] + along * t[0], y, o[1] + along * t[1])
+
+    def corner_angle(self, wall: str) -> float:
+        """Góc trong (độ) giữa tường sau và tường bên ``wall``, đo trên sàn: 90 khi vuông."""
+        t = self.t[wall]
+        back = (1.0, 0.0) if wall == "left" else (-1.0, 0.0)
+        return math.degrees(math.acos(max(-1.0, min(1.0, back[0] * t[0] + back[1] * t[1]))))
 
     def height_mm(self, p: tuple[float, float, float], kv: float) -> float:
         return (p[1] + 1.0) * self.scale * kv
@@ -170,11 +221,81 @@ def _robust_vp(lines: list[tuple[float, float]]) -> VanishingPoint:
         cur.pop(worst)
 
 
+def side_direction(cam: Camera, vs: VanishingPoint | None) -> tuple[float, float]:
+    """Hướng dọc tường bên trên sàn (x, z), về phía camera, từ điểm tụ của nó: (0, 1) khi vuông góc tường sau hoặc không có điểm tụ."""
+    if vs is None or not vs.finite:
+        return (0.0, 1.0)
+    r = (vs.u - cam.cx, vs.v - cam.cy, cam.f)
+    k = math.sqrt(r[0] ** 2 + r[1] ** 2 + r[2] ** 2)
+    d = (-r[0] / k, -r[1] / k, -r[2] / k)                         # ngược hướng nhìn: về phía camera
+    x = cam.ex[0] * d[0] + cam.ex[1] * d[1] + cam.ex[2] * d[2]
+    z = cam.ez[0] * d[0] + cam.ez[1] * d[1] + cam.ez[2] * d[2]
+    n = math.hypot(x, z)
+    if n < 1e-9:
+        return (0.0, 1.0)
+    x, z = x / n, z / n
+    return (x, z) if z > 0 else (-x, -z)
+
+
+SQUARE_WITHIN_DEG = 3.0       # góc trong lệch 90° ít hơn thế: coi là vuông (tiêu cự lấy từ hai điểm tụ)
+ANGLE_EVIDENCE = 0.25         # chỉ nhận góc đo được khi các vật chuẩn khớp nhau rõ hơn hẳn (phương sai < 1/4 khi giả định vuông)
+
+
+def _measured_angle(vb: VanishingPoint, vs: VanishingPoint, f_vp: float, cx: float, cy: float, meas: dict[str, Any],
+                    scene: Scene, runs: list[RunSegmentation], policy: PolicyP, w: float) -> tuple[float, float] | None:
+    """Có vật chuẩn bề rộng trên ít nhất hai tường: dò tiêu cự sao cho chúng cho cùng tỉ lệ mà KHÔNG giả định hai tường vuông góc (hướng
+    tường bên lấy thẳng từ điểm tụ của nó). Trả (tiêu cự, góc trong) khi góc đó lệch 90° rõ và khớp vật chuẩn tốt hơn hẳn; else None."""
+    if len({rs["wall"] for rs in runs if rs["widthRefs"]}) < 2:
+        return None
+
+    def spread(fi: float) -> tuple[float, float] | None:
+        try:
+            cam_i = build_camera(vb, vs, fi, cx, cy)
+            geo_i = Geometry(cam_i, meas, scene, policy, side_direction(cam_i, vs))
+            est = [math.log(e["mmPerUnit"]) for e in _scale_estimates(geo_i, meas, runs)]
+            side = next((x for x in ("left", "right") if x in geo_i.walls), None)
+            angle = geo_i.corner_angle(side) if side else 90.0
+        except (RecognizerError, ZeroDivisionError, ValueError):
+            return None
+        mean = sum(est) / len(est)
+        return sum((x - mean) ** 2 for x in est) / len(est), angle
+
+    at_vp = spread(f_vp)
+    best: tuple[float, float, float] | None = None
+    for i in range(161):
+        fi = w * F_MIN * ((F_MAX / F_MIN) ** (i / 160))
+        got = spread(fi)
+        if got is not None and (best is None or got[0] < best[0]):
+            best = (got[0], fi, got[1])
+    if best is None or at_vp is None:
+        return None
+    step = (F_MAX / F_MIN) ** (1 / 160)
+    lo, hi = best[1] / step, best[1] * step
+    for _ in range(40):                       # tinh lại quanh điểm tốt nhất (hàm một cực tiểu trên khoảng hẹp)
+        m1, m2 = lo + (hi - lo) / 3, hi - (hi - lo) / 3
+        g1, g2 = spread(m1), spread(m2)
+        if g1 is None or g2 is None:
+            break
+        if g1[0] < g2[0]:
+            hi = m2
+        else:
+            lo = m1
+    fine = spread((lo + hi) / 2)
+    if fine is not None and fine[0] <= best[0]:
+        best = (fine[0], (lo + hi) / 2, fine[1])
+    var, f, angle = best
+    if abs(angle - 90.0) <= SQUARE_WITHIN_DEG or var >= ANGLE_EVIDENCE * at_vp[0]:
+        return None
+    return f, angle
+
+
 def _camera(scene: Scene, meas: dict[str, Any], runs: list[RunSegmentation], policy: PolicyP,
-            warnings: list[dict[str, Any]]) -> tuple[Camera, dict[str, Any]]:
+            warnings: list[dict[str, Any]]) -> tuple[Camera, dict[str, Any], tuple[float, float]]:
+    """(camera, evidence, hướng tường bên trên sàn)."""
     w, h = meas["imageSize"]
     cx, cy = w / 2, h / 2
-    back = _vp_lines([ln for ln in meas["runs"]["back"]["lines"].values()], w)
+    back = _vp_lines([ln for wall in ("back", "island") if wall in meas["runs"]          # a free run stands parallel to the back run
+                      for ln in meas["runs"][wall]["lines"].values()], w)
     side = _vp_lines([ln for wall in ("left", "right") if wall in meas["runs"]
                       for ln in meas["runs"][wall]["lines"].values()], w)
     vb = _robust_vp(back)
@@ -184,6 +305,11 @@ def _camera(scene: Scene, meas: dict[str, Any], runs: list[RunSegmentation], pol
                                        if vs is not None and vs.finite else None)}
     f = focal_from_vps(vb, vs, cx, cy) if vs is not None else None
     source = "vanishing-points"
+    if f is not None and vs is not None and F_MIN * w <= f <= F_MAX * w:      # góc trong có thể không vuông: đo từ vật chuẩn
+        got = _measured_angle(vb, vs, f, cx, cy, meas, scene, runs, policy, w)
+        if got is not None:
+            f, source = got[0], "reference-consistency-angle"
+            warnings.append({"code": "corner-not-square", "angleDeg": round_half_away(got[1], 0.1)})
     if f is not None and not (F_MIN * w <= f <= F_MAX * w):
         # tiêu cự vô lý: dãy sau gần như chính diện, điểm tụ dọc tường sau coi như ở vô cực
         warnings.append({"code": "back-vp-treated-infinite", "focalFromVp": round_half_away(f, 0.1)})
@@ -213,7 +339,9 @@ def _camera(scene: Scene, meas: dict[str, Any], runs: list[RunSegmentation], pol
             f, source = f_fov, "fov-assumption"
             warnings.append({"code": "focal-from-fov", "fovDeg": policy["fovDeg"]})
     info.update({"focalPx": round_half_away(f, 0.1), "focalSource": source})
-    return build_camera(vb, vs, f, cx, cy), info
+    cam = build_camera(vb, vs, f, cx, cy)
+    side = side_direction(cam, vs) if source == "reference-consistency-angle" else (0.0, 1.0)   # else: vuông góc, đúng như giả định
+    return cam, info, side
 
 
 def build_spec_p(scene: Scene, meas: dict[str, Any], runs: list[RunSegmentation], policy: PolicyP,
@@ -221,8 +349,8 @@ def build_spec_p(scene: Scene, meas: dict[str, Any], runs: list[RunSegmentation]
                  probe: dict[str, Any] | None = None) -> dict[str, Any]:
     """``probe`` (kiểm thử, gỡ lỗi): nhận ``wallPoint(wall, x_mm, h_mm) -> (u, v)`` px, phép ngược của cách đo cửa."""
     warnings: list[dict[str, Any]] = []
-    cam, cam_info = _camera(scene, meas, runs, policy, warnings)
-    geo = Geometry(cam, meas, scene, policy)
+    cam, cam_info, side = _camera(scene, meas, runs, policy, warnings)
+    geo = Geometry(cam, meas, scene, policy, side)
 
     # --- tỉ lệ (2 vòng: vòng 2 có độ lùi chân tủ theo mm)
     estimates: list[dict[str, Any]] = []
@@ -314,6 +442,8 @@ def build_spec_p(scene: Scene, meas: dict[str, Any], runs: list[RunSegmentation]
         """(đầu along nhỏ là góc?, đầu along lớn là góc?)"""
         if wall == "back":
             return ("left" in geo.walls, "right" in geo.walls)
+        if wall == "island":
+            return (False, False)
         return (True, False)
 
     back_len_right: float | None = None
@@ -324,7 +454,7 @@ def build_spec_p(scene: Scene, meas: dict[str, Any], runs: list[RunSegmentation]
             return 0
         return policy["upperDepthMm"] if storey in ("upper", "upper-top") else policy["baseDepthMm"]
 
-    for wall in ("back", "left", "right"):
+    for wall in ("back", "left", "right", "island"):
         if wall not in run_by_wall:
             continue
         rs = run_by_wall[wall]
@@ -337,10 +467,11 @@ def build_spec_p(scene: Scene, meas: dict[str, Any], runs: list[RunSegmentation]
             if wall == "back" and storey == "base":
                 if "left" not in geo.walls:
                     back_origin = min(al)
-                if "right" in geo.walls:
-                    left_ref = geo.wall_pos("left") * geo.scale if "left" in geo.walls else back_origin
-                    back_len_right = geo.wall_pos("right") * geo.scale - left_ref
-            if wall == "back":
+                if "right" in geo.walls:          # góc trong bên phải: giao tường phải với tường sau, đo dọc tường sau
+                    rc = geo.corner("right")
+                    assert rc is not None
+                    back_len_right = geo.along("back", (rc[0], 0.0, rc[1])) * geo.scale - (back_origin if "left" not in geo.walls else 0.0)
+            if wall in ("back", "island"):          # the free run counts from the back run's origin
                 al = [a - back_origin for a in al]
             # căn về đường chia của tủ dưới cùng dãy
             if storey != "base" and base_edges:
@@ -370,7 +501,7 @@ def build_spec_p(scene: Scene, meas: dict[str, Any], runs: list[RunSegmentation]
                 if "corner" in ans["type"] and last and hi_corner and wall == "back" and back_len_right is not None:
                     blind = round_int(back_len_right, wr) - x1
                     x1 = round_int(back_len_right, wr)
-                if wall != "back" and first and blind == 0 and x0 < min_side_start(storey):
+                if wall in ("left", "right") and first and blind == 0 and x0 < min_side_start(storey):
                     # dãy bên không thể bắt đầu trước mặt trước của dãy sau (thường do bị che khuất)
                     warnings.append({"code": "side-start-clamped", "wall": wall, "fromMm": x0,
                                      "toMm": min_side_start(storey)})
@@ -403,7 +534,7 @@ def build_spec_p(scene: Scene, meas: dict[str, Any], runs: list[RunSegmentation]
                     mod["blindSide"] = "start" if x0 == 0 else "end"
                 if ans["doors"] and not ans["open"] and not ans["sections"]:
                     if ans["doorSplits"]:
-                        sp = [_along_of(geo, meas, wall, storey, pos[s]) * geo.scale - (back_origin if wall == "back" else 0)
+                        sp = [_along_of(geo, meas, wall, storey, pos[s]) * geo.scale - (back_origin if wall in ("back", "island") else 0)
                               for s in ans["doorSplits"]]
                         edges = sorted([al[i], *sp, al[i + 1]])
                         tot = edges[-1] - edges[0]
@@ -441,9 +572,15 @@ def build_spec_p(scene: Scene, meas: dict[str, Any], runs: list[RunSegmentation]
                 else:
                     right_upper_start = st
         wall_mods = [m for m in modules if m["wall"] == wall]   # mọi tầng: tủ trên có thể dài hơn tủ dưới
+        hint = next(r for r in scene["runs"] if r["wall"] == wall)
         walls_out[wall] = {"runLength": max(m["x"] + m["width"] for m in wall_mods) if wall_mods else 0,
-                           "end": next(r["end"] for r in scene["runs"] if r["wall"] == wall),
-                           "heightsMm": per_run[wall]}
+                           "end": hint["end"],
+                           "heightsMm": per_run[wall],
+                           **({"angleDeg": round_half_away(geo.corner_angle(wall), 0.1)}            # đo được, không vuông
+                              if wall in ("left", "right") and cam_info["focalSource"] == "reference-consistency-angle" else {}),
+                           **({"offsetMm": round_int((geo.wall_pos("island") - geo.wall_pos("back")) * geo.scale, 10)}  # back wall -> its back face
+                              if wall == "island" and "back" in geo.walls else {}),
+                           **{k: hint[k] for k in ("peninsula", "touches") if k in hint}}
     for m in modules:
         if m.get("type") == "upper-corner-open-shelf":
             m["legSide"] = left_upper_start if left_upper_start is not None else (
@@ -468,14 +605,11 @@ def build_spec_p(scene: Scene, meas: dict[str, Any], runs: list[RunSegmentation]
 
     # cửa: điểm ảnh trên mặt tường -> dọc tường (cùng gốc với x của module) và độ cao
     def on_wall(wall: str, u: float, v: float) -> tuple[float, float]:
-        p = geo.cam.on_plane(u, v, "z" if wall == "back" else "x", geo.wall_pos(wall))
+        p = geo.on(wall, geo.wall_pos(wall), u, v)
         return geo.along(wall, p) * geo.scale - (back_origin if wall == "back" else 0.0), geo.height_mm(p, kv)
     def wall_point(wall: str, x_mm: float, h_mm: float) -> tuple[float, float]:
         y = h_mm / (geo.scale * kv) - 1.0
-        if wall == "back":
-            x = (x_mm + back_origin) / geo.scale + (geo.wall_pos("left") if "left" in geo.walls else 0.0)
-            return geo.cam.project((x, y, geo.wall_pos("back")))
-        return geo.cam.project((geo.wall_pos(wall), y, x_mm / geo.scale + geo.wall_pos("back")))
+        return geo.cam.project(geo.wall_xyz(wall, (x_mm + (back_origin if wall == "back" else 0.0)) / geo.scale, y))
     if probe is not None:
         probe["wallPoint"] = wall_point
     size = meas["imageSize"]

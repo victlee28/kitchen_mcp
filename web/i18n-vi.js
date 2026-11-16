@@ -250,6 +250,7 @@ export default {
  "summary.line-run": "{n} tủ, {length:g} mm, dọc cạnh nghiêng {yaw:g}° (dãy {run})",
  "summary.prefixed": "{id}: {text}",
  "summary.runs-left-out": "Bỏ các dãy không nối với dãy chính: {ids}",
+ "summary.run-unsure": "Dãy {id}: không thấy bức tường nào trong mặt bằng khớp hướng trong ảnh — kiểm tra lại vị trí",
  "summary.run-filled": "Dãy {run}: {n} tủ, dài {length:g} mm",
  "summary.corner-shelf-again": "Dựng lại kệ góc {id} giữa dãy {a} và dãy {b}",
  "summary.left-out-corner": "Bỏ {n} tủ mới ở chỗ kệ góc",
@@ -1242,5 +1243,16 @@ export default {
  "summary.join.not-a-run": "Hãy bấm chuột phải vào một tủ của dãy cần nối (tủ theo tường cũ chưa nối được)",
  "summary.join.no-corner": "Không thấy dãy nào gặp dãy {run} ở góc gần đó",
  "summary.join.already": "Dãy {a} và {b} đã nối khít ở góc {angle}°",
- "summary.join.done": "Nối dãy {a} với {b} ở góc {angle}°: chỉnh {n} tủ gần góc (dãy {a} giữ góc)"
+ "summary.join.done": "Nối dãy {a} với {b} ở góc {angle}°: chỉnh {n} tủ gần góc (dãy {a} giữ góc)",
+ "catalog.layout.palette": "Kéo bước vào bảng:",
+ "catalog.layout.cabinets": "Kéo tủ vào bước «các tủ»:",
+ "catalog.layout.dragHint": "Kéo ⠿ để đổi thứ tự bước; kéo chip tủ để đổi chỗ trong bước; bấm chip để sửa bề rộng (để trống = bỏ), bấm đúp để bật/tắt «chia phần còn lại» (∗). Mẫu thử tự vẽ lại sau mỗi thay đổi.",
+ "catalog.layout.dropHere": "⇢ thả tủ vào đây",
+ "catalog.layout.itemHint": "Kéo để đổi chỗ · bấm: bề rộng · bấm đúp: chia phần còn lại",
+ "catalog.layout.moveHint": "Kéo để đổi thứ tự",
+ "catalog.layout.do.base-run": "dãy tủ dưới",
+ "catalog.layout.do.cabinets": "các tủ",
+ "catalog.layout.do.corner-base": "tủ góc",
+ "catalog.layout.do.corner-shelf": "kệ góc",
+ "catalog.layout.do.upper-run": "dãy tủ trên"
 };
