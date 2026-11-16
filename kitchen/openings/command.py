@@ -7,7 +7,11 @@ sentence; this places what it asks for). Pure (rule R1).
 * Elsewhere on a wall: a new opening centred at the point, the type's default width (``opening-type.defaultWidth``) unless the sentence
   gives one.
 * The type: the one the sentence names (a type of the catalog, the user's own saved ones included), else the default of the kind.
-* Height: the sentence's, else the type's ``defaultHeight``; a window sits at its type's ``defaultSill``, a door on the floor.
+* Height: the sentence's, else the type's ``defaultHeight``. A door stands on the floor. A window sits as high as the sentence says
+  ("cách sàn 900"), else as the clicked window or the floorplan element records, else at ``defaults.openings.windowSill`` (900 mm)
+  whatever its type.
+* "sửa / chỉnh / nâng ... cửa sổ": the clicked opening keeps its type, the sizes said change (``update-opening``); "xóa / bỏ ...":
+  it is removed (``remove-opening``; a floorplan opening leaves a tombstone).
 """
 from __future__ import annotations
 
@@ -15,6 +19,7 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 from ..catalog import Catalog
+from ..defaults import of as defaults_of
 from ..errors import InvalidInput
 from ..jsonview import as_dict
 from ..numeric import round_half_away
@@ -61,7 +66,33 @@ def operation(wish: Mapping[str, Any], point: Pt, axes: Sequence[WallAxis], cata
     named = wish.get("type")
     width_asked = wish.get("width")
     height_asked = wish.get("height")
+    sill_asked = wish.get("sill")
+    action = wish.get("action")
     target = clicked_opening(point, axes, existing, selected)
+    if action in ("remove", "edit"):
+        if target is None:
+            raise InvalidInput("Right-click the door or window to change or remove", code="opening-none-clicked")
+        oid = target.source_element or target.id
+        facts = {"id": target.id, "type": target.opening_type, "width": target.width, "height": target.height, "sill": target.sill}
+        if action == "remove":
+            return {"op": "remove-opening", "id": oid}, "removed", facts
+        changes: dict[str, Any] = {}
+        data = get(catalog, target.opening_type)
+        if width_asked:
+            changes["width"], oversize = _sized(float(width_asked), data, target.kind, target.opening_type, wish)
+            if oversize:
+                changes["oversize"] = True
+        if height_asked:
+            changes["height"] = float(height_asked)
+        if sill_asked is not None:
+            if target.kind != "window":
+                raise InvalidInput("A door stands on the floor: only a window has a height above the floor", code="opening-door-sill")
+            changes["sill"] = float(sill_asked)
+        if not changes:
+            raise InvalidInput("Say what to change: its width, its height, or how far above the floor it sits", code="opening-nothing-to-change")
+        changes.update(source="human", unsure=[])
+        facts.update({k: changes[k] for k in ("width", "height", "sill") if k in changes})
+        return {"op": "update-opening", "id": oid, "changes": changes}, "edited", facts
     if target is not None:
         type_id = str(named or (target.opening_type if target.kind == kind else DEFAULT_TYPE.get(kind, "door-swing-1")))
         data = get(catalog, type_id)
@@ -72,16 +103,17 @@ def operation(wish: Mapping[str, Any], point: Pt, axes: Sequence[WallAxis], cata
                                    "oversize": oversize}
         if type_id != target.opening_type:
             changes.update(axes=None, hAxes=None, leaves=None)
-        changes["sill"] = 0.0 if kind != "window" else (target.sill if target.kind == "window" else num(data, "defaultSill", 900.0))
+        changes["sill"] = 0.0 if kind != "window" else (
+            float(sill_asked) if sill_asked is not None else target.sill if target.kind == "window" else window_sill(catalog))
         return ({"op": "update-opening", "id": target.source_element or target.id, "changes": changes}, "replaced",
-                {"id": target.id, "type": type_id, "width": width, "height": height})
+                {"id": target.id, "type": type_id, "width": width, "height": height, "sill": changes["sill"]})
     type_id = str(named or DEFAULT_TYPE.get(kind, "door-swing-1"))
     data = get(catalog, type_id)
     kind = str(data.get("kind") or kind)
     height = float(height_asked) if height_asked else num(data, "defaultHeight", 2200.0 if kind != "window" else 1200.0)
-    raw: dict[str, Any] = {"kind": kind, "openingType": type_id, "source": "human", "height": height,
-                           "sill": 0.0 if kind != "window" else num(data, "defaultSill", 900.0)}
     element = next((e for e in elements if selected and e.get("id") == selected), None) or element_at(point, elements)
+    sill = 0.0 if kind != "window" else (float(sill_asked) if sill_asked is not None else drawn_sill(element) or window_sill(catalog))
+    raw: dict[str, Any] = {"kind": kind, "openingType": type_id, "source": "human", "height": height, "sill": sill}
     hole = element_hole(element, axes) if element is not None else None
     if hole is not None:
         axis, center, width = hole
@@ -95,7 +127,20 @@ def operation(wish: Mapping[str, Any], point: Pt, axes: Sequence[WallAxis], cata
         raw.update(point={"x": point[0], "z": point[1]}, width=width, **({"oversize": True} if oversize else {}))
         what = "added"
     normalize(dict(raw), "human", catalog, axes, country)          # refuses what cannot stand there (too wide, past the wall's end...)
-    return {"op": "add-opening", "opening": raw}, what, {"type": type_id, "width": raw["width"], "height": height}
+    return {"op": "add-opening", "opening": raw}, what, {"type": type_id, "width": raw["width"], "height": height, "sill": sill}
+
+
+def window_sill(catalog: Catalog) -> float:
+    """How far above the floor a window sits when neither the sentence, the clicked window nor the drawing says: the catalog default
+    (``defaults.openings.windowSill``, 900 mm), whatever its type."""
+    return float(defaults_of(catalog).openings.get("windowSill", 900.0))
+
+
+def drawn_sill(element: Mapping[str, Any] | None) -> float | None:
+    """The sill a floorplan opening element records (``elev.base``, mm), when it records one above the floor; None otherwise."""
+    elev = as_dict(element.get("elev")) if element is not None else None
+    base = elev.get("base") if elev is not None else None
+    return float(base) if isinstance(base, (int, float)) and not isinstance(base, bool) and base > 0 else None
 
 
 def saved_type(opening: Opening, type_data: Mapping[str, Any], name: str) -> dict[str, Any]:
@@ -149,7 +194,7 @@ def hole_opening(point: Pt | None, axes: Sequence[WallAxis], catalog: Catalog, s
     hole_width = float(round_half_away(width, 0))
     raw: dict[str, Any] = {"kind": kind, "openingType": type_id, "source": "drawn", "wallAxis": axis.ref().to_data(),
                            "center": round_half_away(center, 1), "width": hole_width, "height": height,
-                           "sill": 0.0 if kind != "window" else num(data, "defaultSill", 900.0)}
+                           "sill": 0.0 if kind != "window" else drawn_sill(element) or window_sill(catalog)}
     low, high = width_range(data, kind)
     if not low <= hole_width <= high:
         raw["oversize"] = True                       # as drawn: the plan is the authority on its own holes

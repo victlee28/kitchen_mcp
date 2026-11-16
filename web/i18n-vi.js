@@ -1254,5 +1254,20 @@ export default {
  "catalog.layout.do.cabinets": "các tủ",
  "catalog.layout.do.corner-base": "tủ góc",
  "catalog.layout.do.corner-shelf": "kệ góc",
- "catalog.layout.do.upper-run": "dãy tủ trên"
+ "catalog.layout.do.upper-run": "dãy tủ trên",
+ "summary.opening.removed": "Xóa {type} {id} (rộng {width} × cao {height} mm)",
+ "summary.opening.edited": "Sửa {id}: rộng {width} × cao {height} mm",
+ "summary.opening.sill": "Cửa sổ cách sàn {sill} mm",
+ "error.opening-none-clicked": "Hãy bấm chuột phải đúng vào cửa đi hoặc cửa sổ cần sửa hay xóa",
+ "error.opening-nothing-to-change": "Hãy nói cần sửa gì: chiều rộng, chiều cao, hay cách sàn bao nhiêu",
+ "error.opening-door-sill": "Cửa đi đứng trên sàn: chỉ cửa sổ mới đặt cách sàn được",
+ "ui.command.empty": "Hãy gõ câu lệnh trước",
+ "ui.command.sent": "Đã gửi lệnh {0} vào hộp thư của Claude. Hãy nhắn Claude: \"làm các lệnh trong hộp thư\".",
+ "ui.command.waiting": "Đang chờ Claude: \"{0}\"",
+ "ui.command.drop": "Rút lại",
+ "ui.command.drop-title": "Rút lại lệnh này (Claude chưa làm)",
+ "ui.command.done": "Claude đã làm \"{0}\".",
+ "ui.command.failed": "Claude không làm được \"{0}\":",
+ "ui.command.question": "Claude hỏi về \"{0}\":",
+ "ui.command.send": "Gửi Claude"
 };

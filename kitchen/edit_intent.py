@@ -294,14 +294,16 @@ def _item_named(f: str, kind: str, catalog: Catalog) -> tuple[str, str] | None:
 
 
 def _opening_type_named(f: str, catalog: Catalog) -> str | None:
-    """The opening type (catalog kind ``opening-type``, the workshop's and the user's own included) the sentence names by its label or id;
+    """The opening type (catalog kind ``opening-type``, the workshop's and the user's own included) the sentence names by its label, one of
+    its ``aliases`` or its id;
     the longest name wins ("cửa đi hai cánh có ô thoáng" over "cửa đi hai cánh")."""
     best: tuple[int, str] | None = None
     near: tuple[float, int, str] | None = None
     said_words = set(_tokens(f))
     for item in catalog.all("opening-type"):
         label = as_dict(item.data.get("label")) or {}
-        names = [fold(str(v)).strip() for v in label.values() if isinstance(v, str)] + [item.id.replace("-", " "), item.id]
+        aliases = [w for ws in (as_dict(item.data.get("aliases")) or {}).values() for w in (as_list(ws) or []) if isinstance(w, str)]
+        names = [fold(str(v)).strip() for v in [*label.values(), *aliases] if isinstance(v, str)] + [item.id.replace("-", " "), item.id]
         for name in names:
             if len(name) >= 4 and _has(f, name) and (best is None or len(name) > best[0]):
                 best = (len(name), item.id)
@@ -355,20 +357,46 @@ def opening_wish(text: str, catalog: Catalog = builtin.CATALOG) -> dict[str, Any
         kind = str(catalog.data("opening-type", named).get("kind") or kind or "door")
     if kind is None:
         return None
-    out: dict[str, Any] = {"action": "replace" if said_("replace") else "make", "kind": kind, "type": named}
+    raising = bool(said_("raise"))
+    action = ("remove" if said_("remove") else "edit" if said_("edit") or raising else "replace" if said_("replace") else "make")
+    out: dict[str, Any] = {"action": action, "kind": kind, "type": named}
     if said_("keep-size"):
         out["size"] = "keep"            # answers "the hole is wider than the type allows": keep it (``oversize``)
     elif said_("fit-size"):
         out["size"] = "fit"             # ...or bring it into the type's range
+    if action == "remove":
+        return out
+    sill_words = sorted(said_("sill"), key=len, reverse=True)
+    if sill_words:                      # "cách sàn 900", "bậu cửa 1m": the height of the sill above the floor; taken out of the rest
+        out["sill"], f = _taken(f, sill_words[0])
     pair = _pair(f)
     if pair is not None:
         out["width"], out["height"] = pair
     else:
         high = said_("height")
+        wide = [w for w, v in words if v == "width" and _has(f, w)] + [w for w in _verb_words("width", catalog) if _has(f, w)]
         if high:
             out["height"] = _mm(f, tuple(high))
-        if any(_has(f, w) for w in _verb_words("width", catalog)):
-            out["width"] = _mm(f, _verb_words("width", catalog))
+        if wide:
+            out["width"] = _mm(f, tuple(wide))
+        elif not high and raising and "sill" not in out:
+            out["sill"] = _mm(f)        # "nâng cửa sổ lên 1000": the number is where its sill goes
         elif not high:
             out["width"] = _mm(f)
     return {k: v for k, v in out.items() if v is not None or k == "type"}
+
+
+def _taken(f: str, word: str) -> tuple[float | None, str]:
+    """The length written after ``word`` (mm, as ``_mm``) and the text without the word and that number, so the other sizes of the
+    sentence are not read from it."""
+    k = re.search(rf"(?<![a-z0-9]){re.escape(word)}(?![a-z0-9])", f)
+    if k is None:
+        return None, f
+    number = r"(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?(?![a-z0-9])"
+    m = re.search(number, f[k.end():])
+    if m is not None and f[k.end():k.end() + m.start()].strip(" :=") in ("", "la", "len", "xuong", "o", "khoang", "tu", "is", "at", "of", "to"):
+        return _mm(m.group(0)), f[:k.start()] + " " + f[k.end() + m.end():]
+    b = re.search(number + r"\s*$", f[:k.start()])     # "1000 off the floor": the number just before it
+    if b is not None:
+        return _mm(b.group(0)), f[:b.start()] + " " + f[k.end():]
+    return None, f[:k.start()] + " " + f[k.end():]

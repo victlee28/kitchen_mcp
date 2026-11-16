@@ -56,7 +56,8 @@
    "doorZone": 300,
    "windowZone": 650,
    "near": 2000,
-   "snapTolerance": 30
+   "snapTolerance": 30,
+   "windowSill": 900
   }
  }
 ]

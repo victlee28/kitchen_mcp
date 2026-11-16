@@ -122,6 +122,14 @@ def apply_action(design_id: str, base_rev: int, op: dict[str, Any], expect: str 
         raise ToolError('Unsupported corrective action. Use a design-editing tool for other operations.')
     return _call(svc().apply, design_id, op, base_rev, 'mcp-action', expect)
 
+def apply_change(design_id: str, base_rev: int, op: dict[str, Any], expect: str) -> dict[str, Any]:
+    """Save an operation exactly as it was previewed (by propose_change, propose_opening, propose_template, interpret_edit or
+    opening_command): the same op, the preview's baseRev and expect = its proposal.opHash; any other operation is refused. The web app's
+    "Áp dụng". Returns the new revision (rev); revert_design undoes it."""
+    if not isinstance(expect, str) or not expect:
+        raise ToolError('apply_change needs expect = the opHash of the preview of this operation.')
+    return _call(svc().apply, design_id, op, base_rev, 'mcp', expect)
+
 def propose_change(design_id: str, op: dict[str, Any], base_rev: int | None=None, scope_modules: list[str] | None=None) -> dict[str, Any]:
     """Preview a design operation without saving: changes, validation issues it introduces or resolves, and the modules it touches.
 
@@ -277,7 +285,39 @@ def reject_image_job(job_id: str) -> dict[str, Any]:
 def regenerate_image_job(job_id: str, seed: int | None=None) -> dict[str, Any]:
     """Create a replacement job with the same request and a new seed."""
     return _slim_job(_call(svc().images.regenerate, job_id, seed))
-TOOLS = [create_design, list_floorplan_rooms, import_floorplan, bind_floorplan, design_kitchen, list_designs, get_design, design_history, list_openings, opening_types, propose_opening, add_module, update_module, remove_module, update_global, set_moldings, list_molding_profiles, apply_action, propose_change, interpret_edit, recognize_design, propose_template, save_layout_template, revert_design, validate_design, get_scene, export_threejs, render_views, search_knowledge, list_regions, add_knowledge, export_ai_package, list_layers, get_view_status, regenerate_stale_views, create_image_job, get_image_job, list_image_jobs, submit_image_result, import_base_image, accept_image_job, reject_image_job, regenerate_image_job, send_image_job]
+def list_menu_commands(status: Literal['pending', 'done', 'failed', 'question', 'dropped'] | None = 'pending', design_id: str | None = None) -> dict[str, Any]:
+    """The command inbox: sentences the user typed in the right-click menu of the web app, left for you to carry out (oldest first).
+
+    Each command: id, designId, text (the sentence, as typed), place (what was right-clicked: kind module|part|group|appliance|structure|floor|opening,
+    id, part?, point? {x, z} in the wall-axis frame, structureId? (a floorplan element), module?, modules? (a selected group), surfaces? (picked
+    wall faces), title?), baseRev (the revision it was said on), lang, status. To carry one out: read the design (get_design), turn the sentence
+    into an operation with the matching tool, as the menu would (opening_command for doors / windows / passages and "lưu vào database";
+    interpret_edit with scope_modules = the clicked module or group otherwise; propose_template for a run along a floorplan object), check the
+    proposal, save it with apply_change (expect = proposal.opHash), then answer_menu_command. Ask the user in chat when a
+    sentence is unclear rather than guessing; a sentence you cannot do is answered status 'failed' with the reason.
+    """
+    return {'mode': svc().command_mode(), 'commands': _call(svc().command_list, status, design_id)}
+
+def get_menu_command(command_id: str) -> dict[str, Any]:
+    """One command of the inbox (see list_menu_commands), by id."""
+    return _call(svc().command_get, command_id)
+
+def answer_menu_command(command_id: str, status: Literal['done', 'failed', 'question'], reply: str = '', revision: int | None = None) -> dict[str, Any]:
+    """Close a command of the inbox: 'done' (carried out; revision = the design's revision after the change, reply = one line on what changed,
+    in the command's lang), 'failed' (reply = why), or 'question' (reply = what the user must answer; it can still be answered later).
+    The web app shows the reply in the right-click menu and reloads the design."""
+    return _call(svc().command_answer, command_id, status, reply, revision)
+
+def opening_command(design_id: str, text: str, place: dict[str, Any], base_rev: int | None = None, country: str | None = None) -> dict[str, Any]:
+    """A right-click sentence about a room door, window or passage (make / replace / edit / remove, sizes, "cách sàn" = sill), or about
+    saving the clicked door or cabinet system to the catalog ("lưu vào database"). place: {"point": {x, z}, "structureId"?, "module"?}
+    (from the command's place; structureId without the STRUCT- prefix is fine).
+    status 'ok': operation + proposal (save with apply_change and expect = proposal.opHash); 'ask': a question with choices;
+    'saved': already saved to the catalog; 'not-opening': the sentence is about something else (use interpret_edit); 'unsupported': message.
+    """
+    return _call(svc().opening_command, design_id, text, place, 'user', base_rev, country)
+
+TOOLS = [list_menu_commands, get_menu_command, answer_menu_command, opening_command, apply_change, create_design, list_floorplan_rooms, import_floorplan, bind_floorplan, design_kitchen, list_designs, get_design, design_history, list_openings, opening_types, propose_opening, add_module, update_module, remove_module, update_global, set_moldings, list_molding_profiles, apply_action, propose_change, interpret_edit, recognize_design, propose_template, save_layout_template, revert_design, validate_design, get_scene, export_threejs, render_views, search_knowledge, list_regions, add_knowledge, export_ai_package, list_layers, get_view_status, regenerate_stale_views, create_image_job, get_image_job, list_image_jobs, submit_image_result, import_base_image, accept_image_job, reject_image_job, regenerate_image_job, send_image_job]
 for tool_function in TOOLS:
     mcp.add_tool(tool_function, name=tool_function.__name__, description=(tool_function.__doc__ or '').strip(), structured_output=False if tool_function is render_views else None)
 

@@ -29,11 +29,14 @@ export async function api(path, method = 'GET', body, headers = {}) {
 }
 
 /** setStatus(msg, kind) writes into `statusEl`; run(label, fn) shows "label…", then "Xong: label" or the error. */
-export function createStatus(statusEl) {
-  const setStatus = (msg, kind = '') => { statusEl.textContent = msg; statusEl.className = 'status ' + kind; };
+export function createStatus(statusEl, now = () => Date.now()) {
+  let heldUntil = 0;     // a message set with {hold} stays this long against the routine "…" / "Xong:" lines of run()
+  const show = (msg, kind) => { statusEl.textContent = msg; statusEl.className = 'status ' + kind; };
+  const setStatus = (msg, kind = '', opts = {}) => { show(msg, kind); heldUntil = opts.hold ? now() + opts.hold : 0; };
+  const routine = (msg, kind = '') => { if (now() >= heldUntil) show(msg, kind); };
   const run = async (label, fn) => {
-    setStatus(label + '…');
-    try { await fn(); setStatus('Xong: ' + label, 'ok'); } catch (e) { console.error(e); setStatus(e.message, 'warn'); }
+    routine(label + '…');
+    try { await fn(); routine('Xong: ' + label, 'ok'); } catch (e) { console.error(e); setStatus(e.message, 'warn'); }
   };
   return { setStatus, run };
 }

@@ -1237,7 +1237,7 @@
         "active": false
        }
       ],
-      "sill": 0.0,
+      "sill": 900.0,
       "height": 1200.0,
       "clearWidth": null,
       "source": "drawn",

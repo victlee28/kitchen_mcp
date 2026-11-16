@@ -2,7 +2,7 @@
 // The server decides what a change means (POST .../propose previews, POST .../ops saves); nothing here edits data directly.
 import { el } from './dom.js';
 import { request } from './api-client.js';
-import { opensOrSaves, replacesWithDoor, joinsRuns, interpretBody, describeInterpret, templateIntent, systemIntent, mentionsReference, checkUpload, recognizeBody, recognizeJobBody, anchorFor, describeRecognition, recognitionLines } from './assist-logic.js';
+import { opensOrSaves, replacesWithDoor, joinsRuns, interpretBody, describeInterpret, templateIntent, systemIntent, mentionsReference, checkUpload, recognizeBody, recognizeJobBody, anchorFor, describeRecognition, recognitionLines, commandPlace, commandBody, inboxNews, describeCommandAnswer } from './assist-logic.js';
 import { actionsFor, buildGroupOp, buildOp, describeProposal, groupActions, layerFor, lineTemplate, menuPosition, DOOR_STYLES, HANDLE_VARIANTS, RUN_ACTIONS, RUN_TURNS, systemTemplate, edgeChoices, modelChoices, applianceLayer, lineAlongWall, wallSegments, openingCommand, cabinetTypeChoices } from './menu-logic.js';
 import { groupLabel, groupLayerIds, manySystems } from './design-logic.js';
 import * as catalog from './catalog-client.js';
@@ -18,6 +18,12 @@ const JOB_KEY = 'recogJob';
 // the waiting job and where its run will stand ({job, anchor, mode}); the anchor is the object picked when the picture was sent
 function readJob() { try { const v = JSON.parse(localStorage.getItem(JOB_KEY) || 'null'); return v && typeof v.job === 'string' ? v : null; } catch { return null; } }
 function keepJob(v) { try { if (v) localStorage.setItem(JOB_KEY, JSON.stringify(v)); else localStorage.removeItem(JOB_KEY); } catch { /* no storage: the job lives until the page closes */ } }
+// right-click sentences sent to Claude's command inbox and not yet answered ([{id, text, designId}]): survive closing the menu and reloading
+const SENT_KEY = 'menuCommands';
+function readSent() { try { const v = JSON.parse(localStorage.getItem(SENT_KEY) || '[]'); return Array.isArray(v) ? v.filter((c) => typeof c?.id === 'string') : []; } catch { return []; } }
+function keepSent(v) { try { localStorage.setItem(SENT_KEY, JSON.stringify(v)); } catch { /* no storage: kept until the page closes */ } }
+const POLL_MS = 4000;
+const ANSWER_HOLD_MS = 8000;
 
 /**
  * ctx: { box, getState() -> {id, rev, spec}, afterChange(result), reload(), imageEdit({layer, material}), structure: {hide, isolate, showAll}, setStatus, keepOpenOn?(node) -> true when a press there must not close the popup (the 3D view decides on click) }
@@ -30,6 +36,58 @@ export function createModuleMenu(ctx) {
   let lineFrom = null;
   let lastAppliance = null;   // the appliance model being previewed: once applied, the image tab opens on it      // first point of a run being drawn on the floor (mm); survives closing the menu, the second right click ends the line
   box.setAttribute('role', 'dialog'); box.hidden = true;
+  // the command inbox (server setting KITCHEN_MENU_COMMANDS=inbox): sentences typed here go to Claude, who carries them out by MCP
+  let inboxMode = false; let sent = readSent(); let waitingNow = []; let lastTitle = ''; let poller = null;
+  request('/api/command-inbox?status=pending').then(({ data }) => { inboxMode = data?.mode === 'inbox'; if (sent.length) watchInbox(); }).catch(() => { /* old server: direct */ });
+
+  function watchInbox() {
+    if (poller || !sent.length) return;
+    poller = setInterval(pollInbox, POLL_MS);
+    pollInbox();
+  }
+
+  async function pollInbox() {
+    const { id, rev } = ctx.getState();
+    if (!id) return;
+    if (!sent.length) { clearInterval(poller); poller = null; return; }
+    let data;
+    try { ({ data } = await request(`/api/command-inbox?design=${encodeURIComponent(id)}`)); } catch { return; }
+    const commands = Array.isArray(data?.commands) ? data.commands : [];
+    const { waiting, news } = inboxNews(commands, sent.filter((c) => c.designId === id).map((c) => c.id));
+    const gone = new Set([...news.map((c) => c.id), ...sent.filter((c) => c.designId === id && !commands.some((x) => x.id === c.id)).map((c) => c.id)]);
+    const before = waitingNow.length;
+    waitingNow = waiting;
+    if (gone.size) { sent = sent.filter((c) => !gone.has(c.id)); keepSent(sent); }
+    const said = news.map((c) => describeCommandAnswer(c, rev));
+    if (said.some((d) => d.reload)) { try { await ctx.reload(); } catch { /* the reply is still shown */ } }
+    said.forEach((d) => ctx.setStatus(d.text, d.tone, { hold: ANSWER_HOLD_MS }));   // kept while the panels the reload refreshes report in
+    if ((news.length || before !== waitingNow.length) && !box.hidden && box.querySelector('.ctx-cmd')) redraw(box.querySelector('.ctx-cmd input')?.value || '', '');
+  }
+
+  async function sendToInbox(text) {
+    const { id, rev } = ctx.getState();
+    let body;
+    try { body = commandBody(text, rev, commandPlace(target, lastTitle, target.surface ? ctx.getState().surfaces || [] : []), lang()); } catch (e) { return redraw(text, e.message); }
+    busy = true;
+    try {
+      const { status, data } = await call(`/api/designs/${id}/command`, body);
+      busy = false;
+      if (!data || data.error || status !== 201) return redraw(text, data?.error || tx('ui.loi', { 0: status }));
+      sent = [...sent, { id: data.id, text: data.text, designId: id }]; keepSent(sent);
+      waitingNow = [...waitingNow, data];
+      const line = tx('ui.command.sent', { 0: data.id });
+      ctx.setStatus(line, 'ok');
+      redraw('', line);
+      watchInbox();
+    } catch (e) { busy = false; redraw(text, e.message); }
+  }
+
+  async function dropCommand(cid) {
+    try { await call(`/api/command-inbox/${cid}/drop`, {}); } catch { /* gone already */ }
+    sent = sent.filter((c) => c.id !== cid); keepSent(sent);
+    waitingNow = waitingNow.filter((c) => c.id !== cid);
+    redraw(box.querySelector('.ctx-cmd input')?.value || '', '');
+  }
 
   const close = () => { box.hidden = true; box.replaceChildren(); target = null; step = null; busy = false; attached = null; ctx.guide?.(lineFrom); };   // a line being drawn goes back to following the pointer
   const header = (text) => el('div', { class: 'ctx-head' }, text, el('button', { type: 'button', class: 'ctx-x', title: tx('ui.dong-esc'), onclick: close }, '×'));
@@ -61,6 +119,7 @@ export function createModuleMenu(ctx) {
       : target.kind === 'module' ? `Module ${target.id}` : target.kind === 'floor' ? (lineFrom ? tx('ui.san-dang-ve-day-tu') : tx('ui.san-2'))
         : tx('ui.thanh-phan-mat-bang', { 0: target.id.replace(/^STRUCT-/, '') });
     box.onkeydown = null;
+    lastTitle = title;
     const cmd = commandBox();
     box.replaceChildren(header(title), ...(cmd ? [cmd] : []), el('ul', { class: 'ctx-list' }, ...actionsFor(target, spec, lineFrom).map((a) =>
       el('li', {}, el('button', { type: 'button', onclick: () => choose(a.id) }, a.label)))));
@@ -89,14 +148,19 @@ export function createModuleMenu(ctx) {
       el('span', {}, tx('ui.job-dang-cho-claude', { 0: pendingJob })),
       el('button', { type: 'button', class: 'primary', title: tx('ui.lay-ket-qua-claude-da-tra-loi'), onclick: () => updateJob(input.value) }, tx('ui.cap-nhat')),
       el('button', { type: 'button', class: 'ghost small', title: tx('ui.bo-job-nay'), onclick: () => { setJob(null); redraw(input.value, ''); } }, tx('ui.bo'))) : null;
-    return el('div', { class: 'ctx-cmd' }, input, el('button', { type: 'button', class: 'primary', onclick: run }, tx('ui.xem-truoc')), attach, kind, mode, file,
-      ...(chip ? [chip] : []), ...(waiting ? [waiting] : []),
+    const mineNow = waitingNow.filter((c) => c.designId === ctx.getState().id).slice(-3);
+    const queued = mineNow.map((c) => el('div', { class: 'ctx-pending' }, el('span', {}, tx('ui.command.waiting', { 0: c.text })),
+      el('button', { type: 'button', class: 'ghost small', title: tx('ui.command.drop-title'), onclick: () => dropCommand(c.id) }, tx('ui.command.drop'))));
+    return el('div', { class: 'ctx-cmd' }, input, el('button', { type: 'button', class: 'primary', onclick: run }, tx(inboxMode && !attached ? 'ui.command.send' : 'ui.xem-truoc')), attach, kind, mode, file,
+      ...(chip ? [chip] : []), ...(waiting ? [waiting] : []), ...queued,
       ...(message ? [el('p', { class: 'ctx-msg warn' }, message)] : []),
       ...(choices.length ? [el('div', { class: 'chips' }, ...choices.map((c) => el('button', { type: 'button', class: 'ghost small', onclick: () => command(`${input.value.trim()} ${c}`) }, c)))] : []));
   }
 
   async function command(text) {
-    if (busy) return; const { id, rev } = ctx.getState();
+    if (busy) return;
+    if (inboxMode) return sendToInbox(text);          // Claude reads and carries out the sentence (command inbox)
+    const { id, rev } = ctx.getState();
     if (mentionsReference(text)) return redraw(text, tx('ui.cau-lenh-nhac-toi-anh-tham-chieu'));
     const onCabinets = ['module', 'part', 'group'].includes(target.kind);
     if (onCabinets && joinsRuns(text)) return joinOnServer(text);

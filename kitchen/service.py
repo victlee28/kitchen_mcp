@@ -58,6 +58,31 @@ class KitchenService:
         self.images = ImageJobs(self.store, self.render_dir, self.apply, self.config, catalog=self.catalog, design_catalog=self.catalog_for_revision)
         from .opening_service import OpeningService
         self.opening_service = OpeningService(self.store, self.catalog, self.catalog_for_revision)
+        from .command_inbox import CommandInbox
+        self.commands = CommandInbox(self.config.command_inbox or Path(self.store.path).parent / "command-inbox", self.clock)
+
+    # ---------- the command inbox: right-click sentences Claude carries out (KITCHEN_MENU_COMMANDS=inbox)
+    def command_mode(self) -> str:
+        """``inbox`` (the menu sends sentences to Claude) or ``direct`` (the server reads them at once, as before)."""
+        return self.config.menu_commands
+
+    def command_put(self, design_id: str, text: Any, place: Any, base_rev: Any = None, lang: Any = None) -> dict:
+        """A right-click sentence, with what was clicked, left for Claude (the design must exist)."""
+        self.store.get(design_id)
+        return self.commands.put(design_id, text, place, base_rev, lang)
+
+    def command_list(self, status: str | None = None, design_id: str | None = None) -> list[dict]:
+        return self.commands.list(status, design_id)
+
+    def command_get(self, command_id: str) -> dict:
+        return self.commands.get(command_id)
+
+    def command_answer(self, command_id: str, status: str, reply: str = '', revision: int | None = None) -> dict:
+        """Claude's answer: ``done`` (``revision`` = the design's revision after the change), ``failed`` or ``question``."""
+        return self.commands.answer(command_id, status, reply, revision)
+
+    def command_drop(self, command_id: str) -> dict:
+        return self.commands.drop(command_id)
 
     # ---------- catalog (data-driven business data: kitchen.catalog) and wording (kitchen.i18n)
     USER = "default"          # one user until accounts exist (decision of 11/11/2026)
@@ -846,11 +871,13 @@ class KitchenService:
                 return {**out, 'status': 'saved', 'kind': 'layout-template', 'item': {k: saved[k] for k in ('id', 'scope', 'version', 'system') if k in saved},
                         'summary': [words.said('summary.system.saved', id=saved['id'])]}
             return {**out, 'status': 'unsupported', 'message': words.said('summary.save.nothing')}
-        if point is None:
+        if wish['action'] in ('remove', 'edit') and target is None and module:
+            return {**out, 'status': 'not-opening'}          # "xóa cửa" on a cabinet: about the cabinet, not a room opening
+        if point is None and not (wish['action'] in ('remove', 'edit') and target is not None):
             return {**out, 'status': 'unsupported', 'message': words.said('summary.opening.need-point')}
         try:
-            operation, what, facts = room_openings.command.operation(wish, point, axes, self.catalog(), existing, selected, elements,
-                                                                     country or spec.country)
+            operation, what, facts = room_openings.command.operation(wish, point or (0.0, 0.0), axes, self.catalog(), existing, selected,
+                                                                     elements, country or spec.country)
         except room_openings.command.SizeQuestion as ask:
             p = ask.params
             return {**out, 'status': 'ask', 'message': words.said('summary.opening.size-ask', width=f"{p['width']:g}", type=self._type_label(str(p['type'])),
@@ -860,6 +887,8 @@ class KitchenService:
             return {**out, 'status': 'unsupported', 'message': str(error)}
         summary = [words.said(f'summary.opening.{what}', type=self._type_label(str(facts['type'])), width=f"{facts['width']:g}",
                               height=f"{facts['height']:g}", id=facts.get('id', ''))]
+        if what != 'removed' and facts.get('sill'):
+            summary.append(words.said('summary.opening.sill', sill=f"{facts['sill']:g}"))
         preview = self.propose(design_id, operation, current, None, country)
         return {**out, 'status': 'ok', 'operation': operation, 'summary': summary, 'proposal': preview}
 

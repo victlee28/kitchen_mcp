@@ -138,12 +138,15 @@ class Piece:
     thickness: float
 
 
-def _piece(e: Mapping[str, Any]) -> Piece | None:
+def _piece(e: Mapping[str, Any], turned: bool = False) -> Piece | None:
+    """The element as a straight box along its longest side (``turned``: along the side square to it, for a stub as thick as long)."""
     pts = [(float(p["x"]), float(p["z"])) for p in (as_dict(q) or {} for q in as_list(e.get("outline")) or []) if "x" in p and "z" in p]
     if len(pts) < 3:
         return None
     k = max(range(len(pts)), key=lambda i: math.hypot(pts[(i + 1) % len(pts)][0] - pts[i][0], pts[(i + 1) % len(pts)][1] - pts[i][1]))
     d = _unit(pts[k], pts[(k + 1) % len(pts)])
+    if turned:
+        d = (-d[1] + 0.0, d[0] + 0.0)
     if not canonical(d):
         d = (-d[0] + 0.0, -d[1] + 0.0)
     n = (-d[1], d[0])
@@ -157,14 +160,41 @@ def _piece(e: Mapping[str, Any]) -> Piece | None:
     return Piece(str(e.get("id") or ""), at(min(along)), at(max(along)), d, t)
 
 
+STUB_RATIO = 2.0              # a wall piece less than this many times longer than thick is a stub: which way it runs is not plain
+
+
+def _length(p: Piece) -> float:
+    return math.hypot(p.b[0] - p.a[0], p.b[1] - p.a[1])
+
+
+def _lines_up(p: Piece, q: Piece) -> bool:
+    """Does ``p`` run on along ``q``'s centreline and touch its end (a stub beside a door: the wall the door is in)?"""
+    if _angle(p.d, q.d) > COLLINEAR_DEG or _offset(p, q.a, q.d) > max(p.thickness, q.thickness) / 2 + TOUCH_MM:
+        return False
+    s0, s1 = _span(p, q.a, q.d)
+    q0, q1 = _span(q, q.a, q.d)
+    return s0 <= q1 + TOUCH_MM and s1 >= q0 - TOUCH_MM
+
+
 def wall_pieces(fp: Mapping[str, Any]) -> list[Piece]:
-    """The floorplan's wall elements as straight boxes (an element clearly longer than thick)."""
+    """The floorplan's wall elements as straight boxes (an element clearly longer than thick). A stub (about as long as thick, e.g. the
+    short bit of wall beside a door) runs the way of the door it touches, even when it is thicker than long; a stub touching no door
+    keeps its longest side, as any wall piece."""
+    elements = [e for e in (as_dict(x) or {} for x in as_list(fp.get("elements")) or [])]
+    doors = opening_pieces(fp)
     out: list[Piece] = []
-    for e in (as_dict(x) or {} for x in as_list(fp.get("elements")) or []):
+    for e in elements:
         if e.get("kind") != "wall":
             continue
         p = _piece(e)
-        if p is not None and math.hypot(p.b[0] - p.a[0], p.b[1] - p.a[1]) > p.thickness:
+        if p is None:
+            continue
+        if _length(p) < STUB_RATIO * p.thickness:
+            turned = _piece(e, turned=True)
+            if turned is not None and any(_lines_up(turned, o) for o in doors):
+                out.append(turned)
+                continue
+        if _length(p) > p.thickness:
             out.append(p)
     return out
 

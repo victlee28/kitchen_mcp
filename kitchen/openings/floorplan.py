@@ -17,6 +17,7 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 from ..catalog import Catalog
+from ..defaults import of as defaults_of
 from ..jsonview import as_dict, as_list
 from .contract import Opening, Pt
 from .normalize import normalize
@@ -123,10 +124,12 @@ def raw_from_floorplan(fp: Mapping[str, Any], axes: Sequence[WallAxis], catalog:
         else:
             raw["openingType"] = "window-swing-2"
             unsure.append("openingType")
+        base = float(elev.get("base") or 0.0) if isinstance(elev.get("base"), (int, float)) else 0.0
+        sill = base if base > 0 or kind != "window" else float(defaults_of(catalog).openings.get("windowSill", 900.0))   # no sill drawn: the default
         if isinstance(elev.get("height"), (int, float)):
-            raw.update(height=float(elev["height"]), sill=float(elev.get("base") or 0.0))
+            raw.update(height=float(elev["height"]), sill=sill)
         else:
-            raw.update(height=default_height(kind), sill=0.0)                       # what the floorplan import assumes
+            raw.update(height=default_height(kind), sill=sill)
             unsure += ["height", "sill"] if kind == "window" else ["height"]
         raw["unsure"] = unsure
         out.append((raw, notes))

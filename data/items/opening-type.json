@@ -792,6 +792,18 @@
    "vi": "Cửa sổ cố định",
    "en": "Fixed window"
   },
+  "aliases": {
+   "vi": [
+    "cửa sổ fix",
+    "cửa sổ kính cố định",
+    "ô kính cố định",
+    "vách kính cố định"
+   ],
+   "en": [
+    "fixed window",
+    "picture window"
+   ]
+  },
   "prompt": "fixed picture window"
  },
  {
@@ -859,6 +871,18 @@
   "label": {
    "vi": "Cửa sổ mở quay hai cánh",
    "en": "Double casement window"
+  },
+  "aliases": {
+   "vi": [
+    "cửa sổ mở quay",
+    "cửa sổ hai cánh",
+    "cửa sổ 2 cánh",
+    "cửa sổ mở ra ngoài"
+   ],
+   "en": [
+    "casement window",
+    "double casement"
+   ]
   },
   "prompt": "double casement window"
  },
@@ -944,6 +968,16 @@
    "vi": "Cửa sổ mở quay hai cánh, ô fix phía trên",
    "en": "Double casement window with fixed top light"
   },
+  "aliases": {
+   "vi": [
+    "cửa sổ có ô fix trên",
+    "cửa sổ có ô kính trên",
+    "cửa sổ có ô thoáng trên"
+   ],
+   "en": [
+    "casement window with top light"
+   ]
+  },
   "prompt": "double casement window with a fixed top light"
  },
  {
@@ -992,6 +1026,17 @@
   "label": {
    "vi": "Cửa sổ hất",
    "en": "Top-hung window"
+  },
+  "aliases": {
+   "vi": [
+    "cửa sổ lật",
+    "cửa sổ hất ra",
+    "cửa sổ bật"
+   ],
+   "en": [
+    "awning window",
+    "top hung window"
+   ]
   },
   "prompt": "top-hung awning window"
  },
@@ -1053,6 +1098,17 @@
   "label": {
    "vi": "Cửa sổ trượt hai cánh",
    "en": "Double sliding window"
+  },
+  "aliases": {
+   "vi": [
+    "cửa sổ lùa",
+    "cửa sổ trượt",
+    "cửa sổ đẩy"
+   ],
+   "en": [
+    "sliding window",
+    "slider window"
+   ]
   },
   "prompt": "double sliding window"
  }

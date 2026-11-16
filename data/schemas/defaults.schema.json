@@ -477,6 +477,15 @@
       "vi": "Dung sai bắt khổ cửa (mm)",
       "en": "Opening size snap tolerance (mm)"
      }
+    },
+    "windowSill": {
+     "type": "number",
+     "minimum": 0,
+     "maximum": 3000,
+     "x-label": {
+      "vi": "Cửa sổ cách sàn khi không ghi (mm)",
+      "en": "Window sill above the floor when none is given (mm)"
+     }
     }
    }
   }

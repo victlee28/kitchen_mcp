@@ -45,3 +45,20 @@ test('run writes progress, success and failure into the status element', async (
   console.error = log;
   assert.deepEqual(node, { textContent: 'lỗi rồi', className: 'status warn' });
 });
+
+test('createStatus: a held message outlives the routine lines of run(), not an error', async () => {
+  const el = { textContent: '', className: '' };
+  let t = 1000;
+  const { setStatus, run } = createStatus(el, () => t);
+  setStatus('Claude đã làm', 'ok', { hold: 5000 });
+  await run('Tải cửa', async () => {});
+  assert.equal(el.textContent, 'Claude đã làm');
+  t = 7000;
+  await run('Tải cửa', async () => {});
+  assert.equal(el.textContent, 'Xong: Tải cửa');
+  setStatus('giữ', '', { hold: 5000 });
+  const err = console.error; console.error = () => {};
+  await run('Lưu', async () => { throw new Error('hỏng'); });
+  console.error = err;
+  assert.equal(el.textContent, 'hỏng');
+});

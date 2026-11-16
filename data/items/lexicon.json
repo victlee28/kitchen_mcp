@@ -2505,10 +2505,24 @@
   "group": "edit-opening",
   "aliases": {
    "vi": [
-    "cửa sổ"
+    "cửa sổ",
+    "ô cửa sổ",
+    "khung cửa sổ",
+    "cửa sổ kính",
+    "cửa sổ trượt",
+    "cửa sổ mở quay",
+    "cửa sổ lật",
+    "ô thoáng",
+    "ô gió",
+    "ô kính"
    ],
    "en": [
-    "window"
+    "window",
+    "windows",
+    "casement",
+    "sliding window",
+    "awning window",
+    "transom"
    ]
   },
   "value": "window"
@@ -2643,6 +2657,126 @@
    ]
   },
   "value": "make"
+ },
+ {
+  "id": "edit.opening.remove",
+  "group": "edit-opening",
+  "aliases": {
+   "vi": [
+    "xóa bỏ",
+    "xoá bỏ",
+    "loại bỏ",
+    "gỡ bỏ",
+    "bỏ đi",
+    "xóa",
+    "xoá",
+    "bỏ",
+    "bịt lại",
+    "bịt"
+   ],
+   "en": [
+    "delete",
+    "remove",
+    "take out",
+    "get rid of",
+    "fill in",
+    "close up"
+   ]
+  },
+  "value": "remove"
+ },
+ {
+  "id": "edit.opening.edit",
+  "group": "edit-opening",
+  "aliases": {
+   "vi": [
+    "chỉnh sửa",
+    "điều chỉnh",
+    "chỉnh lại",
+    "sửa lại",
+    "sửa",
+    "cập nhật",
+    "thu hẹp",
+    "mở rộng"
+   ],
+   "en": [
+    "edit",
+    "adjust",
+    "modify",
+    "update",
+    "resize",
+    "widen",
+    "narrow",
+    "set"
+   ]
+  },
+  "value": "edit"
+ },
+ {
+  "id": "edit.opening.raise",
+  "group": "edit-opening",
+  "aliases": {
+   "vi": [
+    "nâng lên",
+    "hạ xuống",
+    "nâng",
+    "hạ"
+   ],
+   "en": [
+    "raise",
+    "lower",
+    "move up",
+    "move down"
+   ]
+  },
+  "value": "raise"
+ },
+ {
+  "id": "edit.opening.sill",
+  "group": "edit-opening",
+  "aliases": {
+   "vi": [
+    "cách mặt sàn",
+    "cách sàn",
+    "cao độ bậu",
+    "độ cao bậu",
+    "chiều cao bậu",
+    "cao từ sàn",
+    "từ sàn lên",
+    "từ sàn",
+    "bậu cửa sổ",
+    "bậu cửa",
+    "bậu",
+    "chân cửa sổ",
+    "đáy cửa sổ",
+    "mép dưới"
+   ],
+   "en": [
+    "above the floor",
+    "off the floor",
+    "from the floor",
+    "sill height",
+    "sill"
+   ]
+  },
+  "value": "sill"
+ },
+ {
+  "id": "edit.opening.width",
+  "group": "edit-opening",
+  "aliases": {
+   "vi": [
+    "rộng",
+    "chiều rộng",
+    "bề rộng",
+    "ngang"
+   ],
+   "en": [
+    "width",
+    "wide"
+   ]
+  },
+  "value": "width"
  },
  {
   "id": "edit.opening.height",

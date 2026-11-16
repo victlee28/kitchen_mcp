@@ -1253,5 +1253,20 @@
  "catalog.layout.do.cabinets": "cabinets",
  "catalog.layout.do.corner-base": "corner cabinet",
  "catalog.layout.do.corner-shelf": "corner shelf",
- "catalog.layout.do.upper-run": "wall cabinet run"
+ "catalog.layout.do.upper-run": "wall cabinet run",
+ "summary.opening.removed": "Remove {type} {id} ({width} wide × {height} mm high)",
+ "summary.opening.edited": "Change {id}: {width} wide × {height} mm high",
+ "summary.opening.sill": "Window sill {sill} mm above the floor",
+ "error.opening-none-clicked": "Right-click the door or window to change or remove",
+ "error.opening-nothing-to-change": "Say what to change: its width, its height, or how far above the floor it sits",
+ "error.opening-door-sill": "A door stands on the floor: only a window has a height above the floor",
+ "ui.command.empty": "Type a command first",
+ "ui.command.sent": "Command {0} sent to Claude's inbox. Message Claude: \"do the commands in the inbox\".",
+ "ui.command.waiting": "Waiting for Claude: \"{0}\"",
+ "ui.command.drop": "Take back",
+ "ui.command.drop-title": "Take this command back (Claude has not done it)",
+ "ui.command.done": "Claude did \"{0}\".",
+ "ui.command.failed": "Claude could not do \"{0}\":",
+ "ui.command.question": "Claude asks about \"{0}\":",
+ "ui.command.send": "Send to Claude"
 }

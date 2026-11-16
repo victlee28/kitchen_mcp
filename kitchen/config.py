@@ -32,6 +32,8 @@ class Config:
     default_recognizer: str | None = None          # name used when a request names none (see recognition.choose_recognizer)
     data_dir: Path | None = None                   # the builtin catalog layer and wording (data/); None: <root>/data
     fixed_role: str | None = None                  # KITCHEN_FIXED_ROLE: every request acts as this catalog role (see kitchen.identity)
+    menu_commands: str = "inbox"                   # KITCHEN_MENU_COMMANDS: inbox (right-click sentences go to Claude's command inbox) | direct
+    command_inbox: Path | None = None              # KITCHEN_COMMAND_INBOX: the inbox folder; None: command-inbox/ beside the database
 
     @classmethod
     def from_env(cls, environ: Mapping[str, str] | None = None, root: Path = ROOT) -> "Config":
@@ -48,4 +50,6 @@ class Config:
                    cabinet_recognizer_timeout=float(env.get("CABINET_RECOGNIZER_TIMEOUT") or 240),
                    default_recognizer=(env.get("KITCHEN_RECOGNIZER") or "").strip() or None,
                    data_dir=Path(env.get("KITCHEN_DATA") or root / "data"),
-                   fixed_role=(env.get("KITCHEN_FIXED_ROLE") or "").strip().lower() or None)
+                   fixed_role=(env.get("KITCHEN_FIXED_ROLE") or "").strip().lower() or None,
+                   menu_commands="direct" if (env.get("KITCHEN_MENU_COMMANDS") or "").strip().lower() == "direct" else "inbox",
+                   command_inbox=Path(env["KITCHEN_COMMAND_INBOX"]) if env.get("KITCHEN_COMMAND_INBOX") else None)

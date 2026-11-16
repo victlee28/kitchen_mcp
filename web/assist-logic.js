@@ -175,3 +175,46 @@ export function recognitionLines(r) {
   const d = describeRecognition(r);
   return d.kind === 'preview' ? d.lines.slice(0, d.lines.length - describeProposal(r.proposal).length) : d.lines;
 }
+
+// ---- the command inbox: a right-click sentence sent to Claude (server mode KITCHEN_MENU_COMMANDS=inbox)
+
+/** What was right-clicked, as the inbox record keeps it (kitchen/menu_commands.clean_place): the target's kind, id, part, point,
+ *  floorplan element, module / group, picked wall faces and the menu's heading. */
+export function commandPlace(target, title = '', surfaces = []) {
+  if (!target) return {};
+  const out = { kind: target.kind };
+  if (target.id) out.id = String(target.id).replace(/^STRUCT-/, '');
+  if (target.part) out.part = target.part;
+  if (target.point && Number.isFinite(target.point.x) && Number.isFinite(target.point.z)) out.point = { x: target.point.x, z: target.point.z };
+  if (target.kind === 'structure' && target.id) out.structureId = String(target.id).replace(/^STRUCT-/, '');
+  const module = ['module', 'part'].includes(target.kind) ? target.id : target.kind === 'group' ? target.group?.modules?.[0] : undefined;
+  if (module) out.module = module;
+  if (target.kind === 'group' && target.group?.modules?.length) out.modules = target.group.modules.slice(0, 50);
+  if (surfaces.length) out.surfaces = surfaces.slice(0, 50);
+  if (title) out.title = String(title).slice(0, 120);
+  return out;
+}
+
+/** The body of POST /api/designs/<id>/command. */
+export function commandBody(text, baseRev, place, language) {
+  const t = String(text ?? '').trim();
+  if (!t) throw new Error(tx('ui.command.empty'));
+  return { text: t.slice(0, 500), place, baseRev, lang: language === 'en' ? 'en' : 'vi' };
+}
+
+/** What the menu shows of the inbox for a design: {waiting: [records still with Claude], news: [records answered since the menu last
+ *  looked, oldest first]}. ``known``: ids the page sent and has not shown an answer for yet. */
+export function inboxNews(commands, known) {
+  const mine = new Set(known);
+  const waiting = commands.filter((c) => mine.has(c.id) && c.status === 'pending');
+  const news = commands.filter((c) => mine.has(c.id) && ['done', 'failed', 'question'].includes(c.status));
+  return { waiting, news };
+}
+
+/** One answered command as a status line: {text, tone: 'ok'|'warn'|'bad', reload: true when the design changed}. */
+export function describeCommandAnswer(c, currentRev) {
+  const said = c.reply ? ` ${c.reply}` : '';
+  if (c.status === 'done') return { text: tx('ui.command.done', { 0: c.text }) + said, tone: 'ok', reload: Number.isInteger(c.revision) ? c.revision !== currentRev : true };
+  if (c.status === 'question') return { text: tx('ui.command.question', { 0: c.text }) + said, tone: 'warn', reload: false };
+  return { text: tx('ui.command.failed', { 0: c.text }) + said, tone: 'bad', reload: false };
+}

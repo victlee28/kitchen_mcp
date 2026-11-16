@@ -262,6 +262,21 @@
         }
       }
     },
+    "aliases": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "maxItems": 20
+      },
+      "x-label": {
+        "vi": "Tên gọi khác (theo ngôn ngữ), để câu lệnh nhận ra mẫu",
+        "en": "Other names (per language), so commands find the type"
+      }
+    },
     "prompt": {
       "type": "string"
     },

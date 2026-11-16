@@ -63,6 +63,36 @@ class TestWish(unittest.TestCase):
         self.assertEqual(edit_intent.opening_wish("lưu hệ tủ vào database")["what"], "system")
 
 
+class TestWindowWords(unittest.TestCase):
+    """Making, changing and removing windows; how far above the floor they sit ("cách sàn")."""
+
+    def test_make_with_a_sill(self):
+        w = edit_intent.opening_wish
+        self.assertEqual(w("tạo cửa sổ 1200x1400 cách sàn 900"),
+                         {"action": "make", "kind": "window", "type": None, "sill": 900.0, "width": 1200.0, "height": 1400.0})
+        self.assertEqual(w("tạo cửa sổ rộng 1000 cao 1200 cách sàn 1m"), {"action": "make", "kind": "window", "type": None,
+                                                                         "sill": 1000.0, "height": 1200.0, "width": 1000.0})
+        self.assertEqual(w("thêm ô thoáng 600x400 bậu 2000")["sill"], 2000.0)
+        self.assertEqual(w("window 1200 wide, 1000 off the floor"),
+                         {"action": "make", "kind": "window", "type": None, "sill": 1000.0, "width": 1200.0})
+        self.assertNotIn("sill", w("tạo cửa sổ"))
+
+    def test_edit_and_remove(self):
+        w = edit_intent.opening_wish
+        self.assertEqual(w("sửa cửa sổ rộng 1500"), {"action": "edit", "kind": "window", "type": None, "width": 1500.0})
+        self.assertEqual(w("nâng cửa sổ lên 1000"), {"action": "edit", "kind": "window", "type": None, "sill": 1000.0})
+        self.assertEqual(w("chỉnh lại cửa sổ cách sàn 1100")["sill"], 1100.0)
+        self.assertEqual(w("sửa cửa sổ cao độ bậu 950"), {"action": "edit", "kind": "window", "type": None, "sill": 950.0})
+        self.assertEqual(w("xóa cửa sổ này"), {"action": "remove", "kind": "window", "type": None})
+        self.assertEqual(w("delete the window")["action"], "remove")
+
+    def test_words_that_only_look_alike(self):
+        w = edit_intent.opening_wish
+        self.assertEqual(w("lắp cửa sổ gỗ")["action"], "make")              # lắp is not lấp, gỗ is not gỡ
+        self.assertEqual(w("tạo cửa chính")["action"], "make")              # chính is not chỉnh
+        self.assertIsNone(w("xóa cánh cửa"))                                 # a cabinet door
+
+
 class TestOtherAxes(unittest.TestCase):
     def test_walls_of_another_room_get_one_axis_through_the_hole(self):
         axes = wall_axes.from_floorplan(_with_next_room())
@@ -71,6 +101,27 @@ class TestOtherAxes(unittest.TestCase):
         other = [a for a in axes if a.inward == 0]
         self.assertEqual([(a.id, a.start, a.length, a.sources()) for a in other],
                          [("WA-wall_n1", (6700.0, 0.0), 4000.0, ("wall_n1", "wall_n2"))])
+
+    def test_a_stub_thicker_than_long_beside_a_door_runs_with_the_wall(self):
+        """A 100 mm bit of a 140 mm wall before a toilet door (drawn 140 wide, 100 long), the door, then the rest of the wall: one axis
+        through all three, so a door made in the hole fits (it was an axis 140 mm long, square to the wall)."""
+        fp = F.room()
+        fp["elements"] += [{"id": "wall_s1", "kind": "wall", "tag": "wall", "outline": _rect(6600.0, 0.0, 6740.0, 100.0)},
+                           {"id": "opening_s1", "kind": "opening", "outline": _rect(6600.0, 100.0, 6740.0, 850.0)},
+                           {"id": "wall_s2", "kind": "wall", "tag": "wall", "outline": _rect(6600.0, 850.0, 6740.0, 1650.0)}]
+        other = [a for a in wall_axes.from_floorplan(fp) if a.inward == 0]
+        self.assertEqual([(a.start, a.dir, a.length, a.sources()) for a in other],
+                         [((6670.0, 0.0), (0.0, 1.0), 1650.0, ("wall_s1", "wall_s2"))])
+        wish = edit_intent.opening_wish("tạo cửa nhà vệ sinh")
+        op, what, facts = command.operation(wish, (6670.0, 500.0), wall_axes.from_floorplan(fp), CAT, (), "opening_s1",
+                                            fp["elements"], "VN")
+        self.assertEqual((what, facts["width"], op["opening"]["center"]), ("hole", 750.0, 475.0))
+
+    def test_a_stub_touching_no_door_keeps_its_longest_side(self):
+        fp = F.room()
+        fp["elements"] += [{"id": "wall_s1", "kind": "wall", "tag": "wall", "outline": _rect(6600.0, 0.0, 6740.0, 100.0)}]
+        other = [a for a in wall_axes.from_floorplan(fp) if a.inward == 0]
+        self.assertEqual([(a.dir, a.length) for a in other], [((1.0, 0.0), 140.0)])
 
     def test_no_floorplan_wall_left_over(self):
         self.assertFalse([a for a in wall_axes.from_floorplan(F.room()) if a.inward == 0])
@@ -120,6 +171,49 @@ class TestCommand(unittest.TestCase):
         self.assertEqual({k: op["changes"][k] for k in ("kind", "openingType", "width", "height", "sill")},
                          {"kind": "window", "openingType": "window-swing-2", "width": 900.0, "height": 1200.0, "sill": 900.0})
 
+    def _window(self, sill=900.0):
+        added, _ = normalize({"kind": "window", "openingType": "window-swing-2", "wallAxis": self.axes[0].ref().to_data(), "center": 2550.0,
+                              "width": 1200.0, "height": 1200.0, "sill": sill}, "human", CAT, self.axes)
+        return dataclasses.replace(added, id="OP1")
+
+    def test_a_window_sits_900_above_the_floor_unless_told(self):
+        op, _, facts = command.operation({"action": "make", "kind": "window", "type": None}, (2500.0, 0.0), self.axes, CAT)
+        self.assertEqual((op["opening"]["sill"], facts["sill"]), (900.0, 900.0))
+        op, _, _ = command.operation({"action": "make", "kind": "window", "type": None, "sill": 1100.0}, (2500.0, 0.0), self.axes, CAT)
+        self.assertEqual(op["opening"]["sill"], 1100.0)
+        self.fp["elements"][-1].update(tag="window", elev={"base": 1000.0, "height": 1200.0})      # the drawing gives its sill
+        op, what, _ = command.operation({"action": "make", "kind": "window", "type": None}, (6650.0, 2000.0), self.axes, CAT, (),
+                                        "opening_n1", self.fp["elements"])
+        self.assertEqual((what, op["opening"]["sill"]), ("hole", 1000.0))
+        self.fp["elements"][-1].update(elev={"base": 0.0, "height": 1200.0})                       # on the floor: not a sill given
+        op, _, _ = command.operation({"action": "make", "kind": "window", "type": None}, (6650.0, 2000.0), self.axes, CAT, (),
+                                     "opening_n1", self.fp["elements"])
+        self.assertEqual(op["opening"]["sill"], 900.0)
+
+    def test_editing_a_window(self):
+        window = self._window(800.0)
+        op, what, facts = command.operation({"action": "edit", "kind": "window", "type": None, "sill": 1100.0, "width": 1400.0},
+                                            (2550.0, 0.0), self.axes, CAT, (window,))
+        self.assertEqual((op["op"], op["id"], what), ("update-opening", "OP1", "edited"))
+        self.assertEqual({k: op["changes"][k] for k in ("sill", "width")}, {"sill": 1100.0, "width": 1400.0})
+        self.assertNotIn("openingType", op["changes"], "it keeps its type")
+        self.assertEqual((facts["sill"], facts["height"]), (1100.0, 1200.0))
+        with self.assertRaises(InvalidInput) as nothing:
+            command.operation({"action": "edit", "kind": "window", "type": None}, (2550.0, 0.0), self.axes, CAT, (window,))
+        self.assertEqual(nothing.exception.code, "opening-nothing-to-change")
+        with self.assertRaises(InvalidInput) as none:
+            command.operation({"action": "edit", "kind": "window", "type": None, "sill": 1000.0}, (500.0, 0.0), self.axes, CAT, (window,))
+        self.assertEqual(none.exception.code, "opening-none-clicked")
+
+    def test_replacing_a_window_keeps_its_sill(self):
+        op, _, _ = command.operation({"action": "replace", "kind": "window", "type": "window-sliding-2"}, (2550.0, 0.0), self.axes, CAT,
+                                     (self._window(1050.0),))
+        self.assertEqual(op["changes"]["sill"], 1050.0)
+
+    def test_removing_a_window(self):
+        op, what, _ = command.operation({"action": "remove", "kind": "window", "type": None}, (2550.0, 0.0), self.axes, CAT, (self._window(),))
+        self.assertEqual((op, what), ({"op": "remove-opening", "id": "OP1"}, "removed"))
+
     def test_the_opening_a_hole_stands_for(self):
         self.fp["elements"][-1].update(tag="door", label="Cửa trượt sau", elev={"base": 0.0, "height": 2400.0})
         found = command.hole_opening((6650.0, 2000.0), self.axes, CAT, None, self.fp["elements"])
@@ -158,6 +252,24 @@ class TestService(unittest.TestCase):
         self.assertEqual((saved["status"], saved["item"]["id"]), ("saved", "cua-nhom-den"))
         again = self.svc.opening_command(self.did, "tạo cửa nhôm đen", {"point": {"x": -3300, "z": -50}}, "user")
         self.assertEqual((again["operation"]["opening"]["openingType"], again["operation"]["opening"]["width"]), ("cua-nhom-den", 1600.0))
+
+    def test_window_made_changed_and_removed(self):
+        at = {"point": {"x": -1500, "z": -50}}
+        made = self.svc.opening_command(self.did, "tạo cửa sổ", at, "user")
+        self.assertEqual((made["status"], made["operation"]["opening"]["sill"]), ("ok", 900.0))
+        self.assertIn("900", made["summary"][-1]["text"] if isinstance(made["summary"][-1], dict) else str(made["summary"][-1]))
+        self.svc.apply(self.did, made["operation"], made["baseRev"])
+        raised = self.svc.opening_command(self.did, "nâng cửa sổ lên cách sàn 1100", at, "user")
+        self.assertEqual((raised["status"], raised["operation"]["op"], raised["operation"]["changes"]["sill"]), ("ok", "update-opening", 1100.0))
+        self.svc.apply(self.did, raised["operation"], raised["baseRev"])
+        (window,) = [o for o in self.svc.get(self.did)["spec"]["openings"] if not o.get("removed")]
+        self.assertEqual((window["kind"], window["sill"]), ("window", 1100.0))
+        gone = self.svc.opening_command(self.did, "xóa cửa sổ này", at, "user")
+        self.assertEqual((gone["status"], gone["operation"]["op"], gone["proposal"]["applicable"]), ("ok", "remove-opening", True))
+        self.svc.apply(self.did, gone["operation"], gone["baseRev"])
+        self.assertEqual([o for o in self.svc.get(self.did)["spec"]["openings"] if not o.get("removed")], [])
+        self.assertEqual(self.svc.opening_command(self.did, "xóa cửa sổ", {"point": {"x": -1000, "z": 300}, "module": "TD1"}, "user")["status"],
+                         "not-opening", "no window there and a cabinet clicked: about the cabinet")
 
     def test_nothing_to_save(self):
         self.assertEqual(self.svc.opening_command(self.did, "lưu vào database", {"point": {"x": -1500, "z": 1500}}, "user")["status"], "unsupported")

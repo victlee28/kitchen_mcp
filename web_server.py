@@ -26,6 +26,9 @@ API:
   GET  /api/regions                       khu vực, quốc gia, số mục
   GET  /api/designs/<id>/history         lịch sử
   POST /api/designs/<id>/opening-command {"prompt", "point", "structureId"?, "module"?, "baseRev"?}: câu lệnh về cửa đi / cửa sổ ở điểm bấm chuột phải (xem trước), hoặc "lưu vào database" cửa / hệ tủ vừa bấm
+  POST /api/designs/<id>/command        {"text", "place"?: {kind, id, part?, point?, structureId?, module?, modules?, surfaces?, title?}, "baseRev"?, "lang"?}: câu lệnh chuột phải gửi vào hộp thư của Claude (KITCHEN_MENU_COMMANDS=inbox); 201 bản ghi lệnh
+  GET  /api/command-inbox[?design=&status=]  {"mode": "inbox"|"direct", "commands": [...]}: các lệnh trong hộp thư (cũ nhất trước)
+  GET  /api/command-inbox/<mã>           một lệnh;  POST /api/command-inbox/<mã>/drop: rút lại lệnh chưa làm
   POST /api/designs/<id>/layout-template {"label"?, "id"?, "system"?, "rev"?, "save"?: true} hệ tủ của thiết kế thành một mẫu bố trí (lưu vào danh mục)
   GET  /api/designs/<id>/catalog-updates[?rev=N]  mục danh mục đã đổi kể từ khi bản lưu được ghi + thao tác cập nhật ({"op": "catalog-refresh"})
   POST /api/designs/<id>/ops             {"baseRev": N, "op": {...}, "expect"?: opHash của /propose: chỉ lưu đúng thao tác đã xem trước}
@@ -238,6 +241,16 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(200, s.check_request(str(self._body(MAX_IMAGE_BODY).get("text", ""))))
         if p == "/api/image-backends" and method == "GET":
             return self._json(200, s.image_backends())
+        if p == "/api/command-inbox" and method == "GET":
+            return self._json(200, {"mode": s.command_mode(), "commands": s.command_list(q.get("status") or None, q.get("design") or None)})
+        m = re.fullmatch(r"/api/command-inbox/(\d{8}-\d{6}-[a-z0-9]{4})(?:/(drop))?", p)
+        if m:
+            cid, sub = m.groups()
+            if method == "GET" and sub is None:
+                return self._json(200, s.command_get(cid))
+            if method == "POST" and sub == "drop":
+                return self._json(200, s.command_drop(cid))
+            raise ApiError(405, "Phương thức không hỗ trợ")
         if p == "/api/image-jobs" and method == "GET":
             return self._json(200, [self._job_out(j) for j in s.images.list(q.get("design"), q.get("view"), q.get("status"))])
         m = re.fullmatch(r"/api/image-jobs/(job-[a-f0-9]+)(?:/(result|accept|reject|regenerate|request|send))?", p)
@@ -278,7 +291,7 @@ class Handler(BaseHTTPRequestHandler):
                 b = self._body()
                 return self._json(201, self._job_out(s.images.regenerate(jid, b.get("seed"))))
             raise ApiError(405, "Phương thức không hỗ trợ")
-        m = re.fullmatch(r"/api/designs/([a-z0-9-]+)(?:/(scene|threejs|validate|history|catalog-updates|openings|ops|revert|render|layers|mask|pick|image-jobs|beauty|base-image|ai-export|floorplan-bind|view-status|regenerate-stale|propose|interpret|recognize|recognize-job|template|layout-template|opening-command))?", p)
+        m = re.fullmatch(r"/api/designs/([a-z0-9-]+)(?:/(scene|threejs|validate|history|catalog-updates|openings|ops|revert|render|layers|mask|pick|image-jobs|beauty|base-image|ai-export|floorplan-bind|view-status|regenerate-stale|propose|interpret|recognize|recognize-job|template|layout-template|opening-command|command))?", p)
         if not m:
             raise ApiError(404, "Không có endpoint")
         did, sub = m.groups()
@@ -372,6 +385,8 @@ class Handler(BaseHTTPRequestHandler):
             if sub == "layout-template":
                 return self._json(200, s.layout_template_from_design(did, self._role(), str(b.get("label") or ""), str(b.get("id") or ""),
                                                                      b.get("system") or None, b.get("rev"), b.get("save", True) is not False))
+            if sub == "command":
+                return self._json(201, s.command_put(did, b.get("text"), b.get("place"), b.get("baseRev"), b.get("lang")))
             if sub == "opening-command":
                 if not isinstance(b.get("prompt"), str):
                     raise ApiError(400, "thiếu prompt")

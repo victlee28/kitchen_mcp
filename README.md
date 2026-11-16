@@ -29,6 +29,7 @@ copy .env.example .env      # tùy chọn: DEEPSEEK_API_KEY... (.env được n�
   "args": ["C:\\Users\\XPC\\Desktop\\image\\mcp-imagev2\\server.py"]}}}
 ```
 
+- **Hộp thư lệnh** (`KITCHEN_MENU_COMMANDS=inbox`, mặc định): câu gõ trong menu chuột phải không chạy ngay mà được ghi vào `command-inbox/` (cạnh `kitchen.db`, kèm vật vừa bấm và revision); nút đổi thành "Gửi Claude". Nhắn Claude "làm các lệnh trong hộp thư": Claude dùng các tool MCP `list_menu_commands` → (`get_design`, `opening_command` / `interpret_edit` / `propose_template` …) → `apply_change` (đúng thao tác đã xem trước, `expect` = opHash) → `answer_menu_command`. Trang web hỏi hộp thư 4 giây một lần, tải lại thiết kế và hiện câu trả lời của Claude; lệnh chưa làm có nút "Rút lại". `KITCHEN_MENU_COMMANDS=direct` = như cũ. Web và MCP server phải dùng chung `KITCHEN_DB` (và `KITCHEN_COMMAND_INBOX` nếu đặt).
 - Test (Windows): `run_tests.bat setup` the first time, then `run_tests.bat`. It installs the project with the `dev` extra (pydantic, numpy, pillow, jsonschema, mcp, pyright), runs `python -m unittest discover -s tests`, then `node --test tests\js\menu-logic.test.mjs`. Without `pyright` the type ratchet (`tests/test_typecheck.py`) is skipped. Python 3.11+ is required.
 - Test (any OS): `pip install -e ".[dev]"` then `python -m unittest discover -s tests -v`
 

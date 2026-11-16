@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { opensOrSaves, replacesWithDoor, joinsRuns, styleFromOptions, styleFromValue, interpretBody, describeInterpret, confirmBody, checkUpload, recognizeBody, recognizeJobBody, anchorFor, describeRecognition, templateIntent, mentionsReference, recognitionLines } from '../../web/assist-logic.js';
+import { opensOrSaves, replacesWithDoor, joinsRuns, styleFromOptions, styleFromValue, interpretBody, describeInterpret, confirmBody, checkUpload, recognizeBody, recognizeJobBody, anchorFor, describeRecognition, templateIntent, mentionsReference, recognitionLines, commandPlace, commandBody, inboxNews, describeCommandAnswer } from '../../web/assist-logic.js';
 
 const prop = (over = {}) => ({ id: 'd1', baseRev: 4, opHash: 'h', operation: { op: 'remove', id: 'TD1' }, applicable: true, unchanged: false,
   diff: { modules: { added: [], removed: ['TD1'], changed: {} }, other: [] }, validation: { introduced: [], resolved: [] }, ...over });
@@ -107,4 +107,25 @@ test('door, window and save sentences go to the server first', () => {
 test('"nối góc" joins two runs', () => {
   for (const t of ['nối góc', 'nối dãy này với dãy kia', 'join the runs']) assert.equal(joinsRuns(t), true, t);
   for (const t of ['nối dài tủ', 'tạo cửa đi']) assert.equal(joinsRuns(t), false, t);
+});
+
+test('command inbox: what was clicked, the body sent, the answers shown', () => {
+  assert.deepEqual(commandPlace({ kind: 'part', id: 'TD1', part: 'door', point: { x: 1, z: 2 } }, 'Cánh · TD1'),
+    { kind: 'part', id: 'TD1', part: 'door', point: { x: 1, z: 2 }, module: 'TD1', title: 'Cánh · TD1' });
+  assert.deepEqual(commandPlace({ kind: 'structure', id: 'STRUCT-opening_002', point: { x: 5, z: 6 } }),
+    { kind: 'structure', id: 'opening_002', point: { x: 5, z: 6 }, structureId: 'opening_002' });
+  assert.deepEqual(commandPlace({ kind: 'group', id: 'G', group: { modules: ['TD1', 'TD2'] } }, '', ['wall_1#inside']),
+    { kind: 'group', id: 'G', module: 'TD1', modules: ['TD1', 'TD2'], surfaces: ['wall_1#inside'] });
+  assert.deepEqual(commandPlace(null), {});
+  assert.deepEqual(commandBody('  xóa TD3 ', 4, { kind: 'module' }, 'vi'), { text: 'xóa TD3', place: { kind: 'module' }, baseRev: 4, lang: 'vi' });
+  assert.throws(() => commandBody('  ', 4, {}, 'vi'));
+  const list = [{ id: 'a', status: 'pending' }, { id: 'b', status: 'done', text: 'xóa TD3', reply: 'Đã xóa', revision: 5 }, { id: 'c', status: 'failed', text: 'x' }, { id: 'z', status: 'done' }];
+  const { waiting, news } = inboxNews(list, ['a', 'b', 'c']);
+  assert.deepEqual(waiting.map((c) => c.id), ['a']);
+  assert.deepEqual(news.map((c) => c.id), ['b', 'c'], 'only the commands this page sent');
+  const done = describeCommandAnswer(list[1], 4);
+  assert.equal(done.tone, 'ok'); assert.equal(done.reload, true); assert.match(done.text, /Đã xóa/);
+  assert.equal(describeCommandAnswer(list[1], 5).reload, false, 'already on that revision');
+  assert.equal(describeCommandAnswer(list[2], 4).tone, 'bad');
+  assert.equal(describeCommandAnswer({ id: 'q', status: 'question', text: 'x', reply: 'Tủ nào?' }, 4).tone, 'warn');
 });
