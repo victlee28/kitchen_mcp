@@ -1,7 +1,7 @@
 """Solids of the openings a design places, for the control-map renderer and the layer catalogue (plan §4, slice 2). Pure.
 
 Part types: ``opening-frame`` (jambs, head, sill, transoms, mullions, casings), ``opening-leaf`` (a door leaf), ``opening-glass`` (a
-window leaf, fixed glazing) and ``opening-sweep`` (the floor a turning leaf sweeps, a flat sheet 2 mm up, like the floorplan's doors).
+window leaf, fixed glazing), ``opening-handle`` (the handle of a leaf that opens, both faces) and ``opening-sweep`` (the floor a turning leaf sweeps, a flat sheet 2 mm up, like the floorplan's doors).
 ``module`` is the opening id, so every opening has its own masks. The wall around the hole is cut by ``cut_polygon`` / ``cut_box``.
 """
 from __future__ import annotations
@@ -49,6 +49,9 @@ def meshes(opening: Opening, axis: WallAxis, type_data: Mapping[str, Any], sh: O
     for lf in sh["leaves"]:
         v, f = prism(_quad(axis, lf["s0"], lf["s1"], lf["d0"], lf["d1"]), lf["y0"], lf["y1"])
         out.append(MeshPart(f"{opening.id}-leaf-{lf['index'] + 1}", opening.id, leaf_type(opening, lf["operation"]), v, f))
+    for hb in sh["handles"]:
+        v, f = prism(_quad(axis, hb["s0"], hb["s1"], hb["d0"], hb["d1"]), hb["y0"], hb["y1"])
+        out.append(MeshPart(f"{opening.id}-handle-{hb['leaf'] + 1}-{hb['part']}", opening.id, "opening-handle", v, f))
     for k, poly in enumerate(sh["sweeps"], 1):
         if len(poly) >= 3:
             v, f = prism(list(poly), SWEEP_Y, SWEEP_Y)

@@ -1271,5 +1271,11 @@
  "ui.command.send": "Gửi Claude",
  "edit.ask.remove-part": "Xóa cả tủ {ids}? Câu lệnh nhắc tới cánh tủ: muốn bỏ riêng cánh thì nói rõ, ví dụ \"tủ mở\".",
  "edit.choice.remove-whole": "xóa cả tủ",
- "ui.command.sent-worker": "Đã gửi lệnh {0}: AI đang tự làm, kết quả hiện ở đây sau ít giây."
+ "ui.command.sent-worker": "Đã gửi lệnh {0}: AI đang tự làm, kết quả hiện ở đây sau ít giây.",
+ "part.opening-handle": "tay nắm cửa",
+ "name.layer.opening": "cửa {module}",
+ "name.layer.opening-leaves": "cánh cửa {module}",
+ "name.layer.opening-frame": "khung cửa {module}",
+ "name.layer.opening-handles": "tay nắm cửa {module}",
+ "name.view.opening": "Cửa {module}"
 }

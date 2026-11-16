@@ -397,10 +397,10 @@ class TestDrawing(unittest.TestCase):
         self.assertEqual([w[0] for w in walls], ["room-wall-1-1", "room-wall-1-2", "room-wall-1-3"])
         self.assertIn((-3000.0, -2100.0), {(w[1], w[2]) for w in walls})                 # the piece over the hole
         types = sorted({m.type for m in scene.meshes if m.module == "OP1"})
-        self.assertEqual(types, ["opening-frame", "opening-glass", "opening-leaf", "opening-sweep"])
+        self.assertEqual(types, ["opening-frame", "opening-glass", "opening-handle", "opening-leaf", "opening-sweep"])
         from kitchen import layers
         keys = {l["materialLocked"] for l in layers.catalogue(spec, scene) if l.get("module") == "OP1" and l.get("variant") == "part"}
-        self.assertEqual(keys, {"common:openingFrame", "common:openingGlass", "common:openingLeaf", "common:floor"})
+        self.assertEqual(keys, {"common:openingFrame", "common:openingGlass", "common:openingLeaf", "common:openingHandle", "common:floor"})
         plain = geometry.compile_spec(self._straight([]), CAT)
         self.assertIn("room-wall-1", {p.id for p in plain.parts})                      # no opening: the wall is one box as before
 

@@ -24,7 +24,8 @@ SEMANTIC = {"carcass": "cabinet_body", "side-panel": "cabinet_body", "shelf": "c
             "door": "cabinet_front", "glass-door": "cabinet_front", "drawer": "cabinet_front",
             "countertop": "countertop", "molding": "decorations", "handle": "hardware", "wall": "room", "floor": "room",
             "fridge": "appliances", "sink": "appliances", "faucet": "appliances", "cooktop": "appliances", "hood": "appliances", "oven": "appliances",
-            "opening-frame": "room_opening", "opening-leaf": "room_opening", "opening-glass": "room_opening", "opening-sweep": "room_opening"}
+            "opening-frame": "room_opening", "opening-leaf": "room_opening", "opening-glass": "room_opening", "opening-sweep": "room_opening",
+            "opening-handle": "room_opening"}
 
 _PROMPT_ROLES = {  # part kind -> the words of the image prompt (English); the name shown to people is the ``part.<kind>`` key of data/i18n
     "door": "cabinet door front", "glass-door": "glass cabinet door", "drawer": "drawer front", "carcass": "cabinet carcass side",
@@ -32,14 +33,18 @@ _PROMPT_ROLES = {  # part kind -> the words of the image prompt (English); the n
     "molding": "decorative molding", "wall": "wall", "floor": "floor", "fridge": "refrigerator", "sink": "kitchen sink",
     "faucet": "kitchen faucet", "cooktop": "cooktop", "hood": "range hood", "oven": "built-in oven", "handle": "cabinet handle",
     "opening-frame": "door or window frame and casing", "opening-leaf": "room door leaf", "opening-glass": "window glass",
-    "opening-sweep": "floor in front of a door",
+    "opening-sweep": "floor in front of a door", "opening-handle": "door handle",
 }
 ROLES = {k: (say(f"part.{k}"), en) for k, en in _PROMPT_ROLES.items()}   # part kind -> (name shown to people, prompt words)
 
 _MATERIALS = defaults.BUILTIN.materials   # finish names drawn where the design names none (data: the ``defaults`` item)
 _DEFAULTS = {k: _MATERIALS[k] for k in ("base", "upper", "carcass", "countertop", "wall", "floor", "plinth", "openingFrame", "openingLeaf",
-                                        "openingGlass") if k in _MATERIALS}
-OPENING_KEYS = {"opening-frame": "openingFrame", "opening-leaf": "openingLeaf", "opening-glass": "openingGlass", "opening-sweep": "floor"}
+                                        "openingGlass", "openingHandle") if k in _MATERIALS}
+OPENING_KEYS = {"opening-frame": "openingFrame", "opening-leaf": "openingLeaf", "opening-glass": "openingGlass", "opening-sweep": "floor",
+                "opening-handle": "openingHandle"}
+OPENING_GROUPS = (("leaves", ("opening-leaf", "opening-glass"), "name.layer.opening-leaves"),     # (layer id prefix, part types, name key)
+                  ("frame", ("opening-frame",), "name.layer.opening-frame"),
+                  ("handle", ("opening-handle",), "name.layer.opening-handles"))
 _APPLIANCES = {"fridge": _MATERIALS["steel"], "sink": _MATERIALS["sink"], "faucet": _MATERIALS["steel"], "cooktop": _MATERIALS["cooktop"],
                "hood": _MATERIALS["steel"], "openings": _MATERIALS["openings"]}
 
@@ -149,6 +154,19 @@ def catalogue(spec: KitchenSpec, scene: Scene) -> list[dict[str, Any]]:
         if allp:
             groups.append({"id": f"module:{m.id}", "variant": "group", "module": m.id, "type": "module", "semanticClass": "cabinet",
                            "name": say("name.layer.cabinet", module=m.id), "material": None, "materialLocked": "", "component": allp})
+    for oid in dict.fromkeys(str(x["module"]) for x in out if str(x["type"]).startswith("opening-") and x["module"]):
+        mine = [x for x in out if x["module"] == oid and str(x["type"]).startswith("opening-")]
+        for prefix, types, name in OPENING_GROUPS:        # a door / window: its leaves, its frame, its handles, then the whole of it
+            ids = [str(x["id"]) for x in mine if x["type"] in types]
+            if ids:
+                first = by_id[ids[0]]
+                same = len({by_id[i]["materialLocked"] for i in ids}) == 1
+                groups.append({"id": f"{prefix}:{oid}", "variant": "group", "module": oid, "type": first["type"], "semanticClass": "room_opening",
+                               "name": say(name, module=oid), "material": first["material"] if same else None,
+                               "materialLocked": first["materialLocked"] if same else "", "component": ids})
+        groups.append({"id": f"module:{oid}", "variant": "group", "module": oid, "type": "opening", "semanticClass": "room_opening",
+                       "name": say("name.layer.opening", module=oid), "material": None, "materialLocked": "",
+                       "component": [str(x["id"]) for x in mine]})
     for mol in spec.moldings:
         ids: list[str] = [x["id"] for x in out if x["module"] == mol.id and x["type"] == "molding"]
         if ids:

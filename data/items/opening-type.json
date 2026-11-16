@@ -189,7 +189,12 @@
     "url": "https://hdblaminatedoor.blogspot.com/2025/06/standard-door-and-gate-sizes-in.html",
     "note": "HDB / condo room and toilet doors sold as 3 ft x 7 ft (915 x 2135 mm); used as the wall-hole size (user's decision 16/11/2026)"
    }
-  ]
+  ],
+  "handle": {
+   "kind": "lever",
+   "height": 1000,
+   "inset": 70
+  }
  },
  {
   "id": "door-swing-1-transom",
@@ -264,7 +269,12 @@
    "vi": "Cửa đi một cánh có ô thoáng",
    "en": "Single swing door with transom"
   },
-  "prompt": "single-leaf hinged door with a fixed glass transom above"
+  "prompt": "single-leaf hinged door with a fixed glass transom above",
+  "handle": {
+   "kind": "lever",
+   "height": 1000,
+   "inset": 70
+  }
  },
  {
   "id": "door-swing-2",
@@ -383,7 +393,12 @@
     "url": "https://hdblaminatedoor.blogspot.com/2025/06/standard-door-and-gate-sizes-in.html",
     "note": "double main doors sold as 4 ft x 7 ft (1220 x 2135 mm); used as the wall-hole size (user's decision 16/11/2026)"
    }
-  ]
+  ],
+  "handle": {
+   "kind": "lever",
+   "height": 1000,
+   "inset": 70
+  }
  },
  {
   "id": "door-swing-2-transom",
@@ -474,7 +489,12 @@
    "vi": "Cửa đi hai cánh có ô thoáng",
    "en": "Double swing door with transom"
   },
-  "prompt": "double-leaf hinged door with a fixed glass transom above"
+  "prompt": "double-leaf hinged door with a fixed glass transom above",
+  "handle": {
+   "kind": "lever",
+   "height": 1000,
+   "inset": 70
+  }
  },
  {
   "id": "door-swing-2-unequal",
@@ -553,7 +573,12 @@
    "vi": "Cửa đi hai cánh lệch (mẹ con)",
    "en": "Unequal double swing door"
   },
-  "prompt": "unequal double-leaf hinged door"
+  "prompt": "unequal double-leaf hinged door",
+  "handle": {
+   "kind": "lever",
+   "height": 1000,
+   "inset": 70
+  }
  },
  {
   "id": "door-sliding-2",
@@ -626,7 +651,131 @@
    "vi": "Cửa đi trượt hai cánh",
    "en": "Double sliding door"
   },
-  "prompt": "double sliding door"
+  "prompt": "double sliding door",
+  "handle": {
+   "kind": "pull",
+   "height": 1000,
+   "inset": 60
+  },
+  "aliases": {
+   "vi": [
+    "cửa trượt hai cánh",
+    "cửa trượt 2 cánh",
+    "cửa lùa hai cánh",
+    "cửa lùa 2 cánh"
+   ],
+   "en": [
+    "two-panel sliding door"
+   ]
+  }
+ },
+ {
+  "id": "door-sliding-4",
+  "kind": "door",
+  "operation": "sliding",
+  "axesRatio": [
+   0.25,
+   0.5,
+   0.75
+  ],
+  "hAxesFromSill": [],
+  "leaves": [
+   {
+    "cols": [
+     0,
+     1
+    ],
+    "rows": [
+     0,
+     1
+    ],
+    "operation": "sliding",
+    "hinge": null,
+    "opens": null,
+    "active": false
+   },
+   {
+    "cols": [
+     1,
+     2
+    ],
+    "rows": [
+     0,
+     1
+    ],
+    "operation": "sliding",
+    "hinge": null,
+    "opens": null,
+    "active": true
+   },
+   {
+    "cols": [
+     2,
+     3
+    ],
+    "rows": [
+     0,
+     1
+    ],
+    "operation": "sliding",
+    "hinge": null,
+    "opens": null,
+    "active": false
+   },
+   {
+    "cols": [
+     3,
+     4
+    ],
+    "rows": [
+     0,
+     1
+    ],
+    "operation": "sliding",
+    "hinge": null,
+    "opens": null,
+    "active": false
+   }
+  ],
+  "frameFace": 30,
+  "frameDepth": null,
+  "casing": {
+   "width": 50,
+   "thickness": 10
+  },
+  "threshold": 0,
+  "stop": 0,
+  "transom": 40,
+  "leafThickness": 40,
+  "gap": 3,
+  "minLeaf": 200,
+  "minWidth": 2000,
+  "maxWidth": 6000,
+  "defaultWidth": 3200,
+  "defaultHeight": 2200,
+  "defaultSill": 0,
+  "label": {
+   "vi": "Cửa đi trượt bốn cánh",
+   "en": "Four-panel sliding door"
+  },
+  "prompt": "four-panel sliding door",
+  "handle": {
+   "kind": "pull",
+   "height": 1000,
+   "inset": 60
+  },
+  "aliases": {
+   "vi": [
+    "cửa trượt bốn cánh",
+    "cửa trượt 4 cánh",
+    "cửa lùa bốn cánh",
+    "cửa lùa 4 cánh"
+   ],
+   "en": [
+    "four-panel sliding door",
+    "4 panel sliding door"
+   ]
+  }
  },
  {
   "id": "door-folding-4",
@@ -717,7 +866,24 @@
    "vi": "Cửa xếp bốn cánh",
    "en": "Four-leaf folding door"
   },
-  "prompt": "four-leaf bi-fold door"
+  "prompt": "four-leaf bi-fold door",
+  "handle": {
+   "kind": "pull",
+   "height": 1000,
+   "inset": 60
+  },
+  "aliases": {
+   "vi": [
+    "cửa xếp 4 cánh",
+    "cửa gấp bốn cánh",
+    "cửa gấp 4 cánh",
+    "cửa xếp trượt"
+   ],
+   "en": [
+    "bi-fold door",
+    "folding door"
+   ]
+  }
  },
  {
   "id": "passage",
@@ -747,7 +913,10 @@
    "vi": "Lỗ thông",
    "en": "Passage opening"
   },
-  "prompt": "open passage"
+  "prompt": "open passage",
+  "handle": {
+   "kind": "none"
+  }
  },
  {
   "id": "window-fixed",
@@ -804,7 +973,10 @@
     "picture window"
    ]
   },
-  "prompt": "fixed picture window"
+  "prompt": "fixed picture window",
+  "handle": {
+   "kind": "none"
+  }
  },
  {
   "id": "window-swing-2",
@@ -884,7 +1056,11 @@
     "double casement"
    ]
   },
-  "prompt": "double casement window"
+  "prompt": "double casement window",
+  "handle": {
+   "kind": "lever",
+   "inset": 60
+  }
  },
  {
   "id": "window-swing-2-top",
@@ -978,7 +1154,11 @@
     "casement window with top light"
    ]
   },
-  "prompt": "double casement window with a fixed top light"
+  "prompt": "double casement window with a fixed top light",
+  "handle": {
+   "kind": "lever",
+   "inset": 60
+  }
  },
  {
   "id": "window-top-hung",
@@ -1038,7 +1218,11 @@
     "top hung window"
    ]
   },
-  "prompt": "top-hung awning window"
+  "prompt": "top-hung awning window",
+  "handle": {
+   "kind": "lever",
+   "inset": 60
+  }
  },
  {
   "id": "window-sliding-2",
@@ -1110,6 +1294,10 @@
     "slider window"
    ]
   },
-  "prompt": "double sliding window"
+  "prompt": "double sliding window",
+  "handle": {
+   "kind": "pull",
+   "inset": 50
+  }
  }
 ]

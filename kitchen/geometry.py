@@ -737,7 +737,41 @@ def default_views(spec: KitchenSpec, scene: Scene | None = None, catalog: Catalo
             v = views[key]
             views[key] = ViewAngle(name=v.name, position=v.position, lookAt=v.lookAt, verticalFov=v.verticalFov,
                                    hide=camera_plan.hidden_for(v.position, faces, solids))
+    views.update(opening_views(spec, scene, room, catalog))
     return views
+
+
+OPENING_VIEW_FOV = 50.0          # degrees, vertical: a door or window seen square-on
+OPENING_VIEW_MARGIN = (800.0, 600.0)   # mm of wall left around the opening (across, up)
+OPENING_VIEW_DIST = (1200.0, 5000.0)   # nearest / farthest the camera stands from the wall (mm)
+
+
+def opening_views(spec: KitchenSpec, scene: Scene, room: list[tuple[float, float]] | None, catalog: Catalog = builtin.CATALOG) -> dict[str, ViewAngle]:
+    """One view per door / window the design places (``opening-<id>``): square-on from the side of the wall the kitchen is on, at eye
+    height, far enough back to show the whole opening with some wall around it (closer when the room is small)."""
+    out: dict[str, ViewAngle] = {}
+    lo, hi = scene.bounds()
+    kc = ((lo[0] + hi[0]) / 2, (lo[2] + hi[2]) / 2)
+    half_v = math.radians(OPENING_VIEW_FOV / 2)
+    half_h = math.atan(math.tan(half_v) * camera_plan.ASPECT)
+    for opening, axis in design_openings(spec, scene, catalog):
+        if opening.removed:
+            continue
+        c = axis.point(opening.center, 0.0)
+        n = axis.normal
+        sign = 1.0 if (kc[0] - c[0]) * n[0] + (kc[1] - c[1]) * n[1] >= 0 else -1.0
+        need = max((opening.height + OPENING_VIEW_MARGIN[1]) / 2 / math.tan(half_v), (opening.width + OPENING_VIEW_MARGIN[0]) / 2 / math.tan(half_h))
+        dist = min(max(need, OPENING_VIEW_DIST[0]), OPENING_VIEW_DIST[1])
+        pos = (c[0] + n[0] * sign * dist, c[1] + n[1] * sign * dist)
+        while room is not None and not camera_plan.stands_in_room(pos, room) and dist > OPENING_VIEW_DIST[0] / 2:
+            dist -= 200.0                            # a small room: step closer (the lens is not widened: the margins shrink instead)
+            pos = (c[0] + n[0] * sign * dist, c[1] + n[1] * sign * dist)
+        look_y = (opening.sill + opening.height / 2) / 1000
+        out[f"opening-{opening.id}"] = ViewAngle(name=say("name.view.opening", module=opening.id),
+                                                 position=(round_half_away(pos[0] / 1000, 3), camera_plan.EYE / 1000, round_half_away(pos[1] / 1000, 3)),
+                                                 lookAt=(round_half_away(c[0] / 1000, 3), round_half_away(look_y, 3), round_half_away(c[1] / 1000, 3)),
+                                                 verticalFov=OPENING_VIEW_FOV)
+    return out
 
 
 def views_of(spec: KitchenSpec, catalog: Catalog = builtin.CATALOG) -> dict[str, ViewAngle]:

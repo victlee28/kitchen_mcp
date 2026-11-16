@@ -1271,5 +1271,11 @@
  "ui.command.send": "Send to Claude",
  "edit.ask.remove-part": "Remove the whole cabinet {ids}? The sentence names its door: to remove only the door, say so, e.g. \"open cabinet\".",
  "edit.choice.remove-whole": "remove the whole cabinet",
- "ui.command.sent-worker": "Command {0} sent: the AI is carrying it out, the result shows here in a few seconds."
+ "ui.command.sent-worker": "Command {0} sent: the AI is carrying it out, the result shows here in a few seconds.",
+ "part.opening-handle": "door handle",
+ "name.layer.opening": "opening {module}",
+ "name.layer.opening-leaves": "leaves of {module}",
+ "name.layer.opening-frame": "frame of {module}",
+ "name.layer.opening-handles": "handles of {module}",
+ "name.view.opening": "Opening {module}"
 }

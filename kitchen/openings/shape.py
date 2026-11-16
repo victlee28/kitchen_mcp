@@ -42,6 +42,10 @@ class LeafShape(TypedDict):
     active: bool
 
 
+class HandleBox(Box):
+    leaf: int
+
+
 class OpeningShape(TypedDict):
     hole: list[Pt]
     center: Pt
@@ -53,6 +57,7 @@ class OpeningShape(TypedDict):
     hAxes: list[float]
     frame: list[Box]
     leaves: list[LeafShape]
+    handles: list[HandleBox]
     sweeps: list[list[Pt]]
     clear: tuple[float, float] | None
 
@@ -153,11 +158,61 @@ def shape(opening: Opening, axis: WallAxis, type_data: Mapping[str, Any]) -> Ope
             clear = (_r(b0 + lost), _r(b1)) if hinge_s is not None and hinge_s == s0 else (_r(b0), _r(b1 - lost))
     if opening.kind == "passage" and opening.clear_width is not None:
         clear = (_r(e0), _r(e1))
+    handles = _handles(opening, type_data, leaves)
     n = axis.normal
     return {"hole": [_pt(axis, e0, -t / 2), _pt(axis, e1, -t / 2), _pt(axis, e1, t / 2), _pt(axis, e0, t / 2)],
             "center": _pt(axis, opening.center, 0.0), "along": (axis.dir[0], axis.dir[1]), "normal": (n[0], n[1]), "thickness": t,
             "edges": (_r(e0), _r(e1)), "vAxes": [_r(x) for x in v], "hAxes": [_r(y) for y in h], "frame": frame, "leaves": leaves,
-            "sweeps": sweeps, "clear": clear}
+            "handles": handles, "sweeps": sweeps, "clear": clear}
+
+
+LEVER = {"rose": 55.0, "length": 130.0, "thick": 20.0, "reach": 60.0}       # mm: the rose on the leaf, the lever, how far it stands off
+PULL = {"length": 300.0, "thick": 25.0, "reach": 45.0}                     # a vertical pull bar (sliding / folding leaves)
+HANDLE_DEFAULT = {"door": {"kind": "lever", "height": 1000.0, "inset": 70.0}, "window": {"kind": "lever", "inset": 60.0}}
+
+
+def _handles(opening: Opening, type_data: Mapping[str, Any], leaves: list[LeafShape]) -> list[HandleBox]:
+    """The handle of every leaf that opens, on both faces: a lever (rose + lever pointing to the hinge) on a hinged leaf, at the edge away
+    from the hinge; a vertical pull bar on a sliding / folding leaf, at the edge away from the jamb; a lever in the middle of the bottom rail
+    of a top-hung leaf. ``handle`` of the opening type: ``kind`` lever | pull | none, ``height`` above the floor (none: the middle of the
+    leaf), ``inset`` from the leaf edge. A fixed leaf and a passage have none."""
+    spec = {**HANDLE_DEFAULT.get(opening.kind, {"kind": "none"}), **(obj(type_data.get("handle")) or {})}
+    kind = spec.get("kind")
+    if kind not in ("lever", "pull") or opening.kind == "passage":
+        return []
+    inset = float(spec.get("inset") or 60.0)
+    out: list[HandleBox] = []
+    for lf in leaves:
+        op = lf["operation"]
+        if op == "fixed":
+            continue
+        s0, s1, y0, y1 = lf["s0"], lf["s1"], lf["y0"], lf["y1"]
+        if s1 - s0 < 2 * inset or y1 - y0 < 200:
+            continue
+        wanted = spec.get("height")
+        y = min(max(float(wanted), y0 + 100.0), y1 - 100.0) if isinstance(wanted, (int, float)) else (y0 + y1) / 2
+        boxes: list[tuple[str, float, float, float, float, float]] = []   # (part, s0, s1, y0, y1, reach from the face)
+        if op in ("top-hung", "bottom-hung"):
+            mid, yb = (s0 + s1) / 2, (y0 + 70.0 if op == "top-hung" else y1 - 70.0)
+            boxes += [("rose", mid - LEVER["rose"] / 2, mid + LEVER["rose"] / 2, yb - LEVER["rose"] / 2, yb + LEVER["rose"] / 2, 12.0),
+                      ("lever", mid - LEVER["length"] / 2, mid + LEVER["length"] / 2, yb - LEVER["thick"] / 2, yb + LEVER["thick"] / 2, LEVER["reach"])]
+        elif lf["hingeS"] is not None and kind == "lever":
+            at_end = lf["hingeS"] == s0                            # the hinge at the start: the handle near the end, the lever towards the hinge
+            hs = s1 - inset if at_end else s0 + inset
+            toward = -1.0 if at_end else 1.0
+            boxes += [("rose", hs - LEVER["rose"] / 2, hs + LEVER["rose"] / 2, y - LEVER["rose"], y + LEVER["rose"], 12.0),
+                      ("lever", min(hs, hs + toward * LEVER["length"]), max(hs, hs + toward * LEVER["length"]),
+                       y - LEVER["thick"] / 2, y + LEVER["thick"] / 2, LEVER["reach"])]
+        else:                                                      # sliding / folding: a pull bar at the edge away from the jamb
+            meet = s1 - inset if (s0 + s1) / 2 < opening.center else s0 + inset
+            boxes.append(("pull", meet - PULL["thick"] / 2, meet + PULL["thick"] / 2, y - PULL["length"] / 2, y + PULL["length"] / 2, PULL["reach"]))
+        for face, sign in (("front", 1.0), ("back", -1.0)):
+            base = lf["d1"] if sign > 0 else lf["d0"]
+            for part, a, b, c, d, reach in boxes:
+                d0, d1 = (base, base + reach) if sign > 0 else (base - reach, base)
+                out.append({"part": f"{part}-{face}", "leaf": lf["index"], "s0": _r(a), "s1": _r(b), "y0": _r(c), "y1": _r(d),
+                            "d0": _r(d0), "d1": _r(d1)})
+    return out
 
 
 def world_opening(opening: Opening, axis: WallAxis, type_data: Mapping[str, Any]) -> Any:
