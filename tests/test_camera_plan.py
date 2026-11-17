@@ -138,3 +138,10 @@ class TestWholeRoom(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestOpeningOfAnotherRoom(unittest.TestCase):
+    def test_near_room(self):
+        self.assertTrue(camera_plan.near_room((-2000.0, 1000.0), ROOM, 600.0))
+        self.assertTrue(camera_plan.near_room((300.0, 1000.0), ROOM, 600.0), "in a thick wall of the room")
+        self.assertFalse(camera_plan.near_room((9000.0, 1000.0), ROOM, 600.0), "a window of another room of the plan")

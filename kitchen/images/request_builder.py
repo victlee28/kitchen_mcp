@@ -62,7 +62,7 @@ class RequestBuilder(Component):
         if kind == "geometry_edit":
             self._prepare_geometry(jdir, d, spec, man, did, view, geometry_items, instruction, reference, req)
         elif kind == "edit":
-            cat = layers.catalogue(spec, scene)
+            cat = layers.catalogue(spec, scene, render.wall_faces(spec, scene=scene))
             cur = spec
             inst, meta = imaging.load_instances(d)
             present = set(int(v) for v in np.unique(inst))  # pyright: ignore[reportUnknownMemberType] (numpy stubs)
@@ -78,7 +78,7 @@ class RequestBuilder(Component):
                 if mode == "design":
                     if not t["material"]:
                         raise InvalidInput(f"Task {i} ({t['targetLayer']}): design mode needs a material", code="task-no-material", params={"n": i, "layer": t["targetLayer"]})
-                    op = layers.design_op(cur, layers.resolve(layers.catalogue(cur, scene), t["targetLayer"])[0], t["material"], scene)
+                    op = layers.design_op(cur, layers.resolve(layers.catalogue(cur, scene, render.wall_faces(cur, scene=scene)), t["targetLayer"])[0], t["material"], scene)
                     if op is None:
                         raise InvalidInput(f"Task {i}: {layer['name']!r} cannot be changed in the design yet; use quick mode", code="layer-not-editable",
                                    params={"n": i, "name": layer["name"]})
@@ -108,7 +108,7 @@ class RequestBuilder(Component):
                 union |= tmask
                 imaging.save_mask(tmask, jdir / f"target_{i}.png")
                 imaging.save_mask(imaging.grow(tmask, GROW_PX), jdir / f"mask_{i}.png")
-                lay_new = layers.resolve(layers.catalogue(cur, scene), t["targetLayer"])[0]
+                lay_new = layers.resolve(layers.catalogue(cur, scene, render.wall_faces(cur, scene=scene)), t["targetLayer"])[0]
                 material_text = t["material"] or lay_new.get("material") or ""
                 type = lay_new.get("type") or ""
                 role_en = layers.ROLES.get(type, (None, "kitchen element"))[1]

@@ -57,6 +57,24 @@ export function pickTarget(hits, moduleIds) {
   return null;
 }
 
+const IMAGE_APPLIANCES = ['cooktop', 'sink', 'faucet', 'hood', 'fridge', 'oven', 'tv'];
+/** The menu target of a pixel of the layered image (an instance of the render's instances.json: {id, module, type}), as the 3D view's
+ *  right click gives it: a floorplan element, an appliance, a door / drawer front / handle / worktop, or the cabinet; null for what the
+ *  menu has nothing for (floor, a room door's own parts). A wall face carries its id (``surface``), as a right click on a lit face in
+ *  the 3D view does. No point: the picture has no floor position. */
+export function imageTarget(inst, moduleIds = []) {
+  if (!inst || typeof inst !== 'object') return null;
+  const m = typeof inst.module === 'string' ? inst.module : '';
+  const face = inst.type === 'wall-face' && typeof inst.surface === 'string' ? { surface: inst.surface } : {};   // a wall face (its own layer)
+  if (m.startsWith('STRUCT-')) return { kind: 'structure', id: m, ...face };
+  if (face.surface) return { kind: 'surface', id: face.surface, ...face };     // a face of a default wall
+  if (IMAGE_APPLIANCES.includes(inst.type) && /^TB\d+$/.test(m)) return { kind: 'appliance', id: m, applianceType: inst.type };
+  if (inst.type === 'countertop') return { kind: 'part', part: 'countertop', id: 'back' };
+  if (!moduleIds.includes(m)) return null;
+  if (['door', 'drawer', 'handle'].includes(inst.type)) return { kind: 'part', part: inst.type, id: m };
+  return { kind: 'module', id: m };
+}
+
 /** What can be done to the whole run a cabinet stands in (a click on a cabinet usually lands on its door, so doors offer these too). */
 function runActions(m) {
   return m?.run ? [{ id: 'runMove', label: tx('ui.doi-xoay-day', { 0: m.run }) }, { id: 'runStretch', label: tx('ui.keo-dai-thu-ngan-day', { 0: m.run }) }, { id: 'runRemove', label: tx('ui.xoa-ca-day', { 0: m.run }) }] : [];

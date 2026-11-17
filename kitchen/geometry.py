@@ -749,6 +749,7 @@ def default_views(spec: KitchenSpec, scene: Scene | None = None, catalog: Catalo
 OPENING_VIEW_FOV = 50.0          # degrees, vertical: a door or window seen square-on
 OPENING_VIEW_MARGIN = (800.0, 600.0)   # mm of wall left around the opening (across, up)
 OPENING_VIEW_DIST = (1200.0, 5000.0)   # nearest / farthest the camera stands from the wall (mm)
+OPENING_ROOM_REACH = 600.0             # an opening this close to the room's outline (mm; a thick wall) is one of the room's own
 
 
 def opening_views(spec: KitchenSpec, scene: Scene, room: list[tuple[float, float]] | None, catalog: Catalog = builtin.CATALOG) -> dict[str, ViewAngle]:
@@ -757,6 +758,8 @@ def opening_views(spec: KitchenSpec, scene: Scene, room: list[tuple[float, float
     out: dict[str, ViewAngle] = {}
     lo, hi = scene.bounds()
     kc = ((lo[0] + hi[0]) / 2, (lo[2] + hi[2]) / 2)
+    if hi == lo and room:               # no cabinets yet: the camera stands on the side of the wall the room is on
+        kc = (sum(p[0] for p in room) / len(room), sum(p[1] for p in room) / len(room))
     half_v = math.radians(OPENING_VIEW_FOV / 2)
     half_h = math.atan(math.tan(half_v) * camera_plan.ASPECT)
     for opening, axis in design_openings(spec, scene, catalog):
@@ -768,7 +771,8 @@ def opening_views(spec: KitchenSpec, scene: Scene, room: list[tuple[float, float
         need = max((opening.height + OPENING_VIEW_MARGIN[1]) / 2 / math.tan(half_v), (opening.width + OPENING_VIEW_MARGIN[0]) / 2 / math.tan(half_h))
         dist = min(max(need, OPENING_VIEW_DIST[0]), OPENING_VIEW_DIST[1])
         pos = (c[0] + n[0] * sign * dist, c[1] + n[1] * sign * dist)
-        while room is not None and not camera_plan.stands_in_room(pos, room) and dist > OPENING_VIEW_DIST[0] / 2:
+        mine = room is not None and camera_plan.near_room(c, room, OPENING_ROOM_REACH)    # an opening of another room of the plan: not squeezed into this one
+        while mine and room is not None and not camera_plan.stands_in_room(pos, room) and dist > OPENING_VIEW_DIST[0] / 2:
             dist -= 200.0                            # a small room: step closer (the lens is not widened: the margins shrink instead)
             pos = (c[0] + n[0] * sign * dist, c[1] + n[1] * sign * dist)
         look_y = (opening.sill + opening.height / 2) / 1000

@@ -55,8 +55,10 @@ TOOLS = (
     mc.ToolSpec("apply_change", "Save the operation of a preview made in this command, exactly as previewed. expect = that preview's opHash.",
                 _schema({"expect": STR}, ["expect"])),
     mc.ToolSpec("answer", "Close the command: status done (reply = one line on what changed), question (reply = what the user must "
-                "answer) or failed (reply = why). Always the last call.",
-                _schema({"status": {"type": "string", "enum": ["done", "question", "failed"]}, "reply": STR}, ["status", "reply"])),
+                "answer) or failed (reply = why). choices: up to 6 short answers the user can pick (a question's options, or with done "
+                "the other ways it could have gone when you had to choose). Always the last call.",
+                _schema({"status": {"type": "string", "enum": ["done", "question", "failed"]}, "reply": STR,
+                         "choices": {"type": "array", "items": STR}}, ["status", "reply"])),
 )
 
 
@@ -110,10 +112,12 @@ class InboxWorker:
         cid, did = str(command["id"]), str(command["designId"])
         place = dict(command.get("place") or {})
         previews: dict[str, tuple[dict[str, Any], int]] = {}
-        state: dict[str, Any] = {"revision": None}
-        messages: list[dict[str, Any]] = [{"role": "user", "text": json.dumps(
-            {"command": command.get("text"), "language": command.get("lang", "vi"), "clicked": place, "designId": did,
-             "revision": command.get("baseRev")}, ensure_ascii=False)}]
+        state: dict[str, Any] = {"revision": None, "fromRev": None}
+        said: dict[str, Any] = {"command": command.get("text"), "language": command.get("lang", "vi"), "clicked": place, "designId": did,
+                                "revision": command.get("baseRev")}
+        if command.get("replyTo"):          # the user's answer to an earlier answer: what was said and answered then
+            said["answering"] = command.get("context")
+        messages: list[dict[str, Any]] = [{"role": "user", "text": json.dumps(said, ensure_ascii=False)}]
         for _ in range(MAX_STEPS):
             try:
                 reply = self.svc.models.ask(mc.ModelRequest(self.instructions(), tuple(messages), TOOLS, max_tokens=1500, task="inbox"),
@@ -130,16 +134,18 @@ class InboxWorker:
                 if call.name == "answer":
                     status = call.arguments.get("status")
                     return self._close(cid, status if status in ("done", "question", "failed") else "failed",
-                                       str(call.arguments.get("reply") or ""), state["revision"])
+                                       str(call.arguments.get("reply") or ""), state["revision"], call.arguments.get("choices"),
+                                       state["fromRev"])
                 result = self._tool(call, did, place, previews, state)
                 text = json.dumps(result, ensure_ascii=False, default=str)
                 messages.append({"role": "tool", "id": call.id, "name": call.name,
                                  "result": text if len(text) <= RESULT_CHARS else text[:RESULT_CHARS] + " …(cut)"})
         return self._close(cid, "failed", f"No answer after {MAX_STEPS} steps", state["revision"])
 
-    def _close(self, cid: str, status: str, reply: str, revision: int | None) -> dict[str, Any]:
+    def _close(self, cid: str, status: str, reply: str, revision: int | None, choices: Any = None,
+               from_rev: int | None = None) -> dict[str, Any]:
         logger.info("[INBOX] %s -> %s: %s", cid, status, reply[:120])
-        return self.svc.command_answer(cid, status, reply, revision)
+        return self.svc.command_answer(cid, status, reply, revision, choices, from_rev)
 
     def _remember(self, out: Any, previews: dict[str, tuple[dict[str, Any], int]]) -> None:
         """Keep the operation of every preview a tool returned, by its opHash (what apply_change may save)."""
@@ -175,6 +181,8 @@ class InboxWorker:
                     return {"error": "apply_change saves only an operation previewed in this command: give its opHash"}
                 op, base = kept
                 saved = s.apply(did, op, base, "inbox-worker", str(a["expect"]))
+                if state["fromRev"] is None:
+                    state["fromRev"] = base                 # the revision before this command's first change: the menu's undo
                 state["revision"] = saved.get("rev")
                 return {"saved": True, "rev": saved.get("rev")}
             else:

@@ -34,6 +34,11 @@ class TestRecords(unittest.TestCase):
                                                             "point": {"x": -1500.1, "z": -50.0}, "modules": ["TD1", "TD2"],
                                                             "title": "Module TD1"}})
 
+    def test_picked_wall_faces_are_kept(self):
+        r = mc.new_record(CID, "d1", "sơn vàng", {"kind": "structure", "id": "wall_011", "surfaces": ["wall_011#inside", "WALL-BACK#inside",
+                                                                                                 "bad#", "x y#inside", 5]}, 9, "vi", NOW)
+        self.assertEqual(r["place"]["surfaces"], ["wall_011#inside", "WALL-BACK#inside"])
+
     def test_bad_input_is_refused(self):
         for text, code in (("   ", "command-empty"), ("x" * 501, "command-too-long")):
             with self.assertRaises(InvalidInput) as e:
@@ -57,6 +62,31 @@ class TestRecords(unittest.TestCase):
         self.assertEqual(mc.answered(asked, "done", "ok", 4, NOW)["status"], "done", "a question can still be answered")
         self.assertEqual(mc.dropped(r, NOW)["status"], "dropped")
         self.assertEqual(mc.dropped(done, NOW)["status"], "done", "an answered command stays as it was")
+
+    def test_choices_and_the_revision_before(self):
+        r = mc.new_record(CID, "d1", "tạo cửa đi 4 cánh", {}, 1, "vi", NOW)
+        done = mc.answered(r, "done", "Đã lắp cửa trượt 4 cánh", 2, NOW, ["Cửa xếp 4 cánh", " Cửa xếp 4 cánh ", "", 7, "x" * 300], 1)
+        self.assertEqual((done["choices"], done["fromRev"]), (["Cửa xếp 4 cánh", "x" * 160], 1))
+        asked = mc.answered(r, "question", "Sâu bao nhiêu?", None, NOW, ["600 mm", "350 mm"], 1)
+        self.assertEqual(asked["choices"], ["600 mm", "350 mm"])
+        self.assertNotIn("fromRev", asked, "only a done change has a revision to go back to")
+        self.assertNotIn("choices", mc.answered(r, "failed", "không", None, NOW))
+
+    def test_a_reply_to_an_answer(self):
+        asked = mc.answered(mc.new_record(CID, "d1", "tạo hệ tủ", {"kind": "structure", "id": "furniture_021"}, 3, "vi", NOW),
+                            "question", "Sâu 600 hay 350?", None, NOW, ["600", "350"])
+        reply = mc.new_record("20261116-150100-c3d4", "d1", "600", None, 3, "vi", NOW, asked)
+        self.assertEqual(reply["replyTo"], CID)
+        self.assertEqual(reply["context"], {"text": "tạo hệ tủ", "reply": "Sâu 600 hay 350?", "status": "question"})
+        self.assertEqual(reply["place"], {"kind": "structure", "id": "furniture_021"}, "the answered command's place when none is given")
+        after = mc.followed(asked, reply["id"])
+        self.assertEqual((after["status"], after["followUp"]), ("replied", reply["id"]))
+        done = mc.answered(mc.new_record(CID, "d1", "x", {}, 3, "vi", NOW), "done", "ok", 4, NOW)
+        self.assertEqual(mc.followed(done, reply["id"])["status"], "done", "a done change stays done")
+        for answering, code in ((mc.new_record(CID, "d1", "x", {}, 3, "vi", NOW), "command-reply-open"), ({**asked, "designId": "d2"}, "command-reply-design")):
+            with self.assertRaises(InvalidInput) as e:
+                mc.new_record("20261116-150100-c3d4", "d1", "600", None, 3, "vi", NOW, answering)
+            self.assertEqual(e.exception.code, code)
 
 
 class TestInboxFiles(unittest.TestCase):
@@ -125,6 +155,12 @@ class TestServiceHttpMcp(unittest.TestCase):
             self.assertEqual(req("POST", f"/api/command-inbox/{rec['id']}/drop", {})[1]["status"], "dropped")
             self.assertEqual(req("POST", f"/api/designs/{self.did}/command", {"text": " "})[0], 400)
             self.assertEqual(req("GET", "/api/command-inbox/20261116-000000-zzzz")[0], 404)
+            st, ask = req("POST", f"/api/designs/{self.did}/command", {"text": "đổi màu", "baseRev": 1, "place": {"kind": "module", "id": "TD1"}})
+            self.svc.command_answer(ask["id"], "question", "Màu nào?", None, ["trắng", "đen"])
+            st, back = req("POST", f"/api/designs/{self.did}/command", {"text": "trắng", "baseRev": 1, "replyTo": ask["id"]})
+            self.assertEqual((st, back["replyTo"], back["context"]["reply"], back["place"]), (201, ask["id"], "Màu nào?", {"kind": "module", "id": "TD1"}))
+            self.assertEqual(req("GET", f"/api/command-inbox/{ask['id']}")[1]["status"], "replied")
+            self.assertEqual(req("POST", f"/api/designs/{self.did}/command", {"text": "x", "replyTo": "../etc"})[0], 400)
         finally:
             srv.shutdown()
             srv.server_close()
@@ -141,8 +177,10 @@ class TestServiceHttpMcp(unittest.TestCase):
             applied = server.apply_change(self.did, said["baseRev"], said["operation"], said["proposal"]["opHash"])
             with self.assertRaises(Exception):
                 server.apply_change(self.did, applied["rev"], {"op": "remove", "id": "TD1"}, "not-the-preview")
-            done = server.answer_menu_command(rec["id"], "done", "Đã thêm cửa sổ cách sàn 900", applied["rev"])
-            self.assertEqual((done["status"], done["revision"]), ("done", applied["rev"]))
+            done = server.answer_menu_command(rec["id"], "done", "Đã thêm cửa sổ cách sàn 900", applied["rev"],
+                                              ["Cửa sổ cách sàn 1100"], said["baseRev"])
+            self.assertEqual((done["status"], done["revision"], done["fromRev"], done["choices"]),
+                             ("done", applied["rev"], said["baseRev"], ["Cửa sổ cách sàn 1100"]))
             self.assertEqual(server.list_menu_commands()["commands"], [])
             self.assertEqual(server.get_menu_command(rec["id"])["reply"], "Đã thêm cửa sổ cách sàn 900")
         finally:

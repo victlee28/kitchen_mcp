@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { opensOrSaves, replacesWithDoor, joinsRuns, styleFromOptions, styleFromValue, interpretBody, describeInterpret, confirmBody, checkUpload, recognizeBody, recognizeJobBody, anchorFor, photoOpeningHeadline, describeRecognition, templateIntent, mentionsReference, recognitionLines, commandPlace, commandBody, inboxNews, describeCommandAnswer } from '../../web/assist-logic.js';
+import { opensOrSaves, replacesWithDoor, joinsRuns, styleFromOptions, styleFromValue, interpretBody, describeInterpret, confirmBody, checkUpload, recognizeBody, recognizeJobBody, anchorFor, photoOpeningHeadline, describeRecognition, templateIntent, mentionsReference, recognitionLines, commandPlace, facesForTarget, commandBody, answerCard, replyBody, keepAnswers, inboxNews, describeCommandAnswer } from '../../web/assist-logic.js';
 
 const prop = (over = {}) => ({ id: 'd1', baseRev: 4, opHash: 'h', operation: { op: 'remove', id: 'TD1' }, applicable: true, unchanged: false,
   diff: { modules: { added: [], removed: ['TD1'], changed: {} }, other: [] }, validation: { introduced: [], resolved: [] }, ...over });
@@ -148,3 +148,37 @@ test('an unsure door: the answer offers types to pick, and the pick goes back in
   assert.equal('openingType' in recognizeJobBody('20261117-095352', 3), false);
   assert.equal(recognizeBody('photo', 'a.png', 'image/png', 'QQ==', 1, '', null, 'add', 'door-swing-2').openingType, 'door-swing-2');
 });
+
+// the picked wall faces go with a right-click sentence on them or on their wall, not with one on anything else
+{
+  const picked = ['wall_006#inside', 'wall_007#inside'];
+  assert.deepEqual(facesForTarget({ kind: 'structure', id: 'STRUCT-wall_006', surface: 'wall_006#inside' }, picked), picked);
+  assert.deepEqual(facesForTarget({ kind: 'structure', id: 'STRUCT-wall_006' }, picked), picked, 'the wall body, not a face');
+  assert.deepEqual(facesForTarget({ kind: 'structure', id: 'wall_007' }, picked), picked);
+  assert.deepEqual(facesForTarget({ kind: 'structure', id: 'STRUCT-wall_009' }, picked), [], 'another wall');
+  assert.deepEqual(facesForTarget({ kind: 'module', id: 'TD1' }, picked), []);
+  assert.deepEqual(facesForTarget({ kind: 'structure', id: 'STRUCT-wall_006' }, []), []);
+  assert.deepEqual(facesForTarget(null, picked), []);
+  assert.deepEqual(commandPlace({ kind: 'structure', id: 'STRUCT-wall_006', point: { x: 1, z: 2 } }, 'T', facesForTarget({ kind: 'structure', id: 'STRUCT-wall_006' }, picked)).surfaces, picked);
+}
+
+// Claude's answer kept in the command box: its reply, its choices and an undo while the design is still at the change
+{
+  const done = { id: 'c1', designId: 'd', text: 'cửa 4 cánh', status: 'done', reply: 'Đã lắp cửa trượt', revision: 2, fromRev: 1, choices: ['Cửa xếp 4 cánh', '', 3] };
+  const card = answerCard(done, 2);
+  assert.equal(card.undoTo, 1);
+  assert.deepEqual(card.choices, ['Cửa xếp 4 cánh']);
+  assert.equal(card.reply, 'Đã lắp cửa trượt');
+  assert.equal(card.tone, 'ok');
+  assert.equal(answerCard(done, 3).undoTo, null, 'something changed since: no undo');
+  assert.equal(answerCard({ ...done, fromRev: undefined }, 2).undoTo, 1, 'the revision before the change');
+  const asked = answerCard({ id: 'c2', designId: 'd', text: 'tủ', status: 'question', reply: 'Sâu bao nhiêu?', choices: ['600', '350'] }, 5);
+  assert.equal(asked.undoTo, null);
+  assert.equal(asked.tone, 'warn');
+  assert.deepEqual(replyBody(' 600 ', 5, 'c2', 'vi'), { text: '600', place: {}, baseRev: 5, lang: 'vi', replyTo: 'c2' });
+  assert.throws(() => replyBody('  ', 5, 'c2', 'vi'));
+  const kept = keepAnswers([{ id: 'a', designId: 'd' }, { id: 'b', designId: 'e' }], [{ id: 'c', designId: 'd' }, { id: 'a', designId: 'd', status: 'done' }], 2);
+  assert.deepEqual(kept.map((k) => k.id), ['b', 'c', 'a']);
+  assert.equal(kept.find((k) => k.id === 'a').status, 'done', 'the newer record of the same command');
+  assert.deepEqual(keepAnswers([], [1, 2, 3].map((i) => ({ id: `x${i}`, designId: 'd' })), 2).map((k) => k.id), ['x2', 'x3']);
+}

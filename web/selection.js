@@ -5,7 +5,7 @@ import { tx } from './i18n.js';
 export const TIER_OF = { base: 'base', upper: 'upper', loft: 'upper', tall: 'tall', corner: 'corner' };  // loft shares the upper tier
 const FRONT = ['door', 'glass-door', 'drawer'];
 const ROLE_VI = { handle: tx('ui.tay-nam'), door: tx('ui.canh-tu'), 'glass-door': tx('ui.canh-kinh-2'), drawer: tx('ui.mat-ngan-keo'), carcass: tx('ui.than-tu'),
-  'side-panel': tx('ui.tam-hong'), shelf: tx('ui.ke'), plinth: tx('ui.len-chan'), countertop: tx('ui.mat-da'), molding: tx('ui.phao') };
+  'side-panel': tx('ui.tam-hong'), shelf: tx('ui.ke'), plinth: tx('ui.len-chan'), countertop: tx('ui.mat-da'), molding: tx('ui.phao'), 'wall-face': tx('ui.surface.one') };
 
 export const roleName = (type) => ROLE_VI[type] || type;
 export const partIndex = (layers) => new Map(layers.filter((l) => l.variant === 'part').map((l) => [l.id, l]));

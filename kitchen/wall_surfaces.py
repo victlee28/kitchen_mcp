@@ -72,6 +72,29 @@ class Surface:
         return out
 
 
+@dataclass(frozen=True)
+class FaceRef:
+    """A wall face as the render splits it out of its wall (id ``<wall>#<face>``): the parts it lies on (a default wall's box by its
+    ``wall``, a floorplan wall's meshes by their structure id), its outward normal and a point of its plane (kitchen frame, mm)."""
+    id: str
+    face: str
+    wall: str | None
+    structure: str | None
+    normal: Pt3
+    point: Pt3
+
+
+def face_part_id(part_id: str, face: str) -> str:
+    """The instance (and layer part) id of one wall part's share of a face."""
+    return f"{part_id}#{face}"
+
+
+def face_owner(p: Any, fc: Any) -> bool:
+    """Does part ``p`` (a scene part or mesh: ``type``, ``module``, ``wall``) draw the wall ``fc`` (``wall`` / ``structure``) is a face of."""
+    return bool((fc.wall is not None and p.type == "wall" and getattr(p, "wall", None) == fc.wall)
+                or (fc.structure is not None and p.module == fc.structure and str(p.type).startswith("structure-")))
+
+
 def _r(v: float) -> float:
     out = round_half_away(v, 1)
     return out + 0.0 if out != 0 else 0.0

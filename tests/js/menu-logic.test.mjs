@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { isClick, pickTarget, actionsFor, buildOp, layerFor, describeProposal, menuPosition, selectionEffect, sceneToMm, lineTemplate, floorPoint, dragChange, runModulesOf, openingCommand, cabinetTypeChoices } from '../../web/menu-logic.js';
+import { isClick, pickTarget, imageTarget, actionsFor, buildOp, layerFor, describeProposal, menuPosition, selectionEffect, sceneToMm, lineTemplate, floorPoint, dragChange, runModulesOf, openingCommand, cabinetTypeChoices } from '../../web/menu-logic.js';
 
 const spec = { module: [{ id: 'TD1', type: 'base', wall: 'back', y: 0, height: 720, depth: 560, fromCorner: 0, width: 600, material: 'Trắng mờ' }, { id: 'KG1', type: 'corner-shelf', wall: 'corner' }] };
 const hit = (userData, visible = true) => ({ object: { userData, visible } });
@@ -275,4 +275,21 @@ test('a cabinet added beside another can take any type of the same storey', () =
   const spec = { module: [m] };
   assert.equal(buildOp('add', 'TD1', { width: 600, side: 'after', type: 'base-drawers' }, spec).module.type, 'base-drawers');
   assert.equal(buildOp('add', 'TD1', { width: 600, side: 'after', type: 'base' }, spec).module.type, undefined);
+});
+
+test('a pixel of the layered picture opens the same menu target as the 3D view', () => {
+  const ids = ['TD1', 'TC2'];
+  assert.deepEqual(imageTarget({ id: 'STRUCT-furniture_021', module: 'STRUCT-furniture_021', type: 'structure-furniture' }, ids), { kind: 'structure', id: 'STRUCT-furniture_021' });
+  assert.deepEqual(imageTarget({ id: 'TB4-cooktop-1', module: 'TB4', type: 'cooktop' }, ids), { kind: 'appliance', id: 'TB4', applianceType: 'cooktop' });
+  assert.deepEqual(imageTarget({ id: 'room-countertop-1', module: null, type: 'countertop' }, ids), { kind: 'part', part: 'countertop', id: 'back' });
+  assert.deepEqual(imageTarget({ id: 'TD1-drawer-1', module: 'TD1', type: 'drawer' }, ids), { kind: 'part', part: 'drawer', id: 'TD1' });
+  assert.deepEqual(imageTarget({ id: 'TD1-handle-1', module: 'TD1', type: 'handle' }, ids), { kind: 'part', part: 'handle', id: 'TD1' });
+  assert.deepEqual(imageTarget({ id: 'TC2-carcass-1', module: 'TC2', type: 'carcass' }, ids), { kind: 'module', id: 'TC2' });
+  assert.deepEqual(imageTarget({ id: 'STRUCT-wall_006#inside', module: 'STRUCT-wall_006', type: 'wall-face', surface: 'wall_006#inside' }, ids),
+    { kind: 'structure', id: 'STRUCT-wall_006', surface: 'wall_006#inside' }, 'a face of a floorplan wall');
+  assert.deepEqual(imageTarget({ id: 'room-wall-1-2#inside', module: null, type: 'wall-face', surface: 'WALL-BACK#inside' }, ids),
+    { kind: 'surface', id: 'WALL-BACK#inside', surface: 'WALL-BACK#inside' }, 'a face of a default wall');
+  for (const nothing of [{ id: 'room-wall-1-2', module: null, type: 'wall' }, { id: 'OP3-leaf-1', module: 'OP3', type: 'opening-leaf' }, { id: 'TD9-door-1', module: 'TD9', type: 'door' }, null]) {
+    assert.equal(imageTarget(nothing, ids), null);
+  }
 });

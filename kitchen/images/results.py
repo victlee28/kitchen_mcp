@@ -9,7 +9,7 @@ import numpy as np
 
 from PIL import Image
 
-from .. import edit, geometry, imaging, layers, view_sync
+from .. import edit, geometry, imaging, layers, render, view_sync
 from ..errors import InvalidInput
 from ..errors import KitchenError
 from .base_images import BaseImages
@@ -118,7 +118,7 @@ class Results(Component):
                     if not t.get("material"):
                         skip.append(f"việc {i}: không nêu vật liệu")
                         continue
-                    r = layers.design_op(cur, layers.resolve(layers.catalogue(cur, scene), t["targetLayer"])[0], t["material"], scene)
+                    r = layers.design_op(cur, layers.resolve(layers.catalogue(cur, scene, render.wall_faces(cur, scene=scene)), t["targetLayer"])[0], t["material"], scene)
                     if r is None:
                         skip.append(f"việc {i}: layer chưa sửa được trong thiết kế")
                         continue

@@ -2,8 +2,8 @@
 // The server decides what a change means (POST .../propose previews, POST .../ops saves); nothing here edits data directly.
 import { el } from './dom.js';
 import { request } from './api-client.js';
-import { opensOrSaves, replacesWithDoor, joinsRuns, interpretBody, describeInterpret, templateIntent, systemIntent, mentionsReference, checkUpload, recognizeBody, recognizeJobBody, anchorFor, photoOpeningHeadline, describeRecognition, recognitionLines, commandPlace, commandBody, inboxNews, describeCommandAnswer } from './assist-logic.js';
-import { actionsFor, buildGroupOp, buildOp, describeProposal, groupActions, layerFor, lineTemplate, menuPosition, DOOR_STYLES, HANDLE_VARIANTS, RUN_ACTIONS, RUN_TURNS, systemTemplate, edgeChoices, modelChoices, applianceLayer, lineAlongWall, wallSegments, openingCommand, cabinetTypeChoices } from './menu-logic.js';
+import { opensOrSaves, replacesWithDoor, joinsRuns, interpretBody, describeInterpret, templateIntent, systemIntent, mentionsReference, checkUpload, recognizeBody, recognizeJobBody, anchorFor, photoOpeningHeadline, describeRecognition, recognitionLines, commandPlace, facesForTarget, commandBody, inboxNews, describeCommandAnswer, answerCard, replyBody, keepAnswers } from './assist-logic.js';
+import { actionsFor, buildGroupOp, buildOp, describeProposal, groupActions, layerFor, lineTemplate, menuPosition, DOOR_STYLES, HANDLE_VARIANTS, RUN_ACTIONS, RUN_TURNS, systemTemplate, edgeChoices, modelChoices, applianceLayer, lineAlongWall, wallSegments, openingCommand, cabinetTypeChoices, imageTarget } from './menu-logic.js';
 import { groupLabel, groupLayerIds, manySystems } from './design-logic.js';
 import * as catalog from './catalog-client.js';
 import { applianceName, lang, tx } from './i18n.js';
@@ -22,6 +22,10 @@ function keepJob(v) { try { if (v) localStorage.setItem(JOB_KEY, JSON.stringify(
 const SENT_KEY = 'menuCommands';
 function readSent() { try { const v = JSON.parse(localStorage.getItem(SENT_KEY) || '[]'); return Array.isArray(v) ? v.filter((c) => typeof c?.id === 'string') : []; } catch { return []; } }
 function keepSent(v) { try { localStorage.setItem(SENT_KEY, JSON.stringify(v)); } catch { /* no storage: kept until the page closes */ } }
+// Claude's answers kept in the command box until the user decides (replies, picks a choice, undoes or hides them)
+const ANSWERS_KEY = 'menuAnswers';
+function readAnswers() { try { const v = JSON.parse(localStorage.getItem(ANSWERS_KEY) || '[]'); return Array.isArray(v) ? v.filter((c) => typeof c?.id === 'string') : []; } catch { return []; } }
+function keepAnswersStored(v) { try { localStorage.setItem(ANSWERS_KEY, JSON.stringify(v)); } catch { /* kept until the page closes */ } }
 const POLL_MS = 4000;
 const ANSWER_HOLD_MS = 8000;
 
@@ -37,7 +41,7 @@ export function createModuleMenu(ctx) {
   let lastAppliance = null;   // the appliance model being previewed: once applied, the image tab opens on it      // first point of a run being drawn on the floor (mm); survives closing the menu, the second right click ends the line
   box.setAttribute('role', 'dialog'); box.hidden = true;
   // the command inbox (server setting KITCHEN_MENU_COMMANDS=inbox): sentences typed here go to Claude, who carries them out by MCP
-  let inboxMode = false; let inboxWorker = false; let sent = readSent(); let waitingNow = []; let lastTitle = ''; let poller = null;   // inboxWorker: a model carries the inbox out (else Claude by chat)
+  let inboxMode = false; let inboxWorker = false; let sent = readSent(); let answers = readAnswers(); let waitingNow = []; let lastTitle = ''; let poller = null;   // inboxWorker: a model carries the inbox out (else Claude by chat)
   request('/api/command-inbox?status=pending').then(({ data }) => { inboxMode = data?.mode === 'inbox'; inboxWorker = !!data?.worker; if (sent.length) watchInbox(); }).catch(() => { /* old server: direct */ });
 
   function watchInbox() {
@@ -59,6 +63,7 @@ export function createModuleMenu(ctx) {
     const before = waitingNow.length;
     waitingNow = waiting;
     if (gone.size) { sent = sent.filter((c) => !gone.has(c.id)); keepSent(sent); }
+    if (news.length) { answers = keepAnswers(answers, news); keepAnswersStored(answers); }
     const said = news.map((c) => describeCommandAnswer(c, rev));
     if (said.some((d) => d.reload)) { try { await ctx.reload(); } catch { /* the reply is still shown */ } }
     said.forEach((d) => ctx.setStatus(d.text, d.tone, { hold: ANSWER_HOLD_MS }));   // kept while the panels the reload refreshes report in
@@ -68,7 +73,7 @@ export function createModuleMenu(ctx) {
   async function sendToInbox(text) {
     const { id, rev } = ctx.getState();
     let body;
-    try { body = commandBody(text, rev, commandPlace(target, lastTitle, target.surface ? ctx.getState().surfaces || [] : []), lang()); } catch (e) { return redraw(text, e.message); }
+    try { body = commandBody(text, rev, commandPlace(target, lastTitle, facesForTarget(target, ctx.getState().surfaces)), lang()); } catch (e) { return redraw(text, e.message); }
     busy = true;
     try {
       const { status, data } = await call(`/api/designs/${id}/command`, body);
@@ -81,6 +86,58 @@ export function createModuleMenu(ctx) {
       redraw('', line);
       watchInbox();
     } catch (e) { busy = false; redraw(text, e.message); }
+  }
+
+  // The user's answer to one of Claude's answers (a pick of its choices, or the sentence typed): a new command that names it.
+  async function sendReply(card, text) {
+    const { id, rev } = ctx.getState();
+    let body;
+    try { body = replyBody(text, rev, card.id, lang()); } catch { return redraw(text, tx('ui.command.type-reply')); }
+    busy = true;
+    try {
+      const { status, data } = await call(`/api/designs/${id}/command`, body);
+      busy = false;
+      if (!data || data.error || status !== 201) return redraw(text, data?.error || tx('ui.loi', { 0: status }));
+      forgetAnswer(card.id);
+      sent = [...sent, { id: data.id, text: data.text, designId: id }]; keepSent(sent);
+      waitingNow = [...waitingNow, data];
+      const line = tx('ui.command.replied', { 0: data.id });
+      ctx.setStatus(line, 'ok');
+      redraw('', line);
+      watchInbox();
+    } catch (e) { busy = false; redraw(text, e.message); }
+  }
+
+  // Undo of a change Claude made: the design back to the revision before it (only while nothing else changed since).
+  async function undoAnswer(card) {
+    const { id, rev } = ctx.getState();
+    busy = true;
+    try {
+      const { status, data } = await call(`/api/designs/${id}/revert`, { baseRev: rev, rev: card.undoTo });
+      busy = false;
+      if (!data || data.error || status !== 200) return redraw(box.querySelector('.ctx-cmd input')?.value || '', data?.error || tx('ui.loi', { 0: status }));
+      forgetAnswer(card.id);
+      try { await ctx.reload(); } catch { /* the line below still says it */ }
+      const line = tx('ui.command.undone', { 0: card.undoTo });
+      ctx.setStatus(line, 'ok');
+      redraw('', line);
+    } catch (e) { busy = false; redraw('', e.message); }
+  }
+
+  function forgetAnswer(cid) { answers = answers.filter((a) => a.id !== cid); keepAnswersStored(answers); }
+
+  // Claude's answers for this design, newest last: the reply, its choices, and what the user can do with it.
+  function answerViews(input) {
+    const { id, rev } = ctx.getState();
+    return answers.filter((a) => a.designId === id).map((a) => answerCard(a, rev)).map((card) => el('div', { class: `ctx-answer ${card.tone}` },
+      el('div', { class: 'ctx-answer-head' }, card.head),
+      ...(card.reply ? [el('p', { class: 'ctx-answer-reply' }, card.reply)] : []),
+      ...(card.choices.length ? [el('div', { class: 'chips' }, el('span', { class: 'ctx-answer-pick' }, tx('ui.command.pick')),
+        ...card.choices.map((c) => el('button', { type: 'button', class: 'ghost small', title: tx('ui.command.pick-title'), onclick: () => sendReply(card, c) }, c)))] : []),
+      el('div', { class: 'row' },
+        el('button', { type: 'button', class: card.status === 'question' ? 'primary small' : 'ghost small', title: tx('ui.command.reply-title'), onclick: () => sendReply(card, input.value) }, tx('ui.command.reply')),
+        ...(card.undoTo != null ? [el('button', { type: 'button', class: 'ghost small', title: tx('ui.command.undo-title', { 0: card.undoTo }), onclick: () => undoAnswer(card) }, tx('ui.command.undo'))] : []),
+        el('button', { type: 'button', class: 'ghost small', title: tx('ui.command.hide-title'), onclick: () => { forgetAnswer(card.id); redraw(input.value, ''); } }, tx('ui.command.hide')))));
   }
 
   async function dropCommand(cid) {
@@ -115,7 +172,7 @@ export function createModuleMenu(ctx) {
     const { spec } = ctx.getState();
     const partName = { door: tx('ui.canh-2'), drawer: tx('ui.mat-ngan-keo-2'), handle: tx('ui.tay-nam-3'), countertop: tx('ui.mat-ban-2') }[target.part];
     const appl = target.kind === 'appliance' ? spec.appliances?.find((a) => a.id === target.id) : null;
-    const faces = target.surface ? ctx.getState().surfaces || [] : [];        // wall faces picked before the right click: the sentence is about them
+    const faces = facesForTarget(target, ctx.getState().surfaces);        // wall faces picked before the right click: the sentence is about them
     const title = faces.length ? tx('ui.surface.menu-title', { n: faces.length }) : appl ? `${applianceName(appl.type)} ${appl.id}${appl.name ? ` · ${appl.name}` : ''}` : target.kind === 'part' ? (target.part === 'countertop' ? tx('ui.mat-ban-2') : `${partName} · ${target.id}`)
       : target.kind === 'module' ? `Module ${target.id}` : target.kind === 'floor' ? (lineFrom ? tx('ui.san-dang-ve-day-tu') : tx('ui.san-2'))
         : tx('ui.thanh-phan-mat-bang', { 0: target.id.replace(/^STRUCT-/, '') });
@@ -128,7 +185,7 @@ export function createModuleMenu(ctx) {
 
   // A free sentence about THIS module (a floorplan object has no module: the sentence then covers the whole design) ("đổi sang màu trắng", "rộng 800"): the server reads it, the preview shows the result, nothing is saved before Áp dụng.
   function commandBox(text = '', message = '', choices = []) {
-    const input = el('input', { type: 'text', value: text, placeholder: target.surface && ctx.getState().surfaces?.length ? tx('ui.surface.placeholder') : target.kind === 'floor' ? tx('ui.opening-command-placeholder') : target.kind === 'structure' ? tx('ui.ra-lenh-cho-ca-thiet-ke-enter') : target.kind === 'appliance' ? tx('ui.vd-doi-sang-bep-gas-thay-chau') : tx('ui.ra-lenh-cho-enter', { 0: target.id }), autocomplete: 'off', 'aria-label': tx('ui.cau-lenh-cho-module-nay') });
+    const input = el('input', { type: 'text', value: text, placeholder: facesForTarget(target, ctx.getState().surfaces).length ? tx('ui.surface.placeholder') : target.kind === 'floor' ? tx('ui.opening-command-placeholder') : target.kind === 'structure' ? tx('ui.ra-lenh-cho-ca-thiet-ke-enter') : target.kind === 'appliance' ? tx('ui.vd-doi-sang-bep-gas-thay-chau') : tx('ui.ra-lenh-cho-enter', { 0: target.id }), autocomplete: 'off', 'aria-label': tx('ui.cau-lenh-cho-module-nay') });
     const run = () => (attached ? recognizeImage(attached.file, attached.kind, input.value) : command(input.value));
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); run(); } });
     const kind = el('select', { 'aria-label': tx('ui.loai-anh-tham-chieu'), title: tx('ui.loai-anh-tham-chieu') }, el('option', { value: 'photo' }, tx('ui.anh-chup')), el('option', { value: 'drawing' }, tx('ui.ban-ve')));
@@ -153,7 +210,7 @@ export function createModuleMenu(ctx) {
     const queued = mineNow.map((c) => el('div', { class: 'ctx-pending' }, el('span', {}, tx('ui.command.waiting', { 0: c.text })),
       el('button', { type: 'button', class: 'ghost small', title: tx('ui.command.drop-title'), onclick: () => dropCommand(c.id) }, tx('ui.command.drop'))));
     return el('div', { class: 'ctx-cmd' }, input, el('button', { type: 'button', class: 'primary', onclick: run }, tx(inboxMode && !attached ? 'ui.command.send' : 'ui.xem-truoc')), attach, kind, mode, file,
-      ...(chip ? [chip] : []), ...(waiting ? [waiting] : []), ...queued,
+      ...(chip ? [chip] : []), ...(waiting ? [waiting] : []), ...queued, ...answerViews(input),
       ...(message ? [el('p', { class: 'ctx-msg warn' }, message)] : []),
       ...(choices.length ? [el('div', { class: 'chips' }, ...choices.map((c) => (typeof c === 'string'
         ? el('button', { type: 'button', class: 'ghost small', onclick: () => command(`${input.value.trim()} ${c}`) }, c)
@@ -167,7 +224,7 @@ export function createModuleMenu(ctx) {
     if (mentionsReference(text)) return redraw(text, tx('ui.cau-lenh-nhac-toi-anh-tham-chieu'));
     const onCabinets = ['module', 'part', 'group'].includes(target.kind);
     if (onCabinets && joinsRuns(text)) return joinOnServer(text);
-    const picked = target.surface ? ctx.getState().surfaces || [] : [];      // selected wall faces: the sentence is about them
+    const picked = facesForTarget(target, ctx.getState().surfaces);      // selected wall faces: the sentence is about them
     if (!picked.length && opensOrSaves(text) && !(onCabinets && replacesWithDoor(text))) {
       const said = await openingOnServer(text);
       if (said !== 'not-opening') return;
@@ -185,7 +242,7 @@ export function createModuleMenu(ctx) {
         return showPreview('cmd', data, null, [opening.summary, ...(opening.warning ? [{ kind: 'warn', text: opening.warning }] : [])]);
       } catch (e) { busy = false; return redraw(text, e.message); }
     }
-    const faces = target.surface ? ctx.getState().surfaces || [] : [];
+    const faces = facesForTarget(target, ctx.getState().surfaces);
     if (faces.length) { let body; try { body = { ...interpretBody(text, rev), surfaces: faces }; } catch (e) { return ctx.setStatus(e.message, 'warn'); } return interpret(text, body); }
     if (target.kind === 'appliance') return applianceModels(text);
     const wish = target.kind === 'structure' ? null : systemIntent(text, styles);
@@ -584,11 +641,21 @@ export function createModuleMenu(ctx) {
         el('button', { type: 'button', class: 'ghost', onclick: close }, tx('ui.huy'))));
   }
 
+  // a right click on the layered picture (image tab): the same menu, on what the picture shows there
+  window.addEventListener('image-context-menu', (ev) => {
+    const { part, at, surfaces } = ev.detail || {};
+    const { spec } = ctx.getState();
+    const t = imageTarget(part, spec ? spec.module.map((m) => m.id) : []);
+    if (!t || !at) { close(); ctx.setStatus(tx('ui.image-menu.nothing'), 'warn'); return; }
+    ctx.select?.(t, Array.isArray(surfaces) ? surfaces : []);
+    api.open(t, at.x, at.y);
+  });
+
   document.addEventListener('pointerdown', (e) => { if (!box.hidden && !box.contains(e.target) && !ctx.keepOpenOn?.(e.target)) close(); }, true);
   window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !box.hidden) { e.stopPropagation(); close(); } }, true);
   window.addEventListener('design-opened', () => { lineFrom = null; ctx.guide?.(null); if (!busy) close(); });
 
-  return {
+  const api = {
     open(t, x, y) {
       const g = ctx.getState().multi;      // a right click on a module of the Shift-selected group: the group's menu
       const onGroup = g && t && (t.kind === 'module' || (t.kind === 'part' && t.part !== 'countertop')) && g.modules.includes(t.id);
@@ -599,4 +666,5 @@ export function createModuleMenu(ctx) {
     runDrag(change, at) { if (busy) return; target = { kind: 'module', id: change.module }; place(at.x, at.y); preview(change.action, () => change.form); },
     close, get isOpen() { return !box.hidden; },
   };
+  return api;
 }

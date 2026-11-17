@@ -1296,5 +1296,21 @@
  "part.opening-leaf-frame": "door leaf frame",
  "ui.opening.from-photo-replace": "The door or window in the picture will replace {id}, keeping its place and size: {w} wide × {h} high (mm) — check it in \"Doors & windows\".",
  "ui.opening.from-photo-hole": "The door or window in the picture will go into the hole {id} of the drawing: {w} wide × {h} high (mm) — check it in \"Doors & windows\".",
- "ui.opening.pick-type": "Not sure which type this opening is: pick one below (or type the type's name in the box and send the picture again)."
+ "ui.opening.pick-type": "Not sure which type this opening is: pick one below (or type the type's name in the box and send the picture again).",
+ "ui.command.reply": "Reply",
+ "ui.command.reply-title": "Send the sentence typed in the command box as your answer to Claude",
+ "ui.command.type-reply": "Type your answer in the command box and press Reply, or pick a suggestion",
+ "ui.command.pick": "Pick:",
+ "ui.command.pick-title": "Send this choice to Claude",
+ "ui.command.undo": "Undo",
+ "ui.command.undo-title": "Put the design back to revision {0}, before this change",
+ "ui.command.undone": "The design is back at revision {0}.",
+ "ui.command.hide": "Hide",
+ "ui.command.hide-title": "Keep the change, hide this answer",
+ "ui.command.replied": "Answer {0} sent to Claude.",
+ "ui.image-menu.nothing": "Nothing here the menu can act on (no cabinet, appliance or floorplan element)",
+ "scope.surfaces": "wall face(s) {surfaces}",
+ "layer.surface": "Wall face {surface}",
+ "part.wall-face": "wall face",
+ "ui.surface.one": "wall face"
 }

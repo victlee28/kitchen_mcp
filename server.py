@@ -294,7 +294,8 @@ def list_menu_commands(status: Literal['pending', 'done', 'failed', 'question', 
 
     Each command: id, designId, text (the sentence, as typed), place (what was right-clicked: kind module|part|group|appliance|structure|floor|opening,
     id, part?, point? {x, z} in the wall-axis frame, structureId? (a floorplan element), module?, modules? (a selected group), surfaces? (picked
-    wall faces), title?), baseRev (the revision it was said on), lang, status. To carry one out: read the design (get_design), turn the sentence
+    wall faces), title?), baseRev (the revision it was said on), lang, status; a reply of the user to your earlier answer also has replyTo
+(that command's id) and context {text, reply, status} (the sentence and what you answered): read it with that in mind. To carry one out: read the design (get_design), turn the sentence
     into an operation with the matching tool, as the menu would (opening_command for doors / windows / passages and "lưu vào database";
     interpret_edit with scope_modules = the clicked module or group otherwise; propose_template for a run along a floorplan object), check the
     proposal, save it with apply_change (expect = proposal.opHash), then answer_menu_command. Ask the user in chat when a
@@ -306,11 +307,14 @@ def get_menu_command(command_id: str) -> dict[str, Any]:
     """One command of the inbox (see list_menu_commands), by id."""
     return _call(svc().command_get, command_id)
 
-def answer_menu_command(command_id: str, status: Literal['done', 'failed', 'question'], reply: str = '', revision: int | None = None) -> dict[str, Any]:
-    """Close a command of the inbox: 'done' (carried out; revision = the design's revision after the change, reply = one line on what changed,
-    in the command's lang), 'failed' (reply = why), or 'question' (reply = what the user must answer; it can still be answered later).
-    The web app shows the reply in the right-click menu and reloads the design."""
-    return _call(svc().command_answer, command_id, status, reply, revision)
+def answer_menu_command(command_id: str, status: Literal['done', 'failed', 'question'], reply: str = '', revision: int | None = None,
+                        choices: list[str] | None = None, from_rev: int | None = None) -> dict[str, Any]:
+    """Close a command of the inbox: 'done' (carried out; revision = the design's revision after the change, from_rev = the one before it,
+    reply = one line on what changed, in the command's lang), 'failed' (reply = why), or 'question' (reply = what the user must answer).
+    choices: up to 6 short answers in the command's lang the user can pick in the menu: a question's options, or, with 'done', the other
+    ways it could have gone when you had to choose (the user picks one or types an answer; it comes back as a new command with replyTo
+    and context). The web app shows the reply, the choices and an undo (back to from_rev) in the right-click menu, and reloads the design."""
+    return _call(svc().command_answer, command_id, status, reply, revision, choices, from_rev)
 
 def opening_command(design_id: str, text: str, place: dict[str, Any], base_rev: int | None = None, country: str | None = None) -> dict[str, Any]:
     """A right-click sentence about a room door, window or passage (make / replace / edit / remove, sizes, "cách sàn" = sill), or about

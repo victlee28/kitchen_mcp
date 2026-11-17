@@ -390,7 +390,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(200, s.layout_template_from_design(did, self._role(), str(b.get("label") or ""), str(b.get("id") or ""),
                                                                      b.get("system") or None, b.get("rev"), b.get("save", True) is not False))
             if sub == "command":
-                return self._json(201, s.command_put(did, b.get("text"), b.get("place"), b.get("baseRev"), b.get("lang")))
+                return self._json(201, s.command_put(did, b.get("text"), b.get("place"), b.get("baseRev"), b.get("lang"), b.get("replyTo")))
             if sub == "opening-command":
                 if not isinstance(b.get("prompt"), str):
                     raise ApiError(400, "thiếu prompt")

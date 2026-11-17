@@ -72,6 +72,11 @@ def stands_in_room(p: Pt, room: list[Pt] | None, clear: float = WALL_CLEAR) -> b
     return all(_dist_to_segment(p, room[i], room[(i + 1) % len(room)]) >= clear for i in range(len(room)))
 
 
+def near_room(p: Pt, room: list[Pt], reach: float) -> bool:
+    """Inside the room's floor outline or within ``reach`` of one of its sides."""
+    return point_in_poly(p, room) or any(_dist_to_segment(p, room[i], room[(i + 1) % len(room)]) <= reach for i in range(len(room)))
+
+
 def _crossings(a: Pt, b: Pt, poly: tuple[Pt, ...]) -> list[float]:
     """Parameters t in [0, 1] where the segment a->b crosses the polygon's edges, sorted."""
     ts: list[float] = []

@@ -201,6 +201,24 @@ $('imgBase').addEventListener('click', (ev) => {
   });
 });
 
+// Right click on the picture: the same menu as in the 3D view, on what is under the pointer (the app opens it: it owns the menu).
+$('imgBase').addEventListener('contextmenu', (ev) => {
+  if (!S.data) return;
+  ev.preventDefault();
+  const im = ev.currentTarget; const r = im.getBoundingClientRect();
+  const x = Math.floor(((ev.clientX - r.left) / r.width) * S.data.width), y = Math.floor(((ev.clientY - r.top) / r.height) * S.data.height);
+  const at = { x: ev.clientX, y: ev.clientY };
+  run(tx('ui.chon-chi-tiet'), async () => {
+    const p = await api(`/api/designs/${S.id}/pick?view=${encodeURIComponent(S.view)}&x=${x}&y=${y}&radius=4`);
+    if (!p.part) return status(tx('ui.khong-co-chi-tiet-o-diem-nay'));
+    if (!S.sel.includes(p.part.id)) await selectLayer(p.layers[0], p.layers);      // a right click on the picked parts keeps them
+    // wall faces picked on the picture (one, or several with Ctrl+click): the sentence is about them, as faces lit in the 3D view
+    const faceOf = new Map((S.data.layers || []).filter((l) => l.variant === 'part' && l.surface).map((l) => [l.id, l.surface]));
+    const surfaces = p.part.surface ? [...new Set(S.sel.map((i) => faceOf.get(i)).filter(Boolean))] : [];
+    window.dispatchEvent(new CustomEvent('image-context-menu', { detail: { part: p.part, at, surfaces } }));
+  });
+});
+
 // các bản JSON của một job, chuyển ngay trong ô xem
 function jobVariants(id, notSent) {
   const t = notSent ? tx('ui.chua-gui') : '';

@@ -98,6 +98,9 @@ label.kind{display:inline-flex;align-items:center;gap:4px;margin-right:10px;colo
 .ctx-preview{margin:6px 0;padding-left:16px;max-height:220px;overflow:auto;font-size:12px}
 #cmdText{flex:1;min-width:0}#recFile{max-width:150px;font-size:11px}#assistResult{margin-top:6px}
 .ctx-cmd{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0}.ctx-cmd input{flex:1;min-width:150px}.ctx-cmd .ctx-msg,.ctx-cmd .chips{width:100%}
+.ctx-answer{width:100%;border:1px solid #e3dccb;border-left:3px solid #9a6a12;border-radius:6px;padding:6px 8px;margin:4px 0;font-size:12px;background:#fffdf7}
+.ctx-answer.ok{border-left-color:#2c7a4b}.ctx-answer.bad{border-left-color:#a33b2b}.ctx-answer-head{font-weight:600}.ctx-answer-reply{margin:4px 0;white-space:pre-wrap}
+.ctx-answer .chips{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin:4px 0}.ctx-answer-pick{color:#666}.ctx-answer .row{display:flex;gap:4px;flex-wrap:wrap}
 .ctx-cmd select{max-width:96px}.ctx-cmd .ctx-pending{width:100%;display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12px}
 #opForm .unsure{background:#fff3c4;border-color:#d9a400}
 .opening-preview{display:flex;flex-wrap:wrap;gap:8px}.opening-preview figure{margin:0}.opening-preview figcaption{font-size:12px}

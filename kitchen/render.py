@@ -30,6 +30,7 @@ from .errors import InvalidInput
 from .geometry import Scene, compile_spec, views_of
 from .palette import SEGMENT_COLORS, module_color as _module_color
 from .spec import ViewAngle, KitchenSpec
+from .wall_surfaces import FaceRef, face_owner, face_part_id
 
 NEAR = 0.05  # m
 
@@ -263,14 +264,64 @@ class FaceColor:
 
 
 FACE_NORMAL_COS = 0.95
+INSTANCE_FORMAT = 2           # 2: each wall face is an instance of its own; a render of an older format is redone (same renderKey)
+FACE_PLANE_MM = 25.0          # a pixel lies on a wall face when it is this close to the face's plane (an opening's reveal is not)
+
+
+def wall_faces(spec: KitchenSpec, catalog: Catalog = builtin.CATALOG, scene: Scene | None = None) -> list[FaceRef]:
+    """Every face of every wall (the three.js export's ``room.surfaces``) in the render's kitchen frame, for the instance image to give
+    each face a layer of its own."""
+    from . import roomctx
+    from .threejs_export import export
+    doc = export(spec, catalog=catalog)
+    scene = scene or compile_spec(spec, catalog)
+    ctx = roomctx.for_spec(spec, scene.lsau, scene.lphai) if isinstance(spec.floorplan, dict) else None
+    out: list[FaceRef] = []
+    for sf in (doc.get("room") or {}).get("surfaces") or []:
+        n = [float(v) for v in sf.get("normal") or (0.0, 0.0, 0.0)] + [0.0, 0.0, 0.0]
+        nx, ny, nz = n[0], n[1], n[2]
+        if sf.get("outline"):
+            first = sf["outline"][0]
+            px, py, pz = float(first.get("x") or 0.0), float(sf.get("y") or 0.0), float(first.get("z") or 0.0)
+        else:
+            px, py, pz = (float(v) for v in (list(sf.get("origin") or []) + [0.0, 0.0, 0.0])[:3])
+        sid, face = str(sf.get("id")), str(sf.get("face") or "")
+        if ctx is not None:
+            a, b = ctx.placement.to_kitchen(0.0, 0.0), ctx.placement.to_kitchen(nx, nz)
+            nx, nz = b[0] - a[0], b[1] - a[1]
+            px, pz = ctx.placement.to_kitchen(px, pz)
+            out.append(FaceRef(sid, face, None, str(sf.get("structure") or ""), (nx, ny, nz), (px, py, pz)))
+        else:
+            out.append(FaceRef(sid, face, str(sf.get("wall") or "").removeprefix("WALL-").lower(), None, (nx, ny, nz), (px, py, pz)))
+    return out
+
+
+def _split_faces(pid: np.ndarray, hit: np.ndarray, nw: np.ndarray, world: np.ndarray, all_parts: list,
+                 faces: list[FaceRef]) -> tuple[np.ndarray, list[tuple[int, FaceRef]]]:
+    """The instance index with each wall face's pixels moved to an index of their own (part, face): pixels of the face's wall whose
+    normal is the face's and that lie on its plane. Returns the new index (−1 = background) and the added (wall part index, face)."""
+    out = pid.copy()
+    added: list[tuple[int, FaceRef]] = []
+    nxt = len(all_parts)
+    for fc in faces:
+        own = np.array([face_owner(p, fc) for p in all_parts] + [False], bool)
+        n = np.asarray(fc.normal, float)
+        if not own.any() or not np.isfinite(n).all() or float(np.linalg.norm(n)) < 0.5:
+            continue
+        on = hit & own[pid] & ((nw @ n) > FACE_NORMAL_COS) & (np.abs((world - np.asarray(fc.point, float)) @ n) < FACE_PLANE_MM)
+        for part in np.unique(pid[on]).tolist():
+            sel = on & (pid == part)
+            out[sel] = nxt
+            added.append((int(part), fc))
+            nxt += 1
+    return out, added
 
 
 def _paint_faces(alb: np.ndarray, hit: np.ndarray, pid: np.ndarray, nw: np.ndarray, shade: np.ndarray, all_parts: list,
                  faces: list[FaceColor]) -> None:
     """Give the pixels of each finished face its colour (the albedo's shading kept): pixels of the face's wall whose normal is the face's."""
     for fc in faces:
-        own = np.array([(fc.wall is not None and p.type == "wall" and getattr(p, "wall", None) == fc.wall)
-                        or (fc.structure is not None and p.module == fc.structure and p.type.startswith("structure-")) for p in all_parts] + [False], bool)
+        own = np.array([face_owner(p, fc) for p in all_parts] + [False], bool)
         n = np.asarray(fc.normal, float)
         mask = hit & own[pid] & ((nw @ n) > FACE_NORMAL_COS)
         alb[mask] = np.asarray(fc.rgb, float) * shade[mask][:, None]
@@ -278,7 +329,7 @@ def _paint_faces(alb: np.ndarray, hit: np.ndarray, pid: np.ndarray, nw: np.ndarr
 
 def render_view(scene: Scene, view: ViewAngle, out_dir: Path, width: int = 1280, height: int = 960,
                 legend: dict | None = None, colors: list | None = None, meta: dict | None = None,
-                faces: list[FaceColor] | None = None) -> dict:
+                faces: list[FaceColor] | None = None, wall_face_refs: list[FaceRef] | None = None) -> dict:
     out_dir.mkdir(parents=True, exist_ok=True)
     if view.hide:  # structures that would stand between this camera and the cabinets
         scene = replace(scene, meshes=[m for m in scene.meshes if m.module not in view.hide])
@@ -342,27 +393,41 @@ def render_view(scene: Scene, view: ViewAngle, out_dir: Path, width: int = 1280,
     visible = sorted({all_parts[i].module for i in np.unique(pid[hit]) if all_parts[i].module})
 
     # instance: số nguyên, không khử răng cưa, đã qua z-buffer (chỉ phần nhìn thấy)
-    if len(all_parts) >= 65535:
+    nw = np.zeros((height, width, 3))
+    nw[box_hit] = normals_world[pid[box_hit], nid[box_hit]]
+    if mesh_hit.any():
+        nw[mesh_hit] = mesh_n[mesh_hit]
+    ipid, split = pid, []
+    if wall_face_refs:                          # each wall face its own instance (layer): "<wall part>#<face>", with the face's id
+        ys0, xs0 = np.mgrid[0:height, 0:width]
+        zc = np.where(hit, zbuf, 0.0)
+        xc = (xs0 + 0.5 - width / 2) / camera.focal * zc
+        yc = -(ys0 + 0.5 - height / 2) / camera.focal * zc
+        world = (camera.p + xc[..., None] * camera.r + yc[..., None] * camera.u + zc[..., None] * camera.f) * 1000
+        ipid, split = _split_faces(pid, hit, nw, world, all_parts, wall_face_refs)
+    if len(all_parts) + len(split) >= 65535:
         raise InvalidInput("Too many parts for a 16-bit instance image", code="too-many-parts")
-    inst = (pid + 1).astype(np.uint16)
+    inst = (ipid + 1).astype(np.uint16)
     Image.fromarray(inst).save(out_dir / "instance.png")
-    vals, counts = np.unique(pid[hit], return_counts=True)
+    vals, counts = np.unique(ipid[hit], return_counts=True)
     instances = []
     for v, n in zip(vals.tolist(), counts.tolist()):
-        ys, xs = np.nonzero(pid == v)
-        p = all_parts[v]
-        instances.append({"value": v + 1, "id": p.id, "module": p.module, "type": p.type, "pixels": n,
-                          "bbox": [int(xs.min()), int(ys.min()), int(xs.max()) + 1, int(ys.max()) + 1]})
+        ys, xs = np.nonzero(ipid == v)
+        box = [int(xs.min()), int(ys.min()), int(xs.max()) + 1, int(ys.max()) + 1]
+        if v < len(all_parts):
+            p = all_parts[v]
+            instances.append({"value": v + 1, "id": p.id, "module": p.module, "type": p.type, "pixels": n, "bbox": box})
+        else:
+            wall_part, fc = split[v - len(all_parts)]
+            p = all_parts[wall_part]
+            instances.append({"value": v + 1, "id": face_part_id(p.id, fc.face), "module": p.module, "type": "wall-face", "pixels": n, "bbox": box,
+                              "surface": fc.id, "parent": p.id, "parentType": p.type})
     (out_dir / "instances.json").write_text(json.dumps({"encoding": "instance.png 16-bit: giá trị = value, 0 = nền",
                                                         "width": width, "height": height, "instances": instances},
                                                        ensure_ascii=False, indent=1), encoding="utf-8")
 
     # albedo: màu vật liệu × đổ bóng Lambert đơn giản, nét làm tối nhẹ
     col = np.array(colors if colors is not None else [_hex_rgb_part(p) for p in all_parts], float).reshape(-1, 3)
-    nw = np.zeros((height, width, 3))
-    nw[box_hit] = normals_world[pid[box_hit], nid[box_hit]]
-    if mesh_hit.any():
-        nw[mesh_hit] = mesh_n[mesh_hit]
     shade = 0.74 + 0.26 * np.clip(nw @ _DARK, 0, 1)
     alb = np.full((height, width, 3), 244.0)
     alb[hit] = col[pid[hit]] * shade[hit][:, None]
@@ -376,7 +441,7 @@ def render_view(scene: Scene, view: ViewAngle, out_dir: Path, width: int = 1280,
     key = render_key(scene, view, width, height)
     manifest = {**(meta or {}), "view": out_dir.name, "renderKey": key, "sceneHash": scene_hash(scene)[:16],
                 "width": width, "height": height, "files": files + ["manifest.json"], "camera": "camera.json",
-                "instanceEncoding": "uint16 = chỉ số chi tiết + 1"}
+                "instanceEncoding": "uint16 = chỉ số chi tiết + 1", "instanceFormat": INSTANCE_FORMAT}
     (out_dir / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
     return {"dir": str(out_dir), "files": files + ["manifest.json"], "renderKey": key,
             "imageOverlay": round(float(hit.mean()), 3), "editableModule": visible}
@@ -418,7 +483,9 @@ def render_views(spec: KitchenSpec, out_root: Path, views: list[str] | None = No
                              **{x.id: list(_module_color(x.id)) for x in spec.moldings}}}
     (out_root / "legend.json").write_text(json.dumps(legend, ensure_ascii=False, indent=2), encoding="utf-8")
     faces = face_colors(spec, catalog)
-    results = {v: render_view(scene, all_views[v], out_root / v, width, height, colors=colors, meta=meta, faces=faces) for v in chosen}
+    refs = wall_faces(spec, catalog, scene)
+    results = {v: render_view(scene, all_views[v], out_root / v, width, height, colors=colors, meta=meta, faces=faces, wall_face_refs=refs)
+               for v in chosen}
     return {"outDir": str(out_root), "views": results, "legend": "legend.json"}
 
 

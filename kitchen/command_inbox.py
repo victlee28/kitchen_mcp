@@ -40,8 +40,13 @@ class CommandInbox:
             if not self._path(cid).exists():
                 return cid
 
-    def put(self, design_id: str, text: Any, place: Any, base_rev: Any, lang: Any) -> dict[str, Any]:
-        return self._write(mc.new_record(self._new_id(), design_id, text, place, base_rev, lang, self.clock()))
+    def put(self, design_id: str, text: Any, place: Any, base_rev: Any, lang: Any, reply_to: str | None = None) -> dict[str, Any]:
+        """A new command; ``reply_to``: the answered command it answers (marked ``followUp``, and ``replied`` if it asked)."""
+        answering = self.get(reply_to) if reply_to is not None else None
+        record = self._write(mc.new_record(self._new_id(), design_id, text, place, base_rev, lang, self.clock(), answering))
+        if answering is not None:
+            self._write(mc.followed(answering, record["id"]))
+        return record
 
     def get(self, cid: str) -> dict[str, Any]:
         path = self._path(cid)
@@ -58,8 +63,8 @@ class CommandInbox:
                 continue                      # a file being replaced right now: read on the next call
         return mc.matching(records, status, design_id)
 
-    def answer(self, cid: str, status: Any, reply: Any, revision: Any = None) -> dict[str, Any]:
-        return self._write(mc.answered(self.get(cid), status, reply, revision, self.clock()))
+    def answer(self, cid: str, status: Any, reply: Any, revision: Any = None, choices: Any = None, from_rev: Any = None) -> dict[str, Any]:
+        return self._write(mc.answered(self.get(cid), status, reply, revision, self.clock(), choices, from_rev))
 
     def drop(self, cid: str) -> dict[str, Any]:
         return self._write(mc.dropped(self.get(cid), self.clock()))

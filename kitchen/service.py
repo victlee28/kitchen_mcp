@@ -13,6 +13,7 @@ from . import appliance_kind, appliance_models, cabinet_run, run_join, run_line,
 from .intent import KitchenTemplate as KitchenTemplate
 from .spec import Common, KitchenSpec, LaidModule, Room, Wall, dump_spec, load_spec, to_data
 from .store import ConflictError, Store
+from .menu_commands import clean_id as clean_command_id
 from . import legacy as legacy_schema
 from .edit import OPENING_OPS  # noqa: F401  (the MCP adapter offers exactly these opening operations)
 from . import builtin, cabinet_types, catalog as cat, layout_solver, catalog_csv, catalog_files, i18n, lexicon, words
@@ -104,10 +105,11 @@ class KitchenService:
         """``inbox`` (the menu sends sentences to Claude) or ``direct`` (the server reads them at once, as before)."""
         return self.config.menu_commands
 
-    def command_put(self, design_id: str, text: Any, place: Any, base_rev: Any = None, lang: Any = None) -> dict:
-        """A right-click sentence, with what was clicked, left for Claude (the design must exist)."""
+    def command_put(self, design_id: str, text: Any, place: Any, base_rev: Any = None, lang: Any = None, reply_to: Any = None) -> dict:
+        """A right-click sentence, with what was clicked, left for Claude (the design must exist). ``reply_to``: the id of an answered
+        command this sentence answers (Claude's question, or a change the user wants otherwise)."""
         self.store.get(design_id)
-        return self.commands.put(design_id, text, place, base_rev, lang)
+        return self.commands.put(design_id, text, place, base_rev, lang, clean_command_id(reply_to) if reply_to is not None else None)
 
     def command_list(self, status: str | None = None, design_id: str | None = None) -> list[dict]:
         return self.commands.list(status, design_id)
@@ -115,9 +117,11 @@ class KitchenService:
     def command_get(self, command_id: str) -> dict:
         return self.commands.get(command_id)
 
-    def command_answer(self, command_id: str, status: str, reply: str = '', revision: int | None = None) -> dict:
-        """Claude's answer: ``done`` (``revision`` = the design's revision after the change), ``failed`` or ``question``."""
-        return self.commands.answer(command_id, status, reply, revision)
+    def command_answer(self, command_id: str, status: str, reply: str = '', revision: int | None = None, choices: Any = None,
+                       from_rev: int | None = None) -> dict:
+        """Claude's answer: ``done`` (``revision`` = the design's revision after the change, ``from_rev`` = the one before it), ``failed``
+        or ``question``; ``choices``: answers the user can pick in the menu."""
+        return self.commands.answer(command_id, status, reply, revision, choices, from_rev)
 
     def command_drop(self, command_id: str) -> dict:
         return self.commands.drop(command_id)

@@ -58,7 +58,7 @@ const moduleMenu = createModuleMenu({
   getState: () => ({ id: state.id, rev: state.rev, spec: state.spec, systems: state.systems, multi: state.multi, doc: state.doc, surfaces: surfaces.ids() }),
   afterChange: (res) => afterChange(res), reload: () => openDesign(state.id, true),
   structure: { hide: () => structSel.hideSelected(), isolate: () => structSel.isolateSelected(), showAll: () => structSel.showAll() },
-  imageEdit: (detail) => window.dispatchEvent(new CustomEvent('image-edit-request', { detail })), guide: (from, to) => viewer.setGuide(from, to),
+  imageEdit: (detail) => window.dispatchEvent(new CustomEvent('image-edit-request', { detail })), guide: (from, to) => viewer.setGuide(from, to), select: (target, faces) => { if (faces.length) surfaces.set(faces); else surfaces.contextOn(target.surface); if (!editor.inGroup(target)) applyTarget(target); },     // a right click on the layered picture selects what it opens on (its wall faces too)
 });
 createAssist({ setStatus, getState: () => ({ id: state.id, rev: state.rev, selected: state.selected }), afterChange: (res) => afterChange(res) });
 $('moduleActions').addEventListener('click', (ev) => { const r = ev.currentTarget.getBoundingClientRect(); if (state.selected) moduleMenu.open({ kind: 'module', id: state.selected }, r.left - 260, r.bottom + 4); });

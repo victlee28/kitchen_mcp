@@ -10,12 +10,14 @@ và (nếu có) thao tác sửa thiết kế tương ứng khi người dùng ch
 """
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 
 from .geometry import Scene
 from .spec import KitchenSpec
 from . import defaults, handles
 from .errors import InvalidInput, NotFound, require
+from .wall_surfaces import FaceRef, face_owner, face_part_id
 from .words import say
 
 FRONT_SECTIONS = ("door", "glass-door", "drawer")
@@ -33,7 +35,7 @@ _PROMPT_ROLES = {  # part kind -> the words of the image prompt (English); the n
     "molding": "decorative molding", "wall": "wall", "floor": "floor", "fridge": "refrigerator", "sink": "kitchen sink",
     "faucet": "kitchen faucet", "cooktop": "cooktop", "hood": "range hood", "oven": "built-in oven", "handle": "cabinet handle",
     "opening-frame": "door or window frame and casing", "opening-leaf": "room door leaf", "opening-leaf-frame": "door leaf frame", "opening-glass": "window glass",
-    "opening-sweep": "floor in front of a door", "opening-handle": "door handle",
+    "opening-sweep": "floor in front of a door", "opening-handle": "door handle", "wall-face": "wall surface",
 }
 ROLES = {k: (say(f"part.{k}"), en) for k, en in _PROMPT_ROLES.items()}   # part kind -> (name shown to people, prompt words)
 
@@ -97,6 +99,11 @@ def design_op(spec: KitchenSpec, layer: dict[str, Any], material: str, scene: Sc
         if scene is None:
             return None
         return handles.material_ops(spec, scene, layer.get("component") or [layer["id"]], material)
+    if layer.get("type") == "wall-face":          # one wall face or several: their own finish (spec.surfaceMaterials)
+        faces = list(dict.fromkeys(layer.get("surfaces") or ([layer["surface"]] if layer.get("surface") else [])))
+        if not faces:
+            return None
+        return {"op": "surface-material", "surfaces": faces, "material": material}, say("scope.surfaces", surfaces=", ".join(faces))
     key = layer["materialLocked"]
     module, type = layer.get("module"), layer.get("type")
     if type in FRONT_SECTIONS and type != "glass-door" and module and module in {m.id for m in spec.module}:
@@ -121,8 +128,9 @@ def design_op(spec: KitchenSpec, layer: dict[str, Any], material: str, scene: Sc
     return None
 
 
-def catalogue(spec: KitchenSpec, scene: Scene) -> list[dict[str, Any]]:
-    """Mọi chi tiết đơn + layer nhóm. Không gồm số pixel (phụ thuộc góc nhìn)."""
+def catalogue(spec: KitchenSpec, scene: Scene, faces: Sequence[FaceRef] = ()) -> list[dict[str, Any]]:
+    """Mọi chi tiết đơn + layer nhóm. Không gồm số pixel (phụ thuộc góc nhìn). ``faces``: the wall faces the render splits out
+    (``render.wall_faces``): each gets a part per wall part it lies on and a layer ``surface:<id>``."""
     out: list[dict[str, Any]] = []
     storey_of = {m.id: m.storey for m in spec.module}
     from . import runs
@@ -137,6 +145,7 @@ def catalogue(spec: KitchenSpec, scene: Scene) -> list[dict[str, Any]]:
                     "cabinetSystemId": system_of.get(p.module or "") or run_system.get(getattr(p, "run", None) or ""),
                     "selectable": True, "allowAppearanceChange": not p.type.startswith("structure-"),
                     "allowGeometryChange": False, "allowPositionChange": False})
+    out += _face_parts(spec, scene, faces)
     by_id: dict[str, dict[str, Any]] = {x["id"]: x for x in out}
     groups: list[dict[str, Any]] = []
     for m in spec.module:
@@ -182,6 +191,7 @@ def catalogue(spec: KitchenSpec, scene: Scene) -> list[dict[str, Any]]:
                            "name": say("name.layer.every", part=ROLES.get(type, (type,))[0]), "material": first["material"] if same else None,
                            "materialLocked": "common:handle" if type == "handle" else (first["materialLocked"] if same else ""), "component": ids})
     groups.extend(_tier_groups(out))
+    groups.extend(_face_groups(out))
     for g in groups:
         g.update(selectable=True, allowAppearanceChange=not str(g.get("type", "")).startswith("structure-"),
                  allowGeometryChange=False, allowPositionChange=False)
@@ -275,7 +285,38 @@ def _adhoc(cat: list[dict[str, Any]], layer_id: str) -> tuple[dict[str, Any], li
              "name": say("name.layer.count", n=len(ids), part=ROLES.get(first['type'], (first['type'],))[0]), "material": mats.pop() if len(mats) == 1 else None,
              "materialLocked": "common:handle" if first["type"] == "handle" else (keys.pop() if len(keys) == 1 else ""),
              "component": ids, "selectable": True, "allowAppearanceChange": True, "allowGeometryChange": False, "allowPositionChange": False}
+    if first["type"] == "wall-face":
+        layer["surfaces"] = list(dict.fromkeys(str(by_id[i]["surface"]) for i in ids))
     return layer, ids
+
+
+def _face_parts(spec: KitchenSpec, scene: Scene, faces: Sequence[FaceRef]) -> list[dict[str, Any]]:
+    """Each wall part's share of each wall face (the render's ``<part>#<face>`` instances), so faces are picked, grouped and recoloured
+    like any part: ``surface`` = the face's id (``spec.surfaceMaterials`` key)."""
+    out: list[dict[str, Any]] = []
+    parts = list(scene.parts) + list(scene.meshes)
+    finishes = spec.surfaceMaterials or {}
+    for fc in faces:
+        for p in parts:
+            if face_owner(p, fc):
+                out.append({"id": face_part_id(p.id, fc.face), "variant": "part", "module": p.module, "type": "wall-face",
+                            "semanticClass": "wall", "surface": fc.id, "name": say("layer.surface", surface=fc.id),
+                            "material": finishes.get(fc.id), "materialLocked": f"surface:{fc.id}", "storey": None, "parent": p.id,
+                            "cabinetSystemId": None, "selectable": True, "allowAppearanceChange": True,
+                            "allowGeometryChange": False, "allowPositionChange": False})
+    return out
+
+
+def _face_groups(parts: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """One layer per wall face: its shares on every part of the wall."""
+    out: dict[str, dict[str, Any]] = {}
+    for x in parts:
+        if x["type"] != "wall-face":
+            continue
+        g = out.setdefault(x["surface"], {**x, "id": f"surface:{x['surface']}", "variant": "group", "component": [], "parent": None,
+                                          "surfaces": [x["surface"]]})
+        g["component"].append(x["id"])
+    return list(out.values())
 
 
 def resolve(cat: list[dict[str, Any]], layer_id: str) -> tuple[dict[str, Any], list[str]]:

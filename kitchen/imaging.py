@@ -34,7 +34,8 @@ def load_instances(render_dir: Path) -> tuple[npt.NDArray[np.int32], dict[str, A
 
 def mask_of(render_dir: Path, part_ids: list[str]) -> np.ndarray:
     inst, meta = load_instances(render_dir)
-    want = {x["value"] for x in meta["instances"] if x["id"] in set(part_ids)}
+    ids = set(part_ids)       # a wall part's pixels are split into its faces (instance "parent"); a face layer names its share ids
+    want = {x["value"] for x in meta["instances"] if x["id"] in ids or x.get("parent") in ids}
     return np.isin(inst, list(want)) if want else np.zeros(inst.shape, bool)
 
 

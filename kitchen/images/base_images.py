@@ -29,7 +29,8 @@ class BaseImages(Component):
         if man.exists():
             m = json.loads(man.read_text(encoding="utf-8"))
             w, h = width or m["width"], height or m["height"]
-            if m.get("renderKey") == render.render_key(scene, views[view], w, h) and (d / "instance.png").exists():
+            if m.get("renderKey") == render.render_key(scene, views[view], w, h) and (d / "instance.png").exists() \
+                    and m.get("instanceFormat", 1) >= render.INSTANCE_FORMAT:
                 return spec, r, scene, d, m
         w, h = width or VIEW_COLORS[0], height or VIEW_COLORS[1]
         if not (256 <= w <= 4096 and 256 <= h <= 4096):
@@ -40,9 +41,13 @@ class BaseImages(Component):
     def layers(self, did: str, view: str, rev: int | None = None, all_layers: bool = False) -> dict[str, Any]:
         spec, r, scene, d, man = self.ensure_render(did, rev, view)
         _, meta = imaging.load_instances(d)
-        px = {i["id"]: i["pixels"] for i in meta["instances"]}
+        px: dict[str, int] = {}
+        for i in meta["instances"]:           # a wall face's pixels also count for the wall part they were split from
+            for key in (i["id"], i.get("parent")):
+                if key:
+                    px[key] = px.get(key, 0) + int(i["pixels"])
         out: list[dict[str, Any]] = []
-        for x in layers.catalogue(spec, scene):
+        for x in layers.catalogue(spec, scene, render.wall_faces(spec, scene=scene)):
             ids = x.get("component") or [x["id"]]
             n = sum(px.get(i, 0) for i in ids)
             if n or all_layers:
@@ -58,7 +63,7 @@ class BaseImages(Component):
     def mask_png(self, did: str, view: str, layer_id: str, rev: int | None = None) -> bytes:
         import io
         spec, _r, scene, d, _ = self.ensure_render(did, rev, view)
-        _, ids = layers.resolve(layers.catalogue(spec, scene), layer_id)
+        _, ids = layers.resolve(layers.catalogue(spec, scene, render.wall_faces(spec, scene=scene)), layer_id)
         buf = io.BytesIO()
         Image.fromarray(imaging.mask_of(d, ids).astype(np.uint8) * 255, "L").save(buf, "PNG")
         return buf.getvalue()
@@ -68,8 +73,9 @@ class BaseImages(Component):
         hit = imaging.pick(d, x, y, max(0, min(int(radius), 24)))
         if not hit:
             return {"part": None, "layers": []}
-        cat = layers.catalogue(spec, scene)
+        cat = layers.catalogue(spec, scene, render.wall_faces(spec, scene=scene))
         groups = [g["id"] for g in cat if g["id"] == hit["id"] or hit["id"] in (g.get("component") or [])]
+        groups.sort(key=lambda g: not g.startswith("surface:"))      # a wall face: its own layer first
         return {"part": hit, "layers": groups}
 
     def save_beauty(self, did: str, view: str, image: bytes, rev: int | None = None) -> dict[str, Any]:

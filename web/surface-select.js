@@ -19,6 +19,8 @@ export function createSurfaceSelection({ viewer, setStatus }) {
     },
     /** A right click on a face that is not picked yet picks it alone, so the menu always acts on what is lit. */
     contextOn(id) { if (id && !ids.includes(id)) this.pick(id, 'click'); },
+    /** The faces picked on the layered picture: they become the selection (ids the scene does not have are dropped). */
+    set(list) { const known = new Set(records.map((r) => r.id)); ids = [...new Set(list)].filter((id) => known.has(id)); show(); },
     /** Walls hidden or shown (structure panel, views): hidden faces leave the selection. */
     sync() { ids = keepSurfaces(ids, records, (id) => viewer.surfaceShown(id)); show(); },
     ids: () => [...ids],

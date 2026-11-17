@@ -191,6 +191,16 @@ export function recognitionLines(r) {
 
 // ---- the command inbox: a right-click sentence sent to Claude (server mode KITCHEN_MENU_COMMANDS=inbox)
 
+/** The wall faces a right-click sentence is about: the faces picked before it (Ctrl / Shift + click) when the click lands on one of
+ *  them, or anywhere on a wall that has a picked face (its top, an edge, the wall's own body); none when it lands on anything else. */
+export function facesForTarget(target, picked = []) {
+  if (!target || !picked?.length) return [];
+  if (target.surface) return [...picked];
+  if (!['structure', 'surface'].includes(target.kind) || !target.id) return [];
+  const wall = String(target.id).replace(/^STRUCT-/, '').split('#')[0];
+  return picked.some((f) => String(f).split('#')[0] === wall) ? [...picked] : [];
+}
+
 /** What was right-clicked, as the inbox record keeps it (kitchen/menu_commands.clean_place): the target's kind, id, part, point,
  *  floorplan element, module / group, picked wall faces and the menu's heading. */
 export function commandPlace(target, title = '', surfaces = []) {
@@ -213,6 +223,36 @@ export function commandBody(text, baseRev, place, language) {
   const t = String(text ?? '').trim();
   if (!t) throw new Error(tx('ui.command.empty'));
   return { text: t.slice(0, 500), place, baseRev, lang: language === 'en' ? 'en' : 'vi' };
+}
+
+/** Claude's answer as the menu keeps showing it until the user decides: {id, text, reply, status, tone, head, choices, undoTo}. ``undoTo``:
+ *  the revision the menu's undo goes back to (the one before the change: ``fromRev``, else the one before ``revision``), only while the
+ *  design is still at the revision the change made; null otherwise. ``choices``: what Claude offers to pick instead of typing. */
+export function answerCard(c, currentRev) {
+  const d = describeCommandAnswer({ ...c, reply: '' }, currentRev);
+  const at = c.status === 'done' && Number.isInteger(c.revision) && c.revision === currentRev;
+  const back = Number.isInteger(c.fromRev) ? c.fromRev : c.revision - 1;
+  return {
+    id: c.id, text: c.text, reply: typeof c.reply === 'string' ? c.reply : '', status: c.status, tone: d.tone, head: d.text,
+    choices: (Array.isArray(c.choices) ? c.choices : []).filter((x) => typeof x === 'string' && x.trim()).slice(0, 6),
+    undoTo: at && back >= 1 && back < c.revision ? back : null,
+  };
+}
+
+/** The user's answer to one of Claude's answers: a new inbox command that names it (``replyTo``); the server gives it that command's
+ *  place and what was said, so Claude reads it in context. */
+export function replyBody(text, baseRev, answerId, language) {
+  return { ...commandBody(text, baseRev, {}, language), replyTo: answerId };
+}
+
+/** The answers kept for the menu: the newest last, at most ``max`` per design, without repeats. */
+export function keepAnswers(kept, news, max = 5) {
+  const all = [...kept.filter((k) => !news.some((n) => n.id === k.id)), ...news];
+  const out = [];
+  for (const a of [...all].reverse()) {
+    if (out.filter((x) => x.designId === a.designId).length < max) out.unshift(a);
+  }
+  return out;
 }
 
 /** What the menu shows of the inbox for a design: {waiting: [records still with Claude], news: [records answered since the menu last
