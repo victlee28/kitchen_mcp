@@ -1,0 +1,135 @@
+[
+ {
+  "id": "wine",
+  "label": {
+   "vi": "Tủ rượu",
+   "en": "Wine cabinet"
+  },
+  "words": {
+   "vi": [
+    "tu ruou",
+    "ke ruou",
+    "quay ruou",
+    "tu bay ruou",
+    "he tu ruou"
+   ],
+   "en": [
+    "wine cabinet",
+    "wine rack",
+    "wine unit",
+    "bar cabinet"
+   ]
+  },
+  "vars": {
+   "colMin": "450",
+   "colMax": "600",
+   "colsFrom": "1800",
+   "baseHeight": "840",
+   "nicheY": "1000",
+   "nicheHeight": "300",
+   "glassY": "1350",
+   "col": "min(colMax, max(colMin, round(length * 0.18 / 50) * 50)) if length >= colsFrom else 0",
+   "mid": "length - 2 * col"
+  },
+  "steps": [
+   {
+    "do": "cabinets",
+    "when": "col > 0",
+    "type": "tall",
+    "start": "0",
+    "length": "col",
+    "height": "top",
+    "depth": "400",
+    "name": "wine-column",
+    "doors": "600"
+   },
+   {
+    "do": "cabinets",
+    "when": "col > 0",
+    "type": "tall",
+    "start": "length - col",
+    "length": "col",
+    "height": "top",
+    "depth": "400",
+    "name": "wine-column",
+    "doors": "600"
+   },
+   {
+    "do": "cabinets",
+    "type": "base",
+    "start": "col",
+    "length": "mid",
+    "split": "900",
+    "height": "baseHeight",
+    "depth": "400",
+    "name": "wine-base",
+    "doors": "450"
+   },
+   {
+    "do": "cabinets",
+    "when": "mid >= 400",
+    "type": "upper-open",
+    "start": "col",
+    "length": "mid",
+    "split": "1200",
+    "y": "nicheY",
+    "height": "nicheHeight",
+    "depth": "300",
+    "name": "wine-rack",
+    "shelfCount": 1
+   },
+   {
+    "do": "cabinets",
+    "when": "mid >= 400 and top - glassY >= 400",
+    "type": "upper-glass",
+    "start": "col",
+    "length": "mid",
+    "split": "900",
+    "y": "glassY",
+    "height": "top - glassY",
+    "depth": "300",
+    "name": "wine-glass",
+    "doors": "450"
+   }
+  ]
+ },
+ {
+  "id": "low",
+  "label": {
+   "vi": "Tủ thấp (chỉ tủ dưới)",
+   "en": "Low cabinets only"
+  },
+  "words": {
+   "vi": [
+    "tu thap",
+    "ke thap",
+    "he tu thap",
+    "chi tu duoi",
+    "chi co tu duoi",
+    "tu duoi thoi"
+   ],
+   "en": [
+    "low cabinet",
+    "low cabinets",
+    "sideboard",
+    "base cabinets only"
+   ]
+  },
+  "vars": {
+   "baseHeight": "840"
+  },
+  "steps": [
+   {
+    "do": "cabinets",
+    "type": "base",
+    "start": "0",
+    "length": "length",
+    "split": "900",
+    "height": "baseHeight",
+    "depth": "560",
+    "name": "low-cabinet",
+    "doors": "450"
+   }
+  ]
+ }
+]

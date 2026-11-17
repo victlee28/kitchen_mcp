@@ -70,7 +70,7 @@ def check_geometry(spec: KitchenSpec) -> list[dict[str, Any]]:
         elif _overlap((mn, mx), (nn, nx)) > 0:
             issues.append(_issue("GEO-COLLISION", "error", [id, mb], "finding.collision", {"a": id, "b": mb}))
     tier_level = {"base": c.baseTop, "upper": c.upperTierSplit, "loft": c.cabinetTop, "tall": c.cabinetTop, "corner": None}
-    tv = tv_system.tv_modules(spec)          # a TV unit keeps its own heights (low console, floating shelf)
+    tv = tv_system.free_modules(spec)        # a TV unit or another furniture unit keeps its own heights (low console, floating shelf)
     for m in spec.module:
         top = m.y + m.height
         lim = None if m.id in tv else tier_level[m.storey]

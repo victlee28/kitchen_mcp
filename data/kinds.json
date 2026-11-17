@@ -281,6 +281,17 @@
   ],
   "closed": true
  },
+ "unit-layout": {
+  "label": {
+   "vi": "Kiểu tủ đồ khác (tủ rượu, tủ thấp…)",
+   "en": "Other furniture units (wine cabinet, low cabinets…)"
+  },
+  "writers": [
+   "workshop",
+   "user"
+  ],
+  "closed": true
+ },
  "handle": {
   "label": {
    "vi": "Tay nắm",

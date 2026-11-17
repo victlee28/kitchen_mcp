@@ -215,9 +215,22 @@ def set_run_tv(spec: KitchenSpec, id: str, layout: Any) -> KitchenSpec:
     run = _run(s, id)
     if layout is not None and layout not in tv_system.STYLES:
         raise InvalidInput(f"layout must be one of {', '.join(tv_system.STYLES)} or null", code="bad-tv-layout", params={"allowed": ', '.join(tv_system.STYLES)})
-    data = {k: v for k, v in to_data(run).items() if k not in ("purpose", "tvLayout")}
+    data = {k: v for k, v in to_data(run).items() if k not in ("purpose", "tvLayout", "unitLayout")}
     if layout is not None:
         data.update(tv_system.run_fields(layout))
+    s.runs = [from_data(Run, data) if r.id == id else r for r in s.runs]
+    return from_data(KitchenSpec, to_data(s))
+
+
+def set_run_unit(spec: KitchenSpec, id: str, unit: Any) -> KitchenSpec:
+    """Make a run a furniture unit (``purpose: "unit"`` with its ``unitLayout``, catalog kind unit-layout) or, with None, a kitchen run again."""
+    s = _clone(spec)
+    run = _run(s, id)
+    if unit is not None and not (isinstance(unit, str) and unit):
+        raise InvalidInput("unit must be a unit-layout id or null", code="bad-unit-layout")
+    data = {k: v for k, v in to_data(run).items() if k not in ("purpose", "tvLayout", "unitLayout")}
+    if unit is not None:
+        data.update({"purpose": "unit", "unitLayout": unit})
     s.runs = [from_data(Run, data) if r.id == id else r for r in s.runs]
     return from_data(KitchenSpec, to_data(s))
 
@@ -531,6 +544,7 @@ def _apply_op(spec: KitchenSpec, op: dict[str, Any], catalog: Catalog = builtin.
     {"op": "move-run", "id": "R1", "changes": {"x"?, "z"?, "yaw"?}} | {"op": "remove-run", "id": "R1"}  — the run with all its cabinets
     {"op": "set-run-system", "id": "R1", "system": "furniture_003" | null}  — the cabinet system of a run (null: work it out)
     {"op": "set-run-tv", "id": "R1", "layout": "columns" | "shelves" | "full" | null}  — a TV unit run (null: a kitchen run again)
+    {"op": "set-run-unit", "id": "R1", "unit": "wine" | "low" | null}  — a furniture unit run (catalog unit-layout; null: a kitchen run again)
     {"op": "update-appliance", "id": "TB4", "model": "hob-gas-2b-75", "changes"?: {...}}  — another model in the same place
     {"op": "replace-element", "id": "furniture_003", "replaced": true|false}  — a floorplan element replaced by cabinets (no longer built) / back
     {"op": "stretch-run", "id": "R1", "end": "start"|"end", "delta": mm}  — drag one end; the cabinets at that end take the change
@@ -560,6 +574,8 @@ def _apply_op(spec: KitchenSpec, op: dict[str, Any], catalog: Catalog = builtin.
         return set_run_system(spec, op["id"], op.get("system"))
     if kind == "set-run-tv":
         return set_run_tv(spec, str(op.get("id") or ""), op.get("layout"))
+    if kind == "set-run-unit":
+        return set_run_unit(spec, str(op.get("id") or ""), op.get("unit"))
     if kind == "update-appliance":
         return update_appliance(spec, str(op.get("id") or ""), op.get("model"), op.get("changes") or {}, catalog)
     if kind == "replace-element":

@@ -9,7 +9,7 @@ import unicodedata
 import os
 from pathlib import Path
 from typing import Any, Callable
-from . import appliance_kind, appliance_models, cabinet_run, run_join, run_line, run_template, runs, system_replace, tv_system, wall_line, edit, edit_intent, geometry, intent, llm, recognition, regions, roomctx, render, rules, threejs_export
+from . import appliance_kind, appliance_models, cabinet_run, unit_system, run_join, run_line, run_template, runs, system_replace, tv_system, wall_line, edit, edit_intent, geometry, intent, llm, recognition, regions, roomctx, render, rules, threejs_export
 from .intent import KitchenTemplate as KitchenTemplate
 from .spec import Common, KitchenSpec, LaidModule, Room, Wall, dump_spec, load_spec, to_data
 from .store import ConflictError, Store
@@ -340,6 +340,8 @@ class KitchenService:
             layout_solver.templates(trial)
         if kind == 'tv-layout':
             tv_system.layouts(trial)
+        if kind == 'unit-layout':
+            unit_system.units(trial)
 
     PREVIEW_SIZES = {      # storey -> (y, height, depth) of the sample cabinets the type editor shows, at PREVIEW_WIDTHS
         'base': (0.0, 840.0, 560.0), 'upper': (1450.0, 700.0, 350.0), 'loft': (2150.0, 400.0, 350.0), 'tall': (0.0, 2150.0, 580.0),
@@ -850,7 +852,14 @@ class KitchenService:
             preview = self.propose(design_id, plan['operation'], current, None, country)
             return {'id': design_id, 'baseRev': current, 'status': 'ok', 'structureId': struct['id'], 'facing': None, 'replaces': plan['element'],
                     'length': plan['length'], 'summary': plan['summary'], 'operation': plan['operation'], 'proposal': preview}
-        if isinstance(prompt, str) and prompt.strip():      # a described kitchen: fridge, loft row, worktop colour, door colours...
+        unit = unit_system.asks(prompt, self.catalog()) if isinstance(prompt, str) and not tv_system.asks_tv(prompt) else None
+        if unit is not None:                                # a furniture unit along the object (wine cabinet, low cabinets)
+            def planner(outline: list, click: tuple, system: str | None) -> dict:
+                line = run_line.edge_line(outline, click)
+                plan = run_line.plan_on_line(spec, line, unit_system.layout(unit, run_line.run_frame(line)['length'], to_data(spec)['common'],
+                                                                            self.catalog()), system=system, run_fields=unit_system.run_fields(unit))
+                return {**plan, 'facing': None}
+        elif isinstance(prompt, str) and prompt.strip():    # a described kitchen: fridge, loft row, worktop colour, door colours...
             color, notes = intent.parse_prompt(prompt, self.catalog())
             if not color.country and country:
                 color = color.model_copy(update={'country': country})
@@ -1062,7 +1071,8 @@ class KitchenService:
             raise NotFound(f"No such object: {structure_id}", code='structure-not-found')
         element = runs.system_id(struct.get('sourceElement') or str(struct['id']).removeprefix('STRUCT-'))
         tv = tv_system.asks_tv(prompt)           # "tạo hệ tủ tivi": a TV unit, not kitchen cabinets
-        described = intent.parse_prompt(prompt, self.catalog()) if prompt and prompt.strip() and not tv else None
+        unit = None if tv else unit_system.asks(prompt, self.catalog())      # "tạo hệ tủ rượu", "tủ thấp": a furniture unit (unit-layout)
+        described = intent.parse_prompt(prompt, self.catalog()) if prompt and prompt.strip() and not tv and unit is None else None
 
         def planner(place: Any) -> dict:
             walls = self._walls(ctx, place)
@@ -1079,6 +1089,8 @@ class KitchenService:
                 if tv:
                     modules = (tv_system.layout(length, to_data(spec)['common'], tv_system.style_of(prompt), tv_system.wants_panel(prompt), self.catalog())
                                if i == 0 else tv_system.console(length))
+                elif unit is not None:
+                    modules = unit_system.layout(unit, length, to_data(spec)['common'], self.catalog())
                 elif described is None:
                     modules = run_line.base_cabinets(length, to_data(spec)['common'], self.catalog())
                 else:
@@ -1093,7 +1105,8 @@ class KitchenService:
                             changes['material'] = {**spec.common.material, **changes['material']}
                         after = [{'op': 'common', 'changes': changes}]
                 laid.append(cabinet_run.fit_depth(modules, round(p.depth)))
-            plan = cabinet_run.plan_replace(spec, element, placed, laid, after, run_fields=tv_system.run_fields(tv_system.style_of(prompt)) if tv else None)
+            fields = tv_system.run_fields(tv_system.style_of(prompt)) if tv else unit_system.run_fields(unit) if unit is not None else None
+            plan = cabinet_run.plan_replace(spec, element, placed, laid, after, run_fields=fields)
             notes = [n for n in (described[1] if described else []) if words.key_of(n) != intent.NO_LENGTH]
             return {**plan, 'element': element, 'summary': [*plan['summary'], *notes]}
 
@@ -1118,7 +1131,10 @@ class KitchenService:
         kitchen_asked = bool(lexicon.pattern("ask.kitchen", catalog).search(prompt.lower()))
         if tv_system.asks_tv(prompt) or (was_tv and not kitchen_asked):
             return KitchenService._relayout_tv(spec, system, mods, prompt, catalog)
-        undo_tv = [{'op': 'set-run-tv', 'id': r, 'layout': None} for r in own_runs if r in tv_runs]     # a TV unit made a kitchen again
+        unit = unit_system.asks(prompt, catalog)
+        if unit is not None:
+            return KitchenService._relayout_unit(spec, system, mods, unit, catalog)
+        undo_tv = [{'op': 'set-run-tv', 'id': r, 'layout': None} for r in own_runs if r in tv_system.free_runs(spec)]     # a TV / furniture unit made a kitchen again
         color, notes = intent.parse_prompt(prompt, catalog)
         if not color.country and country:
             color = color.model_copy(update={'country': country})
@@ -1169,6 +1185,21 @@ class KitchenService:
         marks = [{'op': 'set-run-tv', 'id': s.run, 'layout': style} for s in slots]
         return {'operation': edit.combine_ops([*marks, *ops]), 'system': system, 'mode': 'relayout',
                 'summary': [words.said('summary.relayout-tv', system=system, layout=words.said(f'tv-layout.{style}')), *summary]}
+
+    @staticmethod
+    def _relayout_unit(spec: KitchenSpec, system: str, mods: list, unit: str, catalog: cat.Catalog = builtin.CATALOG) -> dict:
+        """A system laid out again as a furniture unit (``unit_system.layout``) on each of its runs, the runs marked with the unit."""
+        slots = [s for s in system_replace.run_slots(spec, mods) if s.length >= 400]
+        if not slots:
+            raise InvalidInput(f"System {system} has no run long enough (400 mm)", code='unit-run-too-short', params={'system': system})
+        common = to_data(spec)['common']
+        laid = {slot.run: unit_system.layout(unit, slot.length, common, catalog) for slot in slots}
+        ops, summary = system_replace.relayout_ops(spec, mods, laid, {}, frozenset({'upper', 'loft'}), frozenset(),
+                                                   system_replace.kept_models(spec, mods, '', catalog), catalog=catalog)
+        marks = [{'op': 'set-run-unit', 'id': s.run, 'unit': unit} for s in slots]
+        name = (as_dict(catalog.data('unit-layout', unit).get('label')) or {}).get('vi') or unit
+        return {'operation': edit.combine_ops([*marks, *ops]), 'system': system, 'mode': 'relayout',
+                'summary': [words.said('summary.relayout-unit', system=system, unit=name), *summary]}
 
     @staticmethod
     def _plan_described(spec: KitchenSpec, color: KitchenTemplate, notes: list[str], outline: list, click: tuple, system: str | None = None,
@@ -1248,7 +1279,8 @@ class KitchenService:
             pts[key] = (float(p['x']), float(p['z']))
         prompt = template.get('prompt')
         tv = isinstance(prompt, str) and tv_system.asks_tv(prompt)
-        described = intent.parse_prompt(prompt, self.catalog()) if isinstance(prompt, str) and prompt.strip() and not tv else None
+        unit = None if tv or not isinstance(prompt, str) else unit_system.asks(prompt, self.catalog())
+        described = intent.parse_prompt(prompt, self.catalog()) if isinstance(prompt, str) and prompt.strip() and not tv and unit is None else None
 
         scene = geometry.compile_spec(spec, self.catalog())
         ctx = roomctx.for_spec(spec, scene.lsau, scene.lphai)
@@ -1265,6 +1297,9 @@ class KitchenService:
                 style = tv_system.style_of(prompt)
                 plan = run_line.plan_on_line(spec, line, tv_system.layout(run_line.run_frame(line)['length'], to_data(spec)['common'], style,
                                                                           tv_system.wants_panel(prompt), self.catalog()), run_fields=tv_system.run_fields(style))
+            elif unit is not None:
+                plan = run_line.plan_on_line(spec, line, unit_system.layout(unit, run_line.run_frame(line)['length'], to_data(spec)['common'], self.catalog()),
+                                             run_fields=unit_system.run_fields(unit))
             elif described is not None:
                 color, notes = described
                 if not color.country and country:

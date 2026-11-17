@@ -288,7 +288,7 @@ class _Builder:
     def countertop(self):
         c = self.c
         for r in self.spec.runs:
-            if tv_system.is_tv_run(r):      # a TV unit: its console has its own top, no worktop and no wall tile
+            if tv_system.is_free_run(r):    # a TV unit, a wine cabinet, low cabinets: their own top, no worktop and no wall tile
                 continue
             ms = sorted((m for m in self.spec.module if m.run == r.id and m.storey == "base"), key=lambda m: m.fromCorner)
             if not ms:

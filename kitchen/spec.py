@@ -185,7 +185,11 @@ class Run(_Base):
     x: float = Field(default=0, description="World x of the run origin (s = 0, d = 0), mm, kitchen frame")
     z: float = Field(default=0, description="World z of the run origin, mm, kitchen frame")
     yaw: float = Field(default=0, description="Degrees, three.js rotation.y; the doors look along (sin yaw, cos yaw)")
-    purpose: Literal["tv"] | None = Field(default=None, description="tv: a TV wall unit (kitchen/tv_system.py): no worktop, wall tile or kitchen rule. Unset: kitchen cabinets")
+    purpose: Literal["tv", "unit"] | None = Field(default=None, description="tv: a TV wall unit (kitchen/tv_system.py); unit: another furniture unit "
+                                                  "laid by a unit-layout (kitchen/unit_system.py: wine cabinet, low cabinets...). Either: no worktop, "
+                                                  "wall tile or kitchen rule. Unset: kitchen cabinets")
+    unitLayout: str | None = Field(default=None, pattern=r"^[A-Za-z0-9_.-]+$", max_length=64,
+                                   description="purpose unit only: the unit-layout it was made with (catalog kind unit-layout)")
     tvLayout: Literal["columns", "shelves", "full"] | None = Field(default=None, description="TV unit only: the layout it was made with (tv_system.STYLES)")
     system: str | None = Field(default=None, pattern=r"^[A-Za-z0-9_.-]+$", max_length=80,
                                description="Cabinet system the run belongs to: the id of the floorplan element (elements[].id, e.g. furniture_003) it was made "

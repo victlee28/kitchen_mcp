@@ -199,6 +199,11 @@ def layout(length: float, common: dict[str, Any], style: str = "columns", panel:
     t = layouts(catalog).get(style) or layouts(catalog).get("columns")
     if t is None:
         raise InvalidInput(f"Unknown TV layout {style!r}", code="unknown-layout-template", params={"template": style})
+    return lay_out(t, length, common, panel, catalog)
+
+
+def lay_out(t: TvLayout, length: float, common: dict[str, Any], panel: bool = True, catalog: Catalog = builtin.CATALOG) -> list[LaidModule]:
+    """The cabinets of a compiled layout (a TV unit's, or a ``unit-layout``'s) ``length`` mm long (see :func:`layout`)."""
     env: dict[str, expr.Value] = {"length": float(int(length // 10) * 10), "top": float(common.get("cabinetTop") or 2400.0), "panel": panel}
     for name, fm in t.vars:
         env[name] = float(expr.evaluate(fm, env))
@@ -229,6 +234,9 @@ def layout(length: float, common: dict[str, Any], style: str = "columns", panel:
                                          "depth": v.get("depth", 0.0), "name": cabinet_name(str(st.data.get("name") or ""))}
                 if st.data.get("drawer"):
                     entry["frontSections"] = [{"type": "drawer", "height": v.get("height", 0.0)}]
+                if st.data.get("doors"):         # doors of at most ``doors`` mm each, as even as they come
+                    n = max(1, math.ceil(w / float(st.data["doors"]) - 1e-9))
+                    entry["doors"] = [w / n] * n
                 if "shelfCount" in st.data:
                     entry["shelfCount"] = int(st.data["shelfCount"])
                 if st.data.get("front"):
@@ -267,12 +275,30 @@ def tv_modules(spec: Any) -> set[str]:
     return {m.id for m in spec.module if m.run in ids}
 
 
+NOT_KITCHEN = ("tv", "unit")         # run purposes that are furniture, not kitchen: a TV unit, a unit-layout unit (wine cabinet, low cabinets)
+
+
+def is_free_run(run: Run) -> bool:
+    """A run of furniture that is not kitchen (TV unit, wine cabinet, low cabinets...): no worktop, wall tile or kitchen rule."""
+    return run.purpose in NOT_KITCHEN
+
+
+def free_runs(spec: Any) -> set[str]:
+    return {r.id for r in spec.runs if is_free_run(r)}
+
+
+def free_modules(spec: Any) -> set[str]:
+    """Ids of the cabinets standing in a run that is not kitchen."""
+    ids = free_runs(spec)
+    return {m.id for m in spec.module if m.run in ids}
+
+
 def kitchen_only(spec: KitchenSpec) -> KitchenSpec:
-    """The design without its TV units (and what stands in them): what kitchen rules look at."""
-    gone = tv_modules(spec)
+    """The design without its TV units and other furniture units (and what stands in them): what kitchen rules look at."""
+    gone = free_modules(spec)
     if not gone:
         return spec
-    ids = tv_runs(spec)
+    ids = free_runs(spec)
     d = to_data(spec)
     d["module"] = [m for m in d["module"] if m["id"] not in gone]
     d["appliances"] = [a for a in d.get("appliances", []) if a.get("module") not in gone]

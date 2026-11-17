@@ -1312,5 +1312,12 @@
  "scope.surfaces": "mặt tường {surfaces}",
  "layer.surface": "Mặt tường {surface}",
  "part.wall-face": "mặt tường",
- "ui.surface.one": "mặt tường"
+ "ui.surface.one": "mặt tường",
+ "name.cabinet.wine-column": "Cột tủ rượu",
+ "name.cabinet.wine-base": "Tủ rượu dưới",
+ "name.cabinet.wine-rack": "Hốc để chai rượu",
+ "name.cabinet.wine-glass": "Tủ kính bày rượu",
+ "name.cabinet.low-cabinet": "Tủ thấp",
+ "summary.unit": "Dãy {run}: {unit}, {n} tủ, dài {length} mm",
+ "summary.relayout-unit": "Xếp lại hệ {system} thành {unit}"
 }

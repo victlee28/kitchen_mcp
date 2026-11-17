@@ -38,6 +38,7 @@
         "z": 2000.0,
         "yaw": 180.0,
         "purpose": null,
+        "unitLayout": null,
         "tvLayout": null,
         "system": null,
         "anchor": null

@@ -110,6 +110,11 @@
       "type": "string",
       "minLength": 1
      }
+    },
+    "doors": {
+     "type": "string",
+     "pattern": "^[0-9]+$",
+     "description": "doors of at most this many mm each"
     }
    }
   }

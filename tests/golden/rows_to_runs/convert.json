@@ -16,6 +16,7 @@
       "z": 0.0,
       "yaw": 0.0,
       "purpose": null,
+      "unitLayout": null,
       "tvLayout": null,
       "system": null,
       "anchor": "end"
@@ -26,6 +27,7 @@
       "z": 0.0,
       "yaw": -90.0,
       "purpose": null,
+      "unitLayout": null,
       "tvLayout": null,
       "system": null,
       "anchor": null
@@ -170,6 +172,7 @@
       "z": 0.0,
       "yaw": 0.0,
       "purpose": null,
+      "unitLayout": null,
       "tvLayout": null,
       "system": null,
       "anchor": "end"
@@ -180,6 +183,7 @@
       "z": 0.0,
       "yaw": -90.0,
       "purpose": null,
+      "unitLayout": null,
       "tvLayout": null,
       "system": null,
       "anchor": null

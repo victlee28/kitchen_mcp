@@ -1312,5 +1312,12 @@
  "scope.surfaces": "wall face(s) {surfaces}",
  "layer.surface": "Wall face {surface}",
  "part.wall-face": "wall face",
- "ui.surface.one": "wall face"
+ "ui.surface.one": "wall face",
+ "name.cabinet.wine-column": "Wine cabinet column",
+ "name.cabinet.wine-base": "Wine cabinet base",
+ "name.cabinet.wine-rack": "Bottle niche",
+ "name.cabinet.wine-glass": "Glass wine display",
+ "name.cabinet.low-cabinet": "Low cabinet",
+ "summary.unit": "Run {run}: {unit}, {n} cabinets, {length} mm long",
+ "summary.relayout-unit": "System {system} laid out again as {unit}"
 }
