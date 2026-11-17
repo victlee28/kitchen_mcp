@@ -23,7 +23,8 @@
       ],
       "length": 1370.0,
       "height": 2610.0,
-      "run": "R1"
+      "run": "R1",
+      "depth": 640.0
      },
      {
       "key": "right-wall",
@@ -38,7 +39,8 @@
       ],
       "length": 2830.0,
       "height": 2610.0,
-      "run": "R2"
+      "run": "R2",
+      "depth": 550.0
      }
     ],
     "bodies": [
@@ -129,7 +131,8 @@
       ],
       "length": 1370.0,
       "height": 2610.0,
-      "run": "R1"
+      "run": "R1",
+      "depth": 640.0
      },
      {
       "key": "right-wall",
@@ -144,7 +147,8 @@
       ],
       "length": 2830.0,
       "height": 2610.0,
-      "run": "R2"
+      "run": "R2",
+      "depth": 550.0
      }
     ],
     "bodies": [

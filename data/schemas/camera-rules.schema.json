@@ -12,7 +12,8 @@
   "vMaxDeg",
   "vNaturalDeg",
   "obliqueDeg",
-  "frontProbe"
+  "frontProbe",
+  "frameMargin"
  ],
  "additionalProperties": false,
  "properties": {
@@ -94,6 +95,14 @@
    "x-label": {
     "vi": "Dò phòng trước dãy (mm)",
     "en": "Room probe in front of a run (mm)"
+   }
+  },
+  "frameMargin": {
+   "type": "number",
+   "minimum": 1,
+   "x-label": {
+    "vi": "Lề quanh tủ trong ảnh (× kích thước vừa khít)",
+    "en": "Room around the cabinets in the picture (× a tight fit)"
    }
   }
  }

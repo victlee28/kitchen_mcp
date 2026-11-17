@@ -536,7 +536,8 @@ def cabinet_faces(spec: KitchenSpec, scene: Scene) -> list[camera_plan.Face]:
     def face(key: str, name: str, mods: list[Any], center: Callable[[float, float, float], tuple[float, float]], normal: tuple[float, float],
              owner: str) -> None:
         lo, hi = min(m.fromCorner for m in mods), max(m.endAt for m in mods)
-        faces.append(camera_plan.Face(key, name, center(lo, hi, max(m.depth for m in mods)), normal, hi - lo, max(m.y + m.height for m in mods), owner))
+        depth = max(m.depth for m in mods)
+        faces.append(camera_plan.Face(key, name, center(lo, hi, depth), normal, hi - lo, max(m.y + m.height for m in mods), owner, depth))
 
     for run in spec.runs:
         mods = [m for m in spec.module if m.run == run.id and m.storey != "corner"]      # a corner shelf is not a front
@@ -725,13 +726,19 @@ def default_views(spec: KitchenSpec, scene: Scene | None = None, catalog: Catalo
         views["left-wall"] = ViewAngle(name=say("name.view.left-wall"), position=(-scene.lsau / 1000 + span * 1.4 + 0.6, camera_plan.EYE / 1000, mz), lookAt=(-scene.lsau / 1000, 1.25, mz), verticalFov=48)
     room, solids = room_solids(spec, scene)
     faces = cabinet_faces(spec, scene)
+    if faces and room is None:         # the fixed views of a kitchen without a floorplan: turned and opened so the cabinets fit
+        for key, v in list(views.items()):
+            mine = [f for f in faces if f.key == key] if key.endswith("-wall") else faces if key == "perspective" else []
+            if mine:
+                views[key] = ViewAngle(**{**to_data(v), **camera_plan.refit(to_data(v), mine)})
     if faces and room is not None:
-        planned = camera_plan.plan_views(faces, room, solids, cabinet_bodies(spec))
+        planned = camera_plan.plan_views(faces, room, solids, cabinet_bodies(spec), walls_hide=isinstance(spec.floorplan, dict))
         views.update({key: ViewAngle(**v) for key, v in planned.items()})
         biggest = max(faces, key=lambda f: f.length)
         if "left" not in reach:  # a U sees all three runs only from the open side: keep its own overview
             overview: dict[str, Any] = {**planned[f"{biggest.key}-oblique"], "name": say("name.view.perspective")}
-            views["perspective"] = ViewAngle(**overview)
+            whole = camera_plan.refit(overview, faces)         # from there, every run in the picture when a lens not too wide allows it
+            views["perspective"] = ViewAngle(**(whole if float(whole["verticalFov"]) <= camera_plan.V_NATURAL_DEG else overview))
     if room is not None:               # an imported floorplan: the overview and the plan show the whole room, not only the cabinets
         lo, hi = scene.bounds()
         framed = camera_plan.whole_room({k: to_data(views[k]) for k in ("plan", "overhead")}, room, solids,

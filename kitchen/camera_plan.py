@@ -31,6 +31,7 @@ V_NATURAL_DEG = float(_R["vNaturalDeg"])  # widest lens that still looks like a 
                           # (user, 11/11/2026: "ống kính góc rộng vừa đủ, không quá rộng"); past it the camera stands outside the wall instead
 OBLIQUE = math.radians(float(_R["obliqueDeg"]))
 NON_BLOCKING = ("area", "opening")
+FRAME_MARGIN = float(_R["frameMargin"])   # the picture is this much bigger than the cabinets it frames (each side)
 FRONT_PROBE = float(_R["frontProbe"])   # how far in front of a run its room is probed (mm)   # floor areas and door/window openings are not solids that hide cabinets
 
 
@@ -44,6 +45,7 @@ class Face:
     length: float
     height: float
     run: str = ""         # the run (or wall) the front belongs to: its own cabinets never block it
+    depth: float = 0.0    # how deep the cabinets stand behind the front (mm): their back corners are framed too
 
 
 @dataclass(frozen=True)
@@ -125,20 +127,50 @@ def blockers(eye: tuple[float, float, float], targets: list[tuple[float, float, 
     return sorted({ob.id for ob in obstacles if ob.kind not in NON_BLOCKING and any(blocks(eye, t, ob) for t in targets)})
 
 
-def _fov(face: Face, dist: float, width_factor: float) -> float:
-    """Vertical field of view (degrees) in which the run's width and height fit at ``dist``, before clamping."""
-    ty = _look_height(face)
-    half_v = max(face.height - ty, ty - 0.0, EYE - ty) * 1.1
-    half_h = (face.length * width_factor / 2 + 150.0) * 1.1
-    return math.degrees(2 * math.atan(max(half_v, half_h / ASPECT) / max(dist, 1.0)))
+def face_corners(face: Face) -> list[tuple[float, float, float]]:
+    """The corners of the cabinets' box behind a front (kitchen frame, mm): both ends, floor and top, front and back."""
+    ux, uz = face.normal[1], -face.normal[0]
+    top = max(face.height, 900.0)
+    out: list[tuple[float, float, float]] = []
+    for s in (-0.5, 0.5):
+        for back in (0.0, face.depth):
+            x = face.center[0] + ux * face.length * s - face.normal[0] * back
+            z = face.center[1] + uz * face.length * s - face.normal[1] * back
+            out += [(x, 0.0, z), (x, top, z)]
+    return out
 
 
-def _look_height(face: Face) -> float:
-    return min(1100.0, max(face.height, 900.0) / 2)
+def frame(pos: Pt, corners: Sequence[tuple[float, float, float]], aim: Pt) -> tuple[tuple[float, float, float], float] | None:
+    """Where an eye-level camera at ``pos`` looks (kitchen frame, mm; ``aim``'s distance away) and its vertical field of view (degrees) so
+    every corner is in the picture with ``FRAME_MARGIN`` to spare, in the two-point projection the renderer uses (``two_point``): the camera
+    is level, turned to the middle of the corners' spread, and its picture shifted up or down to centre them. None when a corner is behind
+    the camera."""
+    rel = [(x - pos[0], y - EYE, z - pos[1]) for x, y, z in corners]
+    base = math.atan2(rel[0][2], rel[0][0])
+    turns = [(math.atan2(q[2], q[0]) - base + math.pi) % (2 * math.pi) - math.pi for q in rel]
+    heading = base + (min(turns) + max(turns)) / 2
+    fx, fz = math.cos(heading), math.sin(heading)
+    us: list[float] = []
+    vs: list[float] = []
+    for qx, qy, qz in rel:
+        depth = qx * fx + qz * fz
+        if depth < 50.0:
+            return None
+        us.append(abs(-qx * fz + qz * fx) / depth)
+        vs.append(qy / depth)
+    shift = (max(vs) + min(vs)) / 2
+    half = max((max(vs) - min(vs)) / 2, max(us) / ASPECT) * FRAME_MARGIN
+    reach = max(math.hypot(aim[0] - pos[0], aim[1] - pos[1]), 1.0)
+    return (pos[0] + fx * reach, EYE + shift * reach, pos[1] + fz * reach), math.degrees(2 * math.atan(half))
 
 
-def _candidate(face: Face, direction: Pt, dist: float, width_factor: float) -> tuple[Pt, float]:
-    return (face.center[0] + direction[0] * dist, face.center[1] + direction[1] * dist), _fov(face, dist, width_factor)
+def _candidate(face: Face, direction: Pt, dist: float) -> tuple[Pt, tuple[float, float, float], float]:
+    """A camera ``dist`` in front of the face along ``direction``: where it stands, where it looks and its lens (all the cabinets framed)."""
+    pos = (face.center[0] + direction[0] * dist, face.center[1] + direction[1] * dist)
+    framed = frame(pos, face_corners(face), face.center)
+    if framed is None:
+        return pos, (face.center[0], EYE, face.center[1]), 180.0
+    return pos, framed[0], framed[1]
 
 
 def in_body(p: Pt, bodies: list[Obstacle], clear: float = WALL_CLEAR) -> bool:
@@ -150,8 +182,8 @@ def in_body(p: Pt, bodies: list[Obstacle], clear: float = WALL_CLEAR) -> bool:
     return False
 
 
-def _best(face: Face, directions: list[Pt], width_factor: float, room: list[Pt] | None, obstacles: list[Obstacle],
-          bodies: list[Obstacle]) -> tuple[Pt, float, list[str]]:
+def _best(face: Face, directions: list[Pt], room: list[Pt] | None, obstacles: list[Obstacle],
+          bodies: list[Obstacle], walls_hide: bool = True) -> tuple[Pt, tuple[float, float, float], float, list[str]]:
     """Ranked: never inside or against a cabinet or another solid (stairs, columns, furniture); without a room, fewest target points seen
     across another run's cabinets (they cannot be hidden); a lens no wider than ``V_NATURAL_DEG``; inside the room (else outside a wall, the
     walls in the way hidden — the user's choice of 11/11/2026: a wide lens first, the wall only when even that is not enough); fewest solids
@@ -162,23 +194,24 @@ def _best(face: Face, directions: list[Pt], width_factor: float, room: list[Pt] 
     others = [] if room else [Obstacle(b.id, b.kind, b.outline, -math.inf, math.inf) for b in bodies if b.kind != f"cabinet:{face.run}"]
     # never stand inside (or within WALL_CLEAR of) a solid: a stair, a column, a piece of furniture, a wall the room outline does not cover
     solids = [ob for ob in obstacles if ob.kind not in NON_BLOCKING and ob.y1 > 0.0 and ob.y0 < EYE]
-    best: tuple[tuple[Any, ...], Pt, float, list[str]] | None = None
+    best: tuple[tuple[Any, ...], Pt, tuple[float, float, float], float, list[str]] | None = None
     dist = MAX_DIST
     while dist >= MIN_DIST - 1e-6:
         for direction in directions:
-            pos, fov = _candidate(face, direction, dist, width_factor)
+            pos, look, fov = _candidate(face, direction, dist)
             eye = (pos[0], EYE, pos[1])
             bad = in_body(pos, bodies) or in_body(pos, solids)
             outside = not stands_in_room(pos, room)
+            bad = bad or (outside and not walls_hide)       # a kitchen's own box walls cannot be hidden: from behind one it shows nothing
             hidden = blockers(eye, targets, obstacles)
             behind = sum(any(blocks(eye, t, b) for b in others) for t in targets)
             wide = fov > V_NATURAL_DEG
-            key = (bad, behind, wide, outside, len(hidden), fov if wide else 0.0, dist if outside else -dist)
+            key = (bad, behind, fov > V_MAX, wide, outside, len(hidden), fov if wide else 0.0, dist if outside else -dist)
             if best is None or key < best[0]:
-                best = (key, pos, fov, hidden)
+                best = (key, pos, look, fov, hidden)
         dist -= STEP
     assert best is not None
-    return best[1], best[2], best[3]
+    return best[1], best[2], best[3], best[4]
 
 
 def faces_room(face: Face, room: list[Pt] | None) -> bool:
@@ -188,21 +221,22 @@ def faces_room(face: Face, room: list[Pt] | None) -> bool:
     return point_in_poly((face.center[0] + face.normal[0] * FRONT_PROBE, face.center[1] + face.normal[1] * FRONT_PROBE), room)
 
 
-def plan_views(faces: list[Face], room: list[Pt] | None, obstacles: list[Obstacle], bodies: Sequence[Obstacle] = ()) -> dict[str, dict[str, Any]]:
+def plan_views(faces: list[Face], room: list[Pt] | None, obstacles: list[Obstacle], bodies: Sequence[Obstacle] = (),
+               walls_hide: bool = True) -> dict[str, dict[str, Any]]:
     """``{key: {name, position, lookAt, verticalFov, hide}}`` (position / lookAt in metres, like ``ViewAngle``): per face a front view and an
     oblique view from the side that sees it with the fewest solids in the way. ``room``: the floor outline, or None when it is not known.
-    ``bodies``: the cabinets' footprints (kind ``cabinet:<run>``), never stood in and never hidden; a run outside the room is planned without it."""
+    ``bodies``: the cabinets' footprints (kind ``cabinet:<run>``), never stood in and never hidden; a run outside the room is planned without it.
+    ``walls_hide``: the room's walls are structures a view can leave out (an imported floorplan); else the camera never stands outside the room."""
     bodies = list(bodies)
     views: dict[str, dict[str, Any]] = {}
     for face in faces:
         nx, nz = face.normal
         room_of = room if faces_room(face, room) else None     # a run outside the imported room: no room to stand in, only the solids to hide
-        look = (face.center[0] / 1000.0, _look_height(face) / 1000.0, face.center[1] / 1000.0)
-        pos, fov, hide = _best(face, [(nx, nz)], 1.0, room_of, obstacles, bodies)
-        views[face.key] = _view(face.name, pos, look, fov, hide)
+        pos, look, fov, hide = _best(face, [(nx, nz)], room_of, obstacles, bodies, walls_hide)
+        views[face.key] = _view(face.name, pos, _metres(look), fov, hide)
         sides = [(nx * math.cos(s * OBLIQUE) - nz * math.sin(s * OBLIQUE), nx * math.sin(s * OBLIQUE) + nz * math.cos(s * OBLIQUE)) for s in (-1, 1)]
-        pos, fov, hide = _best(face, sides, 0.85, room_of, obstacles, bodies)
-        views[f"{face.key}-oblique"] = _view(say("name.view.oblique", name=face.name), pos, look, fov, hide)
+        pos, look, fov, hide = _best(face, sides, room_of, obstacles, bodies, walls_hide)
+        views[f"{face.key}-oblique"] = _view(say("name.view.oblique", name=face.name), pos, _metres(look), fov, hide)
     return views
 
 
@@ -211,6 +245,26 @@ def hidden_for(position: tuple[float, float, float], faces: list[Face], obstacle
     eye = (position[0] * 1000.0, position[1] * 1000.0, position[2] * 1000.0)
     targets = [t for f in faces for t in face_targets(f)]
     return blockers(eye, targets, obstacles)
+
+
+def _metres(p: tuple[float, float, float]) -> tuple[float, float, float]:
+    return (p[0] / 1000.0, p[1] / 1000.0, p[2] / 1000.0)
+
+
+def refit(view: dict[str, Any], faces: Sequence[Face]) -> dict[str, Any]:
+    """A view that stays where it stands (``ViewAngle`` data, metres) turned and opened so all the faces' cabinets fit the picture (``frame``);
+    unchanged when it is not at eye level or a cabinet is behind it."""
+    (px, py, pz), (lx, _, lz) = view["position"], view["lookAt"]
+    corners = [c for f in faces for c in face_corners(f)]
+    if not corners or abs(py * 1000.0 - EYE) > 1.0:
+        return view
+    framed = frame((px * 1000.0, pz * 1000.0), corners, (lx * 1000.0, lz * 1000.0))
+    if framed is None:
+        return view
+    look, fov = framed
+    m = _metres(look)
+    return {**view, "lookAt": (round_half_away(m[0], 3), round_half_away(m[1], 3), round_half_away(m[2], 3)),
+            "verticalFov": round_half_away(min(max(fov, V_MIN), V_MAX), 1)}
 
 
 def _view(name: str, pos: Pt, look: tuple[float, float, float], fov: float, hide: list[str]) -> dict[str, Any]:

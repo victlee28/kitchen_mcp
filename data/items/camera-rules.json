@@ -7,9 +7,10 @@
   "step": 250,
   "wallClear": 300,
   "vMinDeg": 40,
-  "vMaxDeg": 78,
+  "vMaxDeg": 90,
   "vNaturalDeg": 62,
   "obliqueDeg": 35,
-  "frontProbe": 300
+  "frontProbe": 300,
+  "frameMargin": 1.06
  }
 ]

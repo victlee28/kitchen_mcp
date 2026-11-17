@@ -46,6 +46,29 @@ class TestTwoPoint(unittest.TestCase):
         self.assertEqual((cam.cx, cam.cy), (640, 480))
         self.assertAlmostEqual(cam.f[1], -1.0, places=3)
 
+    def test_every_run_view_frames_its_cabinets(self):
+        import tempfile
+        import shutil
+        from kitchen import camera_plan, geometry
+        from kitchen.intent import KitchenTemplate
+        from kitchen.service import KitchenService
+        tmp = Path(tempfile.mkdtemp())
+        try:
+            svc = KitchenService(tmp / "k.db", tmp / "r")
+            for shape in ("I", "L", "U"):
+                did = svc.create_from_template(KitchenTemplate.model_validate({"geometry_edit": shape, "backWallLength": 3600}), "t")["id"]
+                spec, _ = svc.store.get(did)
+                views = geometry.views_of(spec, svc.catalog())
+                for face in geometry.cabinet_faces(spec, geometry.compile_spec(spec)):
+                    for key in (face.key, f"{face.key}-oblique"):
+                        cam = Camera(views[key], 1280, 960)
+                        for c in camera_plan.face_corners(face):
+                            x, y = project(cam, tuple(v / 1000 for v in c))
+                            with self.subTest(shape=shape, view=key, corner=c):
+                                self.assertTrue(0 <= x <= 1280 and 0 <= y <= 960, f"{key}: corner at {x:.0f},{y:.0f}")
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
     def test_the_threejs_camera_carries_the_shift(self):
         import tempfile
         import shutil
