@@ -1,14 +1,18 @@
 """Base images of a view: render, layers, masks, imported and approved base photographs."""
 from __future__ import annotations
 
+from typing import Any
+
 from pathlib import Path
 import json
 
 from PIL import Image
 import numpy as np
+import numpy.typing as npt
 
 from .. import geometry, imaging, layers, render
 from ..errors import InvalidInput
+from ..jsonview import as_dict
 from .common import Component, VIEW_COLORS
 
 
@@ -33,11 +37,11 @@ class BaseImages(Component):
         render.render_views(spec, d.parent, [view], w, h, meta={"designId": did, "rev": r}, catalog=dc)
         return spec, r, scene, d, json.loads(man.read_text(encoding="utf-8"))
 
-    def layers(self, did: str, view: str, rev: int | None = None, all_layers: bool = False) -> dict:
+    def layers(self, did: str, view: str, rev: int | None = None, all_layers: bool = False) -> dict[str, Any]:
         spec, r, scene, d, man = self.ensure_render(did, rev, view)
         _, meta = imaging.load_instances(d)
         px = {i["id"]: i["pixels"] for i in meta["instances"]}
-        out = []
+        out: list[dict[str, Any]] = []
         for x in layers.catalogue(spec, scene):
             ids = x.get("component") or [x["id"]]
             n = sum(px.get(i, 0) for i in ids)
@@ -53,14 +57,14 @@ class BaseImages(Component):
 
     def mask_png(self, did: str, view: str, layer_id: str, rev: int | None = None) -> bytes:
         import io
-        spec, r, scene, d, _ = self.ensure_render(did, rev, view)
+        spec, _r, scene, d, _ = self.ensure_render(did, rev, view)
         _, ids = layers.resolve(layers.catalogue(spec, scene), layer_id)
         buf = io.BytesIO()
         Image.fromarray(imaging.mask_of(d, ids).astype(np.uint8) * 255, "L").save(buf, "PNG")
         return buf.getvalue()
 
-    def pick(self, did: str, view: str, x: int, y: int, rev: int | None = None, radius: int = 0) -> dict:
-        spec, r, scene, d, _ = self.ensure_render(did, rev, view)
+    def pick(self, did: str, view: str, x: int, y: int, rev: int | None = None, radius: int = 0) -> dict[str, Any]:
+        spec, _r, scene, d, _ = self.ensure_render(did, rev, view)
         hit = imaging.pick(d, x, y, max(0, min(int(radius), 24)))
         if not hit:
             return {"part": None, "layers": []}
@@ -68,10 +72,9 @@ class BaseImages(Component):
         groups = [g["id"] for g in cat if g["id"] == hit["id"] or hit["id"] in (g.get("component") or [])]
         return {"part": hit, "layers": groups}
 
-    def save_beauty(self, did: str, view: str, image: bytes, rev: int | None = None) -> dict:
+    def save_beauty(self, did: str, view: str, image: bytes, rev: int | None = None) -> dict[str, Any]:
         """Ảnh render three.js (trình duyệt) -> beauty.png của rev/góc; dùng làm ảnh gốc khi chưa có ảnh AI đã duyệt."""
-        import io
-        spec, r, scene, d, man = self.ensure_render(did, rev, view)
+        _spec, r, _scene, d, man = self.ensure_render(did, rev, view)
         im = self._fit_to_render(image, man)
         W, H = man["width"], man["height"]
         im.save(d / "beauty.png")
@@ -82,7 +85,7 @@ class BaseImages(Component):
         return {**info, "dir": str(d)}
 
     @staticmethod
-    def _fit_to_render(image: bytes, man: dict, fit: str = "reject") -> Image.Image:
+    def _fit_to_render(image: bytes, man: dict[str, Any], fit: str = "reject") -> Image.Image:
         """Decode an uploaded image and fit it to the control-render size.
 
         fit="reject" refuses a different aspect ratio; "crop" cuts the centre to the render ratio; "pad" keeps the whole
@@ -109,21 +112,21 @@ class BaseImages(Component):
                     im = im.crop((left, top, left + cw, top + ch))
                 else:
                     cw, ch = (iw, round(iw * H / W)) if iw / ih > W / H else (round(ih * W / H), ih)
-                    arr = np.array(im)
-                    edge = np.concatenate([arr[0], arr[-1], arr[:, 0], arr[:, -1]]).mean(axis=0).astype(np.uint8)
+                    arr: npt.NDArray[np.uint8] = np.asarray(im, dtype=np.uint8)
+                    edge = np.concatenate([arr[0], arr[-1], arr[:, 0], arr[:, -1]]).mean(axis=0).astype(np.uint8)  # pyright: ignore[reportUnknownMemberType] (numpy stubs)
                     canvas = Image.new("RGB", (cw, ch), tuple(int(v) for v in edge))
                     canvas.paste(im, ((cw - iw) // 2, (ch - ih) // 2))
                     im = canvas
             im = im.resize((W, H), Image.Resampling.LANCZOS)
         return im
 
-    def import_base(self, did: str, view: str, image: bytes, rev: int | None = None, source: str = "external image", fit: str = "reject") -> dict:
+    def import_base(self, did: str, view: str, image: bytes, rev: int | None = None, source: str = "external image", fit: str = "reject") -> dict[str, Any]:
         """Replace the base image of a rev/view with an externally generated image (e.g. a fully lit ChatGPT render).
 
         The image is stored as base_imported.png next to the control renders. It is used as the base image until a job
         accepted after the import takes over (see reference).
         """
-        spec, r, scene, d, man = self.ensure_render(did, rev, view)
+        _spec, r, _scene, d, man = self.ensure_render(did, rev, view)
         im = self._fit_to_render(image, man, fit)
         im.save(d / "base_imported.png")
         match = imaging.edge_alignment(np.array(im), imaging.read(d / "lines.png", "L"))
@@ -132,9 +135,9 @@ class BaseImages(Component):
         (d / "base_imported.json").write_text(json.dumps(info, ensure_ascii=False, indent=2), encoding="utf-8")
         return {**info, "dir": str(d)}
 
-    def clear_imported_base(self, did: str, view: str, rev: int | None = None) -> dict:
+    def clear_imported_base(self, did: str, view: str, rev: int | None = None) -> dict[str, Any]:
         """Drop the imported base image of a rev/view so the default base image order applies again."""
-        spec, r, scene, d, man = self.ensure_render(did, rev, view)
+        _spec, r, _scene, d, _man = self.ensure_render(did, rev, view)
         removed = False
         for name in ("base_imported.png", "base_imported.json"):
             if (d / name).exists():
@@ -143,22 +146,23 @@ class BaseImages(Component):
         return {"designId": did, "rev": r, "view": view, "removed": removed, "dir": str(d)}
 
     @staticmethod
-    def _imported_meta(d: Path) -> dict | None:
+    def _imported_meta(d: Path) -> dict[str, Any] | None:
         """Metadata of the imported base image in a render folder, or None when there is no valid import."""
         if not (d / "base_imported.png").exists():
             return None
         try:
-            meta = json.loads((d / "base_imported.json").read_text(encoding="utf-8"))
+            meta: dict[str, Any] = json.loads((d / "base_imported.json").read_text(encoding="utf-8"))
         except (OSError, ValueError):
             return None
         return meta if meta.get("importedAt") else None
 
     @staticmethod
-    def _key_of(j: dict) -> str:
+    def _key_of(j: dict[str, Any]) -> str:
         """renderKey hình học mà ẢNH KẾT QUẢ của job khớp: job sửa hình cho ảnh của thiết kế mới."""
-        return (j["result"] or {}).get("newRenderKey") or j["render_key"] if j["kind"] == "geometry_edit" else j["render_key"]
+        result: dict[str, Any] = as_dict(j["result"]) or {}
+        return str(result.get("newRenderKey") or j["render_key"]) if j["kind"] == "geometry_edit" else str(j["render_key"])
 
-    def reference(self, did: str, view: str, key: str, d: Path) -> tuple[Path, dict]:
+    def reference(self, did: str, view: str, key: str, d: Path) -> tuple[Path, dict[str, Any]]:
         acc = [j for j in self.store.list_jobs(did, view, "accepted", 200) if self._key_of(j) == key]
         acc.sort(key=lambda j: (j["result"].get("acceptNow", ""), j["updated_at"]), reverse=True)
         imported = self._imported_meta(d)
@@ -171,7 +175,7 @@ class BaseImages(Component):
             return d / "beauty.png", {"type": "beauty"}
         return d / "albedo.png", {"type": "albedo"}
 
-    def pick_reference(self, did, view, key, d, reference):
+    def pick_reference(self, did: str, view: str, key: str, d: Path, reference: str | None) -> tuple[Path, dict[str, Any]]:
         if reference in (None, "", "auto"):
             return self.reference(did, view, key, d)
         if reference == "albedo":

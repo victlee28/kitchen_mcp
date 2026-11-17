@@ -19,6 +19,7 @@ import json
 import math
 from dataclasses import dataclass, replace
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 from PIL import Image
@@ -402,7 +403,7 @@ def part_colors(spec: KitchenSpec, scene: Scene) -> list[tuple[int, int, int]]:
 
 
 def render_views(spec: KitchenSpec, out_root: Path, views: list[str] | None = None,
-                 width: int = 1280, height: int = 960, meta: dict | None = None, catalog: Catalog = builtin.CATALOG) -> dict:
+                 width: int = 1280, height: int = 960, meta: dict[str, Any] | None = None, catalog: Catalog = builtin.CATALOG) -> dict[str, Any]:
     scene = compile_spec(spec, catalog)
     colors = part_colors(spec, scene)
     all_views = views_of(spec, catalog)

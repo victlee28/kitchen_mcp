@@ -58,6 +58,7 @@ class Common(_Base):
     backThickness: float = Field(default=9, gt=0, description="Độ dày tấm hậu (mm)")
     material: dict[str, str] = Field(default_factory=dict, description="base, upper, tall, cornerShelf, carcass, countertop, wallTile, floor, wall")
     handle: "Handle" = Field(default_factory=lambda: Handle())
+    hinge: str | None = Field(default=None, description="The catalog hinge (kind ``hinge``) of every cabinet door; None: the workshop default (defaults.hinge.item)")
     handleByStorey: dict[str, "HandleOverride"] | None = Field(
         default=None, description="Partial handle settings per storey (base, upper, loft, tall, corner); overrides `handle`, overridden by Module.handle")
 
@@ -273,6 +274,7 @@ class Module(_Base):
     doorStyle: Literal["flat", "frame", "glass"] | None = Field(default=None, description="Cánh phẳng (slab), cánh khung (shaker) hoặc kính")
     material: str | None = Field(default=None, description="Vật liệu mặt trước riêng của module (ghi đè chung.vatLieu theo tầng)")
     handle: HandleOverride | None = Field(default=None, description="Handle settings of this module only; overrides the storey and common handle")
+    hinge: str | None = Field(default=None, description="The catalog hinge (kind ``hinge``) of this cabinet's doors; None: the common one")
     backPanel: BackPanel | None = Field(default=None, description="TV units: the panel on the wall behind the TV, carried by one console cabinet")
     note: str | None = None
 

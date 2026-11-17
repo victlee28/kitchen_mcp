@@ -80,7 +80,7 @@ def ratio(w: int, h: int) -> str:
     return min(_RATIO, key=lambda t: abs(int(t.split(":")[0]) / int(t.split(":")[1]) - r))
 
 
-def gemini_body(text: str, images: list[Path], size: tuple[int, int], image_size: str = "") -> dict:
+def gemini_body(text: str, images: list[Path], size: tuple[int, int], image_size: str = "") -> dict[str, Any]:
     """Thân request generateContent của Gemini API. Ảnh nằm trong phần inline_data (mime_type + base64):
     máy chủ Gemini tự giải mã và đưa ảnh vào model như ảnh đính kèm — đây là cách duy nhất để model 'thấy' ảnh base64."""
     parts: list[dict] = [{"text": text}]
@@ -97,7 +97,7 @@ class Gemini:
     def __init__(self, config: Config):
         self.cfg = gemini_config(config)
 
-    def generate(self, text: str, images: list[Path], out_path: Path, size: tuple[int, int]) -> dict:
+    def generate(self, text: str, images: list[Path], out_path: Path, size: tuple[int, int]) -> dict[str, Any]:
         body = gemini_body(text, images, size, self.cfg["imageSize"])
         img_cfg = body["generationConfig"]["imageConfig"]
         url = f"{self.cfg['base']}/models/{urllib.parse.quote(self.cfg['model'])}:generateContent"
@@ -160,7 +160,7 @@ class OpenAIImages:
         self.key, self.model = config.openai_api_key, config.openai_image_model or OPENAI_DEFAULT_MODEL
         self.base, self.timeout, self.opener = "https://api.openai.com/v1", config.gemini_timeout, opener
 
-    def generate(self, text: str, images: list[Path], out_path: Path, size: tuple[int, int]) -> dict:
+    def generate(self, text: str, images: list[Path], out_path: Path, size: tuple[int, int]) -> dict[str, Any]:
         boundary = "kitchen" + base64.b16encode(Path(images[0]).name.encode()[:8]).decode() if images else "kitchenboundary"
         body = multipart([("model", self.model), ("prompt", text), ("size", openai_size(*size)), ("n", "1")],
                          [("image[]", Path(p).name, Path(p).read_bytes(), "image/png") for p in images], boundary)

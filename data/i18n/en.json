@@ -1277,5 +1277,20 @@
  "name.layer.opening-leaves": "leaves of {module}",
  "name.layer.opening-frame": "frame of {module}",
  "name.layer.opening-handles": "handles of {module}",
- "name.view.opening": "Opening {module}"
+ "name.view.opening": "Opening {module}",
+ "edit.ask.how-much": "By how many mm? (for example: width 900)",
+ "edit.ask.type-which": "Change the type of which cabinet?",
+ "edit.ask.height-which": "Change the height of which cabinet?",
+ "edit.ask.moldings": "Add or remove the moldings?",
+ "edit.choice.moldings.add": "add moldings",
+ "edit.choice.moldings.remove": "remove moldings",
+ "summary.edit.common-size": "{what}: {value:g} mm",
+ "summary.edit.type": "{ids} becomes a {type} cabinet",
+ "summary.edit.height": "Height {height:g} mm for {ids}",
+ "summary.edit.material-module": "Front material of {ids}: {value}",
+ "summary.edit.moldings-off": "Moldings removed ({which})",
+ "summary.edit.moldings-on": "Moldings added ({which})",
+ "edit.ask.hinge": "Which hinge? (for example: soft-close, inset, wide-angle)",
+ "summary.edit.hinge": "Hinge {hinge} for {ids}",
+ "summary.edit.hinge-common": "Hinge for every door: {hinge}"
 }

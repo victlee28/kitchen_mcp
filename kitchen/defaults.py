@@ -12,7 +12,7 @@ from typing import Any
 
 from . import builtin
 from .catalog import Catalog
-from .jsonview import as_dict
+from .jsonview import as_dict, as_list
 
 ID = "default"
 
@@ -32,6 +32,9 @@ class Defaults:
     menu: Mapping[str, float]         # input limits of the web menu
     openings: Mapping[str, float]     # the checks against doors and windows (``openings.checks``): clearAllowance, doorZone, windowZone, near
     materials: Mapping[str, str]      # finish names drawn where a design names none (``base``, ``carcass``, ``sink`` ...)
+    hinge: str = "clip-110-soft"      # the catalog hinge of a door whose design names none
+    hinge_edge: float = 100.0         # top and bottom hinge from the door's edge (mm)
+    hinge_counts: tuple[tuple[float, int], ...] = ((900.0, 2), (1600.0, 3), (2000.0, 4), (2600.0, 5))   # (door up to mm, hinges)
 
 
 def _number(v: Any) -> float | None:
@@ -53,6 +56,14 @@ def _names(data: Mapping[str, Any], fallback: Mapping[str, Any], key: str) -> di
     return out
 
 
+def _hinge(data: Mapping[str, Any], fallback: Mapping[str, Any]) -> tuple[str, float, tuple[tuple[float, int], ...]]:
+    h = {**(as_dict(fallback.get("hinge")) or {}), **(as_dict(data.get("hinge")) or {})}
+    rows = [as_dict(r) or {} for r in as_list(h.get("counts")) or []]
+    counts = tuple(sorted((float(u), int(c)) for r in rows if (u := _number(r.get("upTo"))) is not None and (c := _number(r.get("count"))) is not None))
+    edge = _number(h.get("edge"))
+    return str(h.get("item") or "clip-110-soft"), float(edge if edge is not None else 100), counts or ((900.0, 2), (1600.0, 3), (2000.0, 4), (2600.0, 5))
+
+
 def _build(catalog: Catalog) -> Defaults:
     fallback = builtin.CATALOG.data("defaults", ID)
     item = catalog.find("defaults", ID)
@@ -60,7 +71,7 @@ def _build(catalog: Catalog) -> Defaults:
     run, stretch, hole = (_section(data, fallback, k) for k in ("run", "stretch", "applianceHole"))
     return Defaults(float(run["moduleWidth"]), float(run["minWidth"]), float(run["maxRun"]), float(run["cornerMaxWidth"]),
                     float(stretch["min"]), float(stretch["max"]), float(hole["side"]), float(hole["worktopEdge"]), float(hole["hoodSide"]), _section(data, fallback, "newDesign"), _section(data, fallback, "menu"),
-                    _section(data, fallback, "openings"), _names(data, fallback, "materials"))
+                    _section(data, fallback, "openings"), _names(data, fallback, "materials"), *_hinge(data, fallback))
 
 
 def of(catalog: Catalog = builtin.CATALOG) -> Defaults:

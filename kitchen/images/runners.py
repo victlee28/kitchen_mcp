@@ -1,6 +1,9 @@
 """Run image jobs. Workers run in a thread and never leave a job in the running state."""
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import Any
+
 from pathlib import Path
 import shutil
 import threading
@@ -22,7 +25,7 @@ class Runners(Component):
         self.packages = packages
         self.results = results
 
-    def dispatch(self, job: dict) -> dict:
+    def dispatch(self, job: dict[str, Any]) -> dict[str, Any]:
         jid, b = job["id"], job["backend"]
         jdir = Path(self.store.get_job(jid)["result"]["dir"])
         req = job["request"]
@@ -32,7 +35,7 @@ class Runners(Component):
                 return self.results.finish(jid, {"backend": {"name": "recolor", "sampleGeometry": True}})
             if b == "recolor":
                 img = imaging.read(jdir / "reference.png", "RGB")
-                used = []
+                used: list[str] = []
                 catalog = self.env.catalog()
                 for i, t in enumerate(req.get("tasks", []), 1):
                     rgb = vocab.color(t.get("material") or "", catalog) or vocab.color(t.get("instruction") or "", catalog)
@@ -55,7 +58,7 @@ class Runners(Component):
             return self.store.update_job(jid, f"error:{e.code}", error=str(e))
         raise InvalidInput(b)
 
-    def _run_gemini(self, jid: str, jdir: Path, req: JobRequest):
+    def _run_gemini(self, jid: str, jdir: Path, req: JobRequest) -> None:
         """An image model that takes the reference image + an instruction: Gemini, or OpenAI's image edit (the job's backend)."""
         name = self.store.get_job(jid)["backend"]
         try:
@@ -69,13 +72,13 @@ class Runners(Component):
         except BackendError as e:
             self.store.update_job(jid, f"error:{e.code}", error=str(e))
 
-    def wait(self, jid: str, timeout: float = 60) -> dict:
+    def wait(self, jid: str, timeout: float = 60) -> dict[str, Any]:
         t = self.env.threads.get(jid)
         if t:
             t.join(timeout)
         return self.store.get_job(jid)
 
-    def _run_guarded(self, fn, jid: str, jdir: Path, req: JobRequest) -> None:
+    def _run_guarded(self, fn: Callable[[str, Path, JobRequest], None], jid: str, jdir: Path, req: JobRequest) -> None:
         """Thread entry. A job must never stay 'running' because a worker raised something unforeseen: mark it failed, then re-raise
         so the thread excepthook still logs the traceback. Known backend failures are handled inside the runners."""
         try:

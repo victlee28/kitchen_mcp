@@ -6,6 +6,8 @@ nét/depth CỦA THIẾT KẾ MỚI (vật đã xóa không còn trong ảnh đi
 """
 from __future__ import annotations
 
+from typing import Any
+
 import json
 from pathlib import Path
 
@@ -43,7 +45,7 @@ def type_label(type_id: str, catalog: Catalog = builtin.CATALOG) -> str:
     return t.label if t is not None and t.label else type_id
 
 
-def build_ops(spec: KitchenSpec, items: list[dict]) -> tuple[list[dict], list[dict], str]:
+def build_ops(spec: KitchenSpec, items: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]], str]:
     """items -> (ops thiết kế, mô tả từng việc, thao tác suy ra).
 
     Mỗi item một trong:
@@ -115,7 +117,7 @@ def build_ops(spec: KitchenSpec, items: list[dict]) -> tuple[list[dict], list[di
     return ops, desc, tt
 
 
-def pin_cameras(spec: KitchenSpec, nxt: KitchenSpec) -> dict | None:
+def pin_cameras(spec: KitchenSpec, nxt: KitchenSpec) -> dict[str, Any] | None:
     """Góc nhìn mặc định tính theo khung bao thiết kế: xóa/thêm tủ làm camera dịch. Ghim camera cũ vào thiết kế mới
     để ảnh trước/sau cùng khung hình (op trả về được ghi cùng rev khi chấp nhận)."""
     old, new = geometry.views_of(spec), geometry.views_of(nxt)
@@ -131,7 +133,7 @@ def _ids(d: Path) -> tuple[np.ndarray, dict[int, str]]:
     return inst, names
 
 
-def diff_mask(old_dir: Path, new_dir: Path) -> tuple[np.ndarray, dict]:
+def diff_mask(old_dir: Path, new_dir: Path) -> tuple[np.ndarray, dict[str, Any]]:
     """Vùng ảnh khác nhau giữa hai render cùng camera: khác chi tiết (instance), khác màu phẳng (albedo) hoặc khác nét."""
     a, na = _ids(old_dir)
     b, nb = _ids(new_dir)
@@ -160,7 +162,7 @@ def diff_mask(old_dir: Path, new_dir: Path) -> tuple[np.ndarray, dict]:
                "partDifferences": int(by_id.sum()), "colorDifferences": int(alb.sum()), "lineDifferences": int(by_line.sum())}
 
 
-def front_mask(d: Path, spec: KitchenSpec, scene, mas: list[str]) -> tuple[np.ndarray, list[np.ndarray]]:
+def front_mask(d: Path, spec: KitchenSpec, scene: Any, mas: list[str]) -> tuple[np.ndarray, list[np.ndarray]]:
     """Mask mặt trước (cánh, ngăn kéo) của các module — dùng khi thao tác không đổi hình trong render nhanh (kiểu cánh)."""
     inst, meta = imaging.load_instances(d)
     val = {x["id"]: x["value"] for x in meta["instances"]}

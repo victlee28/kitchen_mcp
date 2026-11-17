@@ -66,7 +66,8 @@ class TestCases(unittest.TestCase):
         replies = [openai_reply('{"op": "update", "id": "TT2", "changes": {"height": 800}}') for _ in range(5)]
         self.svc.models.config = replace(self.svc.models.config, llm_provider="openai", llm_model="gpt-x", openai_api_key="k")
         self.svc.models.transport = FakeTransport(*replies)
-        doc = {**CASES, "cases": [c for c in CASES["cases"] if c["text"] in ("TT2 cao 800", "xóa TD3")]}
+        unreadable = {"text": "cho TT2 vươn tới gần trần hơn tám phân", "expect": {"op": "update", "id": "TT2", "changes": {"height": 800}}}
+        doc = {**CASES, "cases": [unreadable] + [c for c in CASES["cases"] if c["text"] == "xóa TD3"]}
         result = mcmd.measure(self.svc, doc, use_llm=True)
         self.assertEqual(result["modelCalls"], 1, "only the sentence the rules could not read")
         self.assertEqual(result["right"], 2)

@@ -21,7 +21,7 @@ MAX_TASKS = 8
 ZONE_COLORS = palette.ZONE_COLORS   # catalog kind palette, item zone
 
 
-def describe_position(mask: np.ndarray) -> dict | None:
+def describe_position(mask: np.ndarray) -> dict[str, Any] | None:
     """Vị trí vùng bằng chữ, tính từ mask: vùng ảnh (trái/giữa/phải × trên/giữa/dưới) + khung theo % kích thước ảnh."""
     b = imaging.bbox(mask)
     if b is None:
@@ -55,7 +55,7 @@ class JobEnv:
     apply: Callable[..., dict[str, Any]]
     config: Config
     runtime: Runtime
-    threads: dict[str, threading.Thread] = field(default_factory=dict)
+    threads: dict[str, threading.Thread] = field(default_factory=dict[str, threading.Thread])
     catalog: Callable[[], Catalog] = lambda: builtin.CATALOG     # the merged catalog (the service passes its own)
     design_catalog: Callable[[str, int], Catalog] = lambda did, rev: builtin.CATALOG   # what a stored revision is built with (its snapshot)
 

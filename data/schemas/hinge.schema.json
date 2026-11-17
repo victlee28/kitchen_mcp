@@ -116,6 +116,28 @@
     "vi": "Ghi chú",
     "en": "Note"
    }
+  },
+  "aliases": {
+   "type": "object",
+   "additionalProperties": false,
+   "properties": {
+    "vi": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    },
+    "en": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    }
+   },
+   "x-label": {
+    "vi": "Tên gọi khác (để lệnh chuột phải nhận ra)",
+    "en": "Other names (for typed commands)"
+   }
   }
  }
 }

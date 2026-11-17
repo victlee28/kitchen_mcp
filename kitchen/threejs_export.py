@@ -366,13 +366,20 @@ def _module_entry(spec: KitchenSpec, m: Module, parts: list[Part], frame: Frame,
         rows[round_int(d[0][1])].append(d)
     flat = [d for _, ds in sorted(rows.items()) for d in sorted(ds, key=lambda x: x[0][0])]
     hinge_of = hardware.hinges(m, [(openings[0], hi[0], openings[1], hi[1]) for openings, hi, _, _ in flat])
+    d_ = defaults.BUILTIN
+    hinge_id = hardware.hinge_item(m, spec.common.hinge, d_.hinge)
+    hinge_data = catalog.find("hinge", hinge_id)
+    hinge_fields: Mapping[str, Any] = hinge_data.data if hinge_data is not None else {}
+    hinge_type: dict[str, Any] = {k: hinge_fields[k] for k in ("openingAngle", "overlay", "softClose", "cupDiameter", "brand", "code") if k in hinge_fields}
     for k, (openings, hi, glass, src) in enumerate(flat):
         w, h, d = (hi[j] - openings[j] for j in range(3))
         hinge = hinge_of[k]
         door: dict[str, Any] = {"id": pid("door"), "assetId": "ASSET-DOOR-GLASS" if glass else "ASSET-DOOR-SLAB", "hingeSide": hinge,
                 "materialId": mats["glass"] if glass else mats[front], "dimensions": _dims(w, h, d), "transform": _tf(openings),
                 "glass": glass, "frontStyle": "glass" if glass else entry["frontStyle"], "openingAngle": 0, "sourceRef": src,
-                "hinges": [{"offset": 100}, {"offset": round_half_away(h - 100, 1)}] + ([{"offset": round_half_away(h / 2, 1)}] if h > 1200 else [])}
+                "hinges": [{"offset": round_half_away(o, 1)} for o in hardware.hinge_offsets(w if hinge in ("Top", "Bottom") else h, d_.hinge_edge,
+                                                                                           d_.hinge_counts)],
+                "hingeItem": hinge_id, "hingeType": hinge_type}
         hw = _handle(hn, hmat, w, h, d, tier, hinge, horizontal=hinge in ("Top", "Bottom"), source=handle_of.get(src))
         if hw:
             door["hardware"] = hw

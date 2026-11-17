@@ -1,6 +1,8 @@
 """Packages and files handed to a model or a person: request.json, the AI prompt, the full export."""
 from __future__ import annotations
 
+from typing import Any
+
 from pathlib import Path
 import json
 import shutil
@@ -9,17 +11,18 @@ from PIL import Image
 
 from .. import request_check, backends, edit, imaging, prompts
 from ..errors import KitchenError
+from ..jsonview import as_dict, as_list
 from .request import JobRequest, size_of
 from .common import Component, GROW_PX, ZONE_COLORS
 
 
 class Packages(Component):
-    def export_package(self, jid: str, jdir: Path, req: JobRequest) -> dict:
+    def export_package(self, jid: str, jdir: Path, req: JobRequest) -> dict[str, Any]:
         self.export_request(jid)
         package = sorted(p.name for p in jdir.iterdir() if p.is_file())
         return self.store.update_job(jid, "awaiting-result", {"package": package})
 
-    def ai_input(self, job: dict, jdir: Path, req: JobRequest) -> tuple[str, list[tuple[str, Path]]]:
+    def ai_input(self, job: dict[str, Any], jdir: Path, req: JobRequest) -> tuple[str, list[tuple[str, Path]]]:
         """Chỉ dẫn dạng câu + ảnh gửi model nhận chỉ dẫn (Gemini, gói request). Một nguồn cho cả gọi API lẫn file xuất.
         Có ``styleReference`` thì ảnh đã duyệt của góc khác được đính kèm cuối cùng kèm một câu nói rõ chỉ lấy phong cách."""
         text, images = self._ai_input_core(job, jdir, req)
@@ -30,7 +33,7 @@ class Packages(Component):
             text = f"{text}\n{prompts.style_note(len(images), ref['view'])}"
         return text, images
 
-    def _ai_input_core(self, job: dict, jdir: Path, req: JobRequest) -> tuple[str, list[tuple[str, Path]]]:
+    def _ai_input_core(self, job: dict[str, Any], jdir: Path, req: JobRequest) -> tuple[str, list[tuple[str, Path]]]:
         if req["kind"] == "gen0":
             d = self.view_dir(job["design_id"], job["rev"], job["view"])
             src = d / "beauty.png" if (d / "beauty.png").exists() else d / "albedo.png"
@@ -38,12 +41,15 @@ class Packages(Component):
             real = req.get("photoImage") or prompts.full(spec, req.get("lighting") or "daylight", self.env.catalog())
             return prompts.gemini_text("gen0", "", req.get("instruction", ""), req["globalPrompt"], realism=real), [("input-image", src)]
         if req["kind"] == "geometry_edit":
-            t = req.get("tasks", [{}])[0]
-            text = prompts.gemini_text_geometry(req.get("operation") or t.get("operation") or "replace-item", [x["en"] for x in req.get("description", [])],
-                                             (t.get("position") or {}).get("en"), t.get("instruction") or "", self._local_real(job))
+            first: list[Any] = list(req.get("tasks") or [{}])
+            t: dict[str, Any] = dict(first[0])
+            described: list[dict[str, Any]] = list(req.get("description") or [])
+            where: dict[str, Any] = t.get("position") or {}
+            text = prompts.gemini_text_geometry(str(req.get("operation") or t.get("operation") or "replace-item"), [str(x["en"]) for x in described],
+                                             where.get("en"), str(t.get("instruction") or ""), self._local_real(job))
             return text, [("marked-base-image", jdir / "reference_marked.png"), ("mask", jdir / "mask.png"),
                           ("new-geometry", jdir / "new_geometry.png")]
-        tasks = req.get("tasks", [])
+        tasks: list[dict[str, Any]] = [dict(x) for x in as_list(req.get("tasks")) or []]
         multi = len(tasks) > 1
         marked = jdir / "reference_marked.png"
         if not marked.exists():  # job tạo trước khi có ảnh đánh dấu
@@ -51,17 +57,17 @@ class Packages(Component):
             marks = [(imaging.read(jdir / f"target_{i}.png", "L") > 127, ZONE_COLORS[(i - 1) % len(ZONE_COLORS)][1], str(i))
                      for i in range(1, len(tasks) + 1) if (jdir / f"target_{i}.png").exists()]
             Image.fromarray(imaging.mark_regions(ref, marks, gap=GROW_PX + 2)).save(marked)
-        regions = []
+        regions: list[dict[str, Any]] = []
         for i, t in enumerate(tasks, 1):
             extra = " ".join(x for x in (t.get("instruction"), None if multi else req.get("instruction")) if x)
             regions.append({"n": i, "color": ZONE_COLORS[(i - 1) % len(ZONE_COLORS)][0], "role": t.get("roleEn") or "kitchen element",
                             "material_text": t.get("materialText") or t.get("prompt", ""), "extra": extra,
-                            "where": (t.get("position") or {}).get("en"), "others": t.get("remaining") or 0,
+                            "where": (as_dict(t.get("position")) or {}).get("en"), "others": t.get("remaining") or 0,
                             "kind": t.get("typeEn") or t.get("roleEn") or "element"})
         text = prompts.gemini_text_edit(regions, req.get("instruction", "") if multi else "", self._local_real(job))
         return text, [("marked-base-image", marked), ("color-mask" if multi else "mask", jdir / ("mask_color.png" if multi else "mask.png"))]
 
-    def _local_real(self, job: dict) -> str:
+    def _local_real(self, job: dict[str, Any]) -> str:
         """Yêu cầu ảnh thật khi sửa vùng; vật liệu lấy theo thiết kế sau sửa nếu có (sửa hình) để mô tả bề mặt đúng."""
         spec, _ = self.store.get(job["design_id"], job["rev"])
         op = job["request"].get("designOp")
@@ -72,7 +78,8 @@ class Packages(Component):
                 pass
         if op:
             return prompts.local(spec)
-        mats = [t.get("material") for t in job["request"].get("tasks") or [] if t.get("material")]
+        all_tasks: list[dict[str, Any]] = job["request"].get("tasks") or []
+        mats: list[str] = [str(t["material"]) for t in all_tasks if t.get("material")]
         return prompts.local(None, mats)
 
     def export_request(self, jid: str) -> Path:
@@ -94,15 +101,16 @@ class Packages(Component):
                    "style-reference": "anh da duyet cua goc khac (chi lay vat lieu, mau, anh sang; khong chep bo cuc)"}
         for old in jdir.glob("image-*.png"):  # bỏ bản đánh số của lần xuất trước (tên vai trò có thể đã đổi)
             old.unlink()
-        attached = []
+        attached: list[dict[str, Any]] = []
         for k, (role, pth) in enumerate(imgs, 1):
             fname = f"image-{k}-{role}.png"
             shutil.copyfile(pth, jdir / fname)
             attached.append({"order": k, "role": role, "description": image_name.get(role, role), "file": fname,
                              "dataUrl": "data:image/png;base64," + base64.b64encode(pth.read_bytes()).decode()})
-        task = []
-        for i, t in enumerate(req.get("tasks") or [], 1):
-            vt = t.get("position") or {}
+        task: list[dict[str, Any]] = []
+        req_tasks: list[dict[str, Any]] = [dict(x) for x in as_list(req.get("tasks")) or []]
+        for i, t in enumerate(req_tasks, 1):
+            vt: dict[str, Any] = t.get("position") or {}
             task.append({k: v for k, v in {
                 "task": i, "label": str(i), "borderColor": ZONE_COLORS[(i - 1) % len(ZONE_COLORS)][0],
                 "zoneColor": ZONE_COLORS[(i - 1) % len(ZONE_COLORS)][0] if len(req.get("tasks", [])) > 1 else "WHITE",
@@ -127,7 +135,7 @@ class Packages(Component):
         (jdir / "gemini-request.json").write_text(json.dumps(backends.gemini_body(text, [p for _, p in imgs], size),
                                                              ensure_ascii=False), encoding="utf-8")
         steps = "\n".join(f"  {d['order']}. {d['file']}  ({d['description']})" for d in attached)
-        kt = lean["validation"]
+        kt: dict[str, Any] = lean["validation"]
         doors = "".join(f"  ! {x}\n" for x in kt["errors"] + kt["warning"])
         (jdir / "AI-CHAT-GUIDE.txt").write_text(
             f"Job {jid} — use with ChatGPT, Claude or Gemini web\n"

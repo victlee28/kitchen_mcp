@@ -303,6 +303,10 @@
   "writers": [
    "workshop",
    "user"
+  ],
+  "usedBy": [
+   "common.hinge",
+   "module[].hinge"
   ]
  }
 }

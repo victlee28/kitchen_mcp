@@ -24,12 +24,13 @@ from . import builtin, lexicon
 from .catalog import Catalog
 from .lexicon import fold
 from .words import Said, said, say
+from .i18n import DEFAULT_LANG
 from .numeric import round_half_away
 from .spec import KitchenSpec, Module, to_data
 from . import vocab
 from . import cabinet_types
 
-ALLOWED_OPS = ("add", "remove", "update", "common", "lower-top", "multi")
+ALLOWED_OPS = ("add", "remove", "update", "common", "lower-top", "set-moldings", "multi")
 MAX_CHOICES = 12
 
 
@@ -131,11 +132,18 @@ def _add(spec: KitchenSpec, f: str, ids: list[str], catalog: Catalog) -> dict[st
 def _clause(spec: KitchenSpec, f: str, ids: list[str], catalog: Catalog) -> dict[str, Any] | tuple[dict[str, Any], Said]:
     """One clause -> (operation, summary) | a clarify result | an unsupported result. ``ids``: targets (mentioned or selected)."""
     storeys = _storeys_in(f, catalog)
+    molding = _first(f, "edit-molding", catalog)
+    if molding is not None:
+        return _moldings(spec, f, tuple(molding), catalog)
+    if _says(f, "hinge", catalog):
+        return _hinge(spec, f, ids, storeys, catalog)
     if _says(f, "add", catalog):
         return _add(spec, f, ids, catalog)
     if _says(f, "remove", catalog) and not _says(f, "handle", catalog):
+        if not ids and storeys and _first(f, "edit-all", catalog):     # "xóa hết tủ trên": every cabinet of that storey
+            ids = _pick(spec, [], storeys)
         if not ids:
-            return _clarify(said("edit.ask.remove"), [m.id for m in spec.module])
+            return _clarify(said("edit.ask.remove"), _pick(spec, [], storeys))
         whole = say("edit.choice.remove-whole")
         if _says(f, "door", catalog) and not _has(f, fold(whole)):   # "xóa cánh cửa": the cabinet's door, not the cabinet: ask before removing it
             return _clarify(said("edit.ask.remove-part", ids=", ".join(ids)), [whole])
@@ -184,6 +192,25 @@ def _clause(spec: KitchenSpec, f: str, ids: list[str], catalog: Catalog) -> dict
             return _clarify(said("edit.ask.door"), [m.id for m in spec.module])
         return (combine_ops([{"op": "update", "id": i, "changes": {"doorStyle": style}} for i in targets]),
                 said("summary.edit.door", style=style, ids=", ".join(targets)))
+    common = _first(f, "edit-common", catalog)
+    size = _mm(f)
+    if common is not None and size is not None and not _says(f, "width", catalog):   # "hạ mặt bếp xuống 850", "trần cao 2700"
+        return {"op": "common", "changes": {common: size}}, said("summary.edit.common-size", what=common, value=size)
+    if _first(f, "edit-vague", catalog) and size is None:           # "to ra một chút": how much?
+        return _clarify(said("edit.ask.how-much"))
+    new_type = _type_after_into(f, catalog)
+    if new_type is not None and not _says(f, "add", catalog):     # "đổi TD5 thành tủ ngăn kéo", "thay bằng tủ ngăn kéo"
+        if not ids:
+            return _clarify(said("edit.ask.type-which"), [m.id for m in spec.module])
+        return (combine_ops([{"op": "update", "id": i, "changes": {"type": new_type}} for i in ids]),
+                said("summary.edit.type", type=new_type, ids=", ".join(ids)))
+    if _says(f, "height", catalog) and size is not None:          # "TT2 cao 800"
+        targets = ids or (_pick(spec, [], storeys) if storeys else [])
+        if not targets:
+            return _clarify(said("edit.ask.height-which"), [m.id for m in spec.module])
+        return combine_ops([{"op": "update", "id": i, "changes": {"height": size}} for i in targets]), said("summary.edit.height", height=size, ids=", ".join(targets))
+    if _says(f, "change", catalog) and ids and size is not None and _color(f, catalog) is None:   # "đổi TD6 sang 400": a cabinet's size is its width
+        return combine_ops([{"op": "update", "id": i, "changes": {"width": size}} for i in ids]), said("summary.edit.width", width=size, ids=", ".join(ids))
     if _says(f, "width", catalog):
         width = _mm(f)
         if width is None:
@@ -196,12 +223,74 @@ def _clause(spec: KitchenSpec, f: str, ids: list[str], catalog: Catalog) -> dict
         slot = _first(f, "edit-slot", catalog)
         if slot is None and storeys:
             slot = "tall" if storeys == ("tall",) else "upper" if "upper" in storeys else "base"
+        if slot is None and ids:                                    # "đổi màu cánh tủ này sang gỗ sồi": the cabinets' own front
+            return (combine_ops([{"op": "update", "id": i, "changes": {"material": color}} for i in ids]),
+                    said("summary.edit.material-module", value=color, ids=", ".join(ids)))
         if slot is None:
             return _clarify(said("edit.ask.color-where"), [say(f"edit.choice.part.{k}") for k in ("base", "upper", "tall", "countertop", "wall", "floor")])
         value = say("material.stone-named", stone=color.lower()) if slot == "countertop" else color
         material = {**to_data(spec)["common"]["material"], slot: value}
         return {"op": "common", "changes": {"material": material}}, said("summary.edit.material", slot=slot, value=value)
     return {"status": "unsupported", "message": said("edit.not-understood")}
+
+
+def _without_ids(spec: KitchenSpec, f: str) -> str:
+    """The text with the cabinet ids it names taken out."""
+    for m in spec.module:
+        f = re.sub(rf"(?<![a-z0-9]){re.escape(fold(m.id))}(?![a-z0-9])", " ", f)
+    return f
+
+
+def _into_at(f: str, catalog: Catalog) -> int | None:
+    """Where the first "into" word ("thành", "sang", "bằng") ends, None when the text has none."""
+    hits = [m.end() for w, _ in _words("edit-into", catalog) for m in re.finditer(rf"(?<![a-z0-9]){re.escape(w)}(?![a-z0-9])", f)]
+    return min(hits) if hits else None
+
+
+def _type_after_into(f: str, catalog: Catalog) -> str | None:
+    """The cabinet type named after an "into" word ("đổi TD5 thành tủ ngăn kéo"): the type to change to."""
+    at = _into_at(f, catalog)
+    return None if at is None else _first(f[at:], "edit-type", catalog)
+
+
+def _typed(spec: KitchenSpec, f: str, catalog: Catalog) -> list[str]:
+    """Cabinets the text points at by their kind ("xóa tủ chậu", "tủ bếp nấu rộng 900"): the modules of the type it names before any
+    "into" word. A storey word ("tủ trên") names a storey, not a kind: none."""
+    at = _into_at(f, catalog)
+    head = f if at is None else f[:at]
+    storey_words = {w for w, _ in _words("edit-storey", catalog)}
+    for w, v in _words("edit-type", catalog):
+        if w not in storey_words and _has(head, w):
+            return [m.id for m in spec.module if m.type == v]
+    return []
+
+
+def _hinge(spec: KitchenSpec, f: str, ids: list[str], storeys: tuple[str, ...] | None,
+           catalog: Catalog) -> dict[str, Any] | tuple[dict[str, Any], Said]:
+    """"đổi bản lề giảm chấn", "TD3 bản lề lọt lòng": the catalog hinge of the cabinets named or clicked (or of a storey), else of the design."""
+    found = _item_named(f, "hinge", catalog)
+    if found is None:
+        return _clarify(said("edit.ask.hinge"), [str((as_dict(item.data.get("label")) or {}).get(DEFAULT_LANG) or item.id) for item in catalog.all("hinge")])
+    hinge = found[0]
+    if ids or storeys:
+        targets = _pick(spec, ids, storeys)
+        return (combine_ops([{"op": "update", "id": i, "changes": {"hinge": hinge}} for i in targets]),
+                said("summary.edit.hinge", hinge=hinge, ids=", ".join(targets)))
+    return {"op": "common", "changes": {"hinge": hinge}}, said("summary.edit.hinge-common", hinge=hinge)
+
+
+def _moldings(spec: KitchenSpec, f: str, variants: tuple[str, ...], catalog: Catalog) -> dict[str, Any] | tuple[dict[str, Any], Said]:
+    """"bỏ phào", "thêm phào chân": the design's moldings without / with the crown or base molding (``set-moldings``)."""
+    from .moldings import default_moldings
+    have = [to_data(m) for m in spec.moldings]
+    if _says(f, "remove", catalog):
+        kept = [m for m in have if m.get("variant") not in variants]
+        return {"op": "set-moldings", "moldings": kept}, said("summary.edit.moldings-off", which=", ".join(variants))
+    if _says(f, "add", catalog):
+        present = {m.get("variant") for m in have}
+        extra = [to_data(m) for m in default_moldings("crown" in variants, "base" in variants) if m.variant not in present]
+        return {"op": "set-moldings", "moldings": have + extra}, said("summary.edit.moldings-on", which=", ".join(variants))
+    return _clarify(said("edit.ask.moldings"), [say("edit.choice.moldings.add"), say("edit.choice.moldings.remove")])
 
 
 def interpret_edit(spec: KitchenSpec, text: str, scope: list[str] | None = None, catalog: Catalog = builtin.CATALOG) -> dict[str, Any]:
@@ -214,8 +303,14 @@ def interpret_edit(spec: KitchenSpec, text: str, scope: list[str] | None = None,
     ops: list[dict[str, Any]] = []
     lines: list[Said] = []
     joins = "|".join(re.escape(f" {w} ") for w, _ in _words("edit-split", catalog))
+    parts: list[str] = []
     for part in [p for p in re.split(r"[,;]" + (f"|{joins}" if joins else ""), f) if p.strip()]:
-        ids = _ids_in(spec, part) or named or selected
+        if parts and _ids_in(spec, part) and not _without_ids(spec, part).strip():
+            parts[-1] += " " + part          # "xóa TD1 và TD2": a part that only names cabinets belongs to the one before
+        else:
+            parts.append(part)
+    for part in parts:
+        ids = _ids_in(spec, part) or (_typed(spec, part, catalog) if not _says(part, "add", catalog) else []) or named or selected
         got = _clause(spec, part, ids, catalog)
         if isinstance(got, dict):
             return got
@@ -290,7 +385,8 @@ def _item_named(f: str, kind: str, catalog: Catalog) -> tuple[str, str] | None:
     best: tuple[int, str, str] | None = None
     for item in catalog.all(kind):
         label = as_dict(item.data.get("label")) or {}
-        for name in [fold(str(v)).strip() for v in label.values() if isinstance(v, str)] + [item.id.replace("-", " ")]:
+        aliases = [w for ws in (as_dict(item.data.get("aliases")) or {}).values() for w in (as_list(ws) or []) if isinstance(w, str)]
+        for name in [fold(str(v)).strip() for v in [*label.values(), *aliases] if isinstance(v, str)] + [item.id.replace("-", " ")]:
             if len(name) >= 4 and _has(f, name) and (best is None or len(name) > best[0]):
                 best = (len(name), item.id, name)
     return (best[1], best[2]) if best else None

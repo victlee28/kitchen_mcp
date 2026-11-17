@@ -5,6 +5,8 @@ thiếu ảnh mask, ảnh sai kích thước. Mọi kiểm tra trả {"ok", "err
 """
 from __future__ import annotations
 
+from typing import Any
+
 import base64
 import binascii
 import io
@@ -39,7 +41,7 @@ def _decode(data_url: str) -> tuple[Image.Image | None, str | None]:
         return None, f"không mở được ảnh ({type(e).__name__}) — có thể file bị cắt"
 
 
-def check_lean(lean: dict) -> dict:
+def check_lean(lean: dict[str, Any]) -> dict[str, Any]:
     """Kiểm tra request.json bản gọn (kitchen-ai-edit-request/2.x) — dùng ngay khi xuất và khi người dùng nạp file."""
     errors: list[str] = []
     doors: list[str] = []

@@ -1507,6 +1507,20 @@
   "value": "handle"
  },
  {
+  "id": "edit.verb.hinge",
+  "group": "edit-verb",
+  "aliases": {
+   "vi": [
+    "bản lề"
+   ],
+   "en": [
+    "hinge",
+    "hinges"
+   ]
+  },
+  "value": "hinge"
+ },
+ {
   "id": "edit.verb.door",
   "group": "edit-verb",
   "aliases": {
@@ -1585,6 +1599,7 @@
   "aliases": {
    "vi": [
     "chậu rửa",
+    "tủ chậu rửa",
     "tủ chậu"
    ],
    "en": [
@@ -1600,7 +1615,10 @@
    "vi": [
     "bếp từ",
     "bếp ga",
-    "bếp"
+    "bếp điện",
+    "bếp nấu",
+    "tủ bếp nấu",
+    "tủ dưới bếp"
    ],
    "en": [
     "cooktop",
@@ -1846,10 +1864,13 @@
   "group": "edit-slot",
   "aliases": {
    "vi": [
-    "mặt bàn"
+    "mặt bàn",
+    "mặt đá",
+    "mặt bếp"
    ],
    "en": [
-    "countertop"
+    "countertop",
+    "worktop"
    ]
   },
   "value": "countertop"
@@ -2836,6 +2857,207 @@
    ]
   },
   "value": "cabinets"
+ },
+ {
+  "id": "edit.verb.height",
+  "group": "edit-verb",
+  "aliases": {
+   "vi": [
+    "chiều cao",
+    "cao",
+    "hạ",
+    "nâng"
+   ],
+   "en": [
+    "height",
+    "high",
+    "lower",
+    "raise"
+   ]
+  },
+  "value": "height"
+ },
+ {
+  "id": "edit.verb.change",
+  "group": "edit-verb",
+  "aliases": {
+   "vi": [
+    "đổi",
+    "thay",
+    "chuyển",
+    "sửa"
+   ],
+   "en": [
+    "change",
+    "replace",
+    "switch",
+    "make"
+   ]
+  },
+  "value": "change"
+ },
+ {
+  "id": "edit.into",
+  "group": "edit-into",
+  "aliases": {
+   "vi": [
+    "thành",
+    "sang",
+    "bằng"
+   ],
+   "en": [
+    "into",
+    "to a",
+    "with a"
+   ]
+  },
+  "value": "into"
+ },
+ {
+  "id": "edit.all",
+  "group": "edit-all",
+  "aliases": {
+   "vi": [
+    "hết",
+    "tất cả",
+    "toàn bộ"
+   ],
+   "en": [
+    "all",
+    "every"
+   ]
+  },
+  "value": "all"
+ },
+ {
+  "id": "edit.vague",
+  "group": "edit-vague",
+  "aliases": {
+   "vi": [
+    "to ra",
+    "nhỏ lại",
+    "rộng ra",
+    "hẹp lại",
+    "to hơn",
+    "nhỏ hơn",
+    "rộng hơn",
+    "hẹp hơn",
+    "một chút",
+    "một ít",
+    "một tí"
+   ],
+   "en": [
+    "a bit",
+    "a little",
+    "bigger",
+    "smaller",
+    "wider",
+    "narrower"
+   ]
+  },
+  "value": "vague"
+ },
+ {
+  "id": "edit.molding.crown",
+  "group": "edit-molding",
+  "aliases": {
+   "vi": [
+    "phào nóc",
+    "phào trần",
+    "phào đỉnh"
+   ],
+   "en": [
+    "crown molding",
+    "crown moulding",
+    "cornice"
+   ]
+  },
+  "value": [
+   "crown"
+  ]
+ },
+ {
+  "id": "edit.molding.base",
+  "group": "edit-molding",
+  "aliases": {
+   "vi": [
+    "phào chân",
+    "len chân tủ",
+    "len chân"
+   ],
+   "en": [
+    "base molding",
+    "base moulding",
+    "skirting"
+   ]
+  },
+  "value": [
+   "base"
+  ]
+ },
+ {
+  "id": "edit.molding.all",
+  "group": "edit-molding",
+  "aliases": {
+   "vi": [
+    "phào"
+   ],
+   "en": [
+    "moldings",
+    "molding",
+    "mouldings",
+    "moulding"
+   ]
+  },
+  "value": [
+   "crown",
+   "base"
+  ]
+ },
+ {
+  "id": "edit.common.countertop",
+  "group": "edit-common",
+  "aliases": {
+   "vi": [
+    "mặt bàn",
+    "mặt đá",
+    "mặt bếp"
+   ],
+   "en": [
+    "countertop",
+    "worktop"
+   ]
+  },
+  "value": "countertop"
+ },
+ {
+  "id": "edit.common.ceiling",
+  "group": "edit-common",
+  "aliases": {
+   "vi": [
+    "trần nhà",
+    "trần"
+   ],
+   "en": [
+    "ceiling"
+   ]
+  },
+  "value": "ceiling"
+ },
+ {
+  "id": "edit.common.plinth",
+  "group": "edit-common",
+  "aliases": {
+   "vi": [
+    "chân tủ",
+    "chân đế"
+   ],
+   "en": [
+    "plinth",
+    "toe kick"
+   ]
+  },
+  "value": "plinthHeight"
  },
  {
   "id": "edit.opening.keep-size",

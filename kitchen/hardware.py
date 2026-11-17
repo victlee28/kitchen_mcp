@@ -45,6 +45,20 @@ def hinges(m: Module, doors: list[tuple[float, float, float, float]]) -> list[st
     return [out[i] for i in range(len(doors))]
 
 
+def hinge_item(m: Module, common_hinge: str | None, default: str) -> str:
+    """The catalog hinge of the cabinet's doors: its own, else the design's, else the workshop default."""
+    return m.hinge or common_hinge or default
+
+
+def hinge_offsets(h: float, edge: float, counts: tuple[tuple[float, int], ...]) -> list[float]:
+    """Where the hinges of a door ``h`` mm tall sit, from its bottom edge: ``edge`` from the top and bottom, the others evenly between;
+    how many by the door's height (``counts``: (door up to mm, hinges), the last row for anything taller)."""
+    n = next((c for up_to, c in counts if h <= up_to), counts[-1][1] if counts else 2)
+    n = max(2, n)
+    e = min(edge, h / 4)
+    return [e + i * (h - 2 * e) / (n - 1) for i in range(n)]
+
+
 def handle(tn: Handle, w: float, h: float, tier: str, hinge: str | None, horizontal: bool = False) -> dict[str, Any] | None:
     """Tay nắm trên một cánh/ngăn kéo rộng w, cao h. None nếu không có tay nhô ra (âm / nhấn mở)."""
     if tn.variant in ("none", "concealed"):

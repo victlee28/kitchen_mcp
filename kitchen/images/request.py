@@ -10,7 +10,7 @@ Both are plain JSON-like data (rule R4): a ``dataclass`` of JSON values in, a ``
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Literal, TypedDict
 
 JobKind = Literal["edit", "gen0", "geometry_edit"]

@@ -4,13 +4,13 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 import json
-import shutil
 
 from PIL import Image
 import numpy as np
 
 from .. import appliance_models, view_sync, edit, geometry, geometry_edit, imaging, layers, prompts, render, vocab
 from ..errors import InvalidInput
+from ..jsonview import as_dict, as_list
 if TYPE_CHECKING:
     from .jobs import ImageJobs
 from .request import JobRequest, NewJob, Task, TaskInput
@@ -25,15 +25,18 @@ class RequestBuilder(Component):
 
     @staticmethod
     def norm_tasks(tasks: list[dict[str, Any]] | None, target: str | None, material: str | None, instruction: str) -> list[TaskInput]:
-        if not tasks:
+        given: object = tasks       # JSON from a request: checked here, whatever the annotation says
+        if not given:
             if not target:
                 raise InvalidInput("targetLayer or a list of tasks is needed", code="no-task")
-            tasks = [{"targetLayer": target, "material": material, "instruction": instruction}]
-        if not isinstance(tasks, list) or len(tasks) > MAX_TASKS:
+            given = [{"targetLayer": target, "material": material, "instruction": instruction}]
+        items = as_list(given)
+        if items is None or len(items) > MAX_TASKS:
             raise InvalidInput(f"tasks must be a list of at most {MAX_TASKS}", code="too-many-tasks", params={"max": MAX_TASKS})
         out: list[TaskInput] = []
-        for i, t in enumerate(tasks, 1):
-            if not isinstance(t, dict):
+        for i, raw in enumerate(items, 1):
+            t = as_dict(raw)
+            if t is None:
                 raise InvalidInput(f"Task {i} is not valid", code="bad-task", params={"n": i})
             tl = t.get("targetLayer") or t.get("target") or t.get("target_layer")
             if not tl:
@@ -62,7 +65,7 @@ class RequestBuilder(Component):
             cat = layers.catalogue(spec, scene)
             cur = spec
             inst, meta = imaging.load_instances(d)
-            present = set(int(v) for v in np.unique(inst))
+            present = set(int(v) for v in np.unique(inst))  # pyright: ignore[reportUnknownMemberType] (numpy stubs)
             visible = {x["id"] for x in meta["instances"] if x["value"] in present}
             owner: dict[str, int] = {}
             union = np.zeros((H, W), bool)
@@ -174,12 +177,12 @@ class RequestBuilder(Component):
         req["styleReference"] = src
 
     @staticmethod
-    def _others(cat: list[dict], visible: set[str], ids: list[str], type: str) -> int:
+    def _others(cat: list[dict[str, Any]], visible: set[str], ids: list[str], type: str) -> int:
         """Số vật CÙNG LOẠI khác vẫn thấy trong ảnh mà không thuộc việc này (để dặn model giữ nguyên chúng)."""
         if not type or type in ("module", "wall", "floor"):
             return 0
         mine = set(ids)
-        kinds = {type} | ({"drawer", "glass-door"} if type == "door" else set())
+        kinds: set[str] = {type} | ({"drawer", "glass-door"} if type == "door" else set[str]())
         rest = [x for x in cat if x["variant"] == "part" and x["type"] in kinds and x["id"] in visible and x["id"] not in mine]
         if type == "molding":  # một đường phào gồm nhiều đoạn: đếm theo đường phào
             return len({x["module"] for x in rest})
@@ -204,7 +207,7 @@ class RequestBuilder(Component):
         key_new = json.loads((nd / "manifest.json").read_text(encoding="utf-8"))["renderKey"]
         m, info = geometry_edit.diff_mask(d, nd)
         lines_new = imaging.read(nd / "lines.png", "L")
-        forced = [id for x in desc for id in x.get("required", [])]
+        forced: list[str] = [str(id) for x in desc for id in x.get("required", [])]
         if forced:  # đổi kiểu cánh: render nhanh không dựng khung -> bắt buộc vẽ lại mặt trước các module đó
             fm, doors = geometry_edit.front_mask(nd, nxt, geometry.compile_spec(nxt, self.env.catalog()), forced)
             m |= fm
@@ -257,9 +260,9 @@ class RequestBuilder(Component):
             inst, meta = imaging.load_instances(d)
         except (OSError, ValueError, KeyError):
             return []
-        values = set(int(v) for v in np.unique(inst[region]))
+        values = set(int(v) for v in np.unique(inst[region]))  # pyright: ignore[reportUnknownMemberType] (numpy stubs)
         modules = {x.get("module") for x in meta.get("instances", []) if int(x.get("value", -1)) in values}
-        out = []
+        out: list[dict[str, Any]] = []
         catalog = self.env.catalog()
         by_id = appliance_models.models(catalog)
         for a in spec.appliances:

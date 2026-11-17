@@ -59,6 +59,28 @@
    "near": 2000,
    "snapTolerance": 30,
    "windowSill": 900
+  },
+  "hinge": {
+   "item": "clip-110-soft",
+   "edge": 100,
+   "counts": [
+    {
+     "upTo": 900,
+     "count": 2
+    },
+    {
+     "upTo": 1600,
+     "count": 3
+    },
+    {
+     "upTo": 2000,
+     "count": 4
+    },
+    {
+     "upTo": 2600,
+     "count": 5
+    }
+   ]
   }
  }
 ]

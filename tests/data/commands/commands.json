@@ -825,6 +825,98 @@
      "sill": 0
     }
    }
+  },
+  {
+   "text": "tủ trên rộng 900",
+   "scope": [
+    "TT3"
+   ],
+   "expect": {
+    "op": "update",
+    "id": "TT3",
+    "changes": {
+     "width": 900
+    }
+   },
+   "note": "tủ trên là tầng tủ, không phải loại: sửa tủ đang bấm"
+  },
+  {
+   "text": "đổi màu tủ bếp sang trắng",
+   "scope": [
+    "TD3"
+   ],
+   "expect": {
+    "op": "update",
+    "id": "TD3",
+    "changes": {
+     "material": "trắng"
+    }
+   },
+   "note": "\"tủ bếp\" không phải tủ bếp nấu"
+  },
+  {
+   "text": "thêm tủ ngăn kéo rộng 600",
+   "scope": [
+    "TD3"
+   ],
+   "expect": {
+    "op": "add",
+    "module": {
+     "type": "base-drawer",
+     "width": 600
+    },
+    "afterModule": "TD3"
+   }
+  },
+  {
+   "text": "thêm phào",
+   "expect": {
+    "op": "set-moldings"
+   }
+  },
+  {
+   "text": "chân tủ cao 120",
+   "expect": {
+    "op": "common",
+    "changes": {
+     "plinthHeight": 120
+    }
+   }
+  },
+  {
+   "text": "cho TD3 nhỏ lại",
+   "expect": "clarify",
+   "note": "không nói bao nhiêu"
+  },
+  {
+   "text": "đổi bản lề giảm chấn",
+   "expect": {
+    "op": "common",
+    "changes": {
+     "hinge": "clip-110-soft"
+    }
+   }
+  },
+  {
+   "text": "bản lề lọt lòng",
+   "scope": [
+    "TD3"
+   ],
+   "expect": {
+    "op": "update",
+    "id": "TD3",
+    "changes": {
+     "hinge": "clip-110-inset"
+    }
+   }
+  },
+  {
+   "text": "đổi bản lề",
+   "scope": [
+    "TD3"
+   ],
+   "expect": "clarify",
+   "note": "không nói loại bản lề"
   }
  ]
 }

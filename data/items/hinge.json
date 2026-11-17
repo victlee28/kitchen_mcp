@@ -8,7 +8,22 @@
   "openingAngle": 110,
   "overlay": "full",
   "softClose": true,
-  "cupDiameter": 35
+  "cupDiameter": 35,
+  "aliases": {
+   "vi": [
+    "bản lề giảm chấn",
+    "bản lề trùm ngoài",
+    "bản lề trùm kín",
+    "bản lề thường",
+    "giảm chấn",
+    "trùm ngoài"
+   ],
+   "en": [
+    "soft-close hinge",
+    "soft close hinge",
+    "full overlay hinge"
+   ]
+  }
  },
  {
   "id": "clip-110-half",
@@ -19,7 +34,18 @@
   "openingAngle": 110,
   "overlay": "half",
   "softClose": true,
-  "cupDiameter": 35
+  "cupDiameter": 35,
+  "aliases": {
+   "vi": [
+    "bản lề trùm nửa",
+    "bản lề cong vừa",
+    "trùm nửa"
+   ],
+   "en": [
+    "half overlay hinge",
+    "half-overlay hinge"
+   ]
+  }
  },
  {
   "id": "clip-110-inset",
@@ -30,7 +56,17 @@
   "openingAngle": 110,
   "overlay": "inset",
   "softClose": true,
-  "cupDiameter": 35
+  "cupDiameter": 35,
+  "aliases": {
+   "vi": [
+    "bản lề lọt lòng",
+    "bản lề cong nhiều",
+    "lọt lòng"
+   ],
+   "en": [
+    "inset hinge"
+   ]
+  }
  },
  {
   "id": "wide-165",
@@ -41,6 +77,20 @@
   "openingAngle": 165,
   "overlay": "full",
   "softClose": true,
-  "cupDiameter": 35
+  "cupDiameter": 35,
+  "aliases": {
+   "vi": [
+    "bản lề mở rộng",
+    "bản lề 165",
+    "bản lề góc mở lớn",
+    "mở rộng",
+    "góc mở lớn"
+   ],
+   "en": [
+    "wide-angle hinge",
+    "wide angle hinge",
+    "165 hinge"
+   ]
+  }
  }
 ]

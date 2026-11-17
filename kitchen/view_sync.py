@@ -25,7 +25,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from .images.request import StyleReference
 
 
-def snapshot(images: "ImageJobs", did: str, view: str, rev: int | None = None, size: list | tuple | None = None) -> dict[str, Any]:
+def snapshot(images: "ImageJobs", did: str, view: str, rev: int | None = None, size: list[Any] | tuple[Any, ...] | None = None) -> dict[str, Any]:
     """What the view shows at ``rev``: {"key", "layers": {layerId: material}, "extras": {...}}. ``size``: render size to look at."""
     if size:
         images.ensure_render(did, rev, view, *size)  # fills the cache at that size so layers() below reuses it
@@ -43,7 +43,7 @@ def snapshot(images: "ImageJobs", did: str, view: str, rev: int | None = None, s
     return {"key": hashlib.sha256(blob.encode()).hexdigest()[:16], "layers": rows, "extras": extras}
 
 
-def _changed(was: dict[str, Any], now: dict[str, Any]) -> list[dict]:
+def _changed(was: dict[str, Any], now: dict[str, Any]) -> list[dict[str, Any]]:
     out = []
     for lid in sorted(set(was["layers"]) | set(now["layers"])):
         a, b = was["layers"].get(lid), now["layers"].get(lid)
@@ -55,10 +55,10 @@ def _changed(was: dict[str, Any], now: dict[str, Any]) -> list[dict]:
     return out
 
 
-def view_status(images: "ImageJobs", did: str, rev: int | None = None) -> dict[str, dict]:
+def view_status(images: "ImageJobs", did: str, rev: int | None = None) -> dict[str, dict[str, Any]]:
     """Status of every view of the design at ``rev`` (latest by default). Views with no approved image are not rendered."""
     spec, r = images.store.get(did, rev)
-    out: dict[str, dict] = {}
+    out: dict[str, dict[str, Any]] = {}
     for view in geometry.views_of(spec):
         accepted = images.store.list_jobs(did, view, "accepted", 200)
         if not accepted:
@@ -116,7 +116,7 @@ def style_source(images: "ImageJobs", did: str, view: str, wanted: str = "auto")
     return None if best is None else {"view": best[1], "jobId": best[2], "auto": True}
 
 
-def regenerate_stale(images: "ImageJobs", did: str, views: list[str] | None = None, backend: str = "recolor", base_rev: int | None = None) -> dict:
+def regenerate_stale(images: "ImageJobs", did: str, views: list[str] | None = None, backend: str = "recolor", base_rev: int | None = None) -> dict[str, Any]:
     """Prepare (not send) one review job per view whose approved image shows a changed material.
 
     Each job re-applies the new materials onto the approved image. Nothing is sent to a backend until the user sends it.

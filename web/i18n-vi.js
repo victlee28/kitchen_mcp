@@ -1278,5 +1278,20 @@ export default {
  "name.layer.opening-leaves": "cánh cửa {module}",
  "name.layer.opening-frame": "khung cửa {module}",
  "name.layer.opening-handles": "tay nắm cửa {module}",
- "name.view.opening": "Cửa {module}"
+ "name.view.opening": "Cửa {module}",
+ "edit.ask.how-much": "Muốn thay đổi bao nhiêu mm? (ví dụ: rộng 900)",
+ "edit.ask.type-which": "Đổi loại cho tủ nào?",
+ "edit.ask.height-which": "Đổi chiều cao của tủ nào?",
+ "edit.ask.moldings": "Thêm hay bỏ phào?",
+ "edit.choice.moldings.add": "thêm phào",
+ "edit.choice.moldings.remove": "bỏ phào",
+ "summary.edit.common-size": "{what}: {value:g} mm",
+ "summary.edit.type": "Đổi {ids} thành tủ {type}",
+ "summary.edit.height": "Cao {height:g} mm cho {ids}",
+ "summary.edit.material-module": "Vật liệu mặt trước {ids}: {value}",
+ "summary.edit.moldings-off": "Bỏ phào ({which})",
+ "summary.edit.moldings-on": "Thêm phào ({which})",
+ "edit.ask.hinge": "Đổi sang bản lề nào? (ví dụ: bản lề giảm chấn, bản lề lọt lòng, bản lề mở rộng)",
+ "summary.edit.hinge": "Bản lề {hinge} cho {ids}",
+ "summary.edit.hinge-common": "Bản lề chung: {hinge}"
 };

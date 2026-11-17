@@ -326,12 +326,35 @@ TOOLS = [list_menu_commands, model_usage, get_menu_command, answer_menu_command,
 for tool_function in TOOLS:
     mcp.add_tool(tool_function, name=tool_function.__name__, description=(tool_function.__doc__ or '').strip(), structured_output=False if tool_function is render_views else None)
 
-def main() -> None:
-    logger.info('Starting kitchen-design MCP server (stdio), %d tools', len(TOOLS))
+def http_app() -> Any:
+    """The MCP app over streamable HTTP (``/mcp``). The bearer key (``mcp_http.BearerGate``) is what protects it, so the Host header
+    check meant for servers on 127.0.0.1 is off: LAN clients reach it by the machine's address."""
+    from mcp.server.transport_security import TransportSecuritySettings
+    return mcp.streamable_http_app(transport_security=TransportSecuritySettings(enable_dns_rebinding_protection=False))
+
+
+def main(argv: list[str] | None = None) -> None:
+    """``python server.py``: stdio (Claude Desktop on this machine). ``python server.py --http [--host H] [--port P]``: streamable HTTP for
+    the LAN, every request with ``Authorization: Bearer <KITCHEN_MCP_TOKEN>``."""
+    import argparse
+    parser = argparse.ArgumentParser(prog='server.py')
+    parser.add_argument('--http', action='store_true', help='serve over HTTP (needs KITCHEN_MCP_TOKEN)')
+    parser.add_argument('--host', default=None, help='default KITCHEN_MCP_HOST or 127.0.0.1; 0.0.0.0 = every network of this machine')
+    parser.add_argument('--port', type=int, default=None, help='default KITCHEN_MCP_PORT or 8766')
+    args = parser.parse_args(sys.argv[1:] if argv is None else argv)
     server = svc()
     logger.info('SQLite: %s · renders: %s', server.store.path, server.render_dir)
     try:
-        mcp.run('stdio')
+        if args.http:
+            import mcp_http
+            config = server.config
+            token = mcp_http.check_token(config.mcp_token)
+            host, port = args.host or config.mcp_host, args.port or config.mcp_port
+            logger.info('Starting kitchen-design MCP server (HTTP, bearer key required) on http://%s:%d/mcp, %d tools', host, port, len(TOOLS))
+            mcp_http.serve(http_app(), token, host, port)
+        else:
+            logger.info('Starting kitchen-design MCP server (stdio), %d tools', len(TOOLS))
+            mcp.run('stdio')
     except (KeyboardInterrupt, asyncio.CancelledError):
         logger.info('MCP server stopped')
 if __name__ == '__main__':

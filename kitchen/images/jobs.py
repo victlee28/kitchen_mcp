@@ -26,6 +26,7 @@ from .. import backends
 from ..catalog import Catalog
 from ..config import Config
 from ..errors import InvalidInput
+from ..jsonview import as_dict
 from ..store import ConflictError
 from .request import KINDS, MODES, NewJob, TaskInput
 from .base_images import BaseImages
@@ -110,7 +111,7 @@ class ImageJobs:
 
     def submit(self, new: NewJob) -> dict[str, Any]:
         did, view, target, instruction, mode, material, backend = new.did, new.view, new.target, new.instruction, new.mode, new.material, new.backend
-        reference, base_rev, kind, seed, params = new.reference, new.base_rev, new.kind, new.seed, new.params
+        base_rev, kind, params = new.base_rev, new.kind, new.params
         tasks, preview, geometry_items, operation, lighting = new.tasks, new.preview, new.geometry_items, new.operation, new.lighting
         if kind not in KINDS:
             raise InvalidInput("kind must be edit, gen0 or geometry_edit", code="bad-job-kind")
@@ -170,7 +171,7 @@ class ImageJobs:
             return self.store.update_job(jid, "awaiting-send", {"preview": True})
         return self.runners.dispatch(job)
 
-    def send(self, jid: str) -> dict:
+    def send(self, jid: str) -> dict[str, Any]:
         """Gửi job đang chờ (đã xem trước) sang backend. Thiết kế đổi hình học/camera sau khi tạo thì từ chối."""
         job = self.store.get_job(jid)
         if job["status"] != "awaiting-send":
@@ -183,7 +184,7 @@ class ImageJobs:
             if render.render_key(geometry.compile_spec(spec, dc), views[job["view"]], W, H) != job["render_key"]:
                 raise InvalidInput("The design's geometry or view changed after the job was made; its masks no longer fit", code="job-stale")
         if job["backend"] in ("gemini", "openai", "job-package"):  # model nhận chỉ dẫn: request phải đủ ảnh, đúng kích thước
-            kt = json.loads(self.packages.export_request(jid).read_text(encoding="utf-8")).get("validation") or {}
+            kt: dict[str, Any] = as_dict(json.loads(self.packages.export_request(jid).read_text(encoding="utf-8")).get("validation")) or {}
             if not kt.get("ok", True):
                 failed = "; ".join(map(str, cast(list[Any], kt.get("errors", []))))
                 raise InvalidInput("The request failed its check, not sent: " + failed, code="request-check-failed", params={"errors": failed})
@@ -194,28 +195,28 @@ class ImageJobs:
     def ensure_render(self, did: str, rev: int | None, view: str, width: int | None = None, height: int | None = None):
         return self.base.ensure_render(did, rev, view, width, height)
 
-    def layers(self, did: str, view: str, rev: int | None = None, all_layers: bool = False) -> dict:
+    def layers(self, did: str, view: str, rev: int | None = None, all_layers: bool = False) -> dict[str, Any]:
         return self.base.layers(did, view, rev, all_layers)
 
     def mask_png(self, did: str, view: str, layer_id: str, rev: int | None = None) -> bytes:
         return self.base.mask_png(did, view, layer_id, rev)
 
-    def pick(self, did: str, view: str, x: int, y: int, rev: int | None = None, radius: int = 0) -> dict:
+    def pick(self, did: str, view: str, x: int, y: int, rev: int | None = None, radius: int = 0) -> dict[str, Any]:
         return self.base.pick(did, view, x, y, rev, radius)
 
-    def save_beauty(self, did: str, view: str, image: bytes, rev: int | None = None) -> dict:
+    def save_beauty(self, did: str, view: str, image: bytes, rev: int | None = None) -> dict[str, Any]:
         """Ảnh render three.js (trình duyệt) -> beauty.png của rev/góc; dùng làm ảnh gốc khi chưa có ảnh AI đã duyệt."""
         return self.base.save_beauty(did, view, image, rev)
 
-    def import_base(self, did: str, view: str, image: bytes, rev: int | None = None, source: str = 'external image', fit: str = 'reject') -> dict:
+    def import_base(self, did: str, view: str, image: bytes, rev: int | None = None, source: str = 'external image', fit: str = 'reject') -> dict[str, Any]:
         """Replace the base image of a rev/view with an externally generated image (e.g. a fully lit ChatGPT render)."""
         return self.base.import_base(did, view, image, rev, source, fit)
 
-    def clear_imported_base(self, did: str, view: str, rev: int | None = None) -> dict:
+    def clear_imported_base(self, did: str, view: str, rev: int | None = None) -> dict[str, Any]:
         """Drop the imported base image of a rev/view so the default base image order applies again."""
         return self.base.clear_imported_base(did, view, rev)
 
-    def reference(self, did: str, view: str, key: str, d: Path) -> tuple[Path, dict]:
+    def reference(self, did: str, view: str, key: str, d: Path) -> tuple[Path, dict[str, Any]]:
         return self.base.reference(did, view, key, d)
 
     def export_request(self, jid: str) -> Path:
@@ -226,30 +227,30 @@ class ImageJobs:
         """Bản ĐẦY ĐỦ để kiểm tra (không gửi AI): toàn bộ yêu cầu nội bộ (renderKey, chi tiết bị sửa, thao tác thiết kế chờ ghi,"""
         return self.packages.export_full(jid)
 
-    def submit_result(self, jid: str, image: bytes) -> dict:
+    def submit_result(self, jid: str, image: bytes) -> dict[str, Any]:
         return self.results.submit_result(jid, image)
 
-    def accept(self, jid: str, apply_to_design: bool = False, base_rev: int | None = None) -> dict:
+    def accept(self, jid: str, apply_to_design: bool = False, base_rev: int | None = None) -> dict[str, Any]:
         return self.results.accept(jid, apply_to_design, base_rev)
 
-    def view_status(self, did: str, rev: int | None = None) -> dict:
+    def view_status(self, did: str, rev: int | None = None) -> dict[str, Any]:
         return self.results.view_status(did, rev)
 
-    def regenerate_stale(self, did: str, views: list[str] | None = None, backend: str = 'recolor', base_rev: int | None = None) -> dict:
+    def regenerate_stale(self, did: str, views: list[str] | None = None, backend: str = 'recolor', base_rev: int | None = None) -> dict[str, Any]:
         return self.results.regenerate_stale(did, views, backend, base_rev)
 
-    def reject(self, jid: str) -> dict:
+    def reject(self, jid: str) -> dict[str, Any]:
         return self.results.reject(jid)
 
     def regenerate(self, jid: str, seed: int | None = None) -> dict[str, Any]:
         """A new job with the same request (and a new seed when given)."""
         return self.results.regenerate(jid, seed)
 
-    def get(self, jid: str) -> dict:
+    def get(self, jid: str) -> dict[str, Any]:
         return self.results.get(jid)
 
-    def list(self, did: str | None = None, view: str | None = None, status: str | None = None, limit: int = 50) -> list[dict]:
+    def list(self, did: str | None = None, view: str | None = None, status: str | None = None, limit: int = 50) -> list[dict[str, Any]]:
         return self.results.list(did, view, status, limit)
 
-    def wait(self, jid: str, timeout: float = 60) -> dict:
+    def wait(self, jid: str, timeout: float = 60) -> dict[str, Any]:
         return self.runners.wait(jid, timeout)

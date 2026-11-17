@@ -5,10 +5,13 @@ bằng đúng ảnh gốc theo cấu tạo. Đo thay đổi ngoài mask trên �
 """
 from __future__ import annotations
 
+from typing import Any
+
 import json
 from pathlib import Path
 
 import numpy as np
+import numpy.typing as npt
 from PIL import Image, ImageFilter
 
 from .errors import InvalidInput
@@ -19,7 +22,7 @@ def read(path: Path, mode: str = "RGB") -> np.ndarray:
         return np.array(im.convert(mode))
 
 
-def load_instances(render_dir: Path) -> tuple[np.ndarray, dict]:
+def load_instances(render_dir: Path) -> tuple[npt.NDArray[np.int32], dict[str, Any]]:
     d = Path(render_dir)
     if not (d / "instance.png").exists():
         raise FileNotFoundError(f"Chưa có instance.png trong {d.name}; hãy render lại góc nhìn này")
@@ -35,7 +38,7 @@ def mask_of(render_dir: Path, part_ids: list[str]) -> np.ndarray:
     return np.isin(inst, list(want)) if want else np.zeros(inst.shape, bool)
 
 
-def pick(render_dir: Path, x: int, y: int, radius: int = 0) -> dict | None:
+def pick(render_dir: Path, x: int, y: int, radius: int = 0) -> dict[str, Any] | None:
     """Instance at a pixel. With radius > 0 a handle within that many pixels wins over a non-handle hit: handles are only a few pixels wide."""
     inst, meta = load_instances(render_dir)
     if not (0 <= y < inst.shape[0] and 0 <= x < inst.shape[1]):
@@ -157,7 +160,7 @@ def _grad(img: np.ndarray) -> np.ndarray:
     return np.maximum(gx, gy)
 
 
-def edge_alignment(img: np.ndarray, lines: np.ndarray) -> dict:
+def edge_alignment(img: np.ndarray, lines: np.ndarray) -> dict[str, Any]:
     """Ảnh AI có giữ đúng hình học không: tỷ lệ pixel nét (lines.png) có cạnh trong ảnh, so với vùng cách nét 6-10 px.
     Ảnh khớp: tyLeTrenNet cao hơn hẳn tyLeNgoaiNet. Ảnh bị lệch/vẽ lại: hai số gần nhau."""
     if img.shape[:2] != lines.shape[:2]:
@@ -172,9 +175,9 @@ def edge_alignment(img: np.ndarray, lines: np.ndarray) -> dict:
 
 
 def check(ref: np.ndarray, raw: np.ndarray, comp: np.ndarray, target: np.ndarray, edit_region: np.ndarray,
-          lines: np.ndarray | None) -> dict:
+          lines: np.ndarray | None) -> dict[str, Any]:
     """Ba nhóm kiểm tra: vùng ảnh (trong/ngoài mask), biên (so với lines.png), chẩn đoán ảnh thô."""
-    rep: dict = {}
+    rep: dict[str, Any] = {}
     outside = ~target
     d_out = np.abs(comp.astype(np.int16) - ref.astype(np.int16)).max(-1)
     rep["outsideMask"] = {"pixelsChanged": int((d_out[outside] > 0).sum()), "setPreserve": bool((d_out[outside] == 0).all())}

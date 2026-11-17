@@ -29,10 +29,19 @@ copy .env.example .env      # tùy chọn: DEEPSEEK_API_KEY... (.env được n�
   "args": ["C:\\Users\\XPC\\Desktop\\image\\mcp-imagev2\\server.py"]}}}
 ```
 
+- **MCP qua mạng LAN** (tùy chọn, mặc định tắt): `python server.py --http` chạy MCP qua HTTP tại `http://<máy>:8766/mcp`. Bắt buộc đặt khóa `KITCHEN_MCP_TOKEN` (≥ 16 ký tự; tạo bằng `python -c "import secrets; print(secrets.token_urlsafe(32))"`), không có khóa thì server không chạy; mọi request phải gửi `Authorization: Bearer <khóa>`, sai/thiếu → 401. `KITCHEN_MCP_HOST` mặc định `127.0.0.1` (chỉ máy này); đặt `0.0.0.0` để máy khác trong LAN gọi được, và mở cổng 8766 trên Windows Firewall cho mạng Private. `KITCHEN_MCP_PORT` đổi cổng. Không mở cổng này ra Internet. Claude Desktop ở máy khác nối qua cầu stdio `mcp-remote` (cần Node.js):
+
+```json
+{"mcpServers": {"kitchen-design-lan": {
+  "command": "npx",
+  "args": ["-y", "mcp-remote", "http://192.168.1.10:8766/mcp", "--allow-http", "--header", "Authorization:${AUTH_HEADER}"],
+  "env": {"AUTH_HEADER": "Bearer <khóa KITCHEN_MCP_TOKEN>"}}}}
+```
+
 - **Hộp thư lệnh** (`KITCHEN_MENU_COMMANDS=inbox`, mặc định): câu gõ trong menu chuột phải không chạy ngay mà được ghi vào `command-inbox/` (cạnh `kitchen.db`, kèm vật vừa bấm và revision); nút đổi thành "Gửi Claude". Nhắn Claude "làm các lệnh trong hộp thư": Claude dùng các tool MCP `list_menu_commands` → (`get_design`, `opening_command` / `interpret_edit` / `propose_template` …) → `apply_change` (đúng thao tác đã xem trước, `expect` = opHash) → `answer_menu_command`. Trang web hỏi hộp thư 4 giây một lần, tải lại thiết kế và hiện câu trả lời của Claude; lệnh chưa làm có nút "Rút lại". `KITCHEN_MENU_COMMANDS=direct` = như cũ. Web và MCP server phải dùng chung `KITCHEN_DB` (và `KITCHEN_COMMAND_INBOX` nếu đặt).
 - **Model ngôn ngữ của nhiều hãng** (`kitchen/model_gateway.py`, lõi `kitchen/model_contract.py`): mọi lời gọi model văn bản đi qua một cổng. Chọn hãng trong `.env`: `KITCHEN_LLM_PROVIDER` = `anthropic` (Claude) | `openai` | `deepseek` | `openrouter` | `ollama`, `KITCHEN_LLM_MODEL`, `KITCHEN_LLM_BASE_URL` (proxy / máy trong LAN), `KITCHEN_LLM_FALLBACK` (hãng dự phòng). Mỗi lời gọi ghi vào `logs/model-usage.jsonl` (cạnh `kitchen.db`; không ghi khóa); hạn mức ngày `KITCHEN_MODEL_BUDGET_TOKENS` / `KITCHEN_MODEL_BUDGET_USD` (USD theo `data/model-prices.json`, người dùng tự điền giá). Xem: `GET /api/model-usage`, tool MCP `model_usage`.
 - **Worker hộp thư lệnh** (`KITCHEN_INBOX_WORKER=auto` mặc định: có API thì tự bật, không có thì lệnh chờ nhắn Claude; `on` / `off`): model (`KITCHEN_INBOX_PROVIDER` hoặc `KITCHEN_LLM_PROVIDER`) tự làm lệnh chuột phải, không cần nhắn chat; model lỗi / hết hạn mức thì lệnh vẫn chờ để nhắn Claude, worker nghỉ 5 phút rồi thử lại; chỉ lưu được thao tác đã xem trước trong chính lệnh đó (opHash), tối đa 8 bước; lời dặn ở danh mục `prompt-text/inbox-worker`.
-- **Đo đọc câu lệnh**: `python tools/measure_commands.py [--llm] [--provider openai:<model>] [--record dir | --replay dir]` trên `tests/data/commands/commands.json` (60 câu); mốc luật trong `tests/data/commands/baseline.json` (chỉ được tăng).
+- **Đo đọc câu lệnh**: `python tools/measure_commands.py [--llm] [--provider openai:<model>] [--record dir | --replay dir]` trên `tests/data/commands/commands.json` (66 câu); mốc luật trong `tests/data/commands/baseline.json` (chỉ được tăng).
 - **Tạo ảnh bằng OpenAI**: backend `openai` (`OPENAI_API_KEY`, `OPENAI_IMAGE_MODEL`), cùng luồng job ảnh như `gemini`.
 - Test (Windows): `run_tests.bat setup` the first time, then `run_tests.bat`. It installs the project with the `dev` extra (pydantic, numpy, pillow, jsonschema, mcp, pyright), runs `python -m unittest discover -s tests`, then `node --test tests\js\menu-logic.test.mjs`. Without `pyright` the type ratchet (`tests/test_typecheck.py`) is skipped. Python 3.11+ is required.
 - Test (any OS): `pip install -e ".[dev]"` then `python -m unittest discover -s tests -v`
