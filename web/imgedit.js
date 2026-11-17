@@ -16,10 +16,21 @@ const { setStatus: status, run } = createStatus($('status'));
 const bust = (u) => u && `${u}${u.includes('?') ? '&' : '?'}t=${Date.now()}`;
 
 // ---------------- tab
+const FIRST_VIEW = 'plan';      // the view this tab opens on the first time (the whole floor plan), when the design has it
+let firstOpen = true;
 function showTab(img, skipLoad = false) {
+  startHere = false;          // a tab picked before the first design opens wins
   $('tab3d').classList.toggle('on', !img); $('tabImg').classList.toggle('on', img);
   $('tab3d').setAttribute('aria-selected', String(!img)); $('tabImg').setAttribute('aria-selected', String(img));
   $('pane3d').hidden = img; $('paneImg').hidden = !img; $('bar3d').hidden = img; $('barImg').hidden = !img;
+  const vs = $('viewSelect');
+  if (img && firstOpen && vs.options.length) {
+    firstOpen = false;
+    if (!skipLoad && vs.value !== FIRST_VIEW && [...vs.options].some((o) => o.value === FIRST_VIEW)) {
+      vs.value = FIRST_VIEW; vs.dispatchEvent(new Event('change'));      // the view changes everywhere; 'view-changed' loads this tab
+      return;
+    }
+  }
   if (img && !skipLoad) run(tx('ui.mo-anh'), load);
 }
 $('tab3d').addEventListener('click', () => showTab(false));
@@ -479,7 +490,11 @@ window.addEventListener('image-edit-request', async (ev) => { try {
   if (best.px < MIN_VISIBLE_PX) status(tx('ui.gan-nhu-khong-thay-o-goc-nhin', { 0: module || layer, 1: Math.max(best.px, 0) }), 'warn');
   else status(tx('ui.goc-nhin-px-chon-che-do-backend', { 0: module || layer, 1: best.view, 2: best.px }), 'ok');
 } catch (e) { console.error(e); status(e.message, 'warn'); } });
-window.addEventListener('design-opened', () => { if (active()) run(tx('ui.mo-anh'), load); });
+let startHere = true;       // the page opens on this tab (on the floor plan, see showTab) once the first design is shown
+window.addEventListener('design-opened', () => {
+  if (startHere) { showTab(true); return; }
+  if (active()) run(tx('ui.mo-anh'), load);
+});
 window.addEventListener('view-changed', () => { if (active()) run(tx('ui.mo-anh'), load); });
 $('designSelect').addEventListener('change', () => { S.layer = null; S.sel = []; S.job = null; S.tasks = []; renderTasks(); });
 loadBackends().catch((e) => status(e.message, 'warn'));

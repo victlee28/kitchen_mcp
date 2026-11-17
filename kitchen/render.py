@@ -24,7 +24,7 @@ from typing import Any
 import numpy as np
 from PIL import Image
 
-from . import builtin, runs
+from . import builtin, runs, two_point
 from .catalog import Catalog
 from .errors import InvalidInput
 from .geometry import Scene, compile_spec, views_of
@@ -56,10 +56,13 @@ def _face_normals(part) -> np.ndarray:
 
 
 class Camera:
+    """A pinhole camera for a view. Eye-level views are two-point perspective (``two_point``): the camera is level and the principal point
+    is moved (``cy``) so the point the view aims at stays in the middle; vertical edges stay vertical."""
     def __init__(self, view: ViewAngle, width: int, height: int):
         self.p = np.array(view.position, float)
         t = np.array(view.lookAt, float)
-        f = t - self.p
+        lv = two_point.level(view.position, view.lookAt)
+        f = np.array(lv.forward, float) if lv else t - self.p
         f /= np.linalg.norm(f)
         up = np.array([0.0, 1.0, 0.0])
         if abs(f @ up) > 0.999:  # nhìn thẳng xuống/lên: lấy trục -z làm "lên" của ảnh
@@ -69,6 +72,7 @@ class Camera:
         self.f, self.r, self.u = f, r, u
         self.w, self.h = width, height
         self.focal = (height / 2) / math.tan(math.radians(view.verticalFov) / 2)
+        self.cx, self.cy = width / 2, height / 2 + (self.focal * lv.shift if lv else 0.0)     # image row of the horizon (two-point)
 
     def to_camera(self, pts: np.ndarray) -> np.ndarray:
         d = pts - self.p
@@ -76,7 +80,7 @@ class Camera:
 
     def json(self) -> dict:
         R = np.stack([self.r, -self.u, self.f])  # hàng: trục camera (x phải, y xuống, z tới) theo OpenCV
-        return {"width": self.w, "height": self.h, "fx": self.focal, "fy": self.focal, "cx": self.w / 2, "cy": self.h / 2,
+        return {"width": self.w, "height": self.h, "fx": self.focal, "fy": self.focal, "cx": self.cx, "cy": self.cy,
                 "R_world_to_cam": R.tolist(), "t": (-R @ self.p).tolist(), "position_m": self.p.tolist(),
                 "convention": "OpenCV: x phải, y xuống, z hướng nhìn; toạ độ thế giới tính bằng mét"}
 
@@ -117,8 +121,8 @@ def rasterize(scene: Scene, camera: Camera):
             if len(poly) < 3:
                 continue
             P = np.array(poly)
-            sx = W / 2 + camera.focal * P[:, 0] / P[:, 2]
-            sy = H / 2 - camera.focal * P[:, 1] / P[:, 2]
+            sx = camera.cx + camera.focal * P[:, 0] / P[:, 2]
+            sy = camera.cy - camera.focal * P[:, 1] / P[:, 2]
             iz = 1.0 / P[:, 2]
             for t in range(1, len(P) - 1):
                 tri = [0, t, t + 1]
@@ -162,8 +166,8 @@ def rasterize(scene: Scene, camera: Camera):
             if len(poly) < 3:
                 continue
             P = np.array(poly)
-            sx = W / 2 + camera.focal * P[:, 0] / P[:, 2]
-            sy = H / 2 - camera.focal * P[:, 1] / P[:, 2]
+            sx = camera.cx + camera.focal * P[:, 0] / P[:, 2]
+            sy = camera.cy - camera.focal * P[:, 1] / P[:, 2]
             iz = 1.0 / P[:, 2]
             group = _face_group(f_idx, nprof, len(mesh.faces))
             for t in range(1, len(P) - 1):
@@ -247,7 +251,7 @@ def scene_hash(scene: Scene) -> str:
 
 def render_key(scene: Scene, view: ViewAngle, width: int, height: int) -> str:
     v = json.dumps(view.model_dump(mode="json"), sort_keys=True)
-    return hashlib.sha256(f"{scene_hash(scene)}|{v}|{width}x{height}".encode()).hexdigest()[:16]
+    return hashlib.sha256(f"{scene_hash(scene)}|{v}|{width}x{height}|{two_point.PROJECTION}".encode()).hexdigest()[:16]
 
 
 _DARK = np.array([0.35, 0.85, 0.40]) / np.linalg.norm([0.35, 0.85, 0.40])
@@ -401,8 +405,8 @@ def render_view(scene: Scene, view: ViewAngle, out_dir: Path, width: int = 1280,
     if wall_face_refs:                          # each wall face its own instance (layer): "<wall part>#<face>", with the face's id
         ys0, xs0 = np.mgrid[0:height, 0:width]
         zc = np.where(hit, zbuf, 0.0)
-        xc = (xs0 + 0.5 - width / 2) / camera.focal * zc
-        yc = -(ys0 + 0.5 - height / 2) / camera.focal * zc
+        xc = (xs0 + 0.5 - camera.cx) / camera.focal * zc
+        yc = -(ys0 + 0.5 - camera.cy) / camera.focal * zc
         world = (camera.p + xc[..., None] * camera.r + yc[..., None] * camera.u + zc[..., None] * camera.f) * 1000
         ipid, split = _split_faces(pid, hit, nw, world, all_parts, wall_face_refs)
     if len(all_parts) + len(split) >= 65535:

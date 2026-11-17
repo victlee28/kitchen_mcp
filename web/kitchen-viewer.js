@@ -6,6 +6,7 @@ import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUnifo
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { buildKitchen } from './scene-loader.js';
 import { clickEffect, dragChange, dragTurn, floorPoint, isClick, opensMenu, pickTarget, sceneToMm, surfaceHit } from './menu-logic.js';
+import { twoPoint } from './two-point.js';
 
 /**
  * opts: { container, moduleIds() -> string[] | null (null: nothing to pick yet), extraPickables() -> Object3D[],
@@ -33,12 +34,19 @@ export function createViewer(opts) {
   let meshes = []; let doc = null; let views = {}; let docCams = {}; let hiddenByView = []; let selected = null;
   let faces = new Map(); let wallFaces = []; let litFaces = [];     // wall surfaces: id -> {record, mesh}; the default walls' faces (not structures)
 
+  let size = { w: 1, h: 1 };
   function resize() {
-    const w = container.clientWidth, h = container.clientHeight;
+    const w = container.clientWidth, h = container.clientHeight; size = { w: Math.max(w, 1), h: Math.max(h, 1) };
     renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
   }
+  // two-point perspective: after the orbit controls aim the camera, an eye-level view is levelled and its picture shifted (two-point.js)
+  function levelCamera() {
+    const p = camera.position, t = controls.target;
+    const tp = twoPoint([p.x, p.y, p.z], [t.x, t.y, t.z], camera.fov, size.h);
+    if (tp) { camera.lookAt(...tp.look); camera.setViewOffset(size.w, size.h, 0, tp.offsetY, size.w, size.h); } else if (camera.view?.enabled) camera.clearViewOffset();
+  }
   new ResizeObserver(resize).observe(container);
-  (function loop() { requestAnimationFrame(loop); controls.update(); renderer.render(scene3, camera); })();
+  (function loop() { requestAnimationFrame(loop); controls.update(); levelCamera(); renderer.render(scene3, camera); })();
 
   // ---- overlay: the line of a run being drawn, and the handles of the selected cabinet's run (never part of the kitchen document)
   const overlay = new THREE.Group(); scene3.add(overlay);

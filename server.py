@@ -301,7 +301,9 @@ def list_menu_commands(status: Literal['pending', 'working', 'done', 'failed', '
     proposal, save it with apply_change (expect = proposal.opHash), then answer_menu_command. Ask the user in chat when a
     sentence is unclear rather than guessing; a sentence you cannot do is answered status 'failed' with the reason.
 
-    The inbox is a queue: when asked to do the inbox, carry out every pending command one after another, oldest first, taking each
+    When carrying one out hits a problem the user must decide (the space is too shallow, an appliance does not fit, the preview brings
+    in an error), save nothing and answer 'question' with 2-4 choices of how to go on: the web app puts them up in a question panel and the
+    user's pick comes back as a new command (replyTo). The inbox is a queue: when asked to do the inbox, carry out every pending command one after another, oldest first, taking each
     with start_menu_command before working on it (a background model may be carrying the queue out too; 'working' = taken, with worker
     'worker' or 'claude'; a command start_menu_command refuses as taken is skipped). The user can keep sending while you work: list again
     when the queue is empty.

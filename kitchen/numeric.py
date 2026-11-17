@@ -33,3 +33,16 @@ def round_int(x: float) -> int:
 
 def near(a: float, b: float, eps: float = EPS_MM) -> bool:
     return abs(a - b) <= eps
+
+
+def polygon_centroid(points: list[tuple[float, float]]) -> tuple[float, float]:
+    """The area centroid of a simple polygon ``[(x, z), ...]``; the mean of its corners when it has no area (a line, a point)."""
+    a = cx = cz = 0.0
+    n = len(points)
+    for i in range(n):
+        (x0, z0), (x1, z1) = points[i], points[(i + 1) % n]
+        c = x0 * z1 - x1 * z0
+        a += c; cx += (x0 + x1) * c; cz += (z0 + z1) * c
+    if abs(a) < 1e-9:
+        return sum(p[0] for p in points) / n, sum(p[1] for p in points) / n
+    return cx / (3 * a), cz / (3 * a)

@@ -49,7 +49,7 @@ test('window.kitchenJson is assigned only by json-view.js', () => {
   for (const f of files) if (/window\.kitchenJson\s*=[^=]/.test(src[f])) assert.equal(f, 'json-view.js');
 });
 
-const NO_DOM_FILES = ['design-controller.js'];   // the controller talks to the page only through callbacks
+const NO_DOM_FILES = ['design-controller.js', 'two-point.js'];   // the controller talks to the page only through callbacks
 
 test('pure logic modules (*-logic.js, design-controller.js) touch neither the DOM nor the network', () => {
   for (const f of files.filter((x) => x.endsWith('-logic.js') || NO_DOM_FILES.includes(x))) {
@@ -60,7 +60,7 @@ test('pure logic modules (*-logic.js, design-controller.js) touch neither the DO
 test('kitchen-viewer.js knows nothing of the design state, the API or the popup', () => {
   const code = src['kitchen-viewer.js'].replace(/\/\/.*$/gm, '');
   assert.ok(!/\bfetch\(|document\.getElementById|\bstate\b|\$\(/.test(code), 'kitchen-viewer.js reaches into the page');
-  assert.deepEqual(deps('kitchen-viewer.js').sort(), ['menu-logic.js', 'scene-loader.js']);
+  assert.deepEqual(deps('kitchen-viewer.js').sort(), ['menu-logic.js', 'scene-loader.js', 'two-point.js']);
 });
 
 test('design-editor.js depends only on dom/design-logic and receives everything else', () => {

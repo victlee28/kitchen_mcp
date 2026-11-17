@@ -16,7 +16,7 @@ from .store import ConflictError, Store
 from .menu_commands import clean_id as clean_command_id
 from . import legacy as legacy_schema
 from .edit import OPENING_OPS  # noqa: F401  (the MCP adapter offers exactly these opening operations)
-from . import builtin, cabinet_types, catalog as cat, layout_solver, catalog_csv, catalog_files, i18n, lexicon, words
+from . import builtin, cabinet_types, catalog as cat, layout_solver, catalog_csv, catalog_files, i18n, lexicon, numeric, words
 from .config import Config
 from .identity import IdentityProvider, provider as identity_provider
 from .errors import InvalidInput, KitchenError, NotFound
@@ -108,8 +108,25 @@ class KitchenService:
     def command_put(self, design_id: str, text: Any, place: Any, base_rev: Any = None, lang: Any = None, reply_to: Any = None) -> dict:
         """A right-click sentence, with what was clicked, left for Claude (the design must exist). ``reply_to``: the id of an answered
         command this sentence answers (Claude's question, or a change the user wants otherwise)."""
-        self.store.get(design_id)
+        spec, _ = self.store.get(design_id)
+        if isinstance(place, dict) and place.get('structureId') and not isinstance(place.get('point'), dict):
+            at = self._structure_point(spec, str(place['structureId']))      # picked on the layered picture: no floor point, the object's middle
+            if at is not None:
+                place = {**place, 'point': at}
         return self.commands.put(design_id, text, place, base_rev, lang, clean_command_id(reply_to) if reply_to is not None else None)
+
+    def _structure_point(self, spec: KitchenSpec, structure_id: str) -> dict | None:
+        """The middle of a floorplan object (room frame, mm): where a click on it stands in when none was given (a pick on the layered
+        picture has no floor point). None without a floorplan or such an object."""
+        scene = geometry.compile_spec(spec, self.catalog())
+        ctx = roomctx.for_spec(spec, scene.lsau, scene.lphai)
+        sid = structure_id if structure_id.startswith('STRUCT-') else f'STRUCT-{structure_id}'
+        struct = next((st for st in ctx.structures if st['id'] in (sid, structure_id)), None) if ctx is not None else None
+        pts = [(float(p['x']), float(p['z'])) for p in (struct or {}).get('outline') or []]
+        if not pts:
+            return None
+        x, z = numeric.polygon_centroid(pts)
+        return {'x': numeric.round_half_away(x, 1), 'z': numeric.round_half_away(z, 1)}
 
     def command_list(self, status: str | None = None, design_id: str | None = None) -> list[dict]:
         return self.commands.list(status, design_id)
@@ -842,6 +859,8 @@ class KitchenService:
         if template.get('kind') != 'run-i':
             raise InvalidInput("template.kind must be 'run-i', 'run-line', 'corner', 'join-runs', 'replace-system' or 'replace-appliance'", code='bad-template-kind')
         point = template.get('point')
+        if not isinstance(point, dict) and template.get('structureId'):
+            point = self._structure_point(spec, str(template['structureId']))      # no click point: the middle of the object
         if not isinstance(point, dict) or not all(isinstance(point.get(k), (int, float)) for k in ('x', 'z')):
             raise InvalidInput('template.point needs numeric x and z (mm, room frame)', code='bad-template-point')
         prompt = template.get('prompt')
@@ -896,6 +915,8 @@ class KitchenService:
         if wish is None:
             return {**out, 'status': 'not-opening'}
         point_raw = place.get('point') if isinstance(place, dict) else None
+        if not isinstance(point_raw, dict) and isinstance(place, dict) and place.get('structureId'):
+            point_raw = self._structure_point(spec, str(place['structureId']))      # no click point: the middle of the picked object
         point = (float(point_raw['x']), float(point_raw['z'])) if isinstance(point_raw, dict) and all(
             isinstance(point_raw.get(k), (int, float)) for k in ('x', 'z')) else None
         element = str(place.get('structureId') or '') if isinstance(place, dict) else ''

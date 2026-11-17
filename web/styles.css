@@ -105,3 +105,9 @@ label.kind{display:inline-flex;align-items:center;gap:4px;margin-right:10px;colo
 #opForm .unsure{background:#fff3c4;border-color:#d9a400}
 .opening-preview{display:flex;flex-wrap:wrap;gap:8px}.opening-preview figure{margin:0}.opening-preview figcaption{font-size:12px}
 .opening-preview .op-frame{fill:#d9d4c7;stroke:#7a7062}.opening-preview .op-leaf{fill:#b88a5c;stroke:#5e4630}.opening-preview .op-active{fill:#9c6b3f;stroke:#5e4630}.opening-preview .op-glass{fill:#bfe2ef;stroke:#5e8ea3}
+.ask-panel{position:fixed;right:20px;bottom:20px;z-index:60;width:min(420px,calc(100vw - 40px));background:#fff;border:1px solid #d9d2c3;border-radius:12px;box-shadow:0 10px 32px rgba(0,0,0,.18);padding:12px 14px;font-size:13px}
+.ask-panel:focus{outline:none}.ask-head{display:flex;align-items:center;gap:8px}.ask-head b{flex:1}.ask-count{color:#777;font-size:12px}
+.ask-about{margin:6px 0 2px;color:#666;font-size:12px}.ask-question{margin:4px 0 10px;white-space:pre-wrap;line-height:1.45}
+.ask-options{display:flex;flex-direction:column;gap:6px}.ask-option{display:flex;align-items:center;gap:10px;text-align:left;padding:8px 10px;border:1px solid #e3dccb;border-radius:8px;background:#fffdf7;color:#2a2a2a;cursor:pointer;font:inherit;font-weight:400}
+.ask-option:hover,.ask-option:focus{border-color:#9a6a12;background:#fff7e6;outline:none}.ask-key{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;border-radius:6px;background:#f1ece0;font-size:12px;font-weight:600}
+.ask-row{display:flex;gap:6px;margin-top:10px}.ask-other{flex:1;min-width:0}.ask-foot{display:flex;justify-content:flex-end;margin-top:8px}

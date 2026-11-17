@@ -40,11 +40,16 @@ class CommandInbox:
         return record
 
     def _new_id(self) -> str:
+        """``YYYYMMDD-HHMMSS-xxxx``; ids made in the same second sort in the order they were made (the queue is carried out by id)."""
         stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        same = sorted(p.stem for p in self.root.glob(f"{stamp}-*.json")) if self.root.exists() else []
+        low = int(same[-1][-4:], 16) + 1 if same else 0
         while True:
-            cid = f"{stamp}-{secrets.token_hex(2)}"
+            n = low + secrets.randbelow(16) if same else secrets.randbelow(0x8000)
+            cid = f"{stamp}-{min(n, 0xffff):04x}"
             if not self._path(cid).exists():
                 return cid
+            low = n + 1
 
     def put(self, design_id: str, text: Any, place: Any, base_rev: Any, lang: Any, reply_to: str | None = None) -> dict[str, Any]:
         """A new command; ``reply_to``: the answered command it answers (marked ``followUp``, and ``replied`` if it asked)."""

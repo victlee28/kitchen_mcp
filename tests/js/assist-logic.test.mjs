@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { opensOrSaves, replacesWithDoor, joinsRuns, styleFromOptions, styleFromValue, interpretBody, describeInterpret, confirmBody, checkUpload, recognizeBody, recognizeJobBody, anchorFor, photoOpeningHeadline, describeRecognition, templateIntent, mentionsReference, recognitionLines, commandPlace, facesForTarget, commandBody, answerCard, replyBody, keepAnswers, inboxNews, taskList, describeCommandAnswer } from '../../web/assist-logic.js';
+import { opensOrSaves, replacesWithDoor, joinsRuns, styleFromOptions, styleFromValue, interpretBody, describeInterpret, confirmBody, checkUpload, recognizeBody, recognizeJobBody, anchorFor, photoOpeningHeadline, describeRecognition, templateIntent, mentionsReference, recognitionLines, commandPlace, facesForTarget, commandBody, answerCard, replyBody, keepAnswers, inboxNews, taskList, describeCommandAnswer, openQuestions, pickByKey } from '../../web/assist-logic.js';
 
 const prop = (over = {}) => ({ id: 'd1', baseRev: 4, opHash: 'h', operation: { op: 'remove', id: 'TD1' }, applicable: true, unchanged: false,
   diff: { modules: { added: [], removed: ['TD1'], changed: {} }, other: [] }, validation: { introduced: [], resolved: [] }, ...over });
@@ -194,4 +194,15 @@ test('the task list: the waiting commands in order, the one being done first-cla
     [[1, 'a', 'working', 'worker', false], [2, 'b', 'pending', null, true], [3, 'c', 'working', 'claude', false]]);
   assert.equal(t.more, 0);
   assert.deepEqual([taskList(list, 'd1', 2).shown.length, taskList(list, 'd1', 2).more], [2, 1]);
+});
+
+test('the question panel: the open questions of the design on screen, and keys 1-9 pick a choice', () => {
+  const answers = [{ id: 'q1', designId: 'd1', status: 'question', text: 'tạo bếp', reply: 'Sâu 350, làm sao?', choices: ['Sâu 600', 'Bỏ tủ lạnh'] },
+    { id: 'q2', designId: 'd2', status: 'question', text: 'x', reply: '?' }, { id: 'a1', designId: 'd1', status: 'done', text: 'y', revision: 3 }];
+  const qs = openQuestions(answers, 'd1', 3);
+  assert.deepEqual(qs.map((q) => [q.id, q.designId, q.reply, q.choices]), [['q1', 'd1', 'Sâu 350, làm sao?', ['Sâu 600', 'Bỏ tủ lạnh']]]);
+  assert.equal(pickByKey('2', qs[0].choices), 'Bỏ tủ lạnh');
+  assert.equal(pickByKey('3', qs[0].choices), null);
+  assert.equal(pickByKey('a', qs[0].choices), null);
+  assert.equal(pickByKey('0', qs[0].choices), null);
 });

@@ -2,7 +2,8 @@
 // The server decides what a change means (POST .../propose previews, POST .../ops saves); nothing here edits data directly.
 import { el } from './dom.js';
 import { request } from './api-client.js';
-import { opensOrSaves, replacesWithDoor, joinsRuns, interpretBody, describeInterpret, templateIntent, systemIntent, mentionsReference, checkUpload, recognizeBody, recognizeJobBody, anchorFor, photoOpeningHeadline, describeRecognition, recognitionLines, commandPlace, facesForTarget, commandBody, inboxNews, taskList, describeCommandAnswer, answerCard, replyBody, keepAnswers } from './assist-logic.js';
+import { opensOrSaves, replacesWithDoor, joinsRuns, interpretBody, describeInterpret, templateIntent, systemIntent, mentionsReference, checkUpload, recognizeBody, recognizeJobBody, anchorFor, photoOpeningHeadline, describeRecognition, recognitionLines, commandPlace, facesForTarget, commandBody, inboxNews, taskList, describeCommandAnswer, answerCard, replyBody, keepAnswers, openQuestions } from './assist-logic.js';
+import { createAskPanel } from './ask-panel.js';
 import { actionsFor, buildGroupOp, buildOp, describeProposal, groupActions, layerFor, lineTemplate, menuPosition, DOOR_STYLES, HANDLE_VARIANTS, RUN_ACTIONS, RUN_TURNS, systemTemplate, edgeChoices, modelChoices, applianceLayer, lineAlongWall, wallSegments, openingCommand, cabinetTypeChoices, imageTarget } from './menu-logic.js';
 import { groupLabel, groupLayerIds, manySystems } from './design-logic.js';
 import * as catalog from './catalog-client.js';
@@ -64,7 +65,7 @@ export function createModuleMenu(ctx) {
     const before = sig(waitingNow);
     waitingNow = waiting;
     if (gone.size) { sent = sent.filter((c) => !gone.has(c.id)); keepSent(sent); }
-    if (news.length) { answers = keepAnswers(answers, news); keepAnswersStored(answers); }
+    if (news.length) { answers = keepAnswers(answers, news); keepAnswersStored(answers); asker.ask(openQuestions(news, id, rev)); }
     const said = news.map((c) => describeCommandAnswer(c, rev));
     if (said.some((d) => d.reload)) { try { await ctx.reload(); } catch { /* the reply is still shown */ } }
     said.forEach((d) => ctx.setStatus(d.text, d.tone, { hold: ANSWER_HOLD_MS }));   // kept while the panels the reload refreshes report in
@@ -89,25 +90,29 @@ export function createModuleMenu(ctx) {
     } catch (e) { busy = false; redraw(text, e.message); }
   }
 
-  // The user's answer to one of Claude's answers (a pick of its choices, or the sentence typed): a new command that names it.
-  async function sendReply(card, text) {
+  // The user's answer to one of Claude's answers (a pick of its choices, or the sentence typed): a new command that names it, queued
+  // like any other. {line} when sent, {error} otherwise.
+  async function postReply(card, text) {
     const { id, rev } = ctx.getState();
     let body;
-    try { body = replyBody(text, rev, card.id, lang()); } catch { return redraw(text, tx('ui.command.type-reply')); }
+    try { body = replyBody(text, rev, card.id, lang()); } catch { return { error: tx('ui.command.type-reply') }; }
     busy = true;
     try {
       const { status, data } = await call(`/api/designs/${id}/command`, body);
       busy = false;
-      if (!data || data.error || status !== 201) return redraw(text, data?.error || tx('ui.loi', { 0: status }));
+      if (!data || data.error || status !== 201) return { error: data?.error || tx('ui.loi', { 0: status }) };
       forgetAnswer(card.id);
       sent = [...sent, { id: data.id, text: data.text, designId: id }]; keepSent(sent);
       waitingNow = [...waitingNow, data];
       const line = tx('ui.command.replied', { 0: data.id });
       ctx.setStatus(line, 'ok');
-      redraw('', line);
       watchInbox();
-    } catch (e) { busy = false; redraw(text, e.message); }
+      return { line };
+    } catch (e) { busy = false; return { error: e.message }; }
   }
+  async function sendReply(card, text) { const r = await postReply(card, text); return r.error ? redraw(text, r.error) : redraw('', r.line); }
+  // a question Claude asked comes up by itself, in a panel of its own (the right-click menu need not be open)
+  const asker = createAskPanel({ onAnswer: async (card, text) => (await postReply(card, text)).error || null });
 
   // Undo of a change Claude made: the design back to the revision before it (only while nothing else changed since).
   async function undoAnswer(card) {
@@ -125,7 +130,7 @@ export function createModuleMenu(ctx) {
     } catch (e) { busy = false; redraw('', e.message); }
   }
 
-  function forgetAnswer(cid) { answers = answers.filter((a) => a.id !== cid); keepAnswersStored(answers); }
+  function forgetAnswer(cid) { answers = answers.filter((a) => a.id !== cid); keepAnswersStored(answers); asker.forget(cid); }
 
   // Claude's answers for this design, newest last: the reply, its choices, and what the user can do with it.
   function answerViews(input) {
@@ -657,7 +662,10 @@ export function createModuleMenu(ctx) {
 
   document.addEventListener('pointerdown', (e) => { if (!box.hidden && !box.contains(e.target) && !ctx.keepOpenOn?.(e.target)) close(); }, true);
   window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !box.hidden) { e.stopPropagation(); close(); } }, true);
-  window.addEventListener('design-opened', () => { lineFrom = null; ctx.guide?.(null); if (!busy) close(); });
+  window.addEventListener('design-opened', () => {
+    lineFrom = null; ctx.guide?.(null); if (!busy) close();
+    const { id, rev } = ctx.getState(); asker.only(id); asker.ask(openQuestions(answers, id, rev));     // and those still unanswered from before a reload
+  });
 
   const api = {
     open(t, x, y) {

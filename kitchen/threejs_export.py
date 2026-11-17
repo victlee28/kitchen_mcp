@@ -19,7 +19,7 @@ import re
 from collections import defaultdict
 
 from .numeric import round_half_away, round_int
-from . import appliance_models, builtin, runs, floorplan as fpmod, roomctx, hardware, regions, vocab, openings as opening_logic
+from . import appliance_models, builtin, runs, floorplan as fpmod, roomctx, hardware, regions, two_point, vocab, openings as opening_logic
 from .geometry import Part, backsplash_height, compile_spec, design_surfaces, views_of, wall_length as geometry_wall_length
 from .catalog import Catalog
 from .errors import InvalidInput, require
@@ -714,9 +714,14 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
         d = [b - a for a, b in zip(pos, tgt)]
         n = math.sqrt(sum(x * x for x in d)) or 1
         up = _v(0, 0, -1) if abs(d[1] / n) > 0.999 else _v(0, 1, 0)
+        lv = two_point.level(v.position, v.lookAt)
+        # two-point perspective (``two_point``): the camera looks level, at lookAt (eye height), and the picture window is shifted so the
+        # target stays in the middle: three.js setViewOffset(w, h, 0, lensShiftY × h / 2, w, h) (the window moves down when positive)
+        two = {"twoPoint": {"lookAt": _v(pos[0] + lv.forward[0] * 1000, pos[1], pos[2] + lv.forward[2] * 1000),
+                            "lensShiftY": round_half_away(-lv.shift / math.tan(math.radians(v.verticalFov) / 2), 4)}} if lv else {}
         cameras.append({"id": f"CAM-{key}", "name": v.name or key, "position": _v(pos[0], pos[1], pos[2]), "target": _v(tgt[0], tgt[1], tgt[2]), "projection": "perspective",
                         "fov": v.verticalFov, "fovAxis": "vertical", "near": 50, "far": 50000, "up": up, "aspect": round_half_away(4 / 3, 4),
-                        **({"hide": list(v.hide)} if v.hide else {})})
+                        **two, **({"hide": list(v.hide)} if v.hide else {})})
 
     def params(topic: str) -> dict[str, Any]:
         return (sel.get(topic) or {}).get("params", {})

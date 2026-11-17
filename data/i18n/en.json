@@ -1324,5 +1324,14 @@
  "ui.command.queued": "{0}. Waiting: \"{1}\"",
  "ui.command.working-worker": "{0}. The background AI is doing: \"{1}\"",
  "ui.command.working-claude": "{0}. Claude is doing: \"{1}\"",
- "ui.command.more": "… and {0} more"
+ "ui.command.more": "… and {0} more",
+ "ui.ask.title": "Claude needs you to choose how to go on",
+ "ui.ask.count": "{0}/{1}",
+ "ui.ask.about": "Command: \"{0}\"",
+ "ui.ask.other": "Or type another answer and press Enter…",
+ "ui.ask.send": "Send",
+ "ui.ask.sending": "Sending your answer…",
+ "ui.ask.empty": "Pick a way or type an answer",
+ "ui.ask.later": "Later",
+ "ui.ask.later-title": "Later: the question stays in the right-click menu"
 }

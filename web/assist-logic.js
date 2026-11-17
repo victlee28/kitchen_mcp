@@ -281,3 +281,14 @@ export function describeCommandAnswer(c, currentRev) {
   if (c.status === 'question') return { text: tx('ui.command.question', { 0: c.text }) + said, tone: 'warn', reload: false };
   return { text: tx('ui.command.failed', { 0: c.text }) + said, tone: 'bad', reload: false };
 }
+
+/** The questions Claude asked about this design's commands and the user has not answered yet, oldest first (for the question panel). */
+export function openQuestions(answers, designId, currentRev) {
+  return answers.filter((a) => a.designId === designId && a.status === 'question').map((a) => ({ ...answerCard(a, currentRev), designId }));
+}
+
+/** The choice a key picks in the question panel: "1".."9" for the first nine choices, else null. */
+export function pickByKey(key, choices) {
+  const n = /^[1-9]$/.test(String(key)) ? Number(key) : 0;
+  return n && n <= choices.length ? choices[n - 1] : null;
+}

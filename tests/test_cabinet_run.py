@@ -209,6 +209,20 @@ class TestService(unittest.TestCase):
         self.assertLessEqual(max(gap_x, gap_z), 2.0, "the run touches the object (no gap)")
         self.assertGreaterEqual(max(gap_x, gap_z), -2.0, "the run does not enter the object")
 
+    def test_a_pick_without_a_floor_point_stands_at_the_middle_of_the_object(self):
+        spec, _ = self.svc.store.get(self.did)
+        sc = geometry.compile_spec(spec)
+        struct = next(s for s in roomctx.for_spec(spec, sc.lsau, sc.lphai).structures if s["id"] == "STRUCT-column_a")
+        xs, zs = [p["x"] for p in struct["outline"]], [p["z"] for p in struct["outline"]]
+        mid = {"x": (min(xs) + max(xs)) / 2, "z": (min(zs) + max(zs)) / 2}
+        cmd = self.svc.command_put(self.did, "tạo hệ tủ", {"kind": "structure", "id": "column_a", "structureId": "column_a"}, self.rev, "vi")
+        self.assertAlmostEqual(cmd["place"]["point"]["x"], mid["x"], delta=0.1)
+        self.assertAlmostEqual(cmd["place"]["point"]["z"], mid["z"], delta=0.1)
+        given = self.svc.command_put(self.did, "x", {"kind": "structure", "structureId": "column_a", "point": {"x": 1, "z": 2}}, self.rev, "vi")
+        self.assertEqual(given["place"]["point"], {"x": 1, "z": 2}, "a click point is kept")
+        r = self.svc.template(self.did, {"kind": "run-i", "structureId": "STRUCT-column_a"})
+        self.assertEqual(r["status"], "ok")
+
     def test_bad_requests(self):
         with self.assertRaises(NotFound):
             self.svc.template(self.did, {**self.click(-2300.0, 1990.0), "structureId": "STRUCT-nope"})

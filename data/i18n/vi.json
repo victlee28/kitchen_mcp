@@ -1324,5 +1324,14 @@
  "ui.command.queued": "{0}. Đang chờ: \"{1}\"",
  "ui.command.working-worker": "{0}. AI đang làm trong nền: \"{1}\"",
  "ui.command.working-claude": "{0}. Claude đang làm: \"{1}\"",
- "ui.command.more": "… và {0} việc nữa"
+ "ui.command.more": "… và {0} việc nữa",
+ "ui.ask.title": "Claude cần anh chọn cách làm tiếp",
+ "ui.ask.count": "{0}/{1}",
+ "ui.ask.about": "Lệnh: \"{0}\"",
+ "ui.ask.other": "Hoặc gõ câu trả lời khác rồi Enter…",
+ "ui.ask.send": "Gửi",
+ "ui.ask.sending": "Đang gửi câu trả lời…",
+ "ui.ask.empty": "Hãy chọn một cách hoặc gõ câu trả lời",
+ "ui.ask.later": "Để sau",
+ "ui.ask.later-title": "Để sau: câu hỏi vẫn còn trong menu chuột phải"
 }
