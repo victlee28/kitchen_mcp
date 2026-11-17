@@ -323,12 +323,62 @@ def photo_match(seen: PhotoOpening, catalog: Catalog) -> opening_match.Match:
     return found
 
 
-def photo_opening(seen: PhotoOpening, point: Pt, catalog: Catalog, country: str | None = None) -> dict[str, Any]:
+ASK_CONFIDENCE = 0.6     # a recognizer this unsure of an opening: the user picks its type (proposal P6)
+ASK_MARGIN = 2.0         # the two best types this close and neither exact: the user picks
+ASK_CHOICES = 3
+
+
+@dataclass(frozen=True)
+class TypeChoice:
+    type_id: str
+    notes: tuple[str, ...]
+    choices: tuple[str, ...] = ()        # not empty: ask the user to pick one of these types (best first) before anything is placed
+
+
+def choose_type(seen: PhotoOpening, catalog: Catalog, note: str = "", chosen: str | None = None) -> TypeChoice:
+    """The type of the opening of a picture (proposal P6): the one the user picked (``chosen``); else the one the user's note names
+    ("cửa trượt 4 cánh"), which wins over the picture and is reported when they differ; else the best match, unless the recognizer was
+    unsure (``confidence`` below ``ASK_CONFIDENCE``) or two types fit about as well (``ASK_MARGIN``): then the user is asked."""
+    if chosen:
+        item = catalog.find("opening-type", chosen)
+        if item is None or item.data.get("kind") != seen.kind:
+            raise InvalidInput(f"{chosen} is not a {seen.kind} type of the catalog", code="bad-opening-type", params={"type": chosen, "kind": seen.kind})
+        return TypeChoice(chosen, (f"opening-type-chosen: {chosen}, picked by the user.",))
+    ranks = opening_match.ranked(photo_features(seen), catalog)
+    if not ranks:
+        raise InvalidInput(f"The catalog has no {seen.kind} type", code="opening-type-missing", params={"kind": seen.kind})
+    top = ranks[0]
+    named = _note_type(note, catalog)
+    if named is not None:
+        item = catalog.find("opening-type", named)
+        if item is not None and item.data.get("kind") == seen.kind:
+            said = () if named == top.type_id else (f"opening-note-wins: the picture looks like {top.type_id}; the note names {named}, so "
+                                                    f"{named} is used.",)
+            return TypeChoice(named, said)
+    unsure = seen.confidence < ASK_CONFIDENCE
+    close = len(ranks) > 1 and not top.exact and top.score - ranks[1].score < ASK_MARGIN
+    if unsure or close:
+        why = "the recognizer is unsure of it" if unsure else f"{top.type_id} and {ranks[1].type_id} fit about as well"
+        return TypeChoice(top.type_id, (f"opening-type-asked: {why}.",), tuple(m.type_id for m in ranks[:ASK_CHOICES]))
+    return TypeChoice(top.type_id, tuple(opening_match.note(top)))
+
+
+def _note_type(note: str, catalog: Catalog) -> str | None:
+    """The opening type the user's note names, if it names one (the right-click words: lexicon ``edit-opening``, type labels and aliases)."""
+    if not note.strip():
+        return None
+    from ..edit_intent import opening_wish
+    wish = opening_wish(note, catalog)
+    t = wish.get("type") if wish else None
+    return t if isinstance(t, str) else None
+
+
+def photo_opening(seen: PhotoOpening, point: Pt, catalog: Catalog, country: str | None = None, type_id: str | None = None) -> dict[str, Any]:
     """The ``add-opening`` record of a door or window seen in a picture with nothing to measure it by: its type from what was seen; its
     height the type's default (doors and windows vary least in height), its width from the picture's proportions, rounded and taken to a
     standard width of the country when one is close; the dividers where the picture shows them. Placed at ``point`` (the axes' frame).
     Width, height and sill are marked unsure: the user checks them."""
-    kind_type = photo_match(seen, catalog).type_id
+    kind_type = type_id or photo_match(seen, catalog).type_id
     data = get(catalog, kind_type)
     height = num(data, "defaultHeight", 2200.0 if seen.kind != "window" else 1200.0)
     casing = casing_width(data) if seen.edges_seen == "casing" else 0.0
@@ -376,12 +426,12 @@ def clicked_opening(point: Pt, axes: Sequence[WallAxis], existing: Sequence[Open
 HEIGHT_STEP = 10.0
 
 
-def photo_replacement(seen: PhotoOpening, target: Opening, catalog: Catalog) -> dict[str, Any]:
+def photo_replacement(seen: PhotoOpening, target: Opening, catalog: Catalog, type_id: str | None = None) -> dict[str, Any]:
     """The ``update-opening`` changes that make the selected opening look like the one in the picture, fitted to the selected opening's
     size: its place and width are kept (the drawing knows them better than a picture with nothing to measure by); its height too when the
     drawing gives it for the same kind of opening, else the picture's proportions on that width (a window replaced by a door, a height the
     drawing only assumed), marked unsure. A door stands on the floor. The dividers sit at the picture's proportions of the hole."""
-    kind_type = photo_match(seen, catalog).type_id
+    kind_type = type_id or photo_match(seen, catalog).type_id
     keep_height = seen.kind == target.kind and "height" not in target.unsure
     if keep_height:
         height = target.height
@@ -458,12 +508,12 @@ PHOTO_HEIGHT_MM = {"door": (1800.0, 3200.0), "passage": (1800.0, 3200.0), "windo
 
 
 def photo_into_hole(seen: PhotoOpening, axis: WallAxis, center: float, width: float, catalog: Catalog,
-                    drawn: tuple[float | None, float | None] = (None, None)) -> dict[str, Any]:
+                    drawn: tuple[float | None, float | None] = (None, None), type_id: str | None = None) -> dict[str, Any]:
     """The ``add-opening`` record that puts the opening of a picture into a hole of the drawing (a selected floorplan opening element):
     the hole's place and width; its height and sill those the drawing gives (``drawn``: the element's ``elev`` height and base), else
     the hole's width times the picture's proportions (the type's default when that falls outside ``PHOTO_HEIGHT_MM``), marked unsure; a door on the floor, a window at the type's sill. The
     dividers sit at the picture's proportions of the hole."""
-    kind_type = photo_match(seen, catalog).type_id
+    kind_type = type_id or photo_match(seen, catalog).type_id
     data = get(catalog, kind_type)
     width = float(round_half_away(width, 0))
     drawn_height, drawn_base = drawn
@@ -480,6 +530,10 @@ def photo_into_hole(seen: PhotoOpening, axis: WallAxis, center: float, width: fl
     unsure = [*([] if drawn_height else ["height"]), *(["sill"] if seen.kind == "window" and not drawn_base else [])]
     raw: dict[str, Any] = {"kind": seen.kind, "openingType": kind_type, "source": "ai", "wallAxis": axis.ref().to_data(), "center": _r(center),
                            "width": width, "height": height, "sill": sill, "unsure": unsure}
+    low, high = width_range(data, seen.kind)
+    if not low <= width <= high:                 # the drawing's hole is the authority; the user sees "check the width" in the preview
+        raw["oversize"] = True
+        raw["unsure"] = [*raw["unsure"], "width"]
     if seen.axes_ratio:
         raw["axes"] = [_r((r - 0.5) * width) for r in seen.axes_ratio]
     if seen.h_axes_ratio:
@@ -495,30 +549,33 @@ def element_elev(element: Mapping[str, Any] | None) -> tuple[float | None, float
 
 
 def photo_operations(seen: Sequence[PhotoOpening], point: Pt, axes: Sequence[WallAxis], catalog: Catalog, country: str | None = None,
-                     existing: Sequence[Opening] = (), selected: str | None = None, elements: Sequence[Mapping[str, Any]] = ()
-                     ) -> tuple[list[dict[str, Any]], list[str]]:
+                     existing: Sequence[Opening] = (), selected: str | None = None, elements: Sequence[Mapping[str, Any]] = (),
+                     note: str = "", chosen: str | None = None) -> tuple[list[dict[str, Any]], list[str], tuple[str, ...]]:
     """``(operations, notes)`` for the openings of a picture with no cabinets: the first one at ``point``; a picture showing more than one
     cannot say where the others are, so they are noted and left out. A click on an opening the design already has (``existing``: its
     effective openings) makes that opening look like the picture (``update-opening``); elsewhere a new one is added. Dividers that do not
     fit the type are dropped for its template."""
     if not seen:
-        return [], []
+        return [], [], ()
     notes = [f"opening-not-placed: the picture shows {len(seen)} openings; only the first was placed at the point picked."] if len(seen) > 1 else []
-    notes += opening_match.note(photo_match(seen[0], catalog))
+    pick = choose_type(seen[0], catalog, note, chosen)
+    notes += list(pick.notes)
+    if pick.choices:                                       # asked: nothing is placed until the user picks a type
+        return [], notes, pick.choices
     target = clicked_opening(point, axes, existing, selected)
     if target is not None:
-        changes = photo_replacement(seen[0], target, catalog)
+        changes = photo_replacement(seen[0], target, catalog, pick.type_id)
         fitted = "its height from the picture's proportions; check it" if changes["unsure"] else "its height kept"
         notes.append(f"opening-replaced-from-photo: {target.id} becomes {changes['openingType']} {target.width:g} x {changes['height']:g} mm "
                      f"(fitted to the selected opening: its place and width kept, {fitted}).")
-        return [{"op": "update-opening", "id": target.source_element or target.id, "changes": changes}], notes
+        return [{"op": "update-opening", "id": target.source_element or target.id, "changes": changes}], notes, ()
     # the opening element selected; a selected wall (or nothing) means the opening element under the click, if any
     element = next((e for e in elements if selected and e.get("id") == selected and e.get("kind") == "opening"), None) \
         or element_at(point, elements)
     hole = element_hole(element, axes) if element is not None else None
     if hole is not None:
         axis, center, width = hole
-        raw = photo_into_hole(seen[0], axis, center, width, catalog, element_elev(element))
+        raw = photo_into_hole(seen[0], axis, center, width, catalog, element_elev(element), pick.type_id)
         if element is not None and element.get("id"):
             raw["sourceElement"] = str(element["id"])     # it takes the drawn element's place: the element is no longer built as a solid
         tall = "its height from the drawing" if "height" not in raw["unsure"] else "the type's height, check it"
@@ -526,21 +583,21 @@ def photo_operations(seen: Sequence[PhotoOpening], point: Pt, axes: Sequence[Wal
                  f"{element.get('id') if element else ''} (its place and width; {tall}).")
     else:
         if nearest(point, axes, PHOTO_REACH_MM) is None:
-            return [], [*notes, "opening-not-placed: no wall near the point picked; right-click a wall or select the opening to replace."]
-        raw = photo_opening(seen[0], point, catalog, country)
+            return [], [*notes, "opening-not-placed: no wall near the point picked; right-click a wall or select the opening to replace."], ()
+        raw = photo_opening(seen[0], point, catalog, country, pick.type_id)
         sized = (f"opening-sized-from-photo: {raw['openingType']} {raw['width']:g} x {raw['height']:g} mm from the picture's proportions; "
                  "check the sizes.")
     try:
         normalize(raw, "ai", catalog, axes, country)
     except InvalidInput as first:
         if "axes" not in raw and "hAxes" not in raw:
-            return [], [*notes, f"opening-not-placed: {seen[0].kind}: {first}"]
+            return [], [*notes, f"opening-not-placed: {seen[0].kind}: {first}"], ()
         raw.pop("axes", None)
         raw.pop("hAxes", None)
         try:
             normalize(raw, "ai", catalog, axes, country)
         except InvalidInput as error:
-            return [], [*notes, f"opening-not-placed: {seen[0].kind}: {error}"]
+            return [], [*notes, f"opening-not-placed: {seen[0].kind}: {error}"], ()
         notes.append(f"opening-axes-dropped: the dividers seen do not fit {raw['openingType']}.")
     notes.append(sized)
-    return [{"op": "add-opening", "opening": raw}], notes
+    return [{"op": "add-opening", "opening": raw}], notes, ()

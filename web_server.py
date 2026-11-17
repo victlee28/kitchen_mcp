@@ -35,7 +35,7 @@ API:
   POST /api/designs/<id>/ops             {"baseRev": N, "op": {...}, "expect"?: opHash của /propose: chỉ lưu đúng thao tác đã xem trước}
   POST /api/designs/<id>/interpret       {"text": "xóa TD3", "baseRev"?: N, "scope"?: ["TD1"], "surfaces"?: ["wall_006#inside"], "useLlm"?: false} câu lệnh tự do -> thao tác + bản xem trước (không lưu) hoặc câu hỏi làm rõ
   POST /api/designs/<id>/template        {"template": {"kind": "run-i", "structureId": "STRUCT-..", "point": {"x": mm, "z": mm}, "prompt"?: "tạo tủ bếp có tủ lạnh, mặt đá đen…"}, "baseRev"?: N} tủ chữ I dựa vào cạnh gần điểm bấm nhất của vật thể, cánh quay ra ngoài; xem trước, không lưu
-  POST /api/designs/<id>/recognize-job  {"job": "<mã job>", "anchor"?, "mode"?, "baseRev"?}   hỏi lại kết quả của lần nhận diện trả "pending" (recognizer "inbox")
+  POST /api/designs/<id>/recognize-job  {"job": "<mã job>", "anchor"?, "mode"?, "baseRev"?, "openingType"?}   hỏi lại kết quả của lần nhận diện trả "pending" (recognizer "inbox")
   POST /api/designs/<id>/recognize       {"source": {"kind": "photo"|"drawing", "imageBase64": "...", "note"?: "gợi ý, tối đa 500 ký tự"}, "recognizer"?: "gemini"|"cabinet"|"inbox", "anchor"?: {"structureId", "point": {"x","z"}}, "mode"?: "add"|"replace", "baseRev"?: N} ảnh/bản vẽ -> bản nháp thay TOÀN BỘ tủ + xem trước (không lưu); bộ nhận diện mặc định: KITCHEN_RECOGNIZER, rồi "cabinet" (CABINET_RECOGNIZER_URL), rồi "gemini"; chưa có thì status "unavailable"
   POST /api/designs/<id>/propose         {"baseRev": N, "op": {...}, "scope"?: ["TD1"]} xem trước, không lưu: diff, validation mới/đã hết, module bị ảnh hưởng
   POST /api/designs/<id>/revert          {"baseRev": N, "rev": M}
@@ -400,14 +400,18 @@ class Handler(BaseHTTPRequestHandler):
                 if not isinstance(b.get("template"), dict):
                     raise ApiError(400, "thiếu template")
                 return self._json(200, s.template(did, b["template"], b.get("baseRev"), b.get("country")))
+            if sub in ("recognize", "recognize-job") and b.get("openingType") is not None and not isinstance(b.get("openingType"), str):
+                raise ApiError(400, "openingType phải là mã loại cửa")
             if sub == "recognize":
                 if not isinstance(b.get("source"), dict):
                     raise ApiError(400, "thiếu source")
-                return self._json(200, s.recognize(did, b["source"], b.get("recognizer"), b.get("baseRev"), b.get("country"), b.get("anchor"), b.get("mode", "add")))
+                return self._json(200, s.recognize(did, b["source"], b.get("recognizer"), b.get("baseRev"), b.get("country"), b.get("anchor"), b.get("mode", "add"),
+                                                   b.get("openingType")))
             if sub == "recognize-job":
                 if not isinstance(b.get("job"), str):
                     raise ApiError(400, "thiếu job")
-                return self._json(200, s.recognize_collect(did, b["job"], b.get("baseRev"), b.get("country"), b.get("anchor"), b.get("mode", "add")))
+                return self._json(200, s.recognize_collect(did, b["job"], b.get("baseRev"), b.get("country"), b.get("anchor"), b.get("mode", "add"),
+                                                           b.get("openingType")))
             if sub == "interpret":
                 if not isinstance(b.get("text"), str):
                     raise ApiError(400, "thiếu text")

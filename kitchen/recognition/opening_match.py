@@ -96,15 +96,21 @@ def _exact(seen: Features, of_type: Features) -> bool:
     return seen.style == of_type.style and seen.leaves == of_type.leaves and seen.transom == of_type.transom and panes
 
 
-def best(seen: Features, catalog: Catalog) -> Match | None:
-    """The catalog type that fits best (the first one in catalog order on a tie); None when the catalog has no type of that kind."""
-    found: Match | None = None
+def ranked(seen: Features, catalog: Catalog) -> list[Match]:
+    """Every catalog type of the same kind of opening, best first (catalog order on a tie)."""
+    out: list[Match] = []
     for item in catalog.all("opening-type"):
         f = type_features(item.data)
         s = score(seen, f)
-        if s is not None and (found is None or s > found.score):
-            found = Match(item.id, s, _exact(seen, f), seen, f)
-    return found
+        if s is not None:
+            out.append(Match(item.id, s, _exact(seen, f), seen, f))
+    return sorted(out, key=lambda m: -m.score)          # sorted() is stable: catalog order among equal scores
+
+
+def best(seen: Features, catalog: Catalog) -> Match | None:
+    """The catalog type that fits best (the first one in catalog order on a tie); None when the catalog has no type of that kind."""
+    found = ranked(seen, catalog)
+    return found[0] if found else None
 
 
 def describe(f: Features) -> str:

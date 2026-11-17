@@ -80,5 +80,61 @@ class TestDefaultViews(unittest.TestCase):
         self.assertAlmostEqual(1.6, views["back-wall"].position[1])
 
 
+def _in_picture(view, point, aspect=camera_plan.ASPECT):
+    """Is ``point`` (mm) inside the picture of ``view`` (metres; up is +y, or -z when looking straight down)?"""
+    import math
+    eye = [c * 1000 for c in view["position"]]
+    look = [c * 1000 for c in view["lookAt"]]
+    f = [b - a for a, b in zip(eye, look)]
+    n = math.sqrt(sum(c * c for c in f))
+    f = [c / n for c in f]
+    up = (0.0, 1.0, 0.0) if abs(f[1]) < 0.99 else (0.0, 0.0, -1.0)
+    r = [f[1] * up[2] - f[2] * up[1], f[2] * up[0] - f[0] * up[2], f[0] * up[1] - f[1] * up[0]]
+    rn = math.sqrt(sum(c * c for c in r))
+    r = [c / rn for c in r]
+    u = [r[1] * f[2] - r[2] * f[1], r[2] * f[0] - r[0] * f[2], r[0] * f[1] - r[1] * f[0]]
+    q = [b - a for a, b in zip(eye, point)]
+    depth = sum(a * b for a, b in zip(q, f))
+    tv = math.tan(math.radians(view["verticalFov"] / 2))
+    return depth > 0 and abs(sum(a * b for a, b in zip(q, u))) <= depth * tv + 1 and abs(sum(a * b for a, b in zip(q, r))) <= depth * tv * aspect + 1
+
+
+class TestWholeRoom(unittest.TestCase):
+    """The plan and the overview show the whole imported floorplan, not only the cabinets (a room with no cabinets showed its origin)."""
+
+    LONG = [(0.0, 0.0), (14000.0, 0.0), (14000.0, 4500.0), (0.0, 4500.0)]
+    WALLS = [Obstacle("W-near", "wall", ((0.0, 4500.0), (14000.0, 4500.0), (14000.0, 4700.0), (0.0, 4700.0)), 0.0, 2700.0),
+             Obstacle("W-far", "wall", ((0.0, -200.0), (14000.0, -200.0), (14000.0, 0.0), (0.0, 0.0)), 0.0, 2700.0)]
+    BEFORE = {"plan": {"name": "plan", "position": (0.0, 6.5, 0.001), "lookAt": (0.0, 0.0, 0.0), "verticalFov": 36.0, "hide": []},
+              "overhead": {"name": "over", "position": (-1.2, 3.8, 1.35), "lookAt": (0.0, 0.6, 0.0), "verticalFov": 50.0, "hide": []}}
+
+    def test_every_corner_of_the_room_is_in_both_pictures(self):
+        out = camera_plan.whole_room(self.BEFORE, self.LONG, self.WALLS, None)
+        for key in ("plan", "overhead"):
+            for x, z in [p for ob in self.WALLS for p in ob.outline]:
+                for y in (0.0, 2700.0):
+                    self.assertTrue(_in_picture(out[key], (x, y, z)), (key, x, y, z))
+        self.assertEqual(out["plan"]["lookAt"], (7.0, 0.0, 2.25))
+        self.assertGreaterEqual(out["overhead"]["position"][1] * 1000 - out["overhead"]["lookAt"][1] * 1000, 0)
+
+    def test_the_overview_hides_the_wall_in_front_and_keeps_the_far_one(self):
+        out = camera_plan.whole_room(self.BEFORE, self.LONG, self.WALLS, None)
+        near = "W-near" if out["overhead"]["position"][2] > 2.25 else "W-far"     # the long wall on the camera's side
+        self.assertEqual(out["overhead"]["hide"], [near])
+        self.assertEqual(out["plan"]["hide"], [])
+
+    def test_a_room_only_design_frames_its_floorplan(self):
+        import json
+        from pathlib import Path
+        from kitchen.spec import load_spec
+        spec = load_spec(json.loads((Path(__file__).parent / "data" / "floorplan-sliding-hole.json").read_text(encoding="utf-8")))
+        scene = geometry.compile_spec(spec)
+        room, solids = geometry.room_solids(spec, scene)
+        views = geometry.views_of(spec)
+        for key in ("plan", "overhead"):
+            for x, z in room:
+                self.assertTrue(_in_picture(geometry.to_data(views[key]), (x, 0.0, z)), (key, x, z))
+
+
 if __name__ == "__main__":
     unittest.main()

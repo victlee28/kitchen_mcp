@@ -211,3 +211,72 @@ def hidden_for(position: tuple[float, float, float], faces: list[Face], obstacle
 def _view(name: str, pos: Pt, look: tuple[float, float, float], fov: float, hide: list[str]) -> dict[str, Any]:
     return {"name": name, "position": (round_half_away(pos[0] / 1000.0, 3), EYE / 1000.0, round_half_away(pos[1] / 1000.0, 3)),
             "lookAt": (round_half_away(look[0], 3), round_half_away(look[1], 3), round_half_away(look[2], 3)), "verticalFov": round_half_away(min(max(fov, V_MIN), V_MAX), 1), "hide": hide}
+
+
+PLAN_MARGIN = 1.08               # room left around the floorplan in the plan and overview views (x the size that just fits)
+OVERVIEW_ELEVATION_MIN = 45.0    # degrees: the overview looks down at least this steeply, so the near walls hide little
+ROOM_TOP = 2700.0                # mm: the least height the overview frames (walls of an imported plan without one)
+
+
+def whole_room(views: dict[str, dict[str, Any]], room: list[Pt], solids: list[Obstacle],
+               cabinets: tuple[Sequence[float], Sequence[float]] | None) -> dict[str, dict[str, Any]]:
+    """``plan`` and ``overhead`` (``ViewAngle`` data, metres) framed on the whole floorplan: the room outline, its walls and columns,
+    and the cabinets' box ``cabinets`` (min, max; mm). The solids between the camera and the room's floor are hidden. The plan looks
+    straight down from just high enough; the overview looks down at least ``OVERVIEW_ELEVATION_MIN``, from its own heading or one 45°
+    further round if the room fits closer from there, and stands back until the whole room fits."""
+    solid = [ob for ob in solids if ob.kind not in NON_BLOCKING]
+    pts = [*room, *(p for ob in solid for p in ob.outline)]
+    top = max([ROOM_TOP, *(ob.y1 for ob in solid)])
+    if cabinets is not None:
+        pts += [(cabinets[0][0], cabinets[0][2]), (cabinets[1][0], cabinets[1][2])]
+        top = max(top, cabinets[1][1])
+    xs, zs = [p[0] for p in pts], [p[1] for p in pts]
+    x0, x1, z0, z1 = min(xs), max(xs), min(zs), max(zs)
+    cx, cz = (x0 + x1) / 2, (z0 + z1) / 2
+    hx, hz = (x1 - x0) / 2 * PLAN_MARGIN, (z1 - z0) / 2 * PLAN_MARGIN
+    floor = [(x0 + (x1 - x0) * i / 6, 0.0, z0 + (z1 - z0) * j / 6) for i in range(1, 6) for j in range(1, 6)]
+    floor = [t for t in floor if point_in_poly((t[0], t[2]), room)] or [(cx, 0.0, cz)]
+
+    def metres(p: Sequence[float]) -> tuple[float, float, float]:
+        return (round_half_away(p[0] / 1000, 3), round_half_away(p[1] / 1000, 3), round_half_away(p[2] / 1000, 3))
+
+    plan = views["plan"]
+    tv = math.tan(math.radians(float(plan["verticalFov"]) / 2))
+    height = top + max(hz / tv, hx / (tv * ASPECT))       # the picture's height runs along z, its width along x
+    eye = (cx, height, cz + 1.0)
+    out: dict[str, dict[str, Any]] = {"plan": {**plan, "position": metres(eye), "lookAt": metres((cx, 0.0, cz)),
+                                               "hide": blockers(eye, floor, solids)}}
+    over = views["overhead"]
+    (px, py, pz), (lx, ly, lz) = over["position"], over["lookAt"]
+    flat = math.hypot(px - lx, pz - lz) or 1.0
+    rise = math.radians(max(OVERVIEW_ELEVATION_MIN, math.degrees(math.atan2(py - ly, flat))))
+    tv = math.tan(math.radians(float(over["verticalFov"]) / 2))
+    look = (cx, top / 3, cz)
+    corners = [(x - cx, y - look[1], z - cz) for x in (cx - hx, cx + hx) for y in (0.0, top) for z in (cz - hz, cz + hz)]
+    start = math.atan2(pz - lz, px - lx)
+    best: tuple[float, float] | None = None
+    for k in range(8):
+        heading = start + k * math.pi / 4
+        dist = _fit_distance(corners, heading, rise, tv)
+        if best is None or dist < best[0] * 0.97:
+            best = (dist, heading)
+    assert best is not None
+    dist, heading = best
+    eye = (look[0] + math.cos(heading) * math.cos(rise) * dist, look[1] + math.sin(rise) * dist,
+           look[2] + math.sin(heading) * math.cos(rise) * dist)
+    out["overhead"] = {**over, "position": metres(eye), "lookAt": metres(look), "hide": blockers(eye, floor, solids)}
+    return out
+
+
+def _fit_distance(corners: list[tuple[float, float, float]], heading: float, rise: float, tan_v: float) -> float:
+    """How far from the look point (along ``heading`` around it, ``rise`` above the horizon) a camera stands so every corner (relative
+    to the look point, mm) is in a picture of vertical half field ``tan_v`` (as a tangent) at the renderer's aspect."""
+    w = (math.cos(heading) * math.cos(rise), math.sin(rise), math.sin(heading) * math.cos(rise))      # towards the camera
+    r = (-math.sin(heading), 0.0, math.cos(heading))                                                   # to the picture's side
+    u = (w[1] * r[2] - w[2] * r[1], w[2] * r[0] - w[0] * r[2], w[0] * r[1] - w[1] * r[0])              # the picture's up
+    tan_h = tan_v * ASPECT
+    need = 0.0
+    for q in corners:
+        depth = sum(a * b for a, b in zip(q, w))
+        need = max(need, depth + abs(sum(a * b for a, b in zip(q, r))) / tan_h, depth + abs(sum(a * b for a, b in zip(q, u))) / tan_v)
+    return need

@@ -146,15 +146,19 @@ def interpret_edit(design_id: str, text: str, base_rev: int | None=None, scope_m
     """
     return _call(svc().interpret, design_id, text, base_rev, scope_modules, None, use_llm)
 
-def recognize_design(design_id: str, source: dict[str, Any], recognizer: str | None=None, base_rev: int | None=None) -> dict[str, Any]:
+def recognize_design(design_id: str, source: dict[str, Any], recognizer: str | None=None, base_rev: int | None=None,
+                     anchor: dict[str, Any] | None=None, mode: str='add', opening_type: str | None=None) -> dict[str, Any]:
     """Recognise a photo or drawing as a DRAFT kitchen and preview it; nothing is saved.
 
     source: {"kind": "photo" | "drawing", "imageBase64": "...", "name"?: "...", "note"?: "hint about the picture, max 500 chars"}.
     recognizer: "cabinet" (the stand-alone cabinet-recognizer, CABINET_RECOGNIZER_URL) , "gemini" or "inbox" (the same service, answered by Claude Desktop by chat; then call recognize-job on the web API); omitted = KITCHEN_RECOGNIZER, else inbox (Claude Desktop by chat), else cabinet, else gemini.
-    The draft replaces ALL cabinets of the design (room, floor plan and common settings are kept). status 'ok' returns draft + operation + proposal (same as propose_change):
-    confirm with the editing tool and expect=proposal.opHash. 'unavailable' = no recognizer is plugged in; 'empty' = nothing usable recognised.
+    anchor: {"structureId", "point": {"x", "z"}} (room frame, mm) - where the main run stands, or, for a picture of a door / window only, the
+    wall, hole or opening it goes into (a placed opening's id works too). Without it the draft replaces ALL cabinets of the design.
+    status 'ok' returns draft + operation + proposal (same as propose_change): confirm with the editing tool and expect=proposal.opHash.
+    'question' (a door / window only): choices = the opening types to pick from; call again with opening_type. 'unavailable' = no
+    recognizer is plugged in; 'empty' = nothing usable recognised.
     """
-    return _call(svc().recognize, design_id, source, recognizer, base_rev)
+    return _call(svc().recognize, design_id, source, recognizer, base_rev, None, anchor, mode, opening_type)
 
 def propose_template(design_id: str, template: dict[str, Any], base_rev: int | None=None) -> dict[str, Any]:
     """Preview a cabinet template against an object of the imported floorplan; nothing is saved.

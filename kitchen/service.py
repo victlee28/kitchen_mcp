@@ -19,6 +19,7 @@ from . import builtin, cabinet_types, catalog as cat, layout_solver, catalog_csv
 from .config import Config
 from .identity import IdentityProvider, provider as identity_provider
 from .errors import InvalidInput, KitchenError, NotFound
+from .jsonview import as_dict
 ROOT = Path(__file__).resolve().parent.parent
 NAMED = ('name', 'description')   # fields that may hold a default name the core wrote (see ``i18n.Names``)
 
@@ -64,6 +65,10 @@ class KitchenService:
         prices_file = Path(data_dir or self.config.data_dir or Path(__file__).resolve().parent.parent / "data") / "model-prices.json"
         self.models = ModelGateway(self.config, Path(self.store.path).parent / "logs" / "model-usage.jsonl",
                                    json.loads(prices_file.read_text(encoding="utf-8")) if prices_file.exists() else {}, clock=self.clock)
+        # a second look at a door built from a picture (P4): (photo, line drawing, question) -> the model's answer text; None = no check
+        self.opening_checker: Callable[[bytes, bytes, str], str] | None = None
+        if self.config.opening_check != 'off':
+            self.opening_checker = self._model_opening_check
 
     def inbox_worker(self):
         """The model that carries out the command inbox without a chat (``KITCHEN_INBOX_WORKER=on``); its instructions are the catalog
@@ -1281,7 +1286,7 @@ class KitchenService:
         self.recognizers[name] = recognizer
 
     def recognize(self, design_id: str, source: dict[str, Any], recognizer: str | None=None, base_revision: int | None=None,
-                  country: str | None=None, anchor: dict[str, Any] | None=None, mode: str='add') -> dict:
+                  country: str | None=None, anchor: dict[str, Any] | None=None, mode: str='add', opening_type: str | None=None) -> dict:
         """Photo or drawing -> a DRAFT kitchen, previewed, never saved. ``source``: ``{"kind": "photo"|"drawing", "imageBase64": "...", "name"?, "mediaType"?, "note"?}`` (``note``: the user's hint, up to 500 characters).
 
         Every recognition is placed BY RUNS (explicit runs, each cabinet with what it carries): a recognizer that gives the kitchen by runs
@@ -1292,7 +1297,8 @@ class KitchenService:
         takes the recognised levels, ceiling and materials into ``common``.
 
         ``status``: ``ok`` (``draft`` + ``operation`` + the :meth:`propose` result under ``proposal``; confirm with :meth:`apply` and its opHash),
-        ``empty`` (nothing usable was recognised), ``unavailable`` (no recognizer plugged in) or ``failed`` (the recognizer raised).
+        ``empty`` (nothing usable was recognised), ``unavailable`` (no recognizer plugged in), ``failed`` (the recognizer raised) or, for a
+        picture of a door or window only, ``question`` (``choices``: the opening types to pick from; ask again with ``opening_type``).
         """
         spec, current = self.store.get(design_id)
         if base_revision is not None and base_revision != current:
@@ -1315,10 +1321,11 @@ class KitchenService:
         inp = recognition.RecognitionInput(kind=kind, data=data, name=str(source.get('name') or ''), media_type=str(source.get('mediaType') or ''),
                                       note=recognition.recognizer_wire.clean_note(source.get('note')))
         anchor, mode = self._check_anchor(anchor, mode)
-        return self._recognition_result(design_id, spec, current, out, name, lambda: self.recognizers[name].recognize(inp), country, anchor, mode)
+        return self._recognition_result(design_id, spec, current, out, name, lambda: self.recognizers[name].recognize(inp), country, anchor, mode,
+                                        inp.note, opening_type, data if kind == 'photo' else None)
 
     def recognize_collect(self, design_id: str, job: str, base_revision: int | None=None, country: str | None=None, anchor: dict[str, Any] | None=None,
-                          mode: str='add') -> dict:
+                          mode: str='add', opening_type: str | None=None) -> dict:
         """Ask again for a recognition that came back ``pending`` (recognizer ``inbox``: someone answers the job's questions by chat first).
 
         The answer is that of :meth:`recognize`: still ``pending`` while questions are open, then ``ok`` / ``empty`` / ``failed``.
@@ -1337,7 +1344,7 @@ class KitchenService:
         collect = getattr(inbox, 'collect', None)                # only the inbox recognizer answers later, by job id
         if collect is None:
             return {**out, 'status': 'unavailable', 'message': 'The inbox recognizer cannot collect a job'}
-        return self._recognition_result(design_id, spec, current, out, 'inbox', lambda: collect(job_id), country, anchor, mode)
+        return self._recognition_result(design_id, spec, current, out, 'inbox', lambda: collect(job_id), country, anchor, mode, '', opening_type)
 
     @staticmethod
     def _check_anchor(anchor: Any, mode: Any) -> tuple[dict[str, Any] | None, str]:
@@ -1352,7 +1359,8 @@ class KitchenService:
         return anchor, mode
 
     def _recognition_result(self, design_id: str, spec: Any, current: int, out: dict[str, Any], name: str, produce: Callable[[], dict],
-                            country: str | None, anchor: dict[str, Any] | None=None, mode: str='add') -> dict:
+                            country: str | None, anchor: dict[str, Any] | None=None, mode: str='add', note: str='',
+                            opening_type: str | None=None, picture: bytes | None=None) -> dict:
         try:
             raw = produce()
         except recognition.Deferred as waiting:
@@ -1364,7 +1372,10 @@ class KitchenService:
         if not draft.modules:
             photo = self._photo_openings(raw)
             if photo[0] or photo[1]:                # a picture with no cabinets, only a door or window: it goes where the user clicked
-                return self._place_photo_openings(design_id, spec, current, out, name, draft, photo, anchor, country)
+                kept = raw.get('note') if isinstance(raw, dict) else None
+                said = kept if isinstance(kept, str) else ''      # an inbox job keeps the note
+                return self._place_photo_openings(design_id, spec, current, out, name, draft, photo, anchor, country, note or said, opening_type,
+                                                  picture)
             return {**out, 'status': 'empty', 'recognizer': name, 'draft': draft.to_data()}
         doc = raw.get('layout') if isinstance(raw, dict) else None
         layout = recognition.build_layout(doc)
@@ -1422,7 +1433,8 @@ class KitchenService:
         return found if found[0] or found[1] else recognition.openings.read_photo(raw)
 
     def _place_photo_openings(self, design_id: str, spec: Any, current: int, out: dict[str, Any], name: str, draft: Any,
-                              photo: tuple[list, list[dict[str, Any]]], anchor: dict[str, Any] | None, country: str | None) -> dict:
+                              photo: tuple[list, list[dict[str, Any]]], anchor: dict[str, Any] | None, country: str | None,
+                              note: str = '', opening_type: str | None = None, picture: bytes | None = None) -> dict:
         """A door or window seen in a picture with nothing to measure it by: one ``add-opening`` at the point the user right-clicked (room
         frame: on the nearest wall axis), sized from the type and the picture's proportions, previewed, nothing saved."""
         from . import openings as room_openings
@@ -1442,8 +1454,26 @@ class KitchenService:
         fp = to_data(spec).get('floorplan')
         listed = fp.get('elements') if isinstance(fp, dict) else None
         elements = [e for e in listed if isinstance(e, dict)] if isinstance(listed, list) else []
-        ops, placed = recognition.openings.photo_operations(found, point, axes, self.catalog(), country or spec.country, existing, selected,
-                                                            elements)
+        ops, placed, choices = recognition.openings.photo_operations(found, point, axes, self.catalog(), country or spec.country, existing,
+                                                                     selected, elements, note, opening_type)
+        if choices:                                 # unsure, or two types fit as well: the user picks before anything is placed
+            labels = {c: (as_dict(self.catalog().data('opening-type', c).get('label')) or {}) for c in choices}
+            return {**out, 'status': 'question', 'recognizer': name, 'draft': draft.to_data(), 'summary': [*notes, *placed],
+                    'structureId': anchor.get('structureId'), 'mode': 'opening',
+                    'choices': [{'openingType': c, 'label': labels[c]} for c in choices]}
+        if ops and picture is not None:             # a second look (P4): the opening drawn next to the picture; corrected once
+            again, checked = self._check_photo_opening(spec, ops[0], picture, found[0], note, opening_type,
+                                                       lambda seen: recognition.openings.photo_operations(
+                                                           [seen, *found[1:]], point, axes, self.catalog(), country or spec.country, existing,
+                                                           selected, elements, note, opening_type))
+            placed += checked
+            if again is not None:
+                ops, placed, choices = again[0], [*again[1], *checked], again[2]
+                if choices:
+                    labels = {c: (as_dict(self.catalog().data('opening-type', c).get('label')) or {}) for c in choices}
+                    return {**out, 'status': 'question', 'recognizer': name, 'draft': draft.to_data(), 'summary': [*notes, *placed],
+                            'structureId': anchor.get('structureId'), 'mode': 'opening',
+                            'choices': [{'openingType': c, 'label': labels[c]} for c in choices]}
         if ops and ops[0]['op'] == 'update-opening':           # the dividers seen may not fit the hole: then the type's own template
             try:
                 edit.apply_op(spec.model_copy(deep=True), ops[0], self.catalog())
@@ -1457,6 +1487,63 @@ class KitchenService:
         preview = self.propose(design_id, operation, current, None, country)
         return {**out, 'status': 'ok', 'recognizer': name, 'draft': draft.to_data(), 'operation': operation, 'summary': [*notes, *placed],
                 'structureId': anchor.get('structureId'), 'mode': 'opening', 'runs': [], 'proposal': preview}
+
+    def _check_photo_opening(self, spec: Any, op: dict[str, Any], picture: bytes, seen: Any, note: str, opening_type: str | None,
+                             redo: Callable[[Any], tuple[list[dict[str, Any]], list[str], tuple[str, ...]]]
+                             ) -> tuple[tuple[list[dict[str, Any]], list[str], tuple[str, ...]] | None, list[str]]:
+        """Proposal P4: draw the opening the preview places (the line render of its camera view), show it to a vision model next to the
+        picture with what was built, and place it again once with the model's corrections. ``(the redone placement or None, notes)``;
+        any failure leaves the preview as it was, with a note."""
+        from .recognition import opening_check
+        check = self.opening_checker
+        if check is None:
+            return None, []
+        if check == self._model_opening_check and not self.models.available(self.config.opening_check_provider):
+            # no vision model: 'auto' stays quiet, 'on' says the check could not run
+            return None, ['opening-check-skipped: no vision model is set'] if self.config.opening_check == 'on' else []
+        try:
+            after = edit.apply_op(spec, op, self.catalog())
+            before = {o.id for o in spec.openings}
+            if op['op'] == 'update-opening':
+                oid = next((o.id for o in after.openings if op['id'] in (o.id, o.sourceElement)), op['id'])
+            else:
+                oid = next(o.id for o in after.openings if o.id not in before)
+            opening = op['opening'] if op['op'] == 'add-opening' else op['changes']
+            type_id = str(opening.get('openingType'))
+            label = as_dict(self.catalog().data('opening-type', type_id).get('label')) or {}
+            import tempfile
+            with tempfile.TemporaryDirectory() as tmp:
+                render.render_views(after, Path(tmp), [f'opening-{oid}'], 800, 600, catalog=self.catalog())
+                drawing = (Path(tmp) / f'opening-{oid}' / 'lines.png').read_bytes()
+            from .prompts import photo as prompt_texts
+            text = check(picture, drawing, opening_check.question(prompt_texts.text('opening-check', self.catalog()), seen, type_id,
+                                                                  str(label.get('en') or type_id)))
+        except Exception as error:      # no model, no key, over budget, a render that failed: the preview stays as it was
+            return None, [f'opening-check-skipped: {type(error).__name__}: {error}'[:200]]
+        from .model_contract import first_json
+        try:
+            fix = opening_check.parse(first_json(text))
+        except Exception:
+            fix = None
+        if fix is None:
+            return None, ['opening-check-unreadable: the second look gave no usable answer; the preview is as first read.']
+        if fix.same:
+            return None, ['opening-checked: the drawing matches the picture.']
+        return redo(opening_check.correct(seen, fix)), [f"opening-checked: corrected after a second look ({', '.join(fix.changes()) or 'notes only'})"
+                                                        + (f": {'; '.join(fix.notes)}" if fix.notes else '') + '.']
+
+    def _model_opening_check(self, picture: bytes, drawing: bytes, question: str) -> str:
+        """The second look asked of the vision model of ``KITCHEN_OPENING_CHECK_PROVIDER`` (else the default one); off in ``auto`` mode
+        when no model is set (raises, so the caller notes it was skipped)."""
+        from .model_contract import ModelRequest
+        provider = self.config.opening_check_provider
+        if not self.models.available(provider):
+            raise RuntimeError('no vision model is set (KITCHEN_OPENING_CHECK_PROVIDER / KITCHEN_LLM_PROVIDER and its API key)')
+        images = [{'mime': recognition.gemini_wire.sniff_media_type(picture), 'data': base64.b64encode(picture).decode('ascii')},
+                  {'mime': 'image/png', 'data': base64.b64encode(drawing).decode('ascii')}]
+        req = ModelRequest(system='', messages=({'role': 'user', 'text': question, 'images': images},), json_only=True, max_tokens=800,
+                           task='opening-check')
+        return self.models.ask(req, provider).text
 
     def _recognised_openings(self, base: Any, plan: dict[str, Any], seen: tuple[list, list[dict[str, Any]]], country: str | None
                              ) -> tuple[list[dict[str, Any]], list[str]]:

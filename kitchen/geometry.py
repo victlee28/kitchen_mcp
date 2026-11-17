@@ -732,7 +732,12 @@ def default_views(spec: KitchenSpec, scene: Scene | None = None, catalog: Catalo
         if "left" not in reach:  # a U sees all three runs only from the open side: keep its own overview
             overview: dict[str, Any] = {**planned[f"{biggest.key}-oblique"], "name": say("name.view.perspective")}
             views["perspective"] = ViewAngle(**overview)
-    if solids and faces:
+    if room is not None:               # an imported floorplan: the overview and the plan show the whole room, not only the cabinets
+        lo, hi = scene.bounds()
+        framed = camera_plan.whole_room({k: to_data(views[k]) for k in ("plan", "overhead")}, room, solids,
+                                        (lo, hi) if hi != lo else None)
+        views.update({k: ViewAngle(**v) for k, v in framed.items()})
+    elif solids and faces:
         for key in ("overhead", "plan"):
             v = views[key]
             views[key] = ViewAngle(name=v.name, position=v.position, lookAt=v.lookAt, verticalFov=v.verticalFov,

@@ -69,23 +69,24 @@ export function photoOpeningHeadline(data) {
 
 const place = (anchor, mode) => ({ ...(anchor ? { anchor } : {}), ...(mode === 'replace' ? { mode } : {}) });
 
-export function recognizeBody(kind, name, mediaType, base64, baseRev, note = '', anchor = null, mode = 'add') {
+export function recognizeBody(kind, name, mediaType, base64, baseRev, note = '', anchor = null, mode = 'add', openingType = null) {
   if (kind !== 'photo' && kind !== 'drawing') throw new Error(tx('ui.kind-phai-la-photo-hoac-drawing'));
   const hint = String(note ?? '').replace(/\s+/g, ' ').trim().slice(0, 500);   // same limit as the server; empty = not sent
-  return { source: { kind, name, mediaType, imageBase64: base64, ...(hint ? { note: hint } : {}) }, baseRev, ...place(anchor, mode) };
+  return { source: { kind, name, mediaType, imageBase64: base64, ...(hint ? { note: hint } : {}) }, baseRev, ...place(anchor, mode),
+    ...(openingType ? { openingType } : {}) };
 }
 
 /** Body of POST .../recognize-job: ask again for the result of a recognition that answered `pending`. */
-export function recognizeJobBody(job, baseRev, anchor = null, mode = 'add') {
+export function recognizeJobBody(job, baseRev, anchor = null, mode = 'add', openingType = null) {
   const id = String(job ?? '').trim();
   if (!/^\d{8}-\d{6}(-\d+)?$/.test(id)) throw new Error(tx('ui.ma-job-khong-hop-le'));
-  return { job: id, baseRev, ...place(anchor, mode) };
+  return { job: id, baseRev, ...place(anchor, mode), ...(openingType ? { openingType } : {}) };
 }
 
 const pct = (c) => `${Math.round((c ?? 1) * 100)}%`;
 
 /** A /recognize answer as {kind: 'preview'|'message', text?, lines, proposal?, ...}. */
-export function describeRecognition(r) {
+export function describeRecognition(r, lang = 'vi') {
   const draft = r.draft;
   const draftLines = draft ? [
     ...draft.modules.map((m) => ({ kind: m.needsReview ? 'warn' : 'info',
@@ -95,6 +96,8 @@ export function describeRecognition(r) {
   switch (r.status) {
     case 'ok': return { kind: 'preview', summary: r.summary || [], lines: [...draftLines, ...describeProposal(r.proposal)], proposal: r.proposal,
       canApply: r.proposal.applicable && !r.proposal.unchanged, introducesErrors: !!r.proposal.validation?.introducesErrors };
+    case 'question': return { kind: 'choices', text: tx('ui.opening.pick-type'), lines: draftLines,
+      choices: (r.choices || []).map((c) => ({ type: c.openingType, label: c.label?.[lang] || c.label?.vi || c.openingType })) };
     case 'pending': return { kind: 'pending', job: r.job, step: r.step, lines: [],
       text: tx('ui.da-tao-job-hay-nhan-claude-tra', { 0: r.job, 1: r.step ? tx('ui.dang-cho-buoc', { 0: r.step }) : '', 2: r.job }) };
     case 'empty': return { kind: 'message', tone: 'warn', text: tx('ui.khong-nhan-ra-tu-nao-trong-anh'), lines: draftLines };

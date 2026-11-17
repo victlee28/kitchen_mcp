@@ -138,3 +138,13 @@ test('a picture of a door: anchored on a placed opening too, and the preview say
   assert.match(hole, /opening_004/);
   assert.notEqual(photoOpeningHeadline({ mode: 'opening', operation: { op: 'add-opening', opening: { width: 900, height: 2200 } } }), hole);
 });
+
+test('an unsure door: the answer offers types to pick, and the pick goes back in the request', () => {
+  const d = describeRecognition({ status: 'question', choices: [{ openingType: 'door-sliding-4', label: { vi: 'Cửa đi trượt bốn cánh', en: 'Four-panel sliding door' } },
+    { openingType: 'x-type' }] }, 'en');
+  assert.equal(d.kind, 'choices');
+  assert.deepEqual(d.choices, [{ type: 'door-sliding-4', label: 'Four-panel sliding door' }, { type: 'x-type', label: 'x-type' }]);
+  assert.equal(recognizeJobBody('20261117-095352', 3, null, 'add', 'door-sliding-4').openingType, 'door-sliding-4');
+  assert.equal('openingType' in recognizeJobBody('20261117-095352', 3), false);
+  assert.equal(recognizeBody('photo', 'a.png', 'image/png', 'QQ==', 1, '', null, 'add', 'door-swing-2').openingType, 'door-swing-2');
+});

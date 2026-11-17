@@ -2,6 +2,7 @@
 
     python tools/measure_openings.py            # table + totals
     python tools/measure_openings.py --json out.json
+    python tools/measure_openings.py --live     # ask the real vision model of RECOG_PROVIDER / RECOG_API_KEY instead of the kept answers
 
 Each case is replayed through cabinet-recognizer with the answers kept for it (services/cabinet-recognizer/tests/data/<case>.answers.json,
 plus <openings> when the case names a separate file), then through the kitchen's reading (``recognition.openings``) and type choice
@@ -25,16 +26,29 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(SERVICE))
 
 
-def replay(case: dict[str, Any]) -> dict[str, Any]:
-    """The recognizer's ``recognized-runs/1`` document for a case."""
+def live_client() -> Any:
+    """The recognizer's own vision client from its environment (RECOG_PROVIDER, RECOG_API_KEY / ANTHROPIC_API_KEY / OPENAI_API_KEY);
+    None when no key is set (a local ollama needs none)."""
+    from cabinet_recognizer.config import Config
+    from cabinet_recognizer.vision import make_client
+    config = Config.from_env()
+    if not config.api_key and config.provider != "ollama":
+        return None
+    return make_client(config)
+
+
+def replay(case: dict[str, Any], client: Any = None) -> dict[str, Any]:
+    """The recognizer's ``recognized-runs/1`` document for a case: from the kept answers, or asked again of ``client`` (a live model)."""
     from cabinet_recognizer.pipeline import recognize_auto
     from cabinet_recognizer.to_runs import to_runs
     from cabinet_recognizer.vision import ReplayClient
     name = case["case"]
-    answers = json.loads((DATA / f"{name}.answers.json").read_text(encoding="utf-8"))
-    if case.get("openings"):
-        answers["openings"] = json.loads((DATA / case["openings"]).read_text(encoding="utf-8"))
-    spec = recognize_auto((DATA / f"{name}.png").read_bytes(), ReplayClient(answers))["spec"]
+    if client is None:
+        answers = json.loads((DATA / f"{name}.answers.json").read_text(encoding="utf-8"))
+        if case.get("openings"):
+            answers["openings"] = json.loads((DATA / case["openings"]).read_text(encoding="utf-8"))
+        client = ReplayClient(answers)
+    spec = recognize_auto((DATA / f"{name}.png").read_bytes(), client)["spec"]
     return to_runs(spec)
 
 
@@ -85,11 +99,11 @@ def compare(expect: dict[str, Any], got: dict[str, Any] | None) -> dict[str, Any
     return row
 
 
-def measure(cases: list[dict[str, Any]]) -> dict[str, Any]:
+def measure(cases: list[dict[str, Any]], client: Any = None) -> dict[str, Any]:
     rows: list[dict[str, Any]] = []
     for case in cases:
         try:
-            read = seen_of(replay(case))
+            read = seen_of(replay(case, client))
         except Exception as e:      # a replay that fails counts every opening of the case as not found
             read = []
             print(f"  {case['case']}: replay failed: {e}", file=sys.stderr)
@@ -115,9 +129,16 @@ def measure(cases: list[dict[str, Any]]) -> dict[str, Any]:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--json", help="write the rows and totals to this file")
+    ap.add_argument("--live", action="store_true", help="ask the real vision model (needs RECOG_API_KEY or the provider's key)")
     a = ap.parse_args(argv)
     doc = json.loads(CASES.read_text(encoding="utf-8"))
-    result = measure(doc["cases"])
+    client = None
+    if a.live:
+        client = live_client()
+        if client is None:
+            print("--live: no key (RECOG_API_KEY / ANTHROPIC_API_KEY / OPENAI_API_KEY); nothing measured", file=sys.stderr)
+            return 2
+    result = measure(doc["cases"], client)
     for r in result["rows"]:
         mark = "OK  " if r["typeRight"] else "SAI "
         extra = {k: v for k, v in r.items() if k not in ("case", "opening", "want", "typeRight", "found", "type")}

@@ -32,7 +32,7 @@ export function createModuleMenu(ctx) {
   const box = ctx.box;
   const saved = readJob();
   let pendingJob = saved?.job ?? null; let pendingPlace = { anchor: saved?.anchor ?? null, mode: saved?.mode ?? 'add' }; let recMode = 'add';   // a recognition waiting for Claude (inbox mode): survives closing the menu and reloading the page
-  let target = null; let step = null; let busy = false; let previewOfJob = null; let attached = null;   // attached: the picture chosen with 📎, sent together with the sentence when "Xem trước" is pressed   // picking: the native file dialog is open (the window blurs, the menu must stay)
+  let target = null; let step = null; let busy = false; let previewOfJob = null; let attached = null; let lastPicture = null;   // lastPicture: the last one sent, read again when the user picks an opening type;  attached: the picture chosen with 📎, sent together with the sentence when "Xem trước" is pressed   // picking: the native file dialog is open (the window blurs, the menu must stay)
   let lineFrom = null;
   let lastAppliance = null;   // the appliance model being previewed: once applied, the image tab opens on it      // first point of a run being drawn on the floor (mm); survives closing the menu, the second right click ends the line
   box.setAttribute('role', 'dialog'); box.hidden = true;
@@ -155,7 +155,9 @@ export function createModuleMenu(ctx) {
     return el('div', { class: 'ctx-cmd' }, input, el('button', { type: 'button', class: 'primary', onclick: run }, tx(inboxMode && !attached ? 'ui.command.send' : 'ui.xem-truoc')), attach, kind, mode, file,
       ...(chip ? [chip] : []), ...(waiting ? [waiting] : []), ...queued,
       ...(message ? [el('p', { class: 'ctx-msg warn' }, message)] : []),
-      ...(choices.length ? [el('div', { class: 'chips' }, ...choices.map((c) => el('button', { type: 'button', class: 'ghost small', onclick: () => command(`${input.value.trim()} ${c}`) }, c)))] : []));
+      ...(choices.length ? [el('div', { class: 'chips' }, ...choices.map((c) => (typeof c === 'string'
+        ? el('button', { type: 'button', class: 'ghost small', onclick: () => command(`${input.value.trim()} ${c}`) }, c)
+        : el('button', { type: 'button', class: 'ghost small', onclick: () => c.pick(input.value) }, c.label))))] : []));
   }
 
   async function command(text) {
@@ -264,8 +266,12 @@ export function createModuleMenu(ctx) {
 
   // Shared by "Xem trước" with an image and by "Cập nhật": the answer is a preview, a message, or "pending" (the job still waits for Claude).
   function showRecognition(data, text, placeAt) {
-    const d = describeRecognition(data);
+    const d = describeRecognition(data, lang());
     if (d.kind === 'pending') { setJob(d.job, placeAt); return redraw(text, d.text); }
+    if (d.kind === 'choices') {        // unsure of the opening's type: the user picks, then the same picture / job is read again with it
+      return redraw(text, d.text, d.choices.map((c) => ({ label: c.label, pick: (now) => (pendingJob ? updateJob(now, c.type)
+        : lastPicture ? recognizeImage(lastPicture.file, lastPicture.kind, now, c.type) : null) })));
+    }
     if (data.status === 'empty') setJob(null);
     if (d.kind !== 'preview') return redraw(text, d.text);
     previewOfJob = pendingJob;       // applying this preview finishes the job
@@ -279,27 +285,27 @@ export function createModuleMenu(ctx) {
       : tx('ui.day-tu-nhan-dien-duoc-se-duoc');
   }
 
-  async function recognizeImage(file, kind, text) {
+  async function recognizeImage(file, kind, text, openingType = null) {
     if (busy) return; const { id, rev } = ctx.getState();
     const bad = checkUpload(file); if (bad) return redraw(text, bad);
     const anchor = anchorFor(target);
     if (!anchor) return redraw(text, tx('ui.hay-chuot-phai-vao-mot-canh-vat'));
     busy = true; ctx.setStatus(tx('ui.nhan-dien-anh-tham-chieu'));
     try {
-      const { status, data } = await call(`/api/designs/${id}/recognize`, recognizeBody(kind, file.name, file.type, await fileBase64(file), rev, text, anchor, recMode));
+      const { status, data } = await call(`/api/designs/${id}/recognize`, recognizeBody(kind, file.name, file.type, await fileBase64(file), rev, text, anchor, recMode, openingType));
       busy = false;
       if (status === 409) return stale('cmd');
       if (!data || data.error) return redraw(text, data?.error || tx('ui.loi', { 0: status }));
-      attached = null;
+      attached = null; lastPicture = { file, kind };
       showRecognition(data, text, { anchor, mode: recMode });
     } catch (e) { busy = false; redraw(text, e.message); }
   }
 
-  async function updateJob(text) {
+  async function updateJob(text, openingType = null) {
     if (busy || !pendingJob) return; const { id, rev } = ctx.getState();
     busy = true; ctx.setStatus(tx('ui.lay-ket-qua-cua-job'));
     try {
-      const { status, data } = await call(`/api/designs/${id}/recognize-job`, recognizeJobBody(pendingJob, rev, pendingPlace.anchor, pendingPlace.mode));
+      const { status, data } = await call(`/api/designs/${id}/recognize-job`, recognizeJobBody(pendingJob, rev, pendingPlace.anchor, pendingPlace.mode, openingType));
       busy = false;
       if (status === 409) return stale('cmd');
       if (!data || data.error) return redraw(text, data?.error || tx('ui.loi', { 0: status }));

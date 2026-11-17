@@ -1,3 +1,4 @@
+import base64
 """Doors and windows seen with a recognised kitchen (plan R10): carried on its runs, placed on the design's wall axes, previewed in the same
 operation as the cabinets, drawn once applied."""
 import copy
@@ -14,6 +15,7 @@ sys.path.insert(0, str(ROOT / "tests"))
 
 from kitchen import builtin, geometry, openings, recognition, run_line  # noqa: E402
 from kitchen.recognition import openings as seen_openings  # noqa: E402
+from kitchen.errors import InvalidInput  # noqa: E402
 from kitchen.service import KitchenService  # noqa: E402
 from test_floorplan import ROOM, plan  # noqa: E402
 
@@ -255,6 +257,131 @@ class TestPhotoIntoTheHoleUnderTheClick(unittest.TestCase):
         op = made["operation"]["opening"]
         self.assertEqual((op["openingType"], op["width"], op["height"], op["sourceElement"]), ("door-sliding-4", 3920.0, 2200.0, "opening_004"))
 
+
+class TestAskWhenUnsure(unittest.TestCase):
+    """Proposal P6: an unsure recognizer, or two types that fit as well, make the user pick; the user's note wins over the picture."""
+
+    FOUR = TestPhotoIntoTheHoleUnderTheClick.FOUR
+    AT = {"structureId": "STRUCT-wall_h10", "point": {"x": 0.0, "z": 1962.5}}
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="recog-ask-"))
+        self.svc = KitchenService(self.tmp / "k.db", self.tmp / "renders")
+        self.svc.recognizers.clear()
+        doc = json.loads((ROOT / "tests" / "data" / "floorplan-sliding-hole.json").read_text(encoding="utf-8"))
+        self.did = self.svc.create_from_spec(doc)["id"]
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def run_with(self, opening, note="", chosen=None):
+        self.svc.recognizers["fake"] = Fake({"modules": [], "layout": {"schema": "recognized-runs/1", "runs": [], "joints": [],
+                                                                       "photoOpenings": [opening]}})
+        return self.svc.recognize(self.did, {"kind": "photo", "imageBase64": PNG, "note": note}, "fake", anchor=self.AT, opening_type=chosen)
+
+    def test_an_unsure_recognizer_makes_the_user_pick_then_the_pick_is_used(self):
+        r = self.run_with({**self.FOUR, "confidence": 0.4})
+        self.assertEqual(r["status"], "question")
+        picks = [c["openingType"] for c in r["choices"]]
+        self.assertEqual(picks[0], "door-sliding-4-transom")
+        self.assertLessEqual(len(picks), 3)
+        self.assertTrue(r["choices"][0]["label"]["vi"])
+        self.assertNotIn("proposal", r, "nothing is placed before the user picks")
+        done = self.run_with({**self.FOUR, "confidence": 0.4}, chosen="door-sliding-4")
+        self.assertEqual((done["status"], done["operation"]["opening"]["openingType"]), ("ok", "door-sliding-4"))
+        with self.assertRaises(InvalidInput):
+            self.run_with({**self.FOUR, "confidence": 0.4}, chosen="window-fixed")
+
+    def test_two_types_that_fit_as_well_are_asked(self):
+        r = self.run_with({**self.FOUR, "leaves": 3, "axesRatio": [0.33, 0.66], "hAxesRatio": []})
+        self.assertEqual(r["status"], "question")
+        self.assertEqual({c["openingType"] for c in r["choices"][:2]}, {"door-sliding-2", "door-sliding-4"})
+
+    def test_the_note_wins_over_the_picture_and_says_so(self):
+        two = {"kind": "door", "style": "swing", "leaves": 2, "edgesSeen": "hole", "aspect": 1.6, "axesRatio": [0.5], "hAxesRatio": [],
+               "confidence": 0.9}
+        r = self.run_with(two, note="thay bằng cửa trượt 4 cánh giống ảnh")
+        self.assertEqual((r["status"], r["operation"]["opening"]["openingType"]), ("ok", "door-sliding-4"))
+        self.assertTrue(any("opening-note-wins" in str(x) for x in r["summary"]))
+        plain = self.run_with(two, note="thay bằng cửa giống ảnh")
+        self.assertEqual(plain["operation"]["opening"]["openingType"], "door-swing-2")
+
+
+class TestSecondLook(unittest.TestCase):
+    """Proposal P4: the door built from a picture is drawn and shown to a vision model next to the picture; its corrections are used once."""
+
+    AT = TestAskWhenUnsure.AT
+    FOUR = TestPhotoIntoTheHoleUnderTheClick.FOUR
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="recog-look-"))
+        self.svc = KitchenService(self.tmp / "k.db", self.tmp / "renders")
+        self.svc.recognizers.clear()
+        doc = json.loads((ROOT / "tests" / "data" / "floorplan-sliding-hole.json").read_text(encoding="utf-8"))
+        self.did = self.svc.create_from_spec(doc)["id"]
+        self.asked = []
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def run_with(self, answer):
+        def checker(picture, drawing, question):
+            self.asked.append((picture, drawing, question))
+            if isinstance(answer, Exception):
+                raise answer
+            return answer
+        self.svc.opening_checker = checker
+        self.svc.recognizers["fake"] = Fake({"modules": [], "layout": {"schema": "recognized-runs/1", "runs": [], "joints": [],
+                                                                       "photoOpenings": [self.FOUR]}})
+        return self.svc.recognize(self.did, {"kind": "photo", "imageBase64": PNG}, "fake", anchor=self.AT)
+
+    def test_a_match_keeps_the_door_and_shows_both_pictures(self):
+        r = self.run_with('{"same": true}')
+        self.assertEqual((r["status"], r["operation"]["opening"]["openingType"]), ("ok", "door-sliding-4-transom"))
+        picture, drawing, question = self.asked[0]
+        self.assertEqual(picture, base64.b64decode(PNG))
+        self.assertTrue(drawing.startswith(b"\x89PNG"), "the line drawing of the opening's own view")
+        self.assertIn("4 leaves", question)
+        self.assertTrue(any("opening-checked" in str(x) for x in r["summary"]))
+
+    def test_corrections_are_used_once(self):
+        r = self.run_with('```json\n{"same": false, "corrections": {"leaves": 2, "axesRatio": [0.5], "transomPanes": 0},'
+                          ' "notes": ["two leaves, not four"]}\n```')
+        self.assertEqual(len(self.asked), 1, "one second look, not a loop")
+        self.assertEqual(r["operation"]["opening"]["openingType"], "door-sliding-2")
+        said = " ".join(str(x) for x in r["summary"])
+        self.assertIn("corrected after a second look", said)
+        self.assertIn("two leaves, not four", said)
+
+    def test_a_failed_or_unreadable_look_leaves_the_door_as_first_read(self):
+        for answer, mark in ((RuntimeError("quota"), "opening-check-skipped"), ("I think it is fine", "opening-check-unreadable")):
+            self.asked.clear()
+            r = self.run_with(answer)
+            self.assertEqual(r["operation"]["opening"]["openingType"], "door-sliding-4-transom")
+            self.assertTrue(any(mark in str(x) for x in r["summary"]), mark)
+
+    def test_without_a_model_auto_mode_is_quiet(self):
+        self.svc.opening_checker = self.svc._model_opening_check
+        self.svc.recognizers["fake"] = Fake({"modules": [], "layout": {"schema": "recognized-runs/1", "runs": [], "joints": [],
+                                                                       "photoOpenings": [self.FOUR]}})
+        if self.svc.models.available(None):
+            self.skipTest("a model key is set here")
+        r = self.svc.recognize(self.did, {"kind": "photo", "imageBase64": PNG}, "fake", anchor=self.AT)
+        self.assertFalse(any("opening-check" in str(x) for x in r["summary"]))
+
+    def test_the_model_is_asked_with_both_pictures(self):
+        from kitchen.model_contract import ModelReply
+        sent = []
+        self.svc.models.available = lambda spec=None: True
+        self.svc.models.ask = lambda req, spec=None: sent.append((req, spec)) or ModelReply('{"same": true}', (), 1, 1, "end")
+        self.svc.opening_checker = self.svc._model_opening_check
+        self.svc.recognizers["fake"] = Fake({"modules": [], "layout": {"schema": "recognized-runs/1", "runs": [], "joints": [],
+                                                                       "photoOpenings": [self.FOUR]}})
+        r = self.svc.recognize(self.did, {"kind": "photo", "imageBase64": PNG}, "fake", anchor=self.AT)
+        req = sent[0][0]
+        self.assertEqual((req.task, req.json_only), ("opening-check", True))
+        self.assertEqual([i["mime"] for i in req.messages[0]["images"]], ["image/png", "image/png"])
+        self.assertTrue(any("opening-checked" in str(x) for x in r["summary"]))
 
 if __name__ == "__main__":
     unittest.main()

@@ -74,6 +74,9 @@ def _draft(payload: object) -> dict:
     if raw is None:
         raise BackendError("generation-failed", f"cabinet-recognizer: {recognizer_wire.response_error(payload) or 'no kitchen by runs in the answer'}")
     raw["layout"] = recognizer_wire.layout_from_runs(payload)     # the kitchen by runs; build_layout checks it and it is what gets placed
+    note = payload.get("note") if isinstance(payload, dict) else None
+    if isinstance(note, str) and note.strip():
+        raw["note"] = recognizer_wire.clean_note(note)            # an inbox job's hint, said when the picture was sent
     return raw
 
 

@@ -64,7 +64,7 @@ def _runs(rec: dict[str, Any]) -> dict[str, Any]:
 
 def _job_payload(job: Path, status: dict[str, Any]) -> dict[str, Any]:
     """The job's status; when finished also the converted ``kitchen`` ({"spec", "issues"}), read back from the files ``run_job`` wrote."""
-    out = {k: v for k, v in status.items() if k in ("id", "state", "step", "answered", "error", "warnings", "layout", "modules")}
+    out = {k: v for k, v in status.items() if k in ("id", "state", "step", "answered", "error", "warnings", "layout", "modules", "note")}
     if status.get("state") == "done":
         out["kitchen"] = {"spec": json.loads((job / "kitchen-spec.json").read_text(encoding="utf-8")), "issues": status.get("kitchenIssues", [])}
         out["runs"] = _runs(json.loads((job / "result.json").read_text(encoding="utf-8")))      # tính lại từ kết quả: job cũ chưa có runs.json

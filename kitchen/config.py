@@ -47,6 +47,8 @@ class Config:
     openai_image_model: str | None = None          # OPENAI_IMAGE_MODEL: the image backend "openai"
     menu_commands: str = "inbox"                   # KITCHEN_MENU_COMMANDS: inbox (right-click sentences go to Claude's command inbox) | direct
     command_inbox: Path | None = None              # KITCHEN_COMMAND_INBOX: the inbox folder; None: command-inbox/ beside the database
+    opening_check: str = "auto"                    # KITCHEN_OPENING_CHECK auto | on | off: a vision model takes a second look at a door built from a picture (auto: when one is set)
+    opening_check_provider: str | None = None      # KITCHEN_OPENING_CHECK_PROVIDER: e.g. "anthropic" or "openai:gpt-4.1"; None = KITCHEN_LLM_PROVIDER
     mcp_token: str | None = None                   # KITCHEN_MCP_TOKEN: the key every HTTP request of the MCP server must carry (server.py --http)
     mcp_host: str = "127.0.0.1"                    # KITCHEN_MCP_HOST: where the HTTP MCP server listens (0.0.0.0: the whole LAN)
     mcp_port: int = 8766                           # KITCHEN_MCP_PORT
@@ -82,6 +84,8 @@ class Config:
                    openai_image_model=(env.get("OPENAI_IMAGE_MODEL") or "").strip() or None,
                    menu_commands="direct" if (env.get("KITCHEN_MENU_COMMANDS") or "").strip().lower() == "direct" else "inbox",
                    command_inbox=Path(env["KITCHEN_COMMAND_INBOX"]) if env.get("KITCHEN_COMMAND_INBOX") else None,
+                   opening_check=(env.get("KITCHEN_OPENING_CHECK") or "auto").strip().lower() if (env.get("KITCHEN_OPENING_CHECK") or "auto").strip().lower() in ("auto", "on", "off") else "auto",
+                   opening_check_provider=(env.get("KITCHEN_OPENING_CHECK_PROVIDER") or "").strip() or None,
                    mcp_token=(env.get("KITCHEN_MCP_TOKEN") or "").strip() or None,
                    mcp_host=(env.get("KITCHEN_MCP_HOST") or "").strip() or "127.0.0.1",
                    mcp_port=int(env.get("KITCHEN_MCP_PORT") or 8766))

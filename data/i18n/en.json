@@ -1295,5 +1295,6 @@
  "summary.edit.hinge-common": "Hinge for every door: {hinge}",
  "part.opening-leaf-frame": "door leaf frame",
  "ui.opening.from-photo-replace": "The door or window in the picture will replace {id}, keeping its place and size: {w} wide × {h} high (mm) — check it in \"Doors & windows\".",
- "ui.opening.from-photo-hole": "The door or window in the picture will go into the hole {id} of the drawing: {w} wide × {h} high (mm) — check it in \"Doors & windows\"."
+ "ui.opening.from-photo-hole": "The door or window in the picture will go into the hole {id} of the drawing: {w} wide × {h} high (mm) — check it in \"Doors & windows\".",
+ "ui.opening.pick-type": "Not sure which type this opening is: pick one below (or type the type's name in the box and send the picture again)."
 }
