@@ -1,0 +1,117 @@
+{
+ "scene": {
+  "layout": "none",
+  "view": "frontal",
+  "runs": [],
+  "materials": {
+   "wall": "white plaster",
+   "floor": "light ceramic tiles",
+   "door": "dark grey aluminium, clear glass"
+  }
+ },
+ "openings": {
+  "openings": [
+   {
+    "kind": "door",
+    "corners": {
+     "topLeft": [
+      0.105,
+      0.112
+     ],
+     "topRight": [
+      0.905,
+      0.112
+     ],
+     "bottomRight": [
+      0.905,
+      0.776
+     ],
+     "bottomLeft": [
+      0.105,
+      0.776
+     ]
+    },
+    "edgesSeen": "hole",
+    "style": "sliding",
+    "leaves": 4,
+    "verticals": [
+     [
+      0.296,
+      0.5
+     ],
+     [
+      0.5,
+      0.5
+     ],
+     [
+      0.701,
+      0.5
+     ]
+    ],
+    "horizontals": [
+     [
+      0.5,
+      0.205
+     ]
+    ],
+    "hidden": [],
+    "confidence": 0.85,
+    "note": "four sliding glass panels (two middle panels with pull handles), fixed glass transom above split in three panes by bars in line with the outer panels' inner edges, dark grey aluminium frame",
+    "upperVerticals": [
+     [
+      0.296,
+      0.16
+     ],
+     [
+      0.701,
+      0.16
+     ]
+    ],
+    "panels": [
+     {
+      "row": 0,
+      "operation": "sliding",
+      "handle": false,
+      "front": false
+     },
+     {
+      "row": 0,
+      "operation": "sliding",
+      "handle": true,
+      "front": true
+     },
+     {
+      "row": 0,
+      "operation": "sliding",
+      "handle": true,
+      "front": true
+     },
+     {
+      "row": 0,
+      "operation": "sliding",
+      "handle": false,
+      "front": false
+     },
+     {
+      "row": 1,
+      "operation": "fixed",
+      "handle": false,
+      "front": false
+     },
+     {
+      "row": 1,
+      "operation": "fixed",
+      "handle": false,
+      "front": false
+     },
+     {
+      "row": 1,
+      "operation": "fixed",
+      "handle": false,
+      "front": false
+     }
+    ]
+   }
+  ]
+ }
+}

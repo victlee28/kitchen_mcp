@@ -111,7 +111,8 @@ def operation(wish: Mapping[str, Any], point: Pt, axes: Sequence[WallAxis], cata
     data = get(catalog, type_id)
     kind = str(data.get("kind") or kind)
     height = float(height_asked) if height_asked else num(data, "defaultHeight", 2200.0 if kind != "window" else 1200.0)
-    element = next((e for e in elements if selected and e.get("id") == selected), None) or element_at(point, elements)
+    element = next((e for e in elements if selected and e.get("id") == selected and e.get("kind") == "opening"), None) \
+        or element_at(point, elements)        # a selected wall: the opening element under the click
     sill = 0.0 if kind != "window" else (float(sill_asked) if sill_asked is not None else drawn_sill(element) or window_sill(catalog))
     raw: dict[str, Any] = {"kind": kind, "openingType": type_id, "source": "human", "height": height, "sill": sill}
     hole = element_hole(element, axes) if element is not None else None
@@ -119,6 +120,12 @@ def operation(wish: Mapping[str, Any], point: Pt, axes: Sequence[WallAxis], cata
         axis, center, width = hole
         width, oversize = _sized(float(width_asked) if width_asked else float(round_half_away(width, 0)), data, kind, type_id, wish)
         raw.update(wallAxis=axis.ref().to_data(), center=round_half_away(center, 1), width=width, **({"oversize": True} if oversize else {}))
+        if element is not None and element.get("id"):
+            raw["sourceElement"] = str(element["id"])     # it takes the drawn element's place: the element is no longer built as a solid
+            elev = as_dict(element.get("elev")) or {}
+            drawn_h = elev.get("height")
+            if not height_asked and isinstance(drawn_h, (int, float)) and not isinstance(drawn_h, bool) and drawn_h > 0:
+                raw["height"] = height = float(drawn_h)
         what = "hole"
     else:
         if nearest(point, axes, REACH_MM) is None:
@@ -181,7 +188,8 @@ def hole_opening(point: Pt | None, axes: Sequence[WallAxis], catalog: Catalog, s
     its drawn height (``elev``) or its type's default, its type from its tag and label. With the element's label (its name in the
     drawing). None when no element is there or no wall axis runs through it."""
     from ..recognition.openings import element_at, element_hole
-    element = next((e for e in elements if selected and e.get("id") == selected), None) or (element_at(point, elements) if point else None)
+    element = next((e for e in elements if selected and e.get("id") == selected and e.get("kind") == "opening"), None) \
+        or (element_at(point, elements) if point else None)
     hole = element_hole(element, axes) if element is not None else None
     if element is None or hole is None:
         return None

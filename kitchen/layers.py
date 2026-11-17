@@ -24,7 +24,7 @@ SEMANTIC = {"carcass": "cabinet_body", "side-panel": "cabinet_body", "shelf": "c
             "door": "cabinet_front", "glass-door": "cabinet_front", "drawer": "cabinet_front",
             "countertop": "countertop", "molding": "decorations", "handle": "hardware", "wall": "room", "floor": "room",
             "fridge": "appliances", "sink": "appliances", "faucet": "appliances", "cooktop": "appliances", "hood": "appliances", "oven": "appliances",
-            "opening-frame": "room_opening", "opening-leaf": "room_opening", "opening-glass": "room_opening", "opening-sweep": "room_opening",
+            "opening-frame": "room_opening", "opening-leaf": "room_opening", "opening-leaf-frame": "room_opening", "opening-glass": "room_opening", "opening-sweep": "room_opening",
             "opening-handle": "room_opening"}
 
 _PROMPT_ROLES = {  # part kind -> the words of the image prompt (English); the name shown to people is the ``part.<kind>`` key of data/i18n
@@ -32,7 +32,7 @@ _PROMPT_ROLES = {  # part kind -> the words of the image prompt (English); the n
     "side-panel": "cabinet side panel", "shelf": "open shelf", "plinth": "toe kick plinth", "countertop": "kitchen countertop",
     "molding": "decorative molding", "wall": "wall", "floor": "floor", "fridge": "refrigerator", "sink": "kitchen sink",
     "faucet": "kitchen faucet", "cooktop": "cooktop", "hood": "range hood", "oven": "built-in oven", "handle": "cabinet handle",
-    "opening-frame": "door or window frame and casing", "opening-leaf": "room door leaf", "opening-glass": "window glass",
+    "opening-frame": "door or window frame and casing", "opening-leaf": "room door leaf", "opening-leaf-frame": "door leaf frame", "opening-glass": "window glass",
     "opening-sweep": "floor in front of a door", "opening-handle": "door handle",
 }
 ROLES = {k: (say(f"part.{k}"), en) for k, en in _PROMPT_ROLES.items()}   # part kind -> (name shown to people, prompt words)
@@ -40,9 +40,9 @@ ROLES = {k: (say(f"part.{k}"), en) for k, en in _PROMPT_ROLES.items()}   # part 
 _MATERIALS = defaults.BUILTIN.materials   # finish names drawn where the design names none (data: the ``defaults`` item)
 _DEFAULTS = {k: _MATERIALS[k] for k in ("base", "upper", "carcass", "countertop", "wall", "floor", "plinth", "openingFrame", "openingLeaf",
                                         "openingGlass", "openingHandle") if k in _MATERIALS}
-OPENING_KEYS = {"opening-frame": "openingFrame", "opening-leaf": "openingLeaf", "opening-glass": "openingGlass", "opening-sweep": "floor",
+OPENING_KEYS = {"opening-frame": "openingFrame", "opening-leaf": "openingLeaf", "opening-leaf-frame": "openingFrame", "opening-glass": "openingGlass", "opening-sweep": "floor",
                 "opening-handle": "openingHandle"}
-OPENING_GROUPS = (("leaves", ("opening-leaf", "opening-glass"), "name.layer.opening-leaves"),     # (layer id prefix, part types, name key)
+OPENING_GROUPS = (("leaves", ("opening-leaf", "opening-leaf-frame", "opening-glass"), "name.layer.opening-leaves"),     # (layer id prefix, part types, name key)
                   ("frame", ("opening-frame",), "name.layer.opening-frame"),
                   ("handle", ("opening-handle",), "name.layer.opening-handles"))
 _APPLIANCES = {"fridge": _MATERIALS["steel"], "sink": _MATERIALS["sink"], "faucet": _MATERIALS["steel"], "cooktop": _MATERIALS["cooktop"],

@@ -1,7 +1,8 @@
 """Solids of the openings a design places, for the control-map renderer and the layer catalogue (plan §4, slice 2). Pure.
 
 Part types: ``opening-frame`` (jambs, head, sill, transoms, mullions, casings), ``opening-leaf`` (a door leaf), ``opening-glass`` (a
-window leaf, fixed glazing), ``opening-handle`` (the handle of a leaf that opens, both faces) and ``opening-sweep`` (the floor a turning leaf sweeps, a flat sheet 2 mm up, like the floorplan's doors).
+window leaf, fixed glazing, the pane of a framed glass leaf), ``opening-leaf-frame`` (the stiles and rails of a framed glass leaf: ``leafFrame``
+of the type), ``opening-handle`` (the handle of a leaf that opens, both faces) and ``opening-sweep`` (the floor a turning leaf sweeps, a flat sheet 2 mm up, like the floorplan's doors).
 ``module`` is the opening id, so every opening has its own masks. The wall around the hole is cut by ``cut_polygon`` / ``cut_box``.
 """
 from __future__ import annotations
@@ -46,9 +47,16 @@ def meshes(opening: Opening, axis: WallAxis, type_data: Mapping[str, Any], sh: O
     for b in sh["frame"]:
         v, f = prism(_quad(axis, b["s0"], b["s1"], b["d0"], b["d1"]), b["y0"], b["y1"])
         out.append(MeshPart(f"{opening.id}-frame-{b['part']}", opening.id, "opening-frame", v, f))
+    framed = {p["leaf"] for p in sh["leafParts"]}
     for lf in sh["leaves"]:
+        if lf["index"] in framed:
+            continue
         v, f = prism(_quad(axis, lf["s0"], lf["s1"], lf["d0"], lf["d1"]), lf["y0"], lf["y1"])
         out.append(MeshPart(f"{opening.id}-leaf-{lf['index'] + 1}", opening.id, leaf_type(opening, lf["operation"]), v, f))
+    for p in sh["leafParts"]:
+        v, f = prism(_quad(axis, p["s0"], p["s1"], p["d0"], p["d1"]), p["y0"], p["y1"])
+        kind = "opening-glass" if p["part"] == "pane" else "opening-leaf-frame"
+        out.append(MeshPart(f"{opening.id}-leaf-{p['leaf'] + 1}-{p['part']}", opening.id, kind, v, f))
     for hb in sh["handles"]:
         v, f = prism(_quad(axis, hb["s0"], hb["s1"], hb["d0"], hb["d1"]), hb["y0"], hb["y1"])
         out.append(MeshPart(f"{opening.id}-handle-{hb['leaf'] + 1}-{hb['part']}", opening.id, "opening-handle", v, f))

@@ -6,7 +6,8 @@ từ sàn. Nhánh phối cảnh dựng nó từ camera; nhánh chính diện t�
 Mỗi cửa ra::
 
     {"id": "CS1", "kind", "wall", "x", "width", "axes"?: [x giữa], "sill"?, "head"?, "hAxes"?: [h], "edgesSeen", "style", "leaves",
-     "confidence", "unsure"?: ["start" | "end" | "sill" | "head"], "note"?}
+     "transomPanes"?, "panels"?: [{"row", "operation", "handle", "front"}], "confidence", "unsure"?: ["start" | "end" | "sill" | "head"],
+     "note"?}
 
 ``x``/``width`` là mép thấy được (``edgesSeen``: ngoài nẹp hay mép lỗ); bên nhận trừ nẹp. Một mép bị che (``hidden``) vẫn được đo nhưng
 ghi vào ``unsure``; chân cửa bị che thì không có ``sill`` (bên nhận dùng mặc định của loại cửa).
@@ -67,6 +68,7 @@ def place(answers: list[OpeningAnswer], project: Project, image_size: tuple[int,
         if lows:
             item["hAxes"] = lows
         item.update(edgesSeen=ans["edgesSeen"], style=ans["style"], leaves=ans["leaves"], confidence=ans["confidence"])
+        item.update(_detail(ans))
         # "start" = mép x nhỏ: bên trái ảnh, trừ khi tường lật chiều
         side_of = {"left": "end" if flipped else "start", "right": "start" if flipped else "end", "top": "head", "bottom": "sill"}
         unsure = sorted({side_of[s] for s in ans["hidden"]})
@@ -126,7 +128,7 @@ def photo(answers: list[OpeningAnswer], image_size: tuple[int, int], warnings: l
     trí các trục giữa theo tỉ lệ của mép (đúng cả khi chụp xiên: chiếu tứ giác về hình chữ nhật)::
 
         {"id": "CS1", "kind", "style", "leaves", "edgesSeen", "aspect": cao/rộng, "axesRatio": [0..1 từ mép trái], "hAxesRatio": [0..1 từ bậu],
-         "confidence", "hidden"?, "note"?}
+         "transomPanes"?, "panels"?, "confidence", "hidden"?, "note"?}
     """
     w, h = image_size
     out: list[dict[str, Any]] = []
@@ -152,9 +154,20 @@ def photo(answers: list[OpeningAnswer], image_size: tuple[int, int], warnings: l
                                 "edgesSeen": ans["edgesSeen"], "aspect": _ratio(tall / wide),
                                 "axesRatio": [m for m in mids if 0.02 < m < 0.98], "hAxesRatio": [v for v in lows if 0.02 < v < 0.98],
                                 "confidence": ans["confidence"]}
+        item.update(_detail(ans))
         if ans["hidden"]:
             item["hidden"] = ans["hidden"]
         if ans["note"]:
             item["note"] = ans["note"]
         out.append(item)
+    return out
+
+
+def _detail(ans: OpeningAnswer) -> dict[str, Any]:
+    """Số ô của ô thoáng (khi AI nói thanh đứng của hàng trên) và các ô (kiểu mở, tay nắm, ray trước), chuyển nguyên cho bên nhận."""
+    out: dict[str, Any] = {}
+    if ans["upperVerticals"] is not None and ans["horizontals"]:
+        out["transomPanes"] = len(ans["upperVerticals"]) + 1
+    if ans["panels"] is not None:
+        out["panels"] = [dict(p) for p in ans["panels"]]
     return out

@@ -477,8 +477,12 @@ def _export_openings(doc: dict[str, Any], spec: KitchenSpec, catalog: Catalog, l
             "id": opening.id, "type": "pass_through" if opening.kind == "passage" else opening.kind, "offset": round_half_away(offset, 1),
             "width": opening.width, "height": opening.height, "sillHeight": opening.sill, "openingType": opening.opening_type,
             "wallAxis": opening.wall_axis.id, "center": opening.center,
-            "frame": [{"part": str(b["part"]), **local(b)} for b in sh["frame"]],
-            "leaves": [{"operation": lf["operation"], "glass": opening.kind == "window", **local(lf)} for lf in sh["leaves"]],
+            "frame": [{"part": str(b["part"]), **local(b)} for b in sh["frame"]]
+                     + [{"part": f"leaf-{p['leaf'] + 1}-{p['part']}", "leafFrame": True, **local(p)} for p in sh["leafParts"] if p["part"] != "pane"],
+            "leaves": [{"operation": lf["operation"], "glass": opening.kind == "window", **local(lf)} for lf in sh["leaves"]
+                       if lf["index"] not in {p["leaf"] for p in sh["leafParts"]}]
+                      + [{"operation": sh["leaves"][p["leaf"]]["operation"], "glass": True, **local(p)} for p in sh["leafParts"] if p["part"] == "pane"],
+            "handles": [{"part": str(hb["part"]), "leaf": hb["leaf"], **local(hb)} for hb in sh["handles"]],
             **({"sourceElement": opening.source_element} if opening.source_element else {})}
         wall["openings"] = [o for o in wall["openings"] if o["id"] != opening.id] + [record]
 

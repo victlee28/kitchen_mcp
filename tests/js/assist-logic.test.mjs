@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { opensOrSaves, replacesWithDoor, joinsRuns, styleFromOptions, styleFromValue, interpretBody, describeInterpret, confirmBody, checkUpload, recognizeBody, recognizeJobBody, anchorFor, describeRecognition, templateIntent, mentionsReference, recognitionLines, commandPlace, commandBody, inboxNews, describeCommandAnswer } from '../../web/assist-logic.js';
+import { opensOrSaves, replacesWithDoor, joinsRuns, styleFromOptions, styleFromValue, interpretBody, describeInterpret, confirmBody, checkUpload, recognizeBody, recognizeJobBody, anchorFor, photoOpeningHeadline, describeRecognition, templateIntent, mentionsReference, recognitionLines, commandPlace, commandBody, inboxNews, describeCommandAnswer } from '../../web/assist-logic.js';
 
 const prop = (over = {}) => ({ id: 'd1', baseRev: 4, opHash: 'h', operation: { op: 'remove', id: 'TD1' }, applicable: true, unchanged: false,
   diff: { modules: { added: [], removed: ['TD1'], changed: {} }, other: [] }, validation: { introduced: [], resolved: [] }, ...over });
@@ -128,4 +128,13 @@ test('command inbox: what was clicked, the body sent, the answers shown', () => 
   assert.equal(describeCommandAnswer(list[1], 5).reload, false, 'already on that revision');
   assert.equal(describeCommandAnswer(list[2], 4).tone, 'bad');
   assert.equal(describeCommandAnswer({ id: 'q', status: 'question', text: 'x', reply: 'Tủ nào?' }, 4).tone, 'warn');
+});
+
+test('a picture of a door: anchored on a placed opening too, and the preview says which opening it replaces or fills', () => {
+  assert.deepEqual(anchorFor({ kind: 'opening', id: 'OP1', point: { x: 0, z: 1962.5 } }), { structureId: 'OP1', point: { x: 0, z: 1962.5 } });
+  const replace = photoOpeningHeadline({ mode: 'opening', operation: { op: 'update-opening', id: 'OP1', changes: { width: 3920, height: 2200 } } });
+  assert.match(replace, /OP1/); assert.match(replace, /3920/); assert.match(replace, /2200/);
+  const hole = photoOpeningHeadline({ mode: 'opening', operation: { op: 'add-opening', opening: { sourceElement: 'opening_004', width: 3920, height: 2200 } } });
+  assert.match(hole, /opening_004/);
+  assert.notEqual(photoOpeningHeadline({ mode: 'opening', operation: { op: 'add-opening', opening: { width: 900, height: 2200 } } }), hole);
 });

@@ -1293,5 +1293,8 @@ export default {
  "summary.edit.moldings-on": "Thêm phào ({which})",
  "edit.ask.hinge": "Đổi sang bản lề nào? (ví dụ: bản lề giảm chấn, bản lề lọt lòng, bản lề mở rộng)",
  "summary.edit.hinge": "Bản lề {hinge} cho {ids}",
- "summary.edit.hinge-common": "Bản lề chung: {hinge}"
+ "summary.edit.hinge-common": "Bản lề chung: {hinge}",
+ "part.opening-leaf-frame": "viền khung cánh cửa",
+ "ui.opening.from-photo-replace": "Cửa trong ảnh sẽ thay {id}, giữ vị trí và khổ của nó: rộng {w} × cao {h} mm — kiểm tra lại trong khung \"Cửa & cửa sổ\".",
+ "ui.opening.from-photo-hole": "Cửa trong ảnh sẽ lắp vào lỗ {id} của bản vẽ: rộng {w} × cao {h} mm — kiểm tra lại trong khung \"Cửa & cửa sổ\"."
 };

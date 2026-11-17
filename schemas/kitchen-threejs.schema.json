@@ -473,6 +473,10 @@
                           },
                           "z1": {
                             "type": "number"
+                          },
+                          "leafFrame": {
+                            "type": "boolean",
+                            "description": "The stile or rail of a framed glass leaf (opening type leafFrame > 0), not the fixed frame"
                           }
                         }
                       }
@@ -522,6 +526,49 @@
                     "sourceElement": {
                       "type": "string",
                       "description": "[v1.6] Floorplan element of the opening"
+                    },
+                    "handles": {
+                      "type": "array",
+                      "description": "Handles of the leaves that open, both faces; same box coordinates as frame",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "part",
+                          "leaf",
+                          "x0",
+                          "x1",
+                          "y0",
+                          "y1",
+                          "z0",
+                          "z1"
+                        ],
+                        "properties": {
+                          "part": {
+                            "type": "string"
+                          },
+                          "leaf": {
+                            "type": "integer"
+                          },
+                          "x0": {
+                            "type": "number"
+                          },
+                          "x1": {
+                            "type": "number"
+                          },
+                          "y0": {
+                            "type": "number"
+                          },
+                          "y1": {
+                            "type": "number"
+                          },
+                          "z0": {
+                            "type": "number"
+                          },
+                          "z1": {
+                            "type": "number"
+                          }
+                        }
+                      }
                     }
                   }
                 },

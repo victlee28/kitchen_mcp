@@ -2,7 +2,7 @@
 // The server decides what a change means (POST .../propose previews, POST .../ops saves); nothing here edits data directly.
 import { el } from './dom.js';
 import { request } from './api-client.js';
-import { opensOrSaves, replacesWithDoor, joinsRuns, interpretBody, describeInterpret, templateIntent, systemIntent, mentionsReference, checkUpload, recognizeBody, recognizeJobBody, anchorFor, describeRecognition, recognitionLines, commandPlace, commandBody, inboxNews, describeCommandAnswer } from './assist-logic.js';
+import { opensOrSaves, replacesWithDoor, joinsRuns, interpretBody, describeInterpret, templateIntent, systemIntent, mentionsReference, checkUpload, recognizeBody, recognizeJobBody, anchorFor, photoOpeningHeadline, describeRecognition, recognitionLines, commandPlace, commandBody, inboxNews, describeCommandAnswer } from './assist-logic.js';
 import { actionsFor, buildGroupOp, buildOp, describeProposal, groupActions, layerFor, lineTemplate, menuPosition, DOOR_STYLES, HANDLE_VARIANTS, RUN_ACTIONS, RUN_TURNS, systemTemplate, edgeChoices, modelChoices, applianceLayer, lineAlongWall, wallSegments, openingCommand, cabinetTypeChoices } from './menu-logic.js';
 import { groupLabel, groupLayerIds, manySystems } from './design-logic.js';
 import * as catalog from './catalog-client.js';
@@ -273,7 +273,7 @@ export function createModuleMenu(ctx) {
   }
 
   function warning(data) {
-    if (data.mode === 'opening') return tx('ui.opening.from-photo');
+    if (data.mode === 'opening') return photoOpeningHeadline(data);
     if (!data.structureId) return tx('ui.ket-qua-nhan-dien-se-thay-toan');
     return data.mode === 'replace' ? tx('ui.cac-tu-hien-co-se-bi-thay')
       : tx('ui.day-tu-nhan-dien-duoc-se-duoc');

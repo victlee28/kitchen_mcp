@@ -140,6 +140,12 @@
      },
      "active": {
       "type": "boolean"
+     },
+     "track": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 3,
+      "description": "Sliding leaves: the rail the leaf runs on, 0 = nearest the minus face; leaves on different rails sit one behind the other"
      }
     }
    }
@@ -345,11 +351,50 @@
       "vi": "Cách mép cánh (mm)",
       "en": "From the leaf edge (mm)"
      }
+    },
+    "leaves": {
+     "type": "array",
+     "items": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 20
+     },
+     "x-label": {
+      "vi": "Chỉ các cánh này có tay nắm (số thứ tự từ 0); trống = mọi cánh mở được",
+      "en": "Only these leaves get a handle (0-based); empty = every leaf that opens"
+     }
     }
    },
    "x-label": {
     "vi": "Tay nắm cửa",
     "en": "Door handle"
+   }
+  },
+  "leafFrame": {
+   "type": "number",
+   "minimum": 0,
+   "maximum": 200,
+   "x-label": {
+    "vi": "Viền khung cánh kính (mm); 0 = cánh đặc",
+    "en": "Glass leaf frame width (mm); 0 = solid leaf"
+   }
+  },
+  "trackGap": {
+   "type": "number",
+   "minimum": 0,
+   "maximum": 50,
+   "x-label": {
+    "vi": "Khe giữa hai ray trượt (mm)",
+    "en": "Gap between sliding rails (mm)"
+   }
+  },
+  "overlap": {
+   "type": "number",
+   "minimum": 0,
+   "maximum": 150,
+   "x-label": {
+    "vi": "Cánh trượt chồng lên nhau ở chỗ gặp (mm)",
+    "en": "Sliding leaves overlap where they meet (mm)"
    }
   }
  }

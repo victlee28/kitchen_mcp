@@ -52,9 +52,19 @@ export function checkUpload(file) {
 
 /** Where a recognised run stands: along the edge of the floor-plan object picked with the right click. null when the target is no such object. */
 export function anchorFor(target) {
-  const p = target?.point;
-  if (target?.kind !== 'structure' || typeof target.id !== 'string' || !p || !Number.isFinite(p.x) || !Number.isFinite(p.z)) return null;
+  const p = target?.point;     // a floorplan element, or a room opening the design places (its id: the server finds it among the openings)
+  if (!['structure', 'opening'].includes(target?.kind) || typeof target.id !== 'string' || !p || !Number.isFinite(p.x) || !Number.isFinite(p.z)) return null;
   return { structureId: target.id, point: { x: p.x, z: p.z } };
+}
+
+/** The headline of a preview made from a picture of a room opening (mode 'opening'): which opening of the drawing it replaces or
+ *  fills, at what size; else the plain warning that it is added to the wall picked. */
+export function photoOpeningHeadline(data) {
+  const op = data?.operation ?? data?.proposal?.operation;
+  const size = (o) => ({ w: Math.round(o?.width ?? 0), h: Math.round(o?.height ?? 0) });
+  if (op?.op === 'update-opening') return tx('ui.opening.from-photo-replace', { id: op.id, ...size(op.changes) });
+  if (op?.op === 'add-opening' && op.opening?.sourceElement) return tx('ui.opening.from-photo-hole', { id: op.opening.sourceElement, ...size(op.opening) });
+  return tx('ui.opening.from-photo');
 }
 
 const place = (anchor, mode) => ({ ...(anchor ? { anchor } : {}), ...(mode === 'replace' ? { mode } : {}) });

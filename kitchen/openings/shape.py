@@ -9,7 +9,7 @@ from ..numeric import round_half_away
 
 import math
 from collections.abc import Mapping
-from typing import Any, TypedDict
+from typing import Any, TypedDict, cast
 
 from .contract import Opening, Pt
 from .types import casing_width, grid, num, obj
@@ -46,6 +46,10 @@ class HandleBox(Box):
     leaf: int
 
 
+class LeafPart(Box):
+    leaf: int
+
+
 class OpeningShape(TypedDict):
     hole: list[Pt]
     center: Pt
@@ -57,6 +61,7 @@ class OpeningShape(TypedDict):
     hAxes: list[float]
     frame: list[Box]
     leaves: list[LeafShape]
+    leafParts: list[LeafPart]
     handles: list[HandleBox]
     sweeps: list[list[Pt]]
     clear: tuple[float, float] | None
@@ -121,10 +126,19 @@ def shape(opening: Opening, axis: WallAxis, type_data: Mapping[str, Any]) -> Ope
     sweeps: list[list[Pt]] = []
     nv, nh = len(v), len(h)
     clear: tuple[float, float] | None = None
+    tracks = _tracks(type_data, len(opening.leaves))
+    n_tracks = max((k for k in tracks if k is not None), default=-1) + 1
+    pitch = lt + num(type_data, "trackGap", 8.0)
+    overlap = num(type_data, "overlap")
     for i, lf in enumerate(opening.leaves):
         (c0, c1), (r0, r1) = lf.cols, lf.rows
         s0 = v[c0] + (ff if c0 == 0 else gap / 2)
         s1 = v[c1] - (ff if c1 == nv - 1 else gap / 2)
+        track = tracks[i] if lf.operation == "sliding" else None
+        mid_d = (track - (n_tracks - 1) / 2) * pitch if track is not None and n_tracks > 1 else 0.0
+        if track is not None and n_tracks > 1:                  # leaves on different rails pass each other: they overlap where they meet
+            s0 -= overlap / 2 if _neighbour_track(opening, tracks, i, c0, at_end=False) not in (None, track) else 0.0
+            s1 += overlap / 2 if _neighbour_track(opening, tracks, i, c1, at_end=True) not in (None, track) else 0.0
         y0 = h[r0] + ((ff if opening.kind == "window" else threshold) if r0 == 0 else tr / 2)
         y1 = h[r1] - (ff if r1 == nh - 1 else tr / 2)
         if r0 == 0 or opening.kind != "door":
@@ -134,7 +148,7 @@ def shape(opening: Opening, axis: WallAxis, type_data: Mapping[str, Any]) -> Ope
         if lf.hinge is not None and lf.hinge.axis == "v":
             hinge_s = s0 if lf.hinge.index == c0 else s1
         leaves.append({"index": i, "operation": lf.operation, "s0": _r(s0), "s1": _r(s1), "y0": _r(y0), "y1": _r(y1),
-                       "d0": _r(-lt / 2), "d1": _r(lt / 2), "hingeS": _r(hinge_s) if hinge_s is not None else None, "side": lf.side,
+                       "d0": _r(mid_d - lt / 2), "d1": _r(mid_d + lt / 2), "hingeS": _r(hinge_s) if hinge_s is not None else None, "side": lf.side,
                        "active": lf.active})
         sign = 1.0 if lf.side == "+" else -1.0
         angle = math.radians(num(type_data, "openingAngle", 90.0))
@@ -159,11 +173,62 @@ def shape(opening: Opening, axis: WallAxis, type_data: Mapping[str, Any]) -> Ope
     if opening.kind == "passage" and opening.clear_width is not None:
         clear = (_r(e0), _r(e1))
     handles = _handles(opening, type_data, leaves)
+    leaf_parts = _leaf_parts(opening, type_data, leaves)
     n = axis.normal
     return {"hole": [_pt(axis, e0, -t / 2), _pt(axis, e1, -t / 2), _pt(axis, e1, t / 2), _pt(axis, e0, t / 2)],
             "center": _pt(axis, opening.center, 0.0), "along": (axis.dir[0], axis.dir[1]), "normal": (n[0], n[1]), "thickness": t,
             "edges": (_r(e0), _r(e1)), "vAxes": [_r(x) for x in v], "hAxes": [_r(y) for y in h], "frame": frame, "leaves": leaves,
-            "handles": handles, "sweeps": sweeps, "clear": clear}
+            "leafParts": leaf_parts, "handles": handles, "sweeps": sweeps, "clear": clear}
+
+
+def _tracks(type_data: Mapping[str, Any], n: int) -> list[int | None]:
+    """The rail of each leaf (``track`` of the type's leaves, by index); None where the type gives none."""
+    raw = type_data.get("leaves")
+    listed: list[Any] = cast(list[Any], raw) if isinstance(raw, list) else []
+    out: list[int | None] = []
+    for i in range(n):
+        item = obj(listed[i]) if i < len(listed) else None
+        t = item.get("track") if item is not None else None
+        out.append(int(t) if isinstance(t, int) and not isinstance(t, bool) else None)
+    return out
+
+
+def _neighbour_track(opening: Opening, tracks: list[int | None], i: int, col: int, at_end: bool) -> int | None:
+    """The rail of the sliding leaf next to leaf ``i`` across its grid line ``col`` (after it when ``at_end``), None if there is none."""
+    me = opening.leaves[i]
+    for j, other in enumerate(opening.leaves):
+        if j == i or other.operation != "sliding":
+            continue
+        meets = other.cols[0] == col if at_end else other.cols[1] == col
+        if meets and other.rows[0] < me.rows[1] and me.rows[0] < other.rows[1]:
+            return tracks[j]
+    return None
+
+
+GLASS_THICK = 6.0       # mm: the pane inside a framed leaf
+
+
+def _leaf_parts(opening: Opening, type_data: Mapping[str, Any], leaves: list[LeafShape]) -> list[LeafPart]:
+    """A framed glass leaf (``leafFrame`` of the type > 0, a door's leaves that open or slide; a window's every leaf): its four
+    stiles and rails ``leafFrame`` wide and the pane inside. Empty for solid leaves, which are drawn whole."""
+    fw = num(type_data, "leafFrame")
+    if fw <= 0:
+        return []
+    out: list[LeafPart] = []
+    for lf in leaves:
+        if opening.kind == "door" and lf["operation"] == "fixed":
+            continue
+        s0, s1, y0, y1, d0, d1 = lf["s0"], lf["s1"], lf["y0"], lf["y1"], lf["d0"], lf["d1"]
+        if s1 - s0 <= 2 * fw or y1 - y0 <= 2 * fw:
+            continue
+        mid = (d0 + d1) / 2
+        k = lf["index"]
+        for part, a, b, c, d in (("stile-start", s0, s0 + fw, y0, y1), ("stile-end", s1 - fw, s1, y0, y1),
+                                 ("rail-bottom", s0 + fw, s1 - fw, y0, y0 + fw), ("rail-top", s0 + fw, s1 - fw, y1 - fw, y1)):
+            out.append({"part": part, "leaf": k, "s0": _r(a), "s1": _r(b), "y0": _r(c), "y1": _r(d), "d0": d0, "d1": d1})
+        out.append({"part": "pane", "leaf": k, "s0": _r(s0 + fw), "s1": _r(s1 - fw), "y0": _r(y0 + fw), "y1": _r(y1 - fw),
+                    "d0": _r(mid - GLASS_THICK / 2), "d1": _r(mid + GLASS_THICK / 2)})
+    return out
 
 
 LEVER = {"rose": 55.0, "length": 130.0, "thick": 20.0, "reach": 60.0}       # mm: the rose on the leaf, the lever, how far it stands off
@@ -175,16 +240,18 @@ def _handles(opening: Opening, type_data: Mapping[str, Any], leaves: list[LeafSh
     """The handle of every leaf that opens, on both faces: a lever (rose + lever pointing to the hinge) on a hinged leaf, at the edge away
     from the hinge; a vertical pull bar on a sliding / folding leaf, at the edge away from the jamb; a lever in the middle of the bottom rail
     of a top-hung leaf. ``handle`` of the opening type: ``kind`` lever | pull | none, ``height`` above the floor (none: the middle of the
-    leaf), ``inset`` from the leaf edge. A fixed leaf and a passage have none."""
+    leaf), ``inset`` from the leaf edge, ``leaves`` the only leaves (by index) that get one. A fixed leaf and a passage have none."""
     spec = {**HANDLE_DEFAULT.get(opening.kind, {"kind": "none"}), **(obj(type_data.get("handle")) or {})}
     kind = spec.get("kind")
     if kind not in ("lever", "pull") or opening.kind == "passage":
         return []
     inset = float(spec.get("inset") or 60.0)
+    only = spec.get("leaves")
+    chosen = {int(k) for k in cast(list[Any], only) if isinstance(k, int) and not isinstance(k, bool)} if isinstance(only, list) else None
     out: list[HandleBox] = []
     for lf in leaves:
         op = lf["operation"]
-        if op == "fixed":
+        if op == "fixed" or (chosen is not None and lf["index"] not in chosen):
             continue
         s0, s1, y0, y1 = lf["s0"], lf["s1"], lf["y0"], lf["y1"]
         if s1 - s0 < 2 * inset or y1 - y0 < 200:

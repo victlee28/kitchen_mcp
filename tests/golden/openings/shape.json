@@ -158,6 +158,7 @@
       "active": true
      }
     ],
+    "leafParts": [],
     "handles": [
      {
       "part": "rose-front",
@@ -631,6 +632,7 @@
       "active": false
      }
     ],
+    "leafParts": [],
     "handles": [
      {
       "part": "rose-front",
@@ -1016,6 +1018,7 @@
       "active": false
      }
     ],
+    "leafParts": [],
     "handles": [
      {
       "part": "rose-front",
@@ -1288,6 +1291,7 @@
       "active": true
      }
     ],
+    "leafParts": [],
     "handles": [
      {
       "part": "rose-front",
@@ -1519,6 +1523,7 @@
       "active": false
      }
     ],
+    "leafParts": [],
     "handles": [],
     "sweeps": [],
     "clear": null

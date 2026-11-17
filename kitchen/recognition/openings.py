@@ -26,6 +26,7 @@ from ..openings.contract import KINDS, Opening
 from ..openings.types import casing_width, get, num
 from ..openings.normalize import width_range
 from ..openings.wall_axes import WallAxis, nearest, opening_pieces
+from . import opening_match
 from .draft import confidence_of, number
 
 Pt = tuple[float, float]
@@ -49,6 +50,33 @@ class SeenOpening:
     leaves: int
     confidence: float
     note: str = ""
+    transom_panes: int | None = None               # panes of the transom, when the recognizer counted them
+    panels: tuple["Panel", ...] | None = None      # every leaf and pane row by row, left to right, when the recognizer said them
+
+
+@dataclass(frozen=True)
+class Panel:
+    row: int
+    operation: str
+    handle: bool
+    front: bool
+
+
+PANEL_OPS = ("swing", "sliding", "folding", "fixed", "top-hung")
+
+
+def read_detail(obj: Mapping[str, Any]) -> tuple[int | None, tuple[Panel, ...] | None]:
+    """``transomPanes`` and ``panels`` of a recognised opening, checked; what is malformed is left out (both are optional)."""
+    tp = obj.get("transomPanes")
+    panes = tp if isinstance(tp, int) and not isinstance(tp, bool) and 1 <= tp <= 8 else None
+    raw = as_list(obj.get("panels"))
+    panels: list[Panel] = []
+    for p in (as_dict(x) for x in raw or []):
+        row, op = (p.get("row", 0), p.get("operation")) if p is not None else (None, None)
+        if p is None or not isinstance(row, int) or isinstance(row, bool) or not 0 <= row <= 2 or op not in PANEL_OPS:
+            return panes, None
+        panels.append(Panel(row, str(op), p.get("handle") is True, p.get("front") is True))
+    return panes, (tuple(panels) if raw is not None and panels else None)
 
 
 def _seen(run: str, value: Any, index: int, rejected: list[dict[str, Any]]) -> SeenOpening | None:
@@ -82,9 +110,10 @@ def _seen(run: str, value: Any, index: int, rejected: list[dict[str, Any]]) -> S
         return reject("sill and head must be numbers") or None
     leaves = obj.get("leaves", 1)
     style, edges = obj.get("style", "swing"), obj.get("edgesSeen", "casing")
+    panes, panels = read_detail(obj)
     return SeenOpening(run, str(kind), tuple(sorted(axes)), sill, head, tuple(sorted(h_axes)), str(edges) if edges in EDGES else "casing",
                        str(style) if style in STYLES else "swing", leaves if isinstance(leaves, int) and not isinstance(leaves, bool) and 0 <= leaves <= 8 else 1,
-                       confidence_of(obj.get("confidence")), str(obj.get("note") or "")[:120])
+                       confidence_of(obj.get("confidence")), str(obj.get("note") or "")[:120], panes, panels)
 
 
 def read(doc: Any) -> tuple[list[SeenOpening], list[dict[str, Any]]]:
@@ -125,22 +154,31 @@ def flat_to_runs(openings: Any, lengths: Mapping[str, float]) -> dict[str, list[
     return out
 
 
-def opening_type(seen: SeenOpening) -> str:
-    """The catalog type closest to what was seen (builtin ids; the workshop may hide or change them, ``normalize`` then refuses)."""
-    if seen.kind == "passage":
-        return "passage"
-    if seen.kind == "door":
-        if seen.style == "sliding":
-            return "door-sliding-2"
-        if seen.style == "folding":
-            return "door-folding-4"
-        if seen.leaves >= 2:
-            return "door-swing-2-transom" if seen.h_axes else "door-swing-2"
-        return "door-swing-1-transom" if seen.h_axes else "door-swing-1"
-    by_style = {"fixed": "window-fixed", "sliding": "window-sliding-2", "top-hung": "window-top-hung"}
-    if seen.style in by_style:
-        return by_style[seen.style]
-    return "window-swing-2-top" if seen.h_axes else "window-swing-2"     # no one-leaf casement type: two leaves, marked unsure by normalize
+def _panel_features(panels: tuple[Panel, ...] | None) -> tuple[tuple[int, ...] | None, tuple[int, ...] | None]:
+    """``(handles, fronts)``: the leaves (indices of the main row, left to right, as a type numbers its leaves) with a handle and on the
+    front rail; None when the panels were not said."""
+    if panels is None:
+        return None, None
+    main = [p for p in panels if p.row == 0]
+    fronts = tuple(i for i, p in enumerate(main) if p.front)
+    return tuple(i for i, p in enumerate(main) if p.handle), (fronts if fronts else None)
+
+
+def features_of(seen: SeenOpening) -> opening_match.Features:
+    """The features of an opening seen on a run: its middle dividers as fractions of its width."""
+    ss = [s for s, _ in seen.axes]
+    wide = ss[-1] - ss[0] if len(ss) >= 2 else 0.0
+    ratios = tuple((s - ss[0]) / wide for s in ss[1:-1]) if wide > 0 else None
+    return opening_match.seen_features(seen.kind, seen.style, seen.leaves, bool(seen.h_axes), ratios, seen.transom_panes,
+                                       *_panel_features(seen.panels))
+
+
+def opening_type(seen: SeenOpening, catalog: Catalog) -> str:
+    """The catalog type that fits what was seen best (``opening_match``): no rule per type, so a type the workshop adds is found too."""
+    found = opening_match.best(features_of(seen), catalog)
+    if found is None:
+        raise InvalidInput(f"The catalog has no {seen.kind} type", code="opening-type-missing", params={"kind": seen.kind})
+    return found.type_id
 
 
 def _start_and_dir(line: Any) -> tuple[Pt, Pt]:
@@ -180,7 +218,12 @@ def operations(seen: Sequence[SeenOpening], lines: Mapping[str, Any], axes: Sequ
             notes.append(f"opening-not-placed: no wall behind the {o.kind} seen on the {o.run} run.")
             continue
         axis = near[0]
-        raw: dict[str, Any] = {"kind": o.kind, "openingType": opening_type(o), "source": "ai", "wallAxis": axis.ref().to_data(),
+        found = opening_match.best(features_of(o), catalog)
+        if found is None:
+            notes.append(f"opening-not-placed: the catalog has no {o.kind} type.")
+            continue
+        notes += opening_match.note(found)
+        raw: dict[str, Any] = {"kind": o.kind, "openingType": found.type_id, "source": "ai", "wallAxis": axis.ref().to_data(),
                                "axes": [{"s": _r(axis.s_of(p)), "confidence": c} for p, (_, c) in zip(pts, o.axes)], "edgesSeen": o.edges_seen}
         if o.sill is not None:
             raw["sill"] = o.sill
@@ -231,6 +274,8 @@ class PhotoOpening:
     h_axes_ratio: tuple[float, ...]       # middle horizontal axes, 0..1 from the sill
     confidence: float
     note: str = ""
+    transom_panes: int | None = None
+    panels: tuple[Panel, ...] | None = None
 
 
 def _ratios(value: Any) -> tuple[float, ...] | None:
@@ -257,11 +302,25 @@ def read_photo(doc: Any) -> tuple[list[PhotoOpening], list[dict[str, Any]]]:
             rejected.append({"run": "photo", "index": i, "reason": "axesRatio and hAxesRatio must be fractions between 0 and 1"})
         else:
             leaves, style, edges = o.get("leaves", 1), o.get("style", "swing"), o.get("edgesSeen", "casing")
+            panes, panels = read_detail(o)
             found.append(PhotoOpening(str(o["kind"]), str(style) if style in STYLES else "swing",
                                       leaves if isinstance(leaves, int) and not isinstance(leaves, bool) and 0 <= leaves <= 8 else 1,
                                       str(edges) if edges in EDGES else "casing", aspect, mids, lows, confidence_of(o.get("confidence")),
-                                      str(o.get("note") or "")[:120]))
+                                      str(o.get("note") or "")[:120], panes, panels))
     return found, rejected
+
+
+def photo_features(seen: PhotoOpening) -> opening_match.Features:
+    return opening_match.seen_features(seen.kind, seen.style, seen.leaves, bool(seen.h_axes_ratio), seen.axes_ratio, seen.transom_panes,
+                                       *_panel_features(seen.panels))
+
+
+def photo_match(seen: PhotoOpening, catalog: Catalog) -> opening_match.Match:
+    """The catalog type that fits the opening of a picture best."""
+    found = opening_match.best(photo_features(seen), catalog)
+    if found is None:
+        raise InvalidInput(f"The catalog has no {seen.kind} type", code="opening-type-missing", params={"kind": seen.kind})
+    return found
 
 
 def photo_opening(seen: PhotoOpening, point: Pt, catalog: Catalog, country: str | None = None) -> dict[str, Any]:
@@ -269,8 +328,7 @@ def photo_opening(seen: PhotoOpening, point: Pt, catalog: Catalog, country: str 
     height the type's default (doors and windows vary least in height), its width from the picture's proportions, rounded and taken to a
     standard width of the country when one is close; the dividers where the picture shows them. Placed at ``point`` (the axes' frame).
     Width, height and sill are marked unsure: the user checks them."""
-    kind_type = opening_type(SeenOpening("photo", seen.kind, ((0.0, 1.0), (1.0, 1.0)), None, None,
-                                         tuple((r, 1.0) for r in seen.h_axes_ratio), seen.edges_seen, seen.style, seen.leaves, seen.confidence))
+    kind_type = photo_match(seen, catalog).type_id
     data = get(catalog, kind_type)
     height = num(data, "defaultHeight", 2200.0 if seen.kind != "window" else 1200.0)
     casing = casing_width(data) if seen.edges_seen == "casing" else 0.0
@@ -323,8 +381,7 @@ def photo_replacement(seen: PhotoOpening, target: Opening, catalog: Catalog) -> 
     size: its place and width are kept (the drawing knows them better than a picture with nothing to measure by); its height too when the
     drawing gives it for the same kind of opening, else the picture's proportions on that width (a window replaced by a door, a height the
     drawing only assumed), marked unsure. A door stands on the floor. The dividers sit at the picture's proportions of the hole."""
-    kind_type = opening_type(SeenOpening("photo", seen.kind, ((0.0, 1.0), (1.0, 1.0)), None, None,
-                                         tuple((r, 1.0) for r in seen.h_axes_ratio), seen.edges_seen, seen.style, seen.leaves, seen.confidence))
+    kind_type = photo_match(seen, catalog).type_id
     keep_height = seen.kind == target.kind and "height" not in target.unsure
     if keep_height:
         height = target.height
@@ -397,23 +454,44 @@ def element_at(point: Pt, elements: Sequence[Mapping[str, Any]]) -> Mapping[str,
     return None
 
 
-def photo_into_hole(seen: PhotoOpening, axis: WallAxis, center: float, width: float, catalog: Catalog) -> dict[str, Any]:
+PHOTO_HEIGHT_MM = {"door": (1800.0, 3200.0), "passage": (1800.0, 3200.0), "window": (300.0, 2400.0)}   # a height from a picture is kept in these
+
+
+def photo_into_hole(seen: PhotoOpening, axis: WallAxis, center: float, width: float, catalog: Catalog,
+                    drawn: tuple[float | None, float | None] = (None, None)) -> dict[str, Any]:
     """The ``add-opening`` record that puts the opening of a picture into a hole of the drawing (a selected floorplan opening element):
-    the hole's place and width; its height the type's default (the drawing gives none, and doors and windows vary least in height),
-    marked unsure; a door on the floor, a window at the type's sill. The dividers sit at the picture's proportions of the hole."""
-    kind_type = opening_type(SeenOpening("photo", seen.kind, ((0.0, 1.0), (1.0, 1.0)), None, None,
-                                         tuple((r, 1.0) for r in seen.h_axes_ratio), seen.edges_seen, seen.style, seen.leaves, seen.confidence))
+    the hole's place and width; its height and sill those the drawing gives (``drawn``: the element's ``elev`` height and base), else
+    the hole's width times the picture's proportions (the type's default when that falls outside ``PHOTO_HEIGHT_MM``), marked unsure; a door on the floor, a window at the type's sill. The
+    dividers sit at the picture's proportions of the hole."""
+    kind_type = photo_match(seen, catalog).type_id
     data = get(catalog, kind_type)
     width = float(round_half_away(width, 0))
-    height = num(data, "defaultHeight", 2200.0 if seen.kind != "window" else 1200.0)
+    drawn_height, drawn_base = drawn
+    if drawn_height:
+        height = drawn_height
+    else:                                        # the hole's width and the picture's proportions; the type's default when that is implausible
+        low, high = PHOTO_HEIGHT_MM.get(seen.kind, PHOTO_HEIGHT_MM["door"])
+        from_picture = float(round_half_away(width * seen.aspect / HEIGHT_STEP, 0)) * HEIGHT_STEP
+        height = from_picture if low <= from_picture <= high else num(data, "defaultHeight", 2200.0 if seen.kind != "window" else 1200.0)
+    if seen.kind != "window":
+        sill = 0.0
+    else:
+        sill = drawn_base if drawn_base else num(data, "defaultSill", 900.0)
+    unsure = [*([] if drawn_height else ["height"]), *(["sill"] if seen.kind == "window" and not drawn_base else [])]
     raw: dict[str, Any] = {"kind": seen.kind, "openingType": kind_type, "source": "ai", "wallAxis": axis.ref().to_data(), "center": _r(center),
-                           "width": width, "height": height, "sill": 0.0 if seen.kind != "window" else num(data, "defaultSill", 900.0),
-                           "unsure": ["height", *(["sill"] if seen.kind == "window" else [])]}
+                           "width": width, "height": height, "sill": sill, "unsure": unsure}
     if seen.axes_ratio:
         raw["axes"] = [_r((r - 0.5) * width) for r in seen.axes_ratio]
     if seen.h_axes_ratio:
         raw["hAxes"] = [_r(r * height) for r in seen.h_axes_ratio]
     return raw
+
+
+def element_elev(element: Mapping[str, Any] | None) -> tuple[float | None, float | None]:
+    """``(height, base)`` a floorplan opening element's ``elev`` gives (mm), None for what it does not give."""
+    elev = as_dict((element or {}).get("elev")) or {}
+    height, base = number(elev.get("height")), number(elev.get("base"))
+    return (height if height is not None and height > 0 else None, base if base is not None and base > 0 else None)
 
 
 def photo_operations(seen: Sequence[PhotoOpening], point: Pt, axes: Sequence[WallAxis], catalog: Catalog, country: str | None = None,
@@ -426,6 +504,7 @@ def photo_operations(seen: Sequence[PhotoOpening], point: Pt, axes: Sequence[Wal
     if not seen:
         return [], []
     notes = [f"opening-not-placed: the picture shows {len(seen)} openings; only the first was placed at the point picked."] if len(seen) > 1 else []
+    notes += opening_match.note(photo_match(seen[0], catalog))
     target = clicked_opening(point, axes, existing, selected)
     if target is not None:
         changes = photo_replacement(seen[0], target, catalog)
@@ -433,13 +512,18 @@ def photo_operations(seen: Sequence[PhotoOpening], point: Pt, axes: Sequence[Wal
         notes.append(f"opening-replaced-from-photo: {target.id} becomes {changes['openingType']} {target.width:g} x {changes['height']:g} mm "
                      f"(fitted to the selected opening: its place and width kept, {fitted}).")
         return [{"op": "update-opening", "id": target.source_element or target.id, "changes": changes}], notes
-    element = next((e for e in elements if selected and e.get("id") == selected), None) or element_at(point, elements)
+    # the opening element selected; a selected wall (or nothing) means the opening element under the click, if any
+    element = next((e for e in elements if selected and e.get("id") == selected and e.get("kind") == "opening"), None) \
+        or element_at(point, elements)
     hole = element_hole(element, axes) if element is not None else None
     if hole is not None:
         axis, center, width = hole
-        raw = photo_into_hole(seen[0], axis, center, width, catalog)
+        raw = photo_into_hole(seen[0], axis, center, width, catalog, element_elev(element))
+        if element is not None and element.get("id"):
+            raw["sourceElement"] = str(element["id"])     # it takes the drawn element's place: the element is no longer built as a solid
+        tall = "its height from the drawing" if "height" not in raw["unsure"] else "the type's height, check it"
         sized = (f"opening-sized-from-selection: {raw['openingType']} {raw['width']:g} x {raw['height']:g} mm in the hole of "
-                 f"{element.get('id') if element else ''} (its place and width; the type's height, check it).")
+                 f"{element.get('id') if element else ''} (its place and width; {tall}).")
     else:
         if nearest(point, axes, PHOTO_REACH_MM) is None:
             return [], [*notes, "opening-not-placed: no wall near the point picked; right-click a wall or select the opening to replace."]

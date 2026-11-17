@@ -1,0 +1,34 @@
+{
+ "about": "Doors and windows of answered recognition jobs, with what they really are. tools/measure_openings.py replays each through cabinet-recognizer (services/cabinet-recognizer/tests/data/<case>.answers.json) and the kitchen's type choice, and compares. Ratios: dividers as fractions of the opening, from the left / from the sill.",
+ "cases": [
+  {
+   "case": "cua-2-canh-o-fix",
+   "job": "20261113-154907",
+   "picture": "a wall with one door, no cabinets",
+   "expect": [
+    {"kind": "door", "type": "door-swing-2-transom", "style": "swing", "leaves": 2, "axesRatio": [0.5], "hAxesRatio": [0.82], "transomPanes": 1,
+     "source": "the picture: two equal swing leaves under one fixed glass pane"}
+   ]
+  },
+  {
+   "case": "cua-truot-4-canh-o-thoang",
+   "job": "20261117-095352",
+   "picture": "a wall with one door, no cabinets",
+   "expect": [
+    {"kind": "door", "type": "door-sliding-4-transom", "style": "sliding", "leaves": 4, "axesRatio": [0.24, 0.49, 0.75], "hAxesRatio": [0.86],
+     "transomPanes": 3, "handles": [1, 2],
+     "source": "the picture, and the user (17/11/2026): four sliding glass panels, pulls on the two middle ones, a transom of three panes"}
+   ]
+  },
+  {
+   "case": "bep-chu-L-trang",
+   "openings": "bep-chu-L-trang.openings.json",
+   "picture": "an L-shaped kitchen with a window on the back wall and a door on the left one",
+   "expect": [
+    {"run": "back", "kind": "window", "type": "window-swing-2-top", "style": "swing", "leaves": 2,
+     "source": "the picture: a two-leaf casement window with a fixed top light"},
+    {"run": "left", "kind": "door", "type": "door-swing-1", "style": "swing", "leaves": 1, "source": "the picture: a single swing door"}
+   ]
+  }
+ ]
+}

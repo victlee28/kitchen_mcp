@@ -68,15 +68,32 @@ class TestFourPanelSliding(unittest.TestCase):
                            ("tạo cửa trượt 2 cánh", "door-sliding-2"), ("tạo cửa xếp 4 cánh", "door-folding-4")):
             self.assertEqual((opening_wish(text) or {}).get("type"), want, text)
 
-    def test_four_leaves_each_with_a_pull_towards_the_middle(self):
+    def test_four_leaves_on_two_rails_with_pulls_on_the_middle_two(self):
         o, sh = opening("door", "door-sliding-4", width=3920, center=2000)
-        self.assertEqual(len(sh["leaves"]), 4)
+        leaves = sh["leaves"]
+        self.assertEqual(len(leaves), 4)
         pulls = [h for h in sh["handles"] if h["part"] == "pull-front"]
-        self.assertEqual(len(pulls), 4)
-        for h in pulls:
-            leaf = next(lf for lf in sh["leaves"] if lf["index"] == h["leaf"])
-            towards_middle = leaf["s1"] if (leaf["s0"] + leaf["s1"]) / 2 < o.center else leaf["s0"]
-            self.assertLess(abs((h["s0"] + h["s1"]) / 2 - towards_middle), 61)
+        self.assertEqual(sorted(h["leaf"] for h in pulls), [1, 2], "only the two middle leaves have a pull (handle.leaves)")
+        for h in pulls:                                   # at the edge where the middle leaves meet
+            self.assertLess(abs((h["s0"] + h["s1"]) / 2 - o.center), 65)
+        outer, middle = {leaves[0]["d0"], leaves[3]["d0"]}, {leaves[1]["d0"], leaves[2]["d0"]}
+        self.assertEqual((len(outer), len(middle)), (1, 1))
+        self.assertGreaterEqual(abs(next(iter(outer)) - next(iter(middle))), 40, "the outer and middle leaves on two rails, one behind the other")
+        self.assertGreater(leaves[0]["s1"], leaves[1]["s0"], "leaves on different rails overlap where they meet")
+        self.assertLessEqual(leaves[1]["s1"], leaves[2]["s0"], "the two middle leaves on one rail meet, not overlap")
+
+    def test_a_glass_leaf_has_a_frame_and_a_pane(self):
+        o, sh = opening("door", "door-sliding-2", width=1600)
+        parts = [p for p in sh["leafParts"] if p["leaf"] == 0]
+        self.assertEqual(sorted(p["part"] for p in parts), ["pane", "rail-bottom", "rail-top", "stile-end", "stile-start"])
+        stile = next(p for p in parts if p["part"] == "stile-start")
+        self.assertAlmostEqual(stile["s1"] - stile["s0"], 45)
+        from kitchen.openings.meshes import meshes
+        types = {m.type for m in meshes(o, AXES[0], CAT.data("opening-type", "door-sliding-2"))}
+        self.assertTrue({"opening-leaf-frame", "opening-glass"} <= types)
+        self.assertNotIn("opening-leaf", types, "the framed leaf is drawn as its frame and pane, not as one solid")
+        _, swing = opening("door", "door-swing-1")
+        self.assertEqual(swing["leafParts"], [], "a solid door leaf has no frame of its own")
 
 
 class TestViewsAndLayers(unittest.TestCase):

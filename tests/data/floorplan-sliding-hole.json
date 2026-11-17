@@ -1,0 +1,1683 @@
+{
+ "floorplan": {
+  "ref": "95464451750d55cce525bd72e81fa5d36bf31169786b8cbf0b1b2afb2a290eec",
+  "planId": "mau-du-lieu",
+  "contractVersion": "2.1",
+  "sourceSha256": "9c6bbd8cf5f44b218cf7e2dc3e4e5467e5865c5aa0892277796fd056dd3dacbe",
+  "sourceUnit": "cm",
+  "roomId": "room_003",
+  "roomLabel": "PHÒNG KHÁCH",
+  "rooms": [
+   {
+    "id": "room_003",
+    "kind": "room",
+    "label": "PHÒNG KHÁCH",
+    "labelStatus": "unreviewed",
+    "bbox": [
+     15,
+     6,
+     487.09,
+     609
+    ],
+    "points": 12
+   }
+  ],
+  "region": null,
+  "origin": {
+   "unit": "cm",
+   "right": 46.5,
+   "forward": 487.04499999999996,
+   "note": "scene.x = right - origin.right, scene.z = origin.forward - forward (file units)"
+  },
+  "outline": [
+   {
+    "x": 5625.0,
+    "z": 4615.45
+   },
+   {
+    "x": 3925.0,
+    "z": 4615.45
+   },
+   {
+    "x": 3925.0,
+    "z": 4715.45
+   },
+   {
+    "x": 0.0,
+    "z": 4715.45
+   },
+   {
+    "x": 0.0,
+    "z": 390.45
+   },
+   {
+    "x": 4.85,
+    "z": 390.45
+   },
+   {
+    "x": 4.85,
+    "z": 0.0
+   },
+   {
+    "x": 3935.0,
+    "z": 0.0
+   },
+   {
+    "x": 3935.0,
+    "z": 125.45
+   },
+   {
+    "x": 5625.0,
+    "z": 125.45
+   }
+  ],
+  "width": 5625.0,
+  "depth": 4715.45,
+  "height": 3000.0,
+  "heightSource": "assumed",
+  "areaM2": 26.141,
+  "walls": [
+   {
+    "id": "WALL-FP-1",
+    "edge": 0,
+    "thickness": 240.0,
+    "thicknessSource": "measured",
+    "sourceElement": "wall_003",
+    "height": 3000.0,
+    "openings": [],
+    "start": {
+     "x": 5625.0,
+     "y": 0,
+     "z": 4615.45
+    },
+    "end": {
+     "x": 3925.0,
+     "y": 0,
+     "z": 4615.45
+    },
+    "interiorNormal": {
+     "x": -0.0,
+     "y": 0,
+     "z": -1.0
+    },
+    "length": 1700.0,
+    "endExtension": 0.0
+   },
+   {
+    "id": "WALL-FP-2",
+    "edge": 1,
+    "thickness": 140.0,
+    "thicknessSource": "assumed",
+    "sourceElement": null,
+    "height": 3000.0,
+    "openings": [],
+    "start": {
+     "x": 3925.0,
+     "y": 0,
+     "z": 4615.45
+    },
+    "end": {
+     "x": 3925.0,
+     "y": 0,
+     "z": 4855.45
+    },
+    "interiorNormal": {
+     "x": -1.0,
+     "y": 0,
+     "z": 0.0
+    },
+    "length": 100.0,
+    "endExtension": 140.0
+   },
+   {
+    "id": "WALL-FP-3",
+    "edge": 2,
+    "thickness": 140.0,
+    "thicknessSource": "measured",
+    "sourceElement": "wall_006",
+    "height": 3000.0,
+    "openings": [],
+    "start": {
+     "x": 3925.0,
+     "y": 0,
+     "z": 4715.45
+    },
+    "end": {
+     "x": -410.0,
+     "y": 0,
+     "z": 4715.45
+    },
+    "interiorNormal": {
+     "x": -0.0,
+     "y": 0,
+     "z": -1.0
+    },
+    "length": 3925.0,
+    "endExtension": 410.0
+   },
+   {
+    "id": "WALL-FP-4",
+    "edge": 3,
+    "thickness": 410.0,
+    "thicknessSource": "measured",
+    "sourceElement": "wall_h10",
+    "height": 3000.0,
+    "openings": [
+     {
+      "id": "WALL-FP-4-FP-opening_004",
+      "type": "door",
+      "offset": 386.3,
+      "width": 3920.0,
+      "height": 2200.0,
+      "sillHeight": 0.0,
+      "sourceElement": "opening_004"
+     }
+    ],
+    "start": {
+     "x": 0.0,
+     "y": 0,
+     "z": 4715.45
+    },
+    "end": {
+     "x": 0.0,
+     "y": 0,
+     "z": 250.45
+    },
+    "interiorNormal": {
+     "x": 1.0,
+     "y": 0,
+     "z": 0.0
+    },
+    "length": 4325.0,
+    "endExtension": 140.0
+   },
+   {
+    "id": "WALL-FP-5",
+    "edge": 4,
+    "thickness": 140.0,
+    "thicknessSource": "assumed",
+    "sourceElement": null,
+    "height": 3000.0,
+    "openings": [],
+    "start": {
+     "x": 0.0,
+     "y": 0,
+     "z": 390.45
+    },
+    "end": {
+     "x": 4.85,
+     "y": 0,
+     "z": 390.45
+    },
+    "interiorNormal": {
+     "x": -0.0,
+     "y": 0,
+     "z": 1.0
+    },
+    "length": 4.85,
+    "endExtension": 0.0
+   },
+   {
+    "id": "WALL-FP-6",
+    "edge": 5,
+    "thickness": 140.0,
+    "thicknessSource": "assumed",
+    "sourceElement": null,
+    "height": 3000.0,
+    "openings": [],
+    "start": {
+     "x": 4.85,
+     "y": 0,
+     "z": 390.45
+    },
+    "end": {
+     "x": 4.85,
+     "y": 0,
+     "z": -120.0
+    },
+    "interiorNormal": {
+     "x": 1.0,
+     "y": 0,
+     "z": 0.0
+    },
+    "length": 390.45,
+    "endExtension": 120.0
+   },
+   {
+    "id": "WALL-FP-7",
+    "edge": 6,
+    "thickness": 120.0,
+    "thicknessSource": "measured",
+    "sourceElement": "wall_015",
+    "height": 3000.0,
+    "openings": [],
+    "start": {
+     "x": 4.85,
+     "y": 0,
+     "z": 0.0
+    },
+    "end": {
+     "x": 4075.0,
+     "y": 0,
+     "z": 0.0
+    },
+    "interiorNormal": {
+     "x": -0.0,
+     "y": 0,
+     "z": 1.0
+    },
+    "length": 3930.15,
+    "endExtension": 140.0
+   },
+   {
+    "id": "WALL-FP-8",
+    "edge": 7,
+    "thickness": 140.0,
+    "thicknessSource": "assumed",
+    "sourceElement": null,
+    "height": 3000.0,
+    "openings": [],
+    "start": {
+     "x": 3935.0,
+     "y": 0,
+     "z": 0.0
+    },
+    "end": {
+     "x": 3935.0,
+     "y": 0,
+     "z": 125.45
+    },
+    "interiorNormal": {
+     "x": -1.0,
+     "y": 0,
+     "z": 0.0
+    },
+    "length": 125.45,
+    "endExtension": 0.0
+   },
+   {
+    "id": "WALL-FP-9",
+    "edge": 8,
+    "thickness": 240.0,
+    "thicknessSource": "measured",
+    "sourceElement": "wall_011",
+    "height": 3000.0,
+    "openings": [],
+    "start": {
+     "x": 3935.0,
+     "y": 0,
+     "z": 125.45
+    },
+    "end": {
+     "x": 5765.0,
+     "y": 0,
+     "z": 125.45
+    },
+    "interiorNormal": {
+     "x": -0.0,
+     "y": 0,
+     "z": 1.0
+    },
+    "length": 1690.0,
+    "endExtension": 140.0
+   },
+   {
+    "id": "WALL-FP-10",
+    "edge": 9,
+    "thickness": 140.0,
+    "thicknessSource": "assumed",
+    "sourceElement": null,
+    "height": 3000.0,
+    "openings": [],
+    "start": {
+     "x": 5625.0,
+     "y": 0,
+     "z": 125.45
+    },
+    "end": {
+     "x": 5625.0,
+     "y": 0,
+     "z": 4855.45
+    },
+    "interiorNormal": {
+     "x": -1.0,
+     "y": 0,
+     "z": 0.0
+    },
+    "length": 4490.0,
+    "endExtension": 240.0
+   }
+  ],
+  "elements": [
+   {
+    "id": "column_001",
+    "kind": "column",
+    "tag": "column",
+    "label": null,
+    "review": {
+     "geometry": "edited",
+     "tag": "unreviewed",
+     "label": "unreviewed"
+    },
+    "elev": null,
+    "outline": [
+     {
+      "x": -405.0,
+      "z": 4850.45
+     },
+     {
+      "x": -405.0,
+      "z": 4350.45
+     },
+     {
+      "x": -5.0,
+      "z": 4350.45
+     },
+     {
+      "x": -5.0,
+      "z": 4850.45
+     }
+    ],
+    "membership": "adjacent",
+    "distance": 5.0
+   },
+   {
+    "id": "opening_001",
+    "kind": "opening",
+    "tag": "door",
+    "label": null,
+    "review": {
+     "geometry": "edited",
+     "tag": "edited",
+     "label": "unreviewed"
+    },
+    "elev": {
+     "base": 0.0,
+     "height": 2200.0
+    },
+    "outline": [
+     {
+      "x": 13225.0,
+      "z": 4314.75
+     },
+     {
+      "x": 13225.0,
+      "z": 3414.75
+     },
+     {
+      "x": 13465.0,
+      "z": 3414.75
+     },
+     {
+      "x": 13465.0,
+      "z": 4314.75
+     }
+    ],
+    "swing": [
+     {
+      "x": 13347.1,
+      "z": 3414.75
+     },
+     {
+      "x": 13424.2,
+      "z": 3418.25
+     },
+     {
+      "x": 13502.4,
+      "z": 3428.65
+     },
+     {
+      "x": 13582.6,
+      "z": 3446.65
+     },
+     {
+      "x": 13661.7,
+      "z": 3472.35
+     },
+     {
+      "x": 13740.0,
+      "z": 3506.05
+     },
+     {
+      "x": 13819.2,
+      "z": 3549.75
+     },
+     {
+      "x": 13896.5,
+      "z": 3603.55
+     },
+     {
+      "x": 13973.2,
+      "z": 3670.25
+     },
+     {
+      "x": 14043.6,
+      "z": 3747.35
+     },
+     {
+      "x": 14109.6,
+      "z": 3840.05
+     },
+     {
+      "x": 14165.6,
+      "z": 3945.05
+     },
+     {
+      "x": 14208.2,
+      "z": 4059.95
+     },
+     {
+      "x": 14235.5,
+      "z": 4184.35
+     },
+     {
+      "x": 14245.0,
+      "z": 4315.45
+     }
+    ],
+    "hinge": {
+     "x": 13345.0,
+     "z": 4314.75
+    },
+    "membership": "outside",
+    "distance": 7600.0,
+    "attached": null,
+    "note": "opening_001 is not on any wall edge (it must be parallel to one and inside its thickness)"
+   },
+   {
+    "id": "opening_002",
+    "kind": "opening",
+    "tag": "door",
+    "label": null,
+    "review": {
+     "geometry": "edited",
+     "tag": "confirmed",
+     "label": "unreviewed"
+    },
+    "elev": {
+     "base": 0.0,
+     "height": 2200.0
+    },
+    "outline": [
+     {
+      "x": 13566.4,
+      "z": 1500.45
+     },
+     {
+      "x": 13566.4,
+      "z": 1360.45
+     },
+     {
+      "x": 14314.0,
+      "z": 1360.45
+     },
+     {
+      "x": 14314.0,
+      "z": 1500.45
+     }
+    ],
+    "swing": [
+     {
+      "x": 14314.2,
+      "z": 1498.75
+     },
+     {
+      "x": 14307.8,
+      "z": 1398.85
+     },
+     {
+      "x": 14288.4,
+      "z": 1302.35
+     },
+     {
+      "x": 14256.3,
+      "z": 1212.25
+     },
+     {
+      "x": 14214.4,
+      "z": 1122.05
+     },
+     {
+      "x": 14159.7,
+      "z": 1041.65
+     },
+     {
+      "x": 14095.4,
+      "z": 967.65
+     },
+     {
+      "x": 14021.3,
+      "z": 903.35
+     },
+     {
+      "x": 13940.8,
+      "z": 848.45
+     },
+     {
+      "x": 13854.0,
+      "z": 806.65
+     },
+     {
+      "x": 13760.6,
+      "z": 774.45
+     },
+     {
+      "x": 13664.1,
+      "z": 755.15
+     },
+     {
+      "x": 13564.2,
+      "z": 748.75
+     }
+    ],
+    "hinge": {
+     "x": 13566.4,
+     "z": 1496.35
+    },
+    "membership": "outside",
+    "distance": 7941.4,
+    "attached": null,
+    "note": "opening_002 is not on any wall edge (it must be parallel to one and inside its thickness)"
+   },
+   {
+    "id": "furniture_001",
+    "kind": "furniture",
+    "tag": "cabinet",
+    "label": "TỦ RƯỢU",
+    "review": {
+     "geometry": "edited",
+     "tag": "confirmed",
+     "label": "confirmed"
+    },
+    "elev": null,
+    "outline": [
+     {
+      "x": 10215.0,
+      "z": 4740.45
+     },
+     {
+      "x": 10215.0,
+      "z": 4620.45
+     },
+     {
+      "x": 9885.0,
+      "z": 4620.45
+     },
+     {
+      "x": 9885.7,
+      "z": 4433.25
+     },
+     {
+      "x": 13235.0,
+      "z": 4430.45
+     },
+     {
+      "x": 13235.0,
+      "z": 4610.45
+     },
+     {
+      "x": 13145.0,
+      "z": 4610.45
+     },
+     {
+      "x": 13145.0,
+      "z": 4720.45
+     }
+    ],
+    "membership": "outside",
+    "distance": 4260.003
+   },
+   {
+    "id": "shaft_001",
+    "kind": "shaft",
+    "tag": "elevator_shaft",
+    "label": "THANG KÍNH",
+    "review": {
+     "geometry": "edited",
+     "tag": "confirmed",
+     "label": "unreviewed"
+    },
+    "elev": null,
+    "outline": [
+     {
+      "x": 8319.0,
+      "z": 4622.35
+     },
+     {
+      "x": 8319.0,
+      "z": 2528.85
+     },
+     {
+      "x": 9815.5,
+      "z": 2528.85
+     },
+     {
+      "x": 9815.5,
+      "z": 3279.85
+     },
+     {
+      "x": 9815.0,
+      "z": 4620.45
+     }
+    ],
+    "membership": "outside",
+    "distance": 2694.0
+   },
+   {
+    "id": "furniture_003",
+    "kind": "furniture",
+    "tag": "cabinet_kitchen_set",
+    "label": "Tủ bếp",
+    "review": {
+     "geometry": "edited",
+     "tag": "edited",
+     "label": "edited"
+    },
+    "elev": null,
+    "outline": [
+     {
+      "x": 14513.0,
+      "z": 3395.95
+     },
+     {
+      "x": 14513.0,
+      "z": 1486.15
+     },
+     {
+      "x": 15112.6,
+      "z": 1486.15
+     },
+     {
+      "x": 15112.6,
+      "z": 3395.95
+     }
+    ],
+    "membership": "outside",
+    "distance": 8888.0
+   },
+   {
+    "id": "furniture_017",
+    "kind": "furniture",
+    "tag": "cabinet_kitchen_set",
+    "label": "Tủ bếp 2",
+    "review": {
+     "geometry": "edited",
+     "tag": "edited",
+     "label": "edited"
+    },
+    "elev": null,
+    "outline": [
+     {
+      "x": 10215.3,
+      "z": 594.75
+     },
+     {
+      "x": 10215.0,
+      "z": 0.45
+     },
+     {
+      "x": 13145.0,
+      "z": 0.45
+     },
+     {
+      "x": 13145.0,
+      "z": 120.45
+     },
+     {
+      "x": 13235.0,
+      "z": 120.45
+     },
+     {
+      "x": 13238.0,
+      "z": 594.75
+     }
+    ],
+    "membership": "outside",
+    "distance": 4590.063
+   },
+   {
+    "id": "furniture_019",
+    "kind": "furniture",
+    "tag": "cabinet",
+    "label": null,
+    "review": {
+     "geometry": "edited",
+     "tag": "confirmed",
+     "label": "unreviewed"
+    },
+    "elev": null,
+    "outline": [
+     {
+      "x": 13456.8,
+      "z": 529.95
+     },
+     {
+      "x": 13465.0,
+      "z": -19.55
+     },
+     {
+      "x": 14253.6,
+      "z": -18.45
+     },
+     {
+      "x": 14253.6,
+      "z": 529.95
+     }
+    ],
+    "membership": "outside",
+    "distance": 7831.8
+   },
+   {
+    "id": "furniture_021",
+    "kind": "furniture",
+    "tag": "cabinet",
+    "label": "Vách TV",
+    "review": {
+     "geometry": "edited",
+     "tag": "edited",
+     "label": "edited"
+    },
+    "elev": null,
+    "outline": [
+     {
+      "x": 965.0,
+      "z": 460.45
+     },
+     {
+      "x": 965.0,
+      "z": 110.45
+     },
+     {
+      "x": 4945.0,
+      "z": 110.45
+     },
+     {
+      "x": 4945.0,
+      "z": 460.45
+     }
+    ],
+    "membership": "inside",
+    "distance": 0.0
+   },
+   {
+    "id": "stair_001",
+    "kind": "stair",
+    "tag": "stair",
+    "label": null,
+    "review": {
+     "geometry": "edited",
+     "tag": "confirmed",
+     "label": "unreviewed"
+    },
+    "elev": null,
+    "outline": [
+     {
+      "x": 5625.9,
+      "z": 4622.35
+     },
+     {
+      "x": 5625.9,
+      "z": 2528.85
+     },
+     {
+      "x": 8319.0,
+      "z": 2528.85
+     },
+     {
+      "x": 8319.0,
+      "z": 4622.35
+     }
+    ],
+    "arrow": [
+     {
+      "x": 6075.0,
+      "z": 2530.45
+     },
+     {
+      "x": 6085.0,
+      "z": 4200.45
+     },
+     {
+      "x": 7895.0,
+      "z": 4200.45
+     },
+     {
+      "x": 7895.0,
+      "z": 2540.45
+     }
+    ],
+    "membership": "adjacent",
+    "distance": 0.9
+   },
+   {
+    "id": "wall_006",
+    "kind": "wall",
+    "tag": "wall",
+    "label": null,
+    "review": {
+     "geometry": "edited",
+     "tag": "unreviewed",
+     "label": "unreviewed"
+    },
+    "elev": null,
+    "outline": [
+     {
+      "x": -5.0,
+      "z": 4860.45
+     },
+     {
+      "x": -5.0,
+      "z": 4720.45
+     },
+     {
+      "x": 3915.0,
+      "z": 4720.45
+     },
+     {
+      "x": 3915.0,
+      "z": 4860.45
+     }
+    ],
+    "membership": "adjacent",
+    "distance": 5.0
+   },
+   {
+    "id": "wall_003",
+    "kind": "wall",
+    "tag": "wall",
+    "label": null,
+    "review": {
+     "geometry": "edited",
+     "tag": "unreviewed",
+     "label": "unreviewed"
+    },
+    "elev": null,
+    "outline": [
+     {
+      "x": 4335.0,
+      "z": 4860.45
+     },
+     {
+      "x": 4335.0,
+      "z": 4620.45
+     },
+     {
+      "x": 9805.0,
+      "z": 4620.45
+     },
+     {
+      "x": 9805.0,
+      "z": 4860.45
+     }
+    ],
+    "membership": "adjacent",
+    "distance": 5.0
+   },
+   {
+    "id": "wall_009",
+    "kind": "wall",
+    "tag": "wall",
+    "label": null,
+    "review": {
+     "geometry": "edited",
+     "tag": "unreviewed",
+     "label": "unreviewed"
+    },
+    "elev": null,
+    "outline": [
+     {
+      "x": 13225.0,
+      "z": 1850.45
+     },
+     {
+      "x": 13225.0,
+      "z": 110.45
+     },
+     {
+      "x": 13465.0,
+      "z": 110.45
+     },
+     {
+      "x": 13465.0,
+      "z": 1850.45
+     }
+    ],
+    "membership": "outside",
+    "distance": 7600.0
+   },
+   {
+    "id": "wall_010",
+    "kind": "wall",
+    "tag": "wall",
+    "label": null,
+    "review": {
+     "geometry": "edited",
+     "tag": "confirmed",
+     "label": "unreviewed"
+    },
+    "elev": null,
+    "outline": [
+     {
+      "x": 14315.0,
+      "z": 1500.45
+     },
+     {
+      "x": 14315.0,
+      "z": 1360.45
+     },
+     {
+      "x": 15115.0,
+      "z": 1360.45
+     },
+     {
+      "x": 15115.0,
+      "z": 1500.45
+     }
+    ],
+    "membership": "outside",
+    "distance": 8690.0
+   },
+   {
+    "id": "wall_002",
+    "kind": "wall",
+    "tag": "wall",
+    "label": null,
+    "review": {
+     "geometry": "confirmed",
+     "tag": "confirmed",
+     "label": "unreviewed"
+    },
+    "elev": null,
+    "outline": [
+     {
+      "x": 15125.0,
+      "z": 1510.45
+     },
+     {
+      "x": 15125.0,
+      "z": -129.55
+     },
+     {
+      "x": 15265.0,
+      "z": -129.55
+     },
+     {
+      "x": 15265.0,
+      "z": 1510.45
+     }
+    ],
+    "membership": "outside",
+    "distance": 9500.0
+   },
+   {
+    "id": "wall_011",
+    "kind": "wall",
+    "tag": "wall",
+    "label": null,
+    "review": {
+     "geometry": "confirmed",
+     "tag": "confirmed",
+     "label": "unreviewed"
+    },
+    "elev": null,
+    "outline": [
+     {
+      "x": 4315.0,
+      "z": 120.45
+     },
+     {
+      "x": 4315.0,
+      "z": -119.55
+     },
+     {
+      "x": 9835.0,
+      "z": -119.55
+     },
+     {
+      "x": 9835.0,
+      "z": 120.45
+     }
+    ],
+    "membership": "adjacent",
+    "distance": 5.0
+   },
+   {
+    "id": "wall_015",
+    "kind": "wall",
+    "tag": "wall",
+    "label": null,
+    "review": {
+     "geometry": "edited",
+     "tag": "confirmed",
+     "label": "unreviewed"
+    },
+    "elev": null,
+    "outline": [
+     {
+      "x": -5.0,
+      "z": 0.45
+     },
+     {
+      "x": -5.0,
+      "z": -119.55
+     },
+     {
+      "x": 3935.0,
+      "z": -119.55
+     },
+     {
+      "x": 3935.0,
+      "z": 0.45
+     }
+    ],
+    "membership": "overlapping",
+    "distance": 0.0
+   },
+   {
+    "id": "wall_012",
+    "kind": "wall",
+    "tag": "wall",
+    "label": null,
+    "review": {
+     "geometry": "edited",
+     "tag": "confirmed",
+     "label": "unreviewed"
+    },
+    "elev": null,
+    "outline": [
+     {
+      "x": 13475.0,
+      "z": 10.45
+     },
+     {
+      "x": 13475.0,
+      "z": -129.55
+     },
+     {
+      "x": 13615.0,
+      "z": -129.55
+     },
+     {
+      "x": 13615.0,
+      "z": 10.45
+     }
+    ],
+    "membership": "outside",
+    "distance": 7850.842
+   },
+   {
+    "id": "wall_013",
+    "kind": "wall",
+    "tag": "wall",
+    "label": null,
+    "review": {
+     "geometry": "confirmed",
+     "tag": "confirmed",
+     "label": "unreviewed"
+    },
+    "elev": null,
+    "outline": [
+     {
+      "x": 10215.0,
+      "z": 0.45
+     },
+     {
+      "x": 10215.0,
+      "z": -119.55
+     },
+     {
+      "x": 13175.0,
+      "z": -119.55
+     },
+     {
+      "x": 13175.0,
+      "z": 0.45
+     }
+    ],
+    "membership": "outside",
+    "distance": 4591.702
+   },
+   {
+    "id": "opening_004",
+    "kind": "opening",
+    "tag": "door",
+    "label": "Cửa trượt trước",
+    "review": {
+     "geometry": "edited",
+     "tag": "edited",
+     "label": "edited"
+    },
+    "elev": {
+     "base": 0.0,
+     "height": 2200.0
+    },
+    "outline": [
+     {
+      "x": -410.0,
+      "z": 4329.15
+     },
+     {
+      "x": -410.0,
+      "z": 409.15
+     },
+     {
+      "x": 0.0,
+      "z": 409.15
+     },
+     {
+      "x": 0.0,
+      "z": 4329.15
+     }
+    ],
+    "membership": "adjacent",
+    "distance": 0.0,
+    "attached": {
+     "wall": "WALL-FP-4",
+     "edge": 3,
+     "offset": 386.3,
+     "width": 3920.0
+    }
+   },
+   {
+    "id": "opening_005",
+    "kind": "opening",
+    "tag": "window",
+    "label": null,
+    "review": {
+     "geometry": "edited",
+     "tag": "confirmed",
+     "label": "unreviewed"
+    },
+    "elev": null,
+    "outline": [
+     {
+      "x": 13225.0,
+      "z": 3029.15
+     },
+     {
+      "x": 13225.0,
+      "z": 1849.05
+     },
+     {
+      "x": 13465.0,
+      "z": 1849.05
+     },
+     {
+      "x": 13465.0,
+      "z": 3029.15
+     }
+    ],
+    "membership": "outside",
+    "distance": 7600.0,
+    "attached": null,
+    "note": "opening_005 is not on any wall edge (it must be parallel to one and inside its thickness)"
+   },
+   {
+    "id": "wall_h02",
+    "kind": "wall",
+    "tag": "wall",
+    "label": null,
+    "review": {
+     "geometry": "edited",
+     "tag": "edited",
+     "label": "edited"
+    },
+    "elev": null,
+    "outline": [
+     {
+      "x": 10235.0,
+      "z": 4860.45
+     },
+     {
+      "x": 10235.0,
+      "z": 4720.45
+     },
+     {
+      "x": 13145.0,
+      "z": 4720.45
+     },
+     {
+      "x": 13145.0,
+      "z": 4860.45
+     }
+    ],
+    "membership": "outside",
+    "distance": 4611.196
+   },
+   {
+    "id": "wall_h03",
+    "kind": "wall",
+    "tag": "wall",
+    "label": null,
+    "review": {
+     "geometry": "edited",
+     "tag": "edited",
+     "label": "edited"
+    },
+    "elev": null,
+    "outline": [
+     {
+      "x": 13475.0,
+      "z": 4850.45
+     },
+     {
+      "x": 13475.0,
+      "z": 4710.45
+     },
+     {
+      "x": 13625.0,
+      "z": 4710.45
+     },
+     {
+      "x": 13625.0,
+      "z": 4850.45
+     }
+    ],
+    "membership": "outside",
+    "distance": 7850.575
+   },
+   {
+    "id": "wall_h04",
+    "kind": "wall",
+    "tag": "wall",
+    "label": null,
+    "review": {
+     "geometry": "edited",
+     "tag": "edited",
+     "label": "edited"
+    },
+    "elev": null,
+    "outline": [
+     {
+      "x": 13225.0,
+      "z": 4610.45
+     },
+     {
+      "x": 13225.0,
+      "z": 4320.45
+     },
+     {
+      "x": 13465.0,
+      "z": 4320.45
+     },
+     {
+      "x": 13465.0,
+      "z": 4610.45
+     }
+    ],
+    "membership": "outside",
+    "distance": 7600.0
+   },
+   {
+    "id": "wall_h05",
+    "kind": "wall",
+    "tag": "wall",
+    "label": null,
+    "review": {
+     "geometry": "edited",
+     "tag": "edited",
+     "label": "edited"
+    },
+    "elev": null,
+    "outline": [
+     {
+      "x": 13235.0,
+      "z": 3400.45
+     },
+     {
+      "x": 13235.0,
+      "z": 3030.45
+     },
+     {
+      "x": 13475.0,
+      "z": 3030.45
+     },
+     {
+      "x": 13475.0,
+      "z": 3400.45
+     }
+    ],
+    "membership": "outside",
+    "distance": 7610.0
+   },
+   {
+    "id": "wall_h06",
+    "kind": "wall",
+    "tag": "wall",
+    "label": null,
+    "review": {
+     "geometry": "edited",
+     "tag": "edited",
+     "label": "edited"
+    },
+    "elev": null,
+    "outline": [
+     {
+      "x": 13615.0,
+      "z": 10.45
+     },
+     {
+      "x": 13615.0,
+      "z": -129.55
+     },
+     {
+      "x": 15135.0,
+      "z": -129.55
+     },
+     {
+      "x": 15135.0,
+      "z": 10.45
+     }
+    ],
+    "membership": "outside",
+    "distance": 7990.828
+   },
+   {
+    "id": "wall_h07",
+    "kind": "wall",
+    "tag": "wall",
+    "label": null,
+    "review": {
+     "geometry": "edited",
+     "tag": "edited",
+     "label": "edited"
+    },
+    "elev": null,
+    "outline": [
+     {
+      "x": 13465.0,
+      "z": 1500.45
+     },
+     {
+      "x": 13465.0,
+      "z": 1360.45
+     },
+     {
+      "x": 13565.0,
+      "z": 1360.45
+     },
+     {
+      "x": 13565.0,
+      "z": 1500.45
+     }
+    ],
+    "membership": "outside",
+    "distance": 7840.0
+   },
+   {
+    "id": "wall_h08",
+    "kind": "wall",
+    "tag": "wall",
+    "label": null,
+    "review": {
+     "geometry": "edited",
+     "tag": "edited",
+     "label": "edited"
+    },
+    "elev": null,
+    "outline": [
+     {
+      "x": 15125.0,
+      "z": 4860.45
+     },
+     {
+      "x": 15125.0,
+      "z": 1510.45
+     },
+     {
+      "x": 15265.0,
+      "z": 1510.45
+     },
+     {
+      "x": 15265.0,
+      "z": 4860.45
+     }
+    ],
+    "membership": "outside",
+    "distance": 9500.0
+   },
+   {
+    "id": "wall_h09",
+    "kind": "wall",
+    "tag": "wall",
+    "label": null,
+    "review": {
+     "geometry": "edited",
+     "tag": "edited",
+     "label": "edited"
+    },
+    "elev": null,
+    "outline": [
+     {
+      "x": 13625.0,
+      "z": 4850.45
+     },
+     {
+      "x": 13625.0,
+      "z": 4710.45
+     },
+     {
+      "x": 15115.0,
+      "z": 4710.45
+     },
+     {
+      "x": 15115.0,
+      "z": 4850.45
+     }
+    ],
+    "membership": "outside",
+    "distance": 8000.564
+   },
+   {
+    "id": "wall_h10",
+    "kind": "wall",
+    "tag": "wall",
+    "label": null,
+    "review": {
+     "geometry": "edited",
+     "tag": "edited",
+     "label": "edited"
+    },
+    "elev": null,
+    "outline": [
+     {
+      "x": -410.0,
+      "z": 4330.45
+     },
+     {
+      "x": -410.0,
+      "z": 360.45
+     },
+     {
+      "x": 0.0,
+      "z": 360.45
+     },
+     {
+      "x": 0.0,
+      "z": 4330.45
+     }
+    ],
+    "membership": "adjacent",
+    "distance": 0.0
+   }
+  ],
+  "counts": {
+   "adjacent": 7,
+   "outside": 21,
+   "inside": 1,
+   "overlapping": 1
+  },
+  "binding": null,
+  "warnings": [
+   {
+    "code": "room-trimmed",
+    "message": "the room outline overlapped wall elements wall_h10; those parts were cut out of the room"
+   },
+   {
+    "code": "outside-room",
+    "element": "opening_001",
+    "kind": "opening",
+    "distance": 7600,
+    "message": "opening_001 (opening) lies 760 cm outside room room_003; it probably belongs to another room or area. Kept as data; not placed and not moved."
+   },
+   {
+    "code": "outside-room",
+    "element": "opening_002",
+    "kind": "opening",
+    "distance": 7941,
+    "message": "opening_002 (opening) lies 794 cm outside room room_003; it probably belongs to another room or area. Kept as data; not placed and not moved."
+   },
+   {
+    "code": "outside-room",
+    "element": "furniture_001",
+    "kind": "furniture",
+    "distance": 4260,
+    "message": "furniture_001 (furniture) lies 426 cm outside room room_003; it probably belongs to another room or area. Kept as data; not placed and not moved."
+   },
+   {
+    "code": "outside-room",
+    "element": "shaft_001",
+    "kind": "shaft",
+    "distance": 2694,
+    "message": "shaft_001 (shaft) lies 269 cm outside room room_003; it probably belongs to another room or area. Kept as data; not placed and not moved."
+   },
+   {
+    "code": "outside-room",
+    "element": "furniture_003",
+    "kind": "furniture",
+    "distance": 8888,
+    "message": "furniture_003 (furniture) lies 889 cm outside room room_003; it probably belongs to another room or area. Kept as data; not placed and not moved."
+   },
+   {
+    "code": "outside-room",
+    "element": "furniture_017",
+    "kind": "furniture",
+    "distance": 4590,
+    "message": "furniture_017 (furniture) lies 459 cm outside room room_003; it probably belongs to another room or area. Kept as data; not placed and not moved."
+   },
+   {
+    "code": "outside-room",
+    "element": "furniture_019",
+    "kind": "furniture",
+    "distance": 7832,
+    "message": "furniture_019 (furniture) lies 783 cm outside room room_003; it probably belongs to another room or area. Kept as data; not placed and not moved."
+   },
+   {
+    "code": "outside-room",
+    "element": "wall_009",
+    "kind": "wall",
+    "distance": 7600,
+    "message": "wall_009 (wall) lies 760 cm outside room room_003; it probably belongs to another room or area. Kept as data; not placed and not moved."
+   },
+   {
+    "code": "outside-room",
+    "element": "wall_010",
+    "kind": "wall",
+    "distance": 8690,
+    "message": "wall_010 (wall) lies 869 cm outside room room_003; it probably belongs to another room or area. Kept as data; not placed and not moved."
+   },
+   {
+    "code": "outside-room",
+    "element": "wall_002",
+    "kind": "wall",
+    "distance": 9500,
+    "message": "wall_002 (wall) lies 950 cm outside room room_003; it probably belongs to another room or area. Kept as data; not placed and not moved."
+   },
+   {
+    "code": "outside-room",
+    "element": "wall_012",
+    "kind": "wall",
+    "distance": 7851,
+    "message": "wall_012 (wall) lies 785 cm outside room room_003; it probably belongs to another room or area. Kept as data; not placed and not moved."
+   },
+   {
+    "code": "outside-room",
+    "element": "wall_013",
+    "kind": "wall",
+    "distance": 4592,
+    "message": "wall_013 (wall) lies 459 cm outside room room_003; it probably belongs to another room or area. Kept as data; not placed and not moved."
+   },
+   {
+    "code": "outside-room",
+    "element": "opening_005",
+    "kind": "opening",
+    "distance": 7600,
+    "message": "opening_005 (opening) lies 760 cm outside room room_003; it probably belongs to another room or area. Kept as data; not placed and not moved."
+   },
+   {
+    "code": "outside-room",
+    "element": "wall_h02",
+    "kind": "wall",
+    "distance": 4611,
+    "message": "wall_h02 (wall) lies 461 cm outside room room_003; it probably belongs to another room or area. Kept as data; not placed and not moved."
+   },
+   {
+    "code": "outside-room",
+    "element": "wall_h03",
+    "kind": "wall",
+    "distance": 7851,
+    "message": "wall_h03 (wall) lies 785 cm outside room room_003; it probably belongs to another room or area. Kept as data; not placed and not moved."
+   },
+   {
+    "code": "outside-room",
+    "element": "wall_h04",
+    "kind": "wall",
+    "distance": 7600,
+    "message": "wall_h04 (wall) lies 760 cm outside room room_003; it probably belongs to another room or area. Kept as data; not placed and not moved."
+   },
+   {
+    "code": "outside-room",
+    "element": "wall_h05",
+    "kind": "wall",
+    "distance": 7610,
+    "message": "wall_h05 (wall) lies 761 cm outside room room_003; it probably belongs to another room or area. Kept as data; not placed and not moved."
+   },
+   {
+    "code": "outside-room",
+    "element": "wall_h06",
+    "kind": "wall",
+    "distance": 7991,
+    "message": "wall_h06 (wall) lies 799 cm outside room room_003; it probably belongs to another room or area. Kept as data; not placed and not moved."
+   },
+   {
+    "code": "outside-room",
+    "element": "wall_h07",
+    "kind": "wall",
+    "distance": 7840,
+    "message": "wall_h07 (wall) lies 784 cm outside room room_003; it probably belongs to another room or area. Kept as data; not placed and not moved."
+   },
+   {
+    "code": "outside-room",
+    "element": "wall_h08",
+    "kind": "wall",
+    "distance": 9500,
+    "message": "wall_h08 (wall) lies 950 cm outside room room_003; it probably belongs to another room or area. Kept as data; not placed and not moved."
+   },
+   {
+    "code": "outside-room",
+    "element": "wall_h09",
+    "kind": "wall",
+    "distance": 8001,
+    "message": "wall_h09 (wall) lies 800 cm outside room room_003; it probably belongs to another room or area. Kept as data; not placed and not moved."
+   },
+   {
+    "code": "assumed-wall-thickness",
+    "message": "5 of 10 walls have no measured wall element; thickness 140 mm assumed"
+   },
+   {
+    "code": "assumed-wall-height",
+    "message": "no wall elevation in the drawing; height 3000 mm assumed"
+   },
+   {
+    "code": "unreviewed",
+    "element": "room_003",
+    "message": "room label 'PHÒNG KHÁCH' is unreviewed"
+   },
+   {
+    "code": "unreviewed",
+    "element": "room_003",
+    "message": "room tag 'room' is unreviewed"
+   }
+  ]
+ }
+}

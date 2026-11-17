@@ -3,6 +3,12 @@ from __future__ import annotations
 
 from typing import Any
 
+
+PANELS: dict[str, Any] = {      # each leaf and pane of a door / window: how it opens, its handle, its rail
+    "type": "ARRAY", "items": {"type": "OBJECT", "properties": {
+        "row": {"type": "INTEGER"}, "operation": {"type": "STRING"}, "handle": {"type": "BOOLEAN"}, "front": {"type": "BOOLEAN"}},
+        "required": ["operation"]}}
+
 SCHEMA: dict[str, Any] = {
     "type": "OBJECT",
     "properties": {
@@ -15,12 +21,13 @@ SCHEMA: dict[str, Any] = {
             "axes": {"type": "ARRAY", "items": {"type": "OBJECT", "properties": {"fromCorner": {"type": "NUMBER"}, "confidence": {"type": "NUMBER"}},
                                                 "required": ["fromCorner"]}},
             "sill": {"type": "NUMBER"}, "head": {"type": "NUMBER"}, "edgesSeen": {"type": "STRING"}, "style": {"type": "STRING"},
-            "leaves": {"type": "INTEGER"}, "confidence": {"type": "NUMBER"}},
+            "leaves": {"type": "INTEGER"}, "transomPanes": {"type": "INTEGER"}, "panels": PANELS, "confidence": {"type": "NUMBER"}},
             "required": ["kind", "wall", "axes"]}},
         "photoOpenings": {"type": "ARRAY", "items": {"type": "OBJECT", "properties": {
             "kind": {"type": "STRING"}, "style": {"type": "STRING"}, "leaves": {"type": "INTEGER"}, "edgesSeen": {"type": "STRING"},
             "aspect": {"type": "NUMBER"}, "axesRatio": {"type": "ARRAY", "items": {"type": "NUMBER"}},
-            "hAxesRatio": {"type": "ARRAY", "items": {"type": "NUMBER"}}, "confidence": {"type": "NUMBER"}},
+            "hAxesRatio": {"type": "ARRAY", "items": {"type": "NUMBER"}}, "transomPanes": {"type": "INTEGER"}, "panels": PANELS,
+            "confidence": {"type": "NUMBER"}},
             "required": ["kind", "aspect"]}},
         "room": {"type": "OBJECT", "properties": {"ceiling": {"type": "NUMBER"}}},
         "materials": {"type": "OBJECT", "properties": {k: {"type": "STRING"} for k in ("base", "upper", "tall", "countertop", "wall", "floor")}},
@@ -44,10 +51,13 @@ def recognition_text(kind: str, module_types: tuple[str, ...]) -> str:
         "openings: the doors, windows and open passages in those walls (not cabinet or appliance doors): kind door, window or passage; wall; "
         "axes = every vertical edge or divider you see across it, as fromCorner measured like the modules' fromCorner, outer edges included; "
         "sill and head heights above the floor; edgesSeen 'casing' when the edges you measured are the outer edges of a trim, else 'hole'; "
-        "style swing, sliding, folding, fixed or top-hung; leaves; confidence.\n"
+        "style swing, sliding, folding, fixed or top-hung; leaves; confidence; and, for every opening, transomPanes (how many panes the "
+        "row above the first horizontal divider has, when there is one) and panels: every leaf and fixed pane row by row (row 0 = the main "
+        "row, 1 = the transom), left to right, each with operation (swing, sliding, folding, fixed, top-hung), handle (a handle or pull is "
+        "visible on it) and front (a sliding leaf on the front rail: its edge covers the leaf next to it).\n"
         "If the picture shows no cabinets at all but a door or window, return an empty modules list and photoOpenings instead: kind, style, "
         "leaves (the ones that open or slide), edgesSeen, aspect = height / width of the opening, axesRatio = each vertical divider as a "
-        "fraction of the width from the left edge, hAxesRatio = each horizontal divider as a fraction of the height from the sill, confidence.\n"
+        "fraction of the width from the left edge, hAxesRatio = each horizontal divider as a fraction of the height from the sill, transomPanes, panels, confidence.\n"
         "Also give room.ceiling if shown, the materials you see (base, upper, tall, countertop, wall, floor) as short names, "
         "and notes for anything you could not read. Never invent modules that are not visible. "
         "If the image is not a kitchen, return an empty modules list and say so in notes.")

@@ -259,6 +259,13 @@ def _openings(rec: dict[str, Any], present: list[str], length: dict[str, int]) -
         if o.get("hAxes"):
             item["hAxes"] = [{"h": int(h), "confidence": conf} for h in o["hAxes"]]
         item.update(edgesSeen=o.get("edgesSeen", "casing"), style=o.get("style", "swing"), leaves=int(o.get("leaves", 1)), confidence=conf)
+        if "transomPanes" in o:
+            item["transomPanes"] = int(o["transomPanes"])
+        if o.get("panels") is not None:      # trái sang phải trong ảnh; dãy trái lật chiều: đảo thứ tự trong từng hàng
+            panels = list(o["panels"])
+            rows = sorted({int(p["row"]) for p in panels})
+            item["panels"] = [p for r in rows for p in (list(reversed([q for q in panels if int(q["row"]) == r])) if mirrored
+                                                        else [q for q in panels if int(q["row"]) == r])]
         if "head" in unsure:
             item["unsure"] = ["head"]
         if o.get("note"):

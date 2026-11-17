@@ -196,3 +196,45 @@ class PhotoOnlyTest(unittest.TestCase):
         with self.assertRaises(RecognizerError) as e:
             self.recognize(a)
         self.assertEqual(e.exception.code, "no-cabinets-no-openings")
+
+
+class PanelsTest(unittest.TestCase):
+    """Inbox job 20261117-095352: four sliding glass panels (pulls and the front rail on the two middle ones) under a transom of three
+    panes. The answer says each pane; the kitchen picks its type and handles from that."""
+    NAME = "cua-truot-4-canh-o-thoang"
+
+    def answers(self):
+        return json.loads((HERE / "data" / f"{self.NAME}.answers.json").read_text(encoding="utf-8"))
+
+    def test_transom_panes_and_panels_come_through(self):
+        spec = recognize_auto((HERE / "data" / f"{self.NAME}.png").read_bytes(), ReplayClient(self.answers()))["spec"]
+        door = spec["photoOpenings"][0]
+        self.assertEqual((door["style"], door["leaves"], door["transomPanes"]), ("sliding", 4, 3))
+        self.assertEqual([p["handle"] for p in door["panels"] if p["row"] == 0], [False, True, True, False])
+        self.assertEqual([p["front"] for p in door["panels"] if p["row"] == 0], [False, True, True, False])
+        runs = to_runs(spec)
+        self.assertEqual(runs["photoOpenings"][0]["transomPanes"], 3)
+
+    def test_old_answers_stay_valid_and_bad_panels_are_refused(self):
+        o = self.answers()["openings"]["openings"][0]
+        old = {k: v for k, v in o.items() if k not in ("upperVerticals", "panels")}
+        (parsed,) = parse_openings({"openings": [old]}, ("back",))
+        self.assertEqual((parsed["upperVerticals"], parsed["panels"]), (None, None))
+        for bad in ({"row": 5, "operation": "sliding"}, {"operation": "rolling"}, {"operation": "sliding", "handle": "yes"}):
+            with self.subTest(bad=bad), self.assertRaises(RecognizerError):
+                parse_openings({"openings": [{**old, "panels": [bad]}]}, ("back",))
+
+    def test_a_transom_without_upper_bars_said_is_not_counted(self):
+        a = self.answers()
+        del a["openings"]["openings"][0]["upperVerticals"]
+        door = recognize_auto((HERE / "data" / f"{self.NAME}.png").read_bytes(), ReplayClient(a))["spec"]["photoOpenings"][0]
+        self.assertNotIn("transomPanes", door)
+
+    def test_panels_of_a_door_on_the_left_wall_are_mirrored_like_its_cabinets(self):
+        from cabinet_recognizer.to_runs import _openings
+        rec = {"openings": [{"id": "CS1", "kind": "door", "wall": "left", "x": 100, "width": 1600, "head": 2100, "style": "sliding", "leaves": 2,
+                             "panels": [{"row": 0, "operation": "sliding", "handle": True, "front": False},
+                                        {"row": 0, "operation": "sliding", "handle": False, "front": True}], "transomPanes": 1}]}
+        got = _openings(rec, ["left"], {"left": 3000})["left"][0]
+        self.assertEqual([p["handle"] for p in got["panels"]], [False, True])
+        self.assertEqual(got["transomPanes"], 1)

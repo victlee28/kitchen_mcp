@@ -601,7 +601,8 @@
     "operation": "sliding",
     "hinge": null,
     "opens": null,
-    "active": true
+    "active": true,
+    "track": 0
    },
    {
     "cols": [
@@ -615,7 +616,8 @@
     "operation": "sliding",
     "hinge": null,
     "opens": null,
-    "active": false
+    "active": false,
+    "track": 1
    }
   ],
   "frameFace": 30,
@@ -667,7 +669,10 @@
    "en": [
     "two-panel sliding door"
    ]
-  }
+  },
+  "leafFrame": 45,
+  "trackGap": 8,
+  "overlap": 40
  },
  {
   "id": "door-sliding-4",
@@ -692,7 +697,8 @@
     "operation": "sliding",
     "hinge": null,
     "opens": null,
-    "active": false
+    "active": false,
+    "track": 0
    },
    {
     "cols": [
@@ -706,7 +712,8 @@
     "operation": "sliding",
     "hinge": null,
     "opens": null,
-    "active": true
+    "active": true,
+    "track": 1
    },
    {
     "cols": [
@@ -720,7 +727,8 @@
     "operation": "sliding",
     "hinge": null,
     "opens": null,
-    "active": false
+    "active": false,
+    "track": 1
    },
    {
     "cols": [
@@ -734,7 +742,8 @@
     "operation": "sliding",
     "hinge": null,
     "opens": null,
-    "active": false
+    "active": false,
+    "track": 0
    }
   ],
   "frameFace": 30,
@@ -762,7 +771,11 @@
   "handle": {
    "kind": "pull",
    "height": 1000,
-   "inset": 60
+   "inset": 60,
+   "leaves": [
+    1,
+    2
+   ]
   },
   "aliases": {
    "vi": [
@@ -775,7 +788,172 @@
     "four-panel sliding door",
     "4 panel sliding door"
    ]
-  }
+  },
+  "leafFrame": 45,
+  "trackGap": 8,
+  "overlap": 40
+ },
+ {
+  "id": "door-sliding-4-transom",
+  "kind": "door",
+  "operation": "sliding",
+  "axesRatio": [
+   0.25,
+   0.5,
+   0.75
+  ],
+  "hAxesFromSill": [
+   2200
+  ],
+  "leaves": [
+   {
+    "cols": [
+     0,
+     1
+    ],
+    "rows": [
+     0,
+     1
+    ],
+    "operation": "sliding",
+    "hinge": null,
+    "opens": null,
+    "active": false,
+    "track": 0
+   },
+   {
+    "cols": [
+     1,
+     2
+    ],
+    "rows": [
+     0,
+     1
+    ],
+    "operation": "sliding",
+    "hinge": null,
+    "opens": null,
+    "active": true,
+    "track": 1
+   },
+   {
+    "cols": [
+     2,
+     3
+    ],
+    "rows": [
+     0,
+     1
+    ],
+    "operation": "sliding",
+    "hinge": null,
+    "opens": null,
+    "active": false,
+    "track": 1
+   },
+   {
+    "cols": [
+     3,
+     4
+    ],
+    "rows": [
+     0,
+     1
+    ],
+    "operation": "sliding",
+    "hinge": null,
+    "opens": null,
+    "active": false,
+    "track": 0
+   },
+   {
+    "cols": [
+     0,
+     1
+    ],
+    "rows": [
+     1,
+     2
+    ],
+    "operation": "fixed",
+    "hinge": null,
+    "opens": null,
+    "active": false
+   },
+   {
+    "cols": [
+     1,
+     3
+    ],
+    "rows": [
+     1,
+     2
+    ],
+    "operation": "fixed",
+    "hinge": null,
+    "opens": null,
+    "active": false
+   },
+   {
+    "cols": [
+     3,
+     4
+    ],
+    "rows": [
+     1,
+     2
+    ],
+    "operation": "fixed",
+    "hinge": null,
+    "opens": null,
+    "active": false
+   }
+  ],
+  "frameFace": 30,
+  "frameDepth": null,
+  "casing": {
+   "width": 50,
+   "thickness": 10
+  },
+  "threshold": 0,
+  "stop": 0,
+  "transom": 40,
+  "leafThickness": 40,
+  "gap": 3,
+  "minLeaf": 200,
+  "minWidth": 2000,
+  "maxWidth": 6000,
+  "defaultWidth": 3200,
+  "defaultHeight": 2700,
+  "defaultSill": 0,
+  "label": {
+   "vi": "Cửa đi trượt bốn cánh có ô thoáng",
+   "en": "Four-panel sliding door with transom"
+  },
+  "prompt": "four-panel sliding glass door with a fixed glass transom of three panes above",
+  "handle": {
+   "kind": "pull",
+   "height": 1000,
+   "inset": 60,
+   "leaves": [
+    1,
+    2
+   ]
+  },
+  "aliases": {
+   "vi": [
+    "cửa trượt 4 cánh có ô thoáng",
+    "cửa trượt bốn cánh có ô thoáng",
+    "cửa lùa 4 cánh có ô fix",
+    "cửa trượt 4 cánh có ô kính trên"
+   ],
+   "en": [
+    "four-panel sliding door with transom"
+   ]
+  },
+  "leafFrame": 45,
+  "trackGap": 8,
+  "overlap": 40
  },
  {
   "id": "door-folding-4",
@@ -1245,7 +1423,8 @@
     "operation": "sliding",
     "hinge": null,
     "opens": null,
-    "active": true
+    "active": true,
+    "track": 0
    },
    {
     "cols": [
@@ -1259,7 +1438,8 @@
     "operation": "sliding",
     "hinge": null,
     "opens": null,
-    "active": false
+    "active": false,
+    "track": 1
    }
   ],
   "frameFace": 50,
@@ -1298,6 +1478,9 @@
   "handle": {
    "kind": "pull",
    "inset": 50
-  }
+  },
+  "leafFrame": 40,
+  "trackGap": 8,
+  "overlap": 40
  }
 ]

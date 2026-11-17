@@ -76,6 +76,7 @@
   "recognition/draft.py": 0,
   "recognition/gemini_wire.py": 0,
   "recognition/layout.py": 0,
+  "recognition/opening_match.py": 0,
   "recognition/openings.py": 0,
   "recognition/operation.py": 0,
   "recognition/recognizer_wire.py": 0,

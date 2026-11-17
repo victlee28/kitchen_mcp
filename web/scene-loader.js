@@ -111,8 +111,11 @@ export function buildKitchen(doc, THREE, opts = {}) {
         mesh.userData = { type: 'opening', openingId: opening.id, role };
         group.add(mesh);
       };
-      (opening.frame || []).forEach((bx) => piece(`frame-${bx.part}`, bx, frameMaterial, 'opening-frame'));
+      const leafFrameMaterial = new THREE.MeshStandardMaterial({ color: 0x4a4d50, roughness: 0.45, metalness: 0.35 });
+      const handleMaterial = new THREE.MeshStandardMaterial({ color: 0xc8cacc, roughness: 0.3, metalness: 0.8 });
+      (opening.frame || []).forEach((bx) => piece(`frame-${bx.part}`, bx, bx.leafFrame ? leafFrameMaterial : frameMaterial, bx.leafFrame ? 'opening-leaf-frame' : 'opening-frame'));
       (opening.leaves || []).forEach((bx, i) => piece(`leaf-${i + 1}`, bx, bx.glass ? glassMaterial : leafMaterial, bx.glass ? 'opening-glass' : 'opening-leaf'));
+      (opening.handles || []).forEach((bx) => piece(`handle-${bx.leaf + 1}-${bx.part}`, bx, handleMaterial, 'opening-handle'));
       room.add(group);
     }
   }

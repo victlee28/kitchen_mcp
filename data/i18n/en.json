@@ -1292,5 +1292,8 @@
  "summary.edit.moldings-on": "Moldings added ({which})",
  "edit.ask.hinge": "Which hinge? (for example: soft-close, inset, wide-angle)",
  "summary.edit.hinge": "Hinge {hinge} for {ids}",
- "summary.edit.hinge-common": "Hinge for every door: {hinge}"
+ "summary.edit.hinge-common": "Hinge for every door: {hinge}",
+ "part.opening-leaf-frame": "door leaf frame",
+ "ui.opening.from-photo-replace": "The door or window in the picture will replace {id}, keeping its place and size: {w} wide × {h} high (mm) — check it in \"Doors & windows\".",
+ "ui.opening.from-photo-hole": "The door or window in the picture will go into the hole {id} of the drawing: {w} wide × {h} high (mm) — check it in \"Doors & windows\"."
 }

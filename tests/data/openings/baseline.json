@@ -1,0 +1,8 @@
+{
+ "typeRight": 4,
+ "leavesRight": 4,
+ "transomPanesRight": 2,
+ "handlesRight": 1,
+ "worstDividerErr": 0.02,
+ "note": "tools/measure_openings.py on cases.json. The counts may only go up and worstDividerErr only down: raise / lower them when recognition gets better."
+}

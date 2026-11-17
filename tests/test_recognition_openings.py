@@ -59,7 +59,8 @@ class TestRead(unittest.TestCase):
 
     def test_types_follow_what_was_seen(self):
         def t(kind, style="swing", leaves=1, h=()):
-            return seen_openings.opening_type(seen_openings.SeenOpening("back", kind, ((0, 1), (900, 1)), None, None, h, "hole", style, leaves, 1.0))
+            return seen_openings.opening_type(seen_openings.SeenOpening("back", kind, ((0, 1), (900, 1)), None, None, h, "hole", style, leaves, 1.0),
+                                              builtin.CATALOG)
         self.assertEqual([t("door"), t("door", leaves=2), t("door", h=((2100, 1),)), t("door", "sliding", 2), t("door", "folding", 4)],
                          ["door-swing-1", "door-swing-2", "door-swing-1-transom", "door-sliding-2", "door-folding-4"])
         self.assertEqual([t("window", "fixed"), t("window", "sliding", 2), t("window", "top-hung"), t("window", leaves=2), t("window", h=((1700, 1),)), t("passage", "none", 0)],
@@ -188,6 +189,73 @@ class TestPlanRunsLines(unittest.TestCase):
         self.assertIsInstance(p["lines"]["back"], run_line.Line)
 
 
+def wall_axes_for_test():
+    from kitchen.openings import wall_axes
+    return wall_axes.for_room(5000, 3000)[0]
+
+
+class TestPhotoIntoTheHoleUnderTheClick(unittest.TestCase):
+    """Inbox job 20261117-094128 on design mau-du-lieu-9f94a0: the drawn sliding door opening_004 (3920 wide, 2200 high in the drawing,
+    its drawn type too narrow for it so it is not an opening of the design) with the wall wall_h10 as the selection. The picture's
+    door goes into that hole at the drawing's height, not beside it at the picture's proportions."""
+
+    FOUR = {"kind": "door", "style": "sliding", "leaves": 4, "edgesSeen": "hole", "aspect": 1.108,
+            "axesRatio": [0.239, 0.494, 0.745], "hAxesRatio": [0.86], "confidence": 0.85}
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="recog-hole-"))
+        self.svc = KitchenService(self.tmp / "k.db", self.tmp / "renders")
+        self.svc.recognizers.clear()
+        doc = json.loads((ROOT / "tests" / "data" / "floorplan-sliding-hole.json").read_text(encoding="utf-8"))
+        self.did = self.svc.create_from_spec(doc)["id"]
+        self.svc.recognizers["fake"] = Fake({"modules": [], "layout": {"schema": "recognized-runs/1", "runs": [], "joints": [],
+                                                                       "photoOpenings": [self.FOUR]}})
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_a_selected_wall_still_finds_the_hole_under_the_click(self):
+        for selected in ("STRUCT-wall_h10", "STRUCT-opening_004"):
+            with self.subTest(selected=selected):
+                r = self.svc.recognize(self.did, {"kind": "photo", "imageBase64": PNG}, "fake",
+                                       anchor={"structureId": selected, "point": {"x": 0.0, "z": 1962.5}})
+                op = r["operation"]["opening"]
+                self.assertEqual((op["openingType"], op["width"], op["height"], op["center"], op["unsure"]),
+                                 ("door-sliding-4-transom", 3920.0, 2200.0, 2048.7, []))
+                self.assertEqual(op["hAxes"], [1892.0])
+                self.assertEqual(op["sourceElement"], "opening_004", "it takes the drawn element's place")
+                self.assertTrue(r["proposal"]["applicable"])
+
+    def test_the_drawn_element_is_no_longer_built_once_a_door_stands_in_its_hole(self):
+        r = self.svc.recognize(self.did, {"kind": "photo", "imageBase64": PNG}, "fake",
+                               anchor={"structureId": "STRUCT-wall_h10", "point": {"x": 0.0, "z": 1962.5}})
+        self.svc.apply(self.did, r["operation"], r["baseRev"], "test", r["proposal"]["opHash"])
+        scene = geometry.compile_spec(self.svc.store.get(self.did)[0])
+        self.assertNotIn("STRUCT-opening_004", {m.module for m in scene.meshes}, "the solid of the drawn element would hide the door")
+        self.assertIn("opening-leaf-frame", {m.type for m in scene.meshes})
+
+    def test_a_door_the_design_places_can_be_the_one_picked(self):
+        r = self.svc.recognize(self.did, {"kind": "photo", "imageBase64": PNG}, "fake",
+                               anchor={"structureId": "STRUCT-wall_h10", "point": {"x": 0.0, "z": 1962.5}})
+        self.svc.apply(self.did, r["operation"], r["baseRev"], "test", r["proposal"]["opHash"])
+        again = self.svc.recognize(self.did, {"kind": "photo", "imageBase64": PNG}, "fake",
+                                   anchor={"structureId": "OP1", "point": {"x": 0.0, "z": 1962.5}})
+        self.assertEqual((again["operation"]["op"], again["operation"]["id"]), ("update-opening", "opening_004"))
+
+    def test_a_hole_with_no_height_drawn_takes_the_picture_s_proportions(self):
+        seen = seen_openings.read_photo({"photoOpenings": [PHOTO]})[0][0]                  # aspect 1.625
+        axis = wall_axes_for_test()
+        raw = seen_openings.photo_into_hole(seen, axis, 1000.0, 1650.0, builtin.CATALOG)
+        self.assertEqual((raw["height"], raw["unsure"]), (2680.0, ["height"]))
+        wide = seen_openings.photo_into_hole(seen, axis, 2000.0, 3920.0, builtin.CATALOG)   # 6370 high: not a door
+        self.assertEqual(wide["height"], 2700.0, "an implausible height from the picture falls back to the type's")
+
+    def test_a_typed_command_on_the_wall_also_fills_the_hole(self):
+        made = self.svc.opening_command(self.did, "tạo cửa trượt 4 cánh", {"point": {"x": 0.0, "z": 1962.5}, "structureId": "wall_h10"}, "user", 1)
+        op = made["operation"]["opening"]
+        self.assertEqual((op["openingType"], op["width"], op["height"], op["sourceElement"]), ("door-sliding-4", 3920.0, 2200.0, "opening_004"))
+
+
 if __name__ == "__main__":
     unittest.main()
 
@@ -224,6 +292,18 @@ class TestPhotoOnly(unittest.TestCase):
         near = seen_openings.photo_opening(seen_openings.read_photo({"photoOpenings": [{**PHOTO, "aspect": 2.2}]})[0][0], (0.0, 0.0),
                                           builtin.CATALOG, "VN")
         self.assertEqual(near["width"], 1200.0, "close to a standard width of the country: taken")
+
+    def test_four_sliding_panels_are_the_four_panel_sliding_door(self):
+        """Inbox job 20261117-094128: four sliding glass panels under a fixed transom."""
+        four = {"kind": "door", "style": "sliding", "leaves": 4, "aspect": 0.83, "axesRatio": [0.239, 0.494, 0.745], "hAxesRatio": [0.86]}
+        seen = seen_openings.read_photo({"photoOpenings": [four]})[0][0]
+        raw = seen_openings.photo_opening(seen, (0.0, 0.0), builtin.CATALOG, "VN")
+        self.assertEqual((raw["openingType"], raw["height"]), ("door-sliding-4-transom", 2700.0))
+        self.assertEqual(len(raw["axes"]), 3)
+        plain = seen_openings.read_photo({"photoOpenings": [{**four, "hAxesRatio": []}]})[0][0]
+        self.assertEqual(seen_openings.photo_opening(plain, (0.0, 0.0), builtin.CATALOG, "VN")["openingType"], "door-sliding-4")
+        two = seen_openings.read_photo({"photoOpenings": [{**four, "leaves": 2, "axesRatio": [0.5], "hAxesRatio": []}]})[0][0]
+        self.assertEqual(seen_openings.photo_opening(two, (0.0, 0.0), builtin.CATALOG, "VN")["openingType"], "door-sliding-2")
 
     def test_a_window_keeps_its_sill_unsure(self):
         w = seen_openings.read_photo({"photoOpenings": [{"kind": "window", "style": "sliding", "leaves": 2, "aspect": 0.8, "axesRatio": [0.5],

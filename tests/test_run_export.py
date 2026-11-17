@@ -75,7 +75,7 @@ class TestRunExport(unittest.TestCase):
         self.assertEqual(out.returncode, 0, out.stderr[-800:])
         rendered = json.loads(out.stdout)
         self.assertTrue(rendered["found"])
-        self.assertEqual(rendered["meshes"], len(door["frame"]) + len(door["leaves"]))
+        self.assertEqual(rendered["meshes"], len(door["frame"]) + len(door["leaves"]) + len(door.get("handles", [])))
 
     def test_countertop_names_its_run(self):
         doc = threejs_export.export(_run_spec(30))

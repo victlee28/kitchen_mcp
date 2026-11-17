@@ -181,7 +181,7 @@ Return:
 
 
 def openings_prompt(walls: list[str]) -> str:
-    from .contract_openings import CORNERS, EDGES, KINDS, SIDES, STYLES
+    from .contract_openings import CORNERS, EDGES, KINDS, PANEL_OPS, SIDES, STYLES
     return f"""Find the room openings in this kitchen photo: doors, windows and open passages in the walls {walls}
 (back = wall facing the camera; left/right = side walls). Ignore cabinet doors, appliance doors, mirrors and pictures.
 Coordinates are fractions of image width/height (0 = left/top, 1 = right/bottom).
@@ -195,6 +195,12 @@ For each opening give:
    "verticals": [[x, y]],               // one point on each vertical divider between leaves (mullion, meeting stiles), not the outer edges
    "horizontals": [[x, y]],             // one point on each horizontal divider (transom), not the top or bottom edge
    "hidden": [subset of {list(SIDES)}], // edges you cannot see (behind a cabinet, out of the picture); still give your best corner
+   "upperVerticals": [[x, y]],          // a transom (row above the first horizontal divider): one point on each of ITS vertical bars,
+                                        // [] when it is one pane; leave it out when there is no transom
+   "panels": [{{"row": 0 | 1, "operation": one of {list(PANEL_OPS)}, "handle": true | false, "front": true | false}}],
+                                        // every leaf and fixed pane, row by row (0 = the main row, 1 = the transom), left to right;
+                                        // handle = a handle or pull is visible on that leaf; front = a sliding leaf on the front rail
+                                        // (its edge covers the edge of the leaf next to it)
    "confidence": 0..1, "note": ""}}
 Only openings in those walls. If a corner is hidden, put it where the edge would be. If there is no opening, return an empty list.
 Return {{"openings": [...]}}
@@ -203,7 +209,7 @@ Return {{"openings": [...]}}
 
 def opening_photo_prompt() -> str:
     """Ảnh không có tủ: chỉ hỏi cửa trên bức tường nhìn thấy (không có vật chuẩn nên không đo mm, code chỉ lấy tỉ lệ)."""
-    from .contract_openings import CORNERS, EDGES, KINDS, SIDES, STYLES
+    from .contract_openings import CORNERS, EDGES, KINDS, PANEL_OPS, SIDES, STYLES
     return f"""This photo shows a wall with no kitchen cabinets. Find the room openings in it: doors, windows and open passages.
 Ignore furniture, mirrors and pictures. Coordinates are fractions of image width/height (0 = left/top, 1 = right/bottom).
 
@@ -216,6 +222,12 @@ For each opening give:
    "verticals": [[x, y]],               // one point on each vertical divider between leaves or panes, not the outer edges
    "horizontals": [[x, y]],             // one point on each horizontal divider (transom), not the top or bottom edge
    "hidden": [subset of {list(SIDES)}], // edges you cannot see; still give your best corner
+   "upperVerticals": [[x, y]],          // a transom (row above the first horizontal divider): one point on each of ITS vertical bars,
+                                        // [] when it is one pane; leave it out when there is no transom
+   "panels": [{{"row": 0 | 1, "operation": one of {list(PANEL_OPS)}, "handle": true | false, "front": true | false}}],
+                                        // every leaf and fixed pane, row by row (0 = the main row, 1 = the transom), left to right;
+                                        // handle = a handle or pull is visible on that leaf; front = a sliding leaf on the front rail
+                                        // (its edge covers the edge of the leaf next to it)
    "confidence": 0..1, "note": ""}}
 If there is no opening, return an empty list.
 Return {{"openings": [...]}}

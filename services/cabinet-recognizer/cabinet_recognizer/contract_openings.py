@@ -6,7 +6,12 @@ AI chỉ chỉ ra vị trí trong ảnh (tỉ lệ 0..1); code đổi sang mm b�
                    "corners": {"topLeft": [x, y], "topRight": [x, y], "bottomRight": [x, y], "bottomLeft": [x, y]},
                    "edgesSeen": "casing" | "hole", "style": "swing" | "sliding" | "folding" | "fixed" | "top-hung" | "none",
                    "leaves": int, "verticals": [[x, y]], "horizontals": [[x, y]], "hidden": ["left" | "right" | "top" | "bottom"],
+                   "upperVerticals"?: [[x, y]], "panels"?: [{"row": 0 | 1 | 2, "operation", "handle": bool, "front": bool}],
                    "confidence": 0..1, "note": ""}]}
+
+``upperVerticals``: các thanh đứng của hàng trên thanh ngang đầu tiên (ô thoáng); [] = ô thoáng một ô; không có = không rõ.
+``panels``: mọi cánh và ô kính, theo hàng (0 = hàng chính, 1 = ô thoáng), trái sang phải: kiểu mở, có thấy tay nắm không, cánh trượt nằm
+ray trước không (mép của nó che cánh bên cạnh). Hai trường đều tùy chọn: câu trả lời cũ vẫn hợp lệ.
 """
 from __future__ import annotations
 
@@ -24,6 +29,16 @@ CORNERS: tuple[str, ...] = ("topLeft", "topRight", "bottomRight", "bottomLeft")
 MAX_OPENINGS = 12
 MAX_SPLITS = 4
 MAX_LEAVES = 6
+PANEL_OPS: tuple[str, ...] = ("swing", "sliding", "folding", "fixed", "top-hung")
+MAX_PANELS = 12
+MAX_ROW = 2
+
+
+class Panel(TypedDict):
+    row: int
+    operation: str
+    handle: bool
+    front: bool
 
 
 class OpeningAnswer(TypedDict):
@@ -36,6 +51,8 @@ class OpeningAnswer(TypedDict):
     verticals: list[Pt]
     horizontals: list[Pt]
     hidden: list[str]
+    upperVerticals: list[Pt] | None
+    panels: list[Panel] | None
     confidence: float
     note: str
 
@@ -46,6 +63,30 @@ def _points(value: Any, what: str) -> list[Pt]:
     if not isinstance(value, list) or len(value) > MAX_SPLITS:
         raise invalid("bad-points", f"{what} phải là danh sách tối đa {MAX_SPLITS} điểm [x, y]")
     return [_pt(p, f"{what}[{i}]") for i, p in enumerate(value)]
+
+
+def _flag(value: Any, what: str) -> bool:
+    if value is None:
+        return False
+    if not isinstance(value, bool):
+        raise invalid("bad-flag", f"{what} phải là true/false")
+    return value
+
+
+def _panels(value: Any, what: str) -> list[Panel] | None:
+    if value is None:
+        return None
+    if not isinstance(value, list) or len(value) > MAX_PANELS:
+        raise invalid("bad-panels", f"{what} phải là danh sách tối đa {MAX_PANELS} ô")
+    out: list[Panel] = []
+    for k, raw in enumerate(value):
+        d = _obj(raw, f"{what}[{k}]")
+        row = d.get("row", 0)
+        if isinstance(row, bool) or not isinstance(row, int) or not 0 <= row <= MAX_ROW:
+            raise invalid("bad-panel-row", f"{what}[{k}].row phải là số nguyên 0..{MAX_ROW}")
+        out.append({"row": row, "operation": _enum(d.get("operation", "fixed"), PANEL_OPS, f"{what}[{k}].operation"),
+                    "handle": _flag(d.get("handle"), f"{what}[{k}].handle"), "front": _flag(d.get("front"), f"{what}[{k}].front")})
+    return out
 
 
 def _opening(data: Any, i: int, walls: tuple[str, ...]) -> OpeningAnswer:
@@ -73,7 +114,9 @@ def _opening(data: Any, i: int, walls: tuple[str, ...]) -> OpeningAnswer:
             "style": _enum(d.get("style", "none" if kind == "passage" else "swing"), STYLES, f"{w}.style"),
             "leaves": leaves, "verticals": _points(d.get("verticals"), f"{w}.verticals"),
             "horizontals": _points(d.get("horizontals"), f"{w}.horizontals"),
-            "hidden": sorted({_enum(h, SIDES, f"{w}.hidden") for h in hidden}), "confidence": float(conf), "note": _text(d, "note")}
+            "hidden": sorted({_enum(h, SIDES, f"{w}.hidden") for h in hidden}),
+            "upperVerticals": _points(d.get("upperVerticals"), f"{w}.upperVerticals") if d.get("upperVerticals") is not None else None,
+            "panels": _panels(d.get("panels"), f"{w}.panels"), "confidence": float(conf), "note": _text(d, "note")}
 
 
 def parse_openings(data: Any, walls: tuple[str, ...]) -> list[OpeningAnswer]:
