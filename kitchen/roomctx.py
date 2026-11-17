@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from . import floorplan as fpmod
+from .floorplan import geom
 from .jsonview import as_dict, as_list
 from .placement import IDENTITY, Placement
 
@@ -63,3 +64,12 @@ def for_spec(spec: Any, back: float, side: float) -> RoomContext | None:
         _CACHE.pop(next(iter(_CACHE)))
     _CACHE[key] = ctx
     return ctx
+
+
+def walled(ctx: RoomContext, x: float, z: float, kinds: tuple[str, ...] = ("wall", "column")) -> bool:
+    """Is the point (room frame, mm) inside a wall or column of the plan, or beyond the room's outline: where a backsplash has a wall."""
+    outline = [(float(q["x"]), float(q["z"])) for q in ctx.floorplan.get("outline", [])]
+    if len(outline) >= 3 and not geom.point_in_poly((x, z), outline):
+        return True
+    return any(st.get("kind") in kinds and len(st["outline"]) >= 3 and geom.point_in_poly((x, z), [(float(q["x"]), float(q["z"])) for q in st["outline"]])
+               for st in ctx.structures)

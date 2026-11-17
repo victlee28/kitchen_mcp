@@ -88,12 +88,15 @@ HOOD_GAP_MM = 650.0             # worktop to the canopy of a hood hanging over t
 HOOD_CANOPY_MM = 150.0          # height of that canopy
 CHIMNEY_MM = (300.0, 250.0)     # width, depth of its chimney
 BACKSPLASH_STANDARD = 600.0  # "standard" backsplash height above the countertop (mm)
+BACKSPLASH_SNAP_MM = 150.0  # a standard backsplash ending this close under the upper cabinets reaches them
+BACKING_PROBE_MM = 60.0      # how far behind a run's back a wall is looked for (a backsplash goes on it)
+BACKING_KINDS = ("wall", "column")
 
 
 def backsplash_height(spec: KitchenSpec, wall: str, run: str | None = None) -> float:
     """Height of the wall backsplash above the countertop on one wall (shared by the 3D geometry and the Three.js export).
 
-    "standard" is a fixed 600 mm; "to-upper" reaches the underside of the lowest upper cabinet on that wall
+    "standard" is 600 mm (up to the uppers when they hang less than ``BACKSPLASH_SNAP_MM`` above that); "to-upper" reaches the underside of the lowest upper cabinet on that wall
     (common.upperBottom when the wall has none); "to-ceiling" reaches the ceiling; common.backsplashHeightMm, when set,
     overrides all three.
     """
@@ -102,10 +105,11 @@ def backsplash_height(spec: KitchenSpec, wall: str, run: str | None = None) -> f
         return float(c.backsplashHeightMm)
     if c.backsplashHeight == "to-ceiling":
         return max(50.0, c.ceiling - c.countertop)
+    uppers = [m.y for m in spec.module if (m.run or None) == run and m.storey == "upper"]          # of that run only
     if c.backsplashHeight != "to-upper":
-        return BACKSPLASH_STANDARD
-    upper_edge = min((m.y for m in spec.module if (m.run or None) == run and m.storey == "upper"), default=c.upperBottom)   # of that run only
-    return max(50.0, upper_edge - c.countertop)
+        gap = min(uppers) - c.countertop - BACKSPLASH_STANDARD if uppers else -1.0
+        return BACKSPLASH_STANDARD + gap if 0.0 < gap <= BACKSPLASH_SNAP_MM else BACKSPLASH_STANDARD     # no thin strip of bare wall under the uppers
+    return max(50.0, min(uppers, default=c.upperBottom) - c.countertop)
 
 
 def wall_length(spec: KitchenSpec) -> tuple[float, float]:
@@ -186,6 +190,7 @@ class _Builder:
         self._n: dict[str, int] = {}
         self._run = {m.id: fr for m in spec.module if (fr := runmod.frame_of(spec, m)) is not None}
         self._joints = runmod.corner_joints(spec)   # explicit run frames by module (or appliance) id
+        self._room: Any = False                       # the imported floorplan's context, read once when a backsplash asks for it
 
     # ---- row coordinates (s, d) -> world
     def seat(self, wall: str) -> "runmod.Seat":
@@ -216,6 +221,26 @@ class _Builder:
 
     def wall_behind(self, fr: "runmod.RunFrame") -> str | None:
         return run_wall(fr, self.lsau)
+
+    def backed(self, fr: "runmod.RunFrame", s0: float, s1: float) -> bool:
+        """Does a wall stand right behind the stretch [s0, s1] of a run: a wall of the kitchen's own box, or, with an imported floorplan, a
+        wall or column of the plan (or the room's edge) just behind most of its length."""
+        if self.wall_behind(fr):
+            return True
+        if self._room is False:
+            try:
+                self._room = roomctx.for_spec(self.spec, self.lsau, self.lphai)
+            except ValueError:
+                self._room = None
+        ctx = self._room
+        if ctx is None:
+            return False
+        hits = 0
+        for t in (0.2, 0.5, 0.8):
+            wx, wz = fr.to_world(s0 + (s1 - s0) * t, -BACKING_PROBE_MM)
+            x, z = ctx.placement.to_room(wx, wz)
+            hits += roomctx.walled(ctx, x, z, BACKING_KINDS)
+        return hits >= 2
 
     def door_widths(self, m: Module, s0: float, s1: float, y0: float, y1: float, type: str = "door") -> None:
         """Chia dải mặt trước [s0,s1]x[y0,y1] thành cánh theo tỉ lệ m.canh, chừa khe."""
@@ -304,7 +329,7 @@ class _Builder:
             fr = self._run[ms[0].id]
             for s0, s1, depth in run:
                 self.box(None, "countertop", "island", s0, s1, 0, depth + c.countertopOverhang, c.baseTop, c.countertop, fr=fr)
-                if c.material.get("wallTile") and self.wall_behind(fr):     # a run standing against a wall of the room is tiled; a free one is not
+                if self.backed(fr, s0, s1):     # a worktop against a wall gets its backsplash (the default tile when none is named); a free one not
                     self.box(None, "wall-tile", "island", s0, s1, 0, 8, c.countertop, c.countertop + backsplash_height(self.spec, "island", fr.id), fr=fr)
 
     def _close_corner(self, run_id: str, stretches: list[list[float]]) -> None:

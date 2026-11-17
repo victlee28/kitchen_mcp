@@ -643,7 +643,8 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
                             "cutouts": cutouts, "sourceRef": f"countertop-{p.run or p.wall}",
                             "partRef": {"kind": "countertop", "wall": p.wall, **({"run": p.run} if p.run else {})}})
         height = backsplash_height(spec, require(p.wall, "countertop wall"), p.run)  # cùng một hàm với hình học 3D
-        if c.material.get("wallTile") and height >= 50:  # ốp tường giữa mặt đá và tủ trên, sát tường
+        tiled = p.lmin is not None and any(q.type == "wall-tile" and q.run == p.run and q.lmin == (p.lmin[0], c.countertop, 0.0) for q in scene.parts)
+        if tiled and height >= 50:  # the backsplash the scene puts behind this worktop (geometry decides: a wall stands behind it)
             accessories.append({"id": f"ACC-BACKSPLASH-{i + 1}", "type": "Backsplash_Tile", "assetId": "ASSET-PANEL",
                                 "dimensions": _dims(w, height, 8), "materialId": mats["wallTile"],
                                 "transform": _tf((fr.pos[0], c.countertop, fr.pos[2]), fr.rot), "sourceRef": f"wall-tile-{p.run or p.wall}"})

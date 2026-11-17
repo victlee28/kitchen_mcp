@@ -122,6 +122,17 @@ class TestService(unittest.TestCase):
         (r1,) = [r for r in spec.runs if r.id != self.wall_run]
         self.assertEqual((r1.yaw, r1.system), (180.0, "column_a"), "doors look -z; the run belongs to the column's system (its element id)")
 
+    def test_a_run_against_a_column_of_the_plan_gets_a_backsplash_without_being_asked(self):
+        r = self.svc.template(self.did, self.click(-2300.0, 1990.0))
+        self.svc.apply(self.did, r["operation"], r["baseRev"], "test", r["proposal"]["opHash"])
+        spec, _ = self.svc.store.get(self.did)
+        self.assertNotIn("wallTile", spec.common.material, "no tile named")
+        (new_run,) = [x.id for x in spec.runs if x.id != self.wall_run]
+        tiles = [p for p in geometry.compile_spec(spec).parts if p.type == "wall-tile"]
+        self.assertIn(new_run, {p.run for p in tiles}, "its back is against the column: tiled")
+        doc = threejs_export.export(spec)
+        self.assertTrue(any(a["type"] == "Backsplash_Tile" for a in doc["accessories"]), "and in the 3D file")
+
     def test_every_run_made_against_one_element_is_in_its_system(self):
         for point in ((-2300.0, 1990.0), (-2300.0, 2410.0)):          # two edges of the same column: one system
             r = self.svc.template(self.did, self.click(*point))
