@@ -2,6 +2,9 @@
 
 A plain folder (``KITCHEN_COMMAND_INBOX``, default ``command-inbox/`` beside the database), so the web server that writes a command and the MCP
 server Claude reads it with need nothing else in common. Each file is written whole (temporary file, then replace).
+
+Taking a command (``take``) is atomic across processes: a ``<id>.take`` file created exclusively, removed when the command is answered or
+given back; a command ``working`` longer than ``STALE_S`` (its taker stopped) is pending again.
 """
 from __future__ import annotations
 
@@ -9,12 +12,15 @@ import json
 import os
 import secrets
 from collections.abc import Callable
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 from . import menu_commands as mc
-from .errors import NotFound
+from .errors import InvalidInput, NotFound
+
+
+STALE_S = 900.0          # a command working this long without an answer was dropped by its taker: pending again
 
 
 class CommandInbox:
@@ -61,10 +67,60 @@ class CommandInbox:
                 records.append(json.loads(path.read_text(encoding="utf-8")))
             except (OSError, ValueError):
                 continue                      # a file being replaced right now: read on the next call
+        for i, r in enumerate(records):          # a taker that stopped: its command is pending again
+            if r.get("status") == "working" and self._stale(r):
+                records[i] = self._write(mc.requeued(r))
+                self._release(str(r.get("id")))
         return mc.matching(records, status, design_id)
 
     def answer(self, cid: str, status: Any, reply: Any, revision: Any = None, choices: Any = None, from_rev: Any = None) -> dict[str, Any]:
-        return self._write(mc.answered(self.get(cid), status, reply, revision, self.clock(), choices, from_rev))
+        out = self._write(mc.answered(self.get(cid), status, reply, revision, self.clock(), choices, from_rev))
+        self._release(cid)
+        return out
+
+    def _take_path(self, cid: str) -> Path:
+        return self.root / f"{mc.clean_id(cid)}.take"
+
+    def _release(self, cid: str) -> None:
+        try:
+            self._take_path(cid).unlink()
+        except FileNotFoundError:
+            pass
+
+    def take(self, cid: str, by: str) -> dict[str, Any]:
+        """Take a pending command for ``by`` (``worker`` | ``claude``): it becomes ``working``; refused (``command-taken``) when another one
+        took it first, even from another process."""
+        record = self.get(cid)
+        if record.get("status") == "working" and self._stale(record):
+            record = self._write(mc.requeued(record))
+            self._release(cid)
+        self.root.mkdir(parents=True, exist_ok=True)
+        try:
+            fd = os.open(self._take_path(cid), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        except FileExistsError:
+            raise InvalidInput(f"Command {cid} is being carried out", code="command-taken", params={"id": cid, "worker": "?"}) from None
+        os.close(fd)
+        try:
+            return self._write(mc.started(self.get(cid), by, self.clock()))
+        except Exception:
+            self._release(cid)
+            raise
+
+    def give_back(self, cid: str) -> dict[str, Any]:
+        """A taken command not carried out after all (the model could not be reached): pending again."""
+        out = self._write(mc.requeued(self.get(cid)))
+        self._release(cid)
+        return out
+
+    def _stale(self, record: dict[str, Any]) -> bool:
+        def when(text: Any) -> datetime | None:
+            try:
+                at = datetime.fromisoformat(str(text).replace("Z", "+00:00"))
+            except ValueError:
+                return None
+            return at if at.tzinfo is not None else at.replace(tzinfo=timezone.utc)
+        at, now = when(record.get("startedAt")), when(self.clock())
+        return at is None or now is None or (now - at).total_seconds() > STALE_S
 
     def drop(self, cid: str) -> dict[str, Any]:
         return self._write(mc.dropped(self.get(cid), self.clock()))

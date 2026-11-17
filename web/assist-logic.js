@@ -259,9 +259,19 @@ export function keepAnswers(kept, news, max = 5) {
  *  looked, oldest first]}. ``known``: ids the page sent and has not shown an answer for yet. */
 export function inboxNews(commands, known) {
   const mine = new Set(known);
-  const waiting = commands.filter((c) => mine.has(c.id) && c.status === 'pending');
+  const waiting = commands.filter((c) => mine.has(c.id) && (c.status === 'pending' || c.status === 'working'));
   const news = commands.filter((c) => mine.has(c.id) && ['done', 'failed', 'question'].includes(c.status));
   return { waiting, news };
+}
+
+/** The task list of the command box: the design's waiting commands in the order they are carried out (oldest first), numbered;
+ * {shown: [{id, n, text, state: 'working'|'pending', by: 'worker'|'claude'|null, canDrop}], more} with at most `limit` shown. */
+export function taskList(waiting, designId, limit = 6) {
+  const mine = waiting.filter((c) => c.designId === designId)
+    .sort((a, b) => String(a.createdAt || a.id).localeCompare(String(b.createdAt || b.id)));
+  const all = mine.map((c, i) => ({ id: c.id, n: i + 1, text: c.text, state: c.status === 'working' ? 'working' : 'pending',
+    by: c.status === 'working' ? (c.worker === 'claude' ? 'claude' : 'worker') : null, canDrop: c.status !== 'working' }));
+  return { shown: all.slice(0, limit), more: Math.max(0, all.length - limit) };
 }
 
 /** One answered command as a status line: {text, tone: 'ok'|'warn'|'bad', reload: true when the design changed}. */

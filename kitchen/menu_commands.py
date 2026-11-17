@@ -4,8 +4,12 @@ may hold and how an answer changes them; ``command_inbox`` keeps them on disk.
 A record::
 
     {"id": "20261116-151500-a1b2", "designId", "text", "place": {...}, "baseRev", "lang", "createdAt",
-     "status": "pending" | "done" | "failed" | "question" | "dropped" | "replied", "reply"?, "choices"?, "revision"?, "fromRev"?,
-     "answeredAt"?, "replyTo"?, "context"?, "followUp"?}
+     "status": "pending" | "working" | "done" | "failed" | "question" | "dropped" | "replied", "reply"?, "choices"?, "revision"?,
+     "fromRev"?, "answeredAt"?, "replyTo"?, "context"?, "followUp"?, "worker"?, "startedAt"?}
+
+The inbox is a queue, carried out oldest first by whoever takes a command: the background worker (a model, when a key is set) or Claude
+in chat. Taking a command (``started``) marks it ``working`` with who took it, so the other one leaves it alone; a command left
+``working`` too long (the worker stopped) is pending again (``command_inbox.STALE_S``).
 
 Claude's answer may offer ``choices`` (short sentences the user can pick instead of typing) and say ``fromRev``, the revision before
 its change (the menu's undo goes back to it). The user's answer to it is a new command with ``replyTo`` (the answered command) and
@@ -28,7 +32,8 @@ from .jsonview import as_dict, as_list
 from .numeric import round_half_away
 
 ID = re.compile(r"^\d{8}-\d{6}-[a-z0-9]{4}$")
-STATUSES = ("pending", "done", "failed", "question", "dropped", "replied")
+STATUSES = ("pending", "working", "done", "failed", "question", "dropped", "replied")
+WORKERS = ("worker", "claude")         # who carries a command out: the background model or Claude in chat
 ANSWERS = ("done", "failed", "question")         # what Claude may set; "dropped" is the user's
 KINDS = ("module", "part", "group", "appliance", "structure", "floor", "opening")
 PARTS = ("door", "drawer", "handle", "countertop")
@@ -134,11 +139,11 @@ def answered(record: Mapping[str, Any], status: Any, reply: Any, revision: Any, 
     answered."""
     if status not in ANSWERS:
         raise InvalidInput(f"status must be one of {', '.join(ANSWERS)}", code="command-bad-status", params={"status": str(status)[:20]})
-    if record.get("status") not in ("pending", "question"):
+    if record.get("status") not in ("pending", "question", "working"):
         raise InvalidInput(f"Command {record.get('id')} is already {record.get('status')}", code="command-closed",
                            params={"id": str(record.get("id")), "status": str(record.get("status"))})
     text = reply.strip()[:MAX_REPLY] if isinstance(reply, str) else ""
-    out = {**record, "status": status, "reply": text, "answeredAt": now}
+    out = {**{k: v for k, v in record.items() if k not in ("worker", "startedAt")}, "status": status, "reply": text, "answeredAt": now}
     for key, value in (("revision", _rev(revision)), ("fromRev", _rev(from_rev) if status == "done" else None)):
         if value is not None:
             out[key] = value
@@ -150,6 +155,27 @@ def answered(record: Mapping[str, Any], status: Any, reply: Any, revision: Any, 
     else:
         out.pop("choices", None)
     return out
+
+
+def started(record: Mapping[str, Any], by: str, now: str) -> dict[str, Any]:
+    """The command taken by ``by`` (``WORKERS``): ``working``. Only a pending command is taken; one being carried out by someone else is
+    refused (``command-taken``)."""
+    if by not in WORKERS:
+        raise InvalidInput(f"by must be one of {', '.join(WORKERS)}", code="command-bad-worker")
+    if record.get("status") == "working":
+        raise InvalidInput(f"Command {record.get('id')} is being carried out by {record.get('worker')}", code="command-taken",
+                           params={"id": str(record.get("id")), "worker": str(record.get("worker"))})
+    if record.get("status") != "pending":
+        raise InvalidInput(f"Command {record.get('id')} is already {record.get('status')}", code="command-closed",
+                           params={"id": str(record.get("id")), "status": str(record.get("status"))})
+    return {**record, "status": "working", "worker": by, "startedAt": now}
+
+
+def requeued(record: Mapping[str, Any]) -> dict[str, Any]:
+    """A command left ``working`` (its worker stopped): pending again, for the next one to take."""
+    if record.get("status") != "working":
+        return dict(record)
+    return {**{k: v for k, v in record.items() if k not in ("worker", "startedAt")}, "status": "pending"}
 
 
 def dropped(record: Mapping[str, Any], now: str) -> dict[str, Any]:

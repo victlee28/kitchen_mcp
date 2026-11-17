@@ -2,7 +2,7 @@
 // The server decides what a change means (POST .../propose previews, POST .../ops saves); nothing here edits data directly.
 import { el } from './dom.js';
 import { request } from './api-client.js';
-import { opensOrSaves, replacesWithDoor, joinsRuns, interpretBody, describeInterpret, templateIntent, systemIntent, mentionsReference, checkUpload, recognizeBody, recognizeJobBody, anchorFor, photoOpeningHeadline, describeRecognition, recognitionLines, commandPlace, facesForTarget, commandBody, inboxNews, describeCommandAnswer, answerCard, replyBody, keepAnswers } from './assist-logic.js';
+import { opensOrSaves, replacesWithDoor, joinsRuns, interpretBody, describeInterpret, templateIntent, systemIntent, mentionsReference, checkUpload, recognizeBody, recognizeJobBody, anchorFor, photoOpeningHeadline, describeRecognition, recognitionLines, commandPlace, facesForTarget, commandBody, inboxNews, taskList, describeCommandAnswer, answerCard, replyBody, keepAnswers } from './assist-logic.js';
 import { actionsFor, buildGroupOp, buildOp, describeProposal, groupActions, layerFor, lineTemplate, menuPosition, DOOR_STYLES, HANDLE_VARIANTS, RUN_ACTIONS, RUN_TURNS, systemTemplate, edgeChoices, modelChoices, applianceLayer, lineAlongWall, wallSegments, openingCommand, cabinetTypeChoices, imageTarget } from './menu-logic.js';
 import { groupLabel, groupLayerIds, manySystems } from './design-logic.js';
 import * as catalog from './catalog-client.js';
@@ -60,14 +60,15 @@ export function createModuleMenu(ctx) {
     inboxWorker = !!data?.worker;
     const { waiting, news } = inboxNews(commands, sent.filter((c) => c.designId === id).map((c) => c.id));
     const gone = new Set([...news.map((c) => c.id), ...sent.filter((c) => c.designId === id && !commands.some((x) => x.id === c.id)).map((c) => c.id)]);
-    const before = waitingNow.length;
+    const sig = (list) => list.map((c) => `${c.id}:${c.status}`).join();
+    const before = sig(waitingNow);
     waitingNow = waiting;
     if (gone.size) { sent = sent.filter((c) => !gone.has(c.id)); keepSent(sent); }
     if (news.length) { answers = keepAnswers(answers, news); keepAnswersStored(answers); }
     const said = news.map((c) => describeCommandAnswer(c, rev));
     if (said.some((d) => d.reload)) { try { await ctx.reload(); } catch { /* the reply is still shown */ } }
     said.forEach((d) => ctx.setStatus(d.text, d.tone, { hold: ANSWER_HOLD_MS }));   // kept while the panels the reload refreshes report in
-    if ((news.length || before !== waitingNow.length) && !box.hidden && box.querySelector('.ctx-cmd')) redraw(box.querySelector('.ctx-cmd input')?.value || '', '');
+    if ((news.length || before !== sig(waitingNow)) && !box.hidden && box.querySelector('.ctx-cmd')) redraw(box.querySelector('.ctx-cmd input')?.value || '', '');
   }
 
   async function sendToInbox(text) {
@@ -206,9 +207,12 @@ export function createModuleMenu(ctx) {
       el('span', {}, tx('ui.job-dang-cho-claude', { 0: pendingJob })),
       el('button', { type: 'button', class: 'primary', title: tx('ui.lay-ket-qua-claude-da-tra-loi'), onclick: () => updateJob(input.value) }, tx('ui.cap-nhat')),
       el('button', { type: 'button', class: 'ghost small', title: tx('ui.bo-job-nay'), onclick: () => { setJob(null); redraw(input.value, ''); } }, tx('ui.bo'))) : null;
-    const mineNow = waitingNow.filter((c) => c.designId === ctx.getState().id).slice(-3);
-    const queued = mineNow.map((c) => el('div', { class: 'ctx-pending' }, el('span', {}, tx('ui.command.waiting', { 0: c.text })),
-      el('button', { type: 'button', class: 'ghost small', title: tx('ui.command.drop-title'), onclick: () => dropCommand(c.id) }, tx('ui.command.drop'))));
+    const tasks = taskList(waitingNow, ctx.getState().id);
+    const queued = tasks.shown.length ? [el('div', { class: 'ctx-tasks' }, el('b', {}, tx('ui.command.tasks', { 0: tasks.shown.length + tasks.more })),
+      ...tasks.shown.map((t) => el('div', { class: `ctx-pending ctx-task-${t.state}` },
+        el('span', {}, tx(t.state === 'working' ? `ui.command.working-${t.by}` : 'ui.command.queued', { 0: t.n, 1: t.text })),
+        ...(t.canDrop ? [el('button', { type: 'button', class: 'ghost small', title: tx('ui.command.drop-title'), onclick: () => dropCommand(t.id) }, tx('ui.command.drop'))] : []))),
+      ...(tasks.more ? [el('div', { class: 'ctx-pending' }, el('span', {}, tx('ui.command.more', { 0: tasks.more })))] : []))] : [];
     return el('div', { class: 'ctx-cmd' }, input, el('button', { type: 'button', class: 'primary', onclick: run }, tx(inboxMode && !attached ? 'ui.command.send' : 'ui.xem-truoc')), attach, kind, mode, file,
       ...(chip ? [chip] : []), ...(waiting ? [waiting] : []), ...queued, ...answerViews(input),
       ...(message ? [el('p', { class: 'ctx-msg warn' }, message)] : []),

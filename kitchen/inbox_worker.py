@@ -22,7 +22,7 @@ from collections.abc import Callable, Mapping
 from typing import Any
 
 from . import model_contract as mc
-from .errors import KitchenError
+from .errors import InvalidInput, KitchenError
 from .jsonview import as_dict
 
 logger = logging.getLogger("kitchen.inbox_worker")
@@ -94,13 +94,23 @@ class InboxWorker:
         self._stop.set()
 
     def run_once(self) -> list[dict[str, Any]]:
-        """Carry out the pending commands; stop at the first one the model cannot be reached for (it stays pending)."""
+        """Carry out the pending commands one after another, oldest first. Each is taken first (``working``), so a command Claude took
+        by chat is left alone; stop at the first one the model cannot be reached for (given back: pending, for Claude by chat)."""
         if time.monotonic() < self._paused_until:
             return []
         done = []
-        for c in self.svc.command_list("pending"):
-            out = self.handle(c)
+        for c in sorted(self.svc.command_list("pending"), key=lambda r: str(r.get("createdAt") or "")):
+            try:
+                taken = self.svc.command_take(str(c["id"]), "worker")
+            except InvalidInput:               # taken by Claude meanwhile, or no longer pending
+                continue
+            try:
+                out = self.handle(taken)
+            except Exception as error:         # one bad command must not hold the queue: closed as failed
+                logger.exception("[INBOX] %s failed", c["id"])
+                out = self._close(str(c["id"]), "failed", f"Error: {type(error).__name__}", None)
             if out is None:
+                self.svc.command_give_back(str(c["id"]))
                 self._paused_until = time.monotonic() + PAUSE_S
                 break
             done.append(out)

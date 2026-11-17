@@ -115,6 +115,36 @@ class TestInboxFiles(unittest.TestCase):
         self.assertEqual(CommandInbox(self.tmp / "none", lambda: NOW).list(), [])
 
 
+    def test_a_command_is_taken_by_one_only(self):
+        a = self.inbox.put("d1", "xóa TD3", {"kind": "module", "id": "TD3"}, 2, "vi")
+        taken = self.inbox.take(a["id"], "claude")
+        self.assertEqual((taken["status"], taken["worker"], taken["startedAt"]), ("working", "claude", NOW))
+        self.assertTrue((self.tmp / "inbox" / f"{a['id']}.take").exists())
+        with self.assertRaises(InvalidInput) as e:
+            self.inbox.take(a["id"], "worker")
+        self.assertEqual(e.exception.code, "command-taken")
+        self.assertEqual(self.inbox.drop(a["id"])["status"], "working", "a command being carried out is not taken back")
+        self.assertEqual(self.inbox.list("pending"), [])
+        done = self.inbox.answer(a["id"], "done", "Đã xóa", 3)
+        self.assertNotIn("worker", done)
+        self.assertFalse((self.tmp / "inbox" / f"{a['id']}.take").exists(), "answered: the take is released")
+        with self.assertRaises(InvalidInput):
+            self.inbox.take(a["id"], "claude")
+        with self.assertRaises(InvalidInput):
+            self.inbox.take(self.inbox.put("d1", "x", {}, 2, "vi")["id"], "someone")
+
+    def test_given_back_or_left_too_long_it_is_pending_again(self):
+        a = self.inbox.put("d1", "xóa TD3", {"kind": "module", "id": "TD3"}, 2, "vi")
+        self.inbox.take(a["id"], "worker")
+        self.assertEqual(self.inbox.give_back(a["id"])["status"], "pending")
+        self.assertEqual(self.inbox.take(a["id"], "claude")["worker"], "claude", "given back: anyone may take it")
+        rec = json.loads((self.tmp / "inbox" / f"{a['id']}.json").read_text(encoding="utf-8"))
+        rec["startedAt"] = "2020-01-01T00:00:00Z"            # its taker stopped long ago
+        (self.tmp / "inbox" / f"{a['id']}.json").write_text(json.dumps(rec), encoding="utf-8")
+        self.assertEqual([r["id"] for r in self.inbox.list("pending")], [a["id"]])
+        self.assertEqual(self.inbox.take(a["id"], "worker")["worker"], "worker")
+
+
 class TestServiceHttpMcp(unittest.TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp())

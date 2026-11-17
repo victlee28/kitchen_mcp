@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { opensOrSaves, replacesWithDoor, joinsRuns, styleFromOptions, styleFromValue, interpretBody, describeInterpret, confirmBody, checkUpload, recognizeBody, recognizeJobBody, anchorFor, photoOpeningHeadline, describeRecognition, templateIntent, mentionsReference, recognitionLines, commandPlace, facesForTarget, commandBody, answerCard, replyBody, keepAnswers, inboxNews, describeCommandAnswer } from '../../web/assist-logic.js';
+import { opensOrSaves, replacesWithDoor, joinsRuns, styleFromOptions, styleFromValue, interpretBody, describeInterpret, confirmBody, checkUpload, recognizeBody, recognizeJobBody, anchorFor, photoOpeningHeadline, describeRecognition, templateIntent, mentionsReference, recognitionLines, commandPlace, facesForTarget, commandBody, answerCard, replyBody, keepAnswers, inboxNews, taskList, describeCommandAnswer } from '../../web/assist-logic.js';
 
 const prop = (over = {}) => ({ id: 'd1', baseRev: 4, opHash: 'h', operation: { op: 'remove', id: 'TD1' }, applicable: true, unchanged: false,
   diff: { modules: { added: [], removed: ['TD1'], changed: {} }, other: [] }, validation: { introduced: [], resolved: [] }, ...over });
@@ -182,3 +182,16 @@ test('an unsure door: the answer offers types to pick, and the pick goes back in
   assert.equal(kept.find((k) => k.id === 'a').status, 'done', 'the newer record of the same command');
   assert.deepEqual(keepAnswers([], [1, 2, 3].map((i) => ({ id: `x${i}`, designId: 'd' })), 2).map((k) => k.id), ['x2', 'x3']);
 }
+
+test('the task list: the waiting commands in order, the one being done first-class, only a waiting one taken back', () => {
+  const list = [{ id: 'b', designId: 'd1', status: 'pending', text: 'xóa TD3', createdAt: '2026-11-17T10:02:00Z' },
+    { id: 'a', designId: 'd1', status: 'working', worker: 'worker', text: 'sơn tường', createdAt: '2026-11-17T10:01:00Z' },
+    { id: 'x', designId: 'd2', status: 'pending', text: 'khác', createdAt: '2026-11-17T10:00:00Z' },
+    { id: 'c', designId: 'd1', status: 'working', worker: 'claude', text: 'tủ thấp', createdAt: '2026-11-17T10:03:00Z' }];
+  assert.deepEqual(inboxNews(list, ['a', 'b']).waiting.map((c) => c.id), ['b', 'a'], 'working is still waiting');
+  const t = taskList(list, 'd1');
+  assert.deepEqual(t.shown.map((x) => [x.n, x.id, x.state, x.by, x.canDrop]),
+    [[1, 'a', 'working', 'worker', false], [2, 'b', 'pending', null, true], [3, 'c', 'working', 'claude', false]]);
+  assert.equal(t.more, 0);
+  assert.deepEqual([taskList(list, 'd1', 2).shown.length, taskList(list, 'd1', 2).more], [2, 1]);
+});

@@ -123,6 +123,13 @@ class KitchenService:
         or ``question``; ``choices``: answers the user can pick in the menu."""
         return self.commands.answer(command_id, status, reply, revision, choices, from_rev)
 
+    def command_take(self, command_id: str, by: str) -> dict:
+        """Take a pending command to carry it out (``worker`` | ``claude``): ``working``, so the other one leaves it alone."""
+        return self.commands.take(command_id, by)
+
+    def command_give_back(self, command_id: str) -> dict:
+        return self.commands.give_back(command_id)
+
     def command_drop(self, command_id: str) -> dict:
         return self.commands.drop(command_id)
 

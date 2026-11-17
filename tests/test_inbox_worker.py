@@ -125,6 +125,23 @@ class TestWorker(unittest.TestCase):
         self.assertEqual(self.svc.get(self.did)["rev"], rev)
         self.assertEqual(self.svc.command_get(cmd["id"])["status"], "question")
 
+    def test_the_queue_is_done_in_order_and_a_command_claude_took_is_left_alone(self):
+        rev = self.svc.get(self.did)["rev"]
+        first = self.svc.command_put(self.did, "rộng 800", {"kind": "module", "id": "TD1"}, rev, "vi")
+        mine = self.svc.command_put(self.did, "xóa TD3", {"kind": "module", "id": "TD3"}, rev, "vi")
+        last = self.svc.command_put(self.did, "rộng 700", {"kind": "module", "id": "TD2"}, rev, "vi")
+        self.assertEqual(self.svc.command_take(mine["id"], "claude")["status"], "working")
+        worker = self.use("openai", [("answer", {"status": "question", "reply": "A?"}), ("answer", {"status": "question", "reply": "B?"})])
+        done = worker.run_once()
+        self.assertEqual([(d["id"], d["reply"]) for d in done], [(first["id"], "A?"), (last["id"], "B?")])
+        self.assertEqual(self.svc.command_get(mine["id"])["worker"], "claude", "still Claude's")
+
+    def test_a_command_the_model_cannot_reach_is_given_back(self):
+        rev = self.svc.get(self.did)["rev"]
+        cmd = self.svc.command_put(self.did, "xóa TD3", {}, rev, "vi")
+        self.assertEqual(self.use("openai", [mc.ModelError("down", code="model-http")]).run_once(), [])
+        self.assertEqual(self.svc.command_take(cmd["id"], "claude")["worker"], "claude", "pending again, Claude can take it")
+
     def test_it_starts_by_itself_when_a_model_is_set_else_claude_by_chat(self):
         self.assertEqual(self.svc.config.inbox_worker, "auto")
         self.svc.models.config = replace(self.svc.models.config, llm_provider=None, deepseek_api_key=None)

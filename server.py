@@ -289,7 +289,7 @@ def reject_image_job(job_id: str) -> dict[str, Any]:
 def regenerate_image_job(job_id: str, seed: int | None=None) -> dict[str, Any]:
     """Create a replacement job with the same request and a new seed."""
     return _slim_job(_call(svc().images.regenerate, job_id, seed))
-def list_menu_commands(status: Literal['pending', 'done', 'failed', 'question', 'dropped'] | None = 'pending', design_id: str | None = None) -> dict[str, Any]:
+def list_menu_commands(status: Literal['pending', 'working', 'done', 'failed', 'question', 'dropped', 'replied'] | None = 'pending', design_id: str | None = None) -> dict[str, Any]:
     """The command inbox: sentences the user typed in the right-click menu of the web app, left for you to carry out (oldest first).
 
     Each command: id, designId, text (the sentence, as typed), place (what was right-clicked: kind module|part|group|appliance|structure|floor|opening,
@@ -300,12 +300,22 @@ def list_menu_commands(status: Literal['pending', 'done', 'failed', 'question', 
     interpret_edit with scope_modules = the clicked module or group otherwise; propose_template for a run along a floorplan object), check the
     proposal, save it with apply_change (expect = proposal.opHash), then answer_menu_command. Ask the user in chat when a
     sentence is unclear rather than guessing; a sentence you cannot do is answered status 'failed' with the reason.
+
+    The inbox is a queue: when asked to do the inbox, carry out every pending command one after another, oldest first, taking each
+    with start_menu_command before working on it (a background model may be carrying the queue out too; 'working' = taken, with worker
+    'worker' or 'claude'; a command start_menu_command refuses as taken is skipped). The user can keep sending while you work: list again
+    when the queue is empty.
     """
     return {'mode': svc().command_mode(), 'commands': _call(svc().command_list, status, design_id)}
 
 def get_menu_command(command_id: str) -> dict[str, Any]:
     """One command of the inbox (see list_menu_commands), by id."""
     return _call(svc().command_get, command_id)
+
+def start_menu_command(command_id: str) -> dict[str, Any]:
+    """Take a pending command of the inbox before carrying it out (status 'working', worker 'claude'), so the background model leaves
+    it alone. Refused (command-taken) when the background model took it first: skip it. Close it with answer_menu_command."""
+    return _call(svc().command_take, command_id, 'claude')
 
 def answer_menu_command(command_id: str, status: Literal['done', 'failed', 'question'], reply: str = '', revision: int | None = None,
                         choices: list[str] | None = None, from_rev: int | None = None) -> dict[str, Any]:
@@ -330,7 +340,7 @@ def model_usage(day: str | None = None) -> dict[str, Any]:
     known (data/model-prices.json), per provider; the daily budget and the providers set."""
     return _call(svc().model_usage, day)
 
-TOOLS = [list_menu_commands, model_usage, get_menu_command, answer_menu_command, opening_command, apply_change, create_design, list_floorplan_rooms, import_floorplan, bind_floorplan, design_kitchen, list_designs, get_design, design_history, list_openings, opening_types, propose_opening, add_module, update_module, remove_module, update_global, set_moldings, list_molding_profiles, apply_action, propose_change, interpret_edit, recognize_design, propose_template, save_layout_template, revert_design, validate_design, get_scene, export_threejs, render_views, search_knowledge, list_regions, add_knowledge, export_ai_package, list_layers, get_view_status, regenerate_stale_views, create_image_job, get_image_job, list_image_jobs, submit_image_result, import_base_image, accept_image_job, reject_image_job, regenerate_image_job, send_image_job]
+TOOLS = [list_menu_commands, model_usage, get_menu_command, start_menu_command, answer_menu_command, opening_command, apply_change, create_design, list_floorplan_rooms, import_floorplan, bind_floorplan, design_kitchen, list_designs, get_design, design_history, list_openings, opening_types, propose_opening, add_module, update_module, remove_module, update_global, set_moldings, list_molding_profiles, apply_action, propose_change, interpret_edit, recognize_design, propose_template, save_layout_template, revert_design, validate_design, get_scene, export_threejs, render_views, search_knowledge, list_regions, add_knowledge, export_ai_package, list_layers, get_view_status, regenerate_stale_views, create_image_job, get_image_job, list_image_jobs, submit_image_result, import_base_image, accept_image_job, reject_image_job, regenerate_image_job, send_image_job]
 for tool_function in TOOLS:
     mcp.add_tool(tool_function, name=tool_function.__name__, description=(tool_function.__doc__ or '').strip(), structured_output=False if tool_function is render_views else None)
 

@@ -1265,7 +1265,7 @@ export default {
  "ui.command.sent": "Đã gửi lệnh {0} vào hộp thư của Claude. Hãy nhắn Claude: \"làm các lệnh trong hộp thư\".",
  "ui.command.waiting": "Đang chờ Claude: \"{0}\"",
  "ui.command.drop": "Rút lại",
- "ui.command.drop-title": "Rút lại lệnh này (Claude chưa làm)",
+ "ui.command.drop-title": "Rút lại lệnh này (chưa ai làm)",
  "ui.command.done": "Claude đã làm \"{0}\".",
  "ui.command.failed": "Claude không làm được \"{0}\":",
  "ui.command.question": "Claude hỏi về \"{0}\":",
@@ -1320,5 +1320,10 @@ export default {
  "name.cabinet.wine-glass": "Tủ kính bày rượu",
  "name.cabinet.low-cabinet": "Tủ thấp",
  "summary.unit": "Dãy {run}: {unit}, {n} tủ, dài {length} mm",
- "summary.relayout-unit": "Xếp lại hệ {system} thành {unit}"
+ "summary.relayout-unit": "Xếp lại hệ {system} thành {unit}",
+ "ui.command.tasks": "Danh sách việc ({0}), làm lần lượt:",
+ "ui.command.queued": "{0}. Đang chờ: \"{1}\"",
+ "ui.command.working-worker": "{0}. AI đang làm trong nền: \"{1}\"",
+ "ui.command.working-claude": "{0}. Claude đang làm: \"{1}\"",
+ "ui.command.more": "… và {0} việc nữa"
 };

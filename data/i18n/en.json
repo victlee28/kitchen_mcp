@@ -1264,7 +1264,7 @@
  "ui.command.sent": "Command {0} sent to Claude's inbox. Message Claude: \"do the commands in the inbox\".",
  "ui.command.waiting": "Waiting for Claude: \"{0}\"",
  "ui.command.drop": "Take back",
- "ui.command.drop-title": "Take this command back (Claude has not done it)",
+ "ui.command.drop-title": "Take this command back (nobody has started it)",
  "ui.command.done": "Claude did \"{0}\".",
  "ui.command.failed": "Claude could not do \"{0}\":",
  "ui.command.question": "Claude asks about \"{0}\":",
@@ -1319,5 +1319,10 @@
  "name.cabinet.wine-glass": "Glass wine display",
  "name.cabinet.low-cabinet": "Low cabinet",
  "summary.unit": "Run {run}: {unit}, {n} cabinets, {length} mm long",
- "summary.relayout-unit": "System {system} laid out again as {unit}"
+ "summary.relayout-unit": "System {system} laid out again as {unit}",
+ "ui.command.tasks": "Task list ({0}), done in order:",
+ "ui.command.queued": "{0}. Waiting: \"{1}\"",
+ "ui.command.working-worker": "{0}. The background AI is doing: \"{1}\"",
+ "ui.command.working-claude": "{0}. Claude is doing: \"{1}\"",
+ "ui.command.more": "… and {0} more"
 }
