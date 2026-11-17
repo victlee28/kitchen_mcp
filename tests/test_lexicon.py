@@ -176,7 +176,8 @@ class TestBacksplashTerms(unittest.TestCase):
             g = {round(p.max[1] - p.min[1]) for p in scene.parts if p.type == "wall-tile"}
             t = {round(a["dimensions"]["height"]) for a in threejs_export.export(spec, "d", 1)["accessories"] if a["type"] == "Backsplash_Tile"}
             self.assertEqual(g, t, prompt)
-            self.assertEqual(g, {expect or round(spec.common.ceiling - spec.common.countertop)}, prompt)
+            hood = {round(m.y - spec.common.countertop) for m in spec.module if m.type == "upper-hood"} if expect == 600 else set()
+            self.assertEqual(g, {expect or round(spec.common.ceiling - spec.common.countertop)} | hood, prompt)
 
 
 class TestReachesTheOutputs(unittest.TestCase):

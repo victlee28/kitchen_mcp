@@ -36,7 +36,8 @@ class TestBacksplash(unittest.TestCase):
             self.assertTrue(spec.common.material.get("wallTile"))
             g, t = _heights(spec)
             self.assertTrue(g and g == t, (g, t))
-            self.assertEqual(set(g), {600})
+            hood = next(m for m in spec.module if m.type == "upper-hood")
+            self.assertEqual(set(g), {600, round(hood.y - spec.common.countertop)}, "600 mm, and up to the hood cabinet behind the hood")
             self.assertEqual(spec.common.backsplashHeight, "standard")
 
     def test_height_option_is_stored_in_spec(self):
@@ -53,7 +54,15 @@ class TestBacksplash(unittest.TestCase):
             if m.storey == "upper":
                 m.y = 1700
         g, t = _heights(spec)
-        self.assertEqual((set(g), set(t)), ({600}, {600}))
+        self.assertEqual((set(g), set(t)), ({600, 800}, {600, 800}), "the hood cabinet is still reached (1700 - 900)")
+
+    def test_under_the_hood_the_tile_reaches_the_hood_cabinet(self):
+        spec = _spec()
+        hood = next(m for m in spec.module if m.type == "upper-hood")
+        pieces = geometry.backsplash_pieces(spec, hood.run, 0.0, 10000.0)
+        under = [p for p in pieces if p[0] <= hood.fromCorner + 1 and hood.endAt - 1 <= p[1]]
+        self.assertEqual([round(p[2]) for p in under], [round(hood.y - spec.common.countertop)])
+        self.assertTrue(all(round(p[2]) == 600 for p in pieces if p not in under))
 
     def test_to_upper_follows_lowest_upper_in_3d_and_threejs(self):
         spec = _spec(backsplashHeight="to-upper")

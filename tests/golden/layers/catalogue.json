@@ -10,7 +10,7 @@
    },
    "expected": {
     "counts": {
-     "part": 98,
+     "part": 100,
      "group": 68
     },
     "groups": [
@@ -404,7 +404,7 @@
       "wall-tile",
       "Melamine trắng",
       "common:carcass",
-      2
+      4
      ],
      [
       "type:wall",
@@ -503,7 +503,7 @@
    },
    "expected": {
     "counts": {
-     "part": 98,
+     "part": 100,
      "group": 68
     },
     "groups": [
@@ -897,7 +897,7 @@
       "wall-tile",
       "Melamine trắng",
       "common:carcass",
-      2
+      4
      ],
      [
       "type:wall",

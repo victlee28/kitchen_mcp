@@ -89,6 +89,7 @@ HOOD_CANOPY_MM = 150.0          # height of that canopy
 CHIMNEY_MM = (300.0, 250.0)     # width, depth of its chimney
 BACKSPLASH_STANDARD = 600.0  # "standard" backsplash height above the countertop (mm)
 BACKSPLASH_SNAP_MM = 150.0  # a standard backsplash ending this close under the upper cabinets reaches them
+BACKSPLASH_GAP_MM = 700.0    # a stretch this narrow with no upper cabinet above (at a run's end) is tiled as high as its neighbour
 BACKING_PROBE_MM = 60.0      # how far behind a run's back a wall is looked for (a backsplash goes on it)
 BACKING_KINDS = ("wall", "column")
 
@@ -110,6 +111,48 @@ def backsplash_height(spec: KitchenSpec, wall: str, run: str | None = None) -> f
         gap = min(uppers) - c.countertop - BACKSPLASH_STANDARD if uppers else -1.0
         return BACKSPLASH_STANDARD + gap if 0.0 < gap <= BACKSPLASH_SNAP_MM else BACKSPLASH_STANDARD     # no thin strip of bare wall under the uppers
     return max(50.0, min(uppers, default=c.upperBottom) - c.countertop)
+
+
+def _hood_cabinet(spec: KitchenSpec, m: Module) -> bool:
+    return m.type == "upper-hood" or any(a.type == "hood" and a.module == m.id for a in spec.appliances)
+
+
+def backsplash_pieces(spec: KitchenSpec, run: str, s0: float, s1: float) -> list[tuple[float, float, float]]:
+    """The backsplash behind the worktop stretch [s0, s1] of a run, piece by piece along it: ``(from, to, height above the countertop)``.
+
+    Each piece follows the upper cabinet above it: under a hood cabinet the tile reaches the cabinet's underside (behind the hood, so no bare
+    wall shows between the worktop and the cabinet); under another upper cabinet it is ``backsplash_height`` of that cabinet's run (the
+    standard 600 mm, up to the cabinet when it hangs a little higher; "to-upper" up to it); with no upper above, the standard height.
+    ``backsplashHeightMm`` and "to-ceiling" give one height all along. Neighbouring pieces of the same height are one piece."""
+    c = spec.common
+    if c.backsplashHeightMm or c.backsplashHeight == "to-ceiling":
+        return [(s0, s1, backsplash_height(spec, "island", run))]
+    uppers = [m for m in spec.module if (m.run or None) == run and m.storey == "upper" and m.endAt > s0 and m.fromCorner < s1]
+    cuts = sorted({s0, s1, *(min(max(x, s0), s1) for m in uppers for x in (m.fromCorner, m.endAt))})
+    raw: list[tuple[float, float, float | None]] = []          # None: no upper cabinet above that piece
+    for a, b in zip(cuts, cuts[1:]):
+        if b - a < 1.0:
+            continue
+        mid = (a + b) / 2
+        above = min((m for m in uppers if m.fromCorner <= mid <= m.endAt), key=lambda m: m.y, default=None)
+        if above is None:
+            raw.append((a, b, None))
+        elif _hood_cabinet(spec, above) or c.backsplashHeight == "to-upper":
+            raw.append((a, b, max(50.0, above.y - c.countertop)))
+        else:
+            gap = above.y - c.countertop - BACKSPLASH_STANDARD
+            raw.append((a, b, BACKSPLASH_STANDARD + gap if 0.0 < gap <= BACKSPLASH_SNAP_MM else BACKSPLASH_STANDARD))
+    pieces: list[tuple[float, float, float]] = []
+    for i, (a, b, h) in enumerate(raw):
+        if h is None:                  # a gap in the uppers: as high as its neighbours when it lies between them or is narrow, else standard
+            near = [x[2] for x in (raw[i - 1] if i else None, raw[i + 1] if i + 1 < len(raw) else None) if x is not None and x[2] is not None]
+            between = len(near) == 2 or (near and b - a <= BACKSPLASH_GAP_MM)
+            h = max(near) if between else (BACKSPLASH_STANDARD if c.backsplashHeight != "to-upper" else max(50.0, c.upperBottom - c.countertop))
+        if pieces and abs(pieces[-1][2] - h) < 0.5 and abs(pieces[-1][1] - a) < 0.5:
+            pieces[-1] = (pieces[-1][0], b, h)
+        else:
+            pieces.append((a, b, h))
+    return pieces
 
 
 def wall_length(spec: KitchenSpec) -> tuple[float, float]:
@@ -330,7 +373,8 @@ class _Builder:
             for s0, s1, depth in run:
                 self.box(None, "countertop", "island", s0, s1, 0, depth + c.countertopOverhang, c.baseTop, c.countertop, fr=fr)
                 if self.backed(fr, s0, s1):     # a worktop against a wall gets its backsplash (the default tile when none is named); a free one not
-                    self.box(None, "wall-tile", "island", s0, s1, 0, 8, c.countertop, c.countertop + backsplash_height(self.spec, "island", fr.id), fr=fr)
+                    for a, b, h in backsplash_pieces(self.spec, fr.id, s0, s1):      # up to each upper cabinet above it (a hood cabinet included)
+                        self.box(None, "wall-tile", "island", a, b, 0, 8, c.countertop, c.countertop + h, fr=fr)
 
     def _close_corner(self, run_id: str, stretches: list[list[float]]) -> None:
         """Where this run ends in an inside corner with another run (``runs.corner_joints``) and neither run's cabinets fill the corner, the

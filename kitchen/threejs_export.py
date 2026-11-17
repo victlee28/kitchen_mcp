@@ -20,7 +20,7 @@ from collections import defaultdict
 
 from .numeric import round_half_away, round_int
 from . import appliance_models, builtin, runs, floorplan as fpmod, roomctx, hardware, regions, two_point, vocab, openings as opening_logic
-from .geometry import Part, backsplash_height, compile_spec, design_surfaces, views_of, wall_length as geometry_wall_length
+from .geometry import Part, compile_spec, design_surfaces, views_of, wall_length as geometry_wall_length
 from .catalog import Catalog
 from .errors import InvalidInput, require
 from .jsonview import as_dict, as_list
@@ -642,12 +642,15 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
                             "transform": _tf(fr.pos, fr.rot), "materialId": mats["countertop"], "edgeProfile": "eased", "overhang": c.countertopOverhang,
                             "cutouts": cutouts, "sourceRef": f"countertop-{p.run or p.wall}",
                             "partRef": {"kind": "countertop", "wall": p.wall, **({"run": p.run} if p.run else {})}})
-        height = backsplash_height(spec, require(p.wall, "countertop wall"), p.run)  # cùng một hàm với hình học 3D
-        tiled = p.lmin is not None and any(q.type == "wall-tile" and q.run == p.run and q.lmin == (p.lmin[0], c.countertop, 0.0) for q in scene.parts)
-        if tiled and height >= 50:  # the backsplash the scene puts behind this worktop (geometry decides: a wall stands behind it)
-            accessories.append({"id": f"ACC-BACKSPLASH-{i + 1}", "type": "Backsplash_Tile", "assetId": "ASSET-PANEL",
-                                "dimensions": _dims(w, height, 8), "materialId": mats["wallTile"],
-                                "transform": _tf((fr.pos[0], c.countertop, fr.pos[2]), fr.rot), "sourceRef": f"wall-tile-{p.run or p.wall}"})
+        # the backsplash the scene puts behind this worktop (geometry decides: a wall behind it; piece by piece, up to the cabinets above)
+        tiles = [q for q in scene.parts if q.type == "wall-tile" and q.run == p.run and q.lmin is not None and q.lmax is not None and p.lmin is not None
+                 and p.lmax is not None and p.lmin[0] - 1 <= q.lmin[0] and q.lmax[0] <= p.lmax[0] + 1]
+        for j, q in enumerate(sorted(tiles, key=lambda q: q.lmin[0] if q.lmin else 0.0)):
+            tf = Frame.for_part(q, q.orient)
+            lo, hi2 = tf.part_box(q)
+            accessories.append({"id": f"ACC-BACKSPLASH-{i + 1}" + (f"-{j + 1}" if j else ""), "type": "Backsplash_Tile", "assetId": "ASSET-PANEL",
+                                "dimensions": _dims(hi2[0] - lo[0], hi2[1] - lo[1], 8), "materialId": mats["wallTile"],
+                                "transform": _tf(tf.pos, tf.rot), "sourceRef": f"wall-tile-{p.run or p.wall}"})
 
     for i, wedge in enumerate(m for m in scene.meshes if m.type == "countertop"):      # the wedge of worktop that closes a corner which is not square
         half = len(wedge.vertices) // 2                                                # a prism: the floor polygon first, then the same polygon at the top

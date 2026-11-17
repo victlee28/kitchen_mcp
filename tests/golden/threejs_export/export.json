@@ -426,7 +426,27 @@
       "ACC-BACKSPLASH-2",
       "Backsplash_Tile",
       [
-       2830.0,
+       1760.0,
+       630.0,
+       8.0
+      ],
+      0
+     ],
+     [
+      "ACC-BACKSPLASH-2-2",
+      "Backsplash_Tile",
+      [
+       740.0,
+       800.0,
+       8.0
+      ],
+      0
+     ],
+     [
+      "ACC-BACKSPLASH-2-3",
+      "Backsplash_Tile",
+      [
+       330.0,
        630.0,
        8.0
       ],
@@ -966,8 +986,18 @@
       "ACC-BACKSPLASH-2",
       "Backsplash_Tile",
       [
-       2830.0,
+       2090.0,
        630.0,
+       8.0
+      ],
+      0
+     ],
+     [
+      "ACC-BACKSPLASH-2-2",
+      "Backsplash_Tile",
+      [
+       740.0,
+       600.0,
        8.0
       ],
       0
