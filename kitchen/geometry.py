@@ -460,13 +460,13 @@ class _Builder:
                 w, h = k[:2]
                 sc = m.fromCorner + m.width / 2
                 self.box(tb.id, "hood", m.wall, sc - w / 2, sc + w / 2, 0, m.depth, m.y - h, m.y)
-            elif tb.type == "tv" and m and len(k) >= 2:      # a flat TV on the wall above its console, ``center`` from the start of that cabinet
+            elif tb.type in ("tv", "painting") and m and len(k) >= 2:   # a flat TV / painting on the wall above its console, ``center`` from the start of that cabinet
                 w, h = k[:2]
                 sc = m.fromCorner + (tb.center if tb.center is not None else m.width / 2)      # a TV's centre is measured from its cabinet
                 d = k[2] if len(k) >= 3 else tv_system.TV_DEPTH_MM
                 y0 = max(m.y + m.height + 100.0, tv_system.TV_CENTER_MM - h / 2)
                 d0 = tv_system.PANEL_THICKNESS_MM + 2      # in front of the panel behind it, if any
-                self.box(tb.id, "tv", m.wall, sc - w / 2, sc + w / 2, d0, d0 + d, y0, y0 + h)
+                self.box(tb.id, tb.type, m.wall, sc - w / 2, sc + w / 2, d0, d0 + d, y0, y0 + h)
             elif tb.type in ("sink", "cooktop", "faucet") and (at := runmod.spot(self.spec, tb)) is not None:
                 wall = tb.wall or "back"                                   # placed by its module: it stands in that module's run (its frame)
                 dmat = c.baseDepth + c.countertopOverhang
@@ -773,14 +773,16 @@ def default_views(spec: KitchenSpec, scene: Scene | None = None, catalog: Catalo
     span = max(w, d, 1.5)
     views = {
         "perspective": ViewAngle(name=say("name.view.perspective"), position=(cx - span * 0.9, 1.6, cz + span * 0.9), lookAt=(cx, 1.1, cz), verticalFov=55),
-        "overhead": ViewAngle(name=say("name.view.overhead"), position=(cx - span * 0.8, 3.8, cz + span * 0.9), lookAt=(cx, 0.6, cz), verticalFov=50),
-        "plan": ViewAngle(name=say("name.view.plan"), position=(cx, 6.5, cz + 0.001), lookAt=(cx, 0, cz), verticalFov=36),
+        # the overview: a perspective camera straight down from high above; the plan: orthographic, to scale (camera_plan.ortho_plan)
+        "overhead": ViewAngle(name=say("name.view.overhead"), position=(cx, 6.5, cz + 0.001), lookAt=(cx, 0, cz), verticalFov=36),
+        "plan": ViewAngle(**camera_plan.ortho_plan({"name": say("name.view.plan"), "verticalFov": 36}, cx * 1000, cz * 1000,
+                                                    max(w, 1.5) * 500 * camera_plan.PLAN_MARGIN,
+                                                    max(d, 1.5) * 500 * camera_plan.PLAN_MARGIN, max(hi[1], 0.0))),
     }
     reach = wall_reach(spec, scene.lsau)
     if "left" in reach:  # chữ U: ba mặt kín, máy ảnh phải đứng ở phía hở (z lớn) mới nhìn thấy cả ba dãy
         zfront = hi[2] / 1000
         views["perspective"] = ViewAngle(name=say("name.view.perspective"), position=(cx + w * 0.3, 1.6, zfront + span * 0.55), lookAt=(cx, 1.0, cz * 0.8), verticalFov=70)
-        views["overhead"] = ViewAngle(name=say("name.view.overhead"), position=(cx, 3.8, zfront + span * 0.35), lookAt=(cx, 0.6, cz * 0.8), verticalFov=70)
     if "back" in reach:
         xs = [-reach["back"] / 1000, 0]
         mx = (min(xs) + max(xs)) / 2
@@ -813,11 +815,10 @@ def default_views(spec: KitchenSpec, scene: Scene | None = None, catalog: Catalo
         framed = camera_plan.whole_room({k: to_data(views[k]) for k in ("plan", "overhead")}, room, solids,
                                         (lo, hi) if hi != lo else None)
         views.update({k: ViewAngle(**v) for k, v in framed.items()})
-    elif solids and faces:
-        for key in ("overhead", "plan"):
-            v = views[key]
-            views[key] = ViewAngle(name=v.name, position=v.position, lookAt=v.lookAt, verticalFov=v.verticalFov,
-                                   hide=camera_plan.hidden_for(v.position, faces, solids))
+    elif solids and faces:             # the plan is orthographic: it hides nothing
+        v = views["overhead"]
+        views["overhead"] = ViewAngle(name=v.name, position=v.position, lookAt=v.lookAt, verticalFov=v.verticalFov,
+                                      hide=camera_plan.hidden_for(v.position, faces, solids))
     views.update(opening_views(spec, scene, room, catalog))
     return views
 

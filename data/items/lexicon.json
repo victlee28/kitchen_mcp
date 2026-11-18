@@ -1752,6 +1752,36 @@
   "value": "flat"
  },
  {
+  "id": "edit.door.solid",
+  "group": "edit-door",
+  "aliases": {
+   "vi": [
+    "gỗ",
+    "đặc"
+   ],
+   "en": [
+    "wood",
+    "wooden",
+    "solid"
+   ]
+  },
+  "value": "solid"
+ },
+ {
+  "id": "edit.wood",
+  "group": "edit-wood",
+  "aliases": {
+   "vi": [
+    "gỗ"
+   ],
+   "en": [
+    "wood",
+    "wooden"
+   ]
+  },
+  "value": "wood"
+ },
+ {
   "id": "edit.handle.none",
   "group": "edit-handle",
   "aliases": {
@@ -2139,6 +2169,30 @@
    ],
    "en": [
     "granite"
+   ]
+  }
+ },
+ {
+  "id": "wish.painting",
+  "group": "regex",
+  "patterns": {
+   "vi": [
+    "(?<!\\w)tranh(?!\\w)"
+   ],
+   "en": [
+    "painting|picture|artwork"
+   ]
+  }
+ },
+ {
+  "id": "wish.tv",
+  "group": "regex",
+  "patterns": {
+   "vi": [
+    "ti\\s*vi"
+   ],
+   "en": [
+    "(?<!\\w)tv(?!\\w)|television"
    ]
   }
  },

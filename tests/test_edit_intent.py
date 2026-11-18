@@ -81,5 +81,39 @@ class EditIntentTests(unittest.TestCase):
         self.assertEqual(edit_intent.check_operation({"op": "multi", "ops": [{"op": "multi", "ops": []}]})["status"], "unsupported")
 
 
+class SolidDoorTests(unittest.TestCase):
+    """18/11/2026: "thay bằng cánh gỗ, vật liệu gỗ vàng" on a glass wine cabinet: each clause is one change, both previewed together."""
+
+    def setUp(self):
+        mods = [
+            {"id": "TT2", "type": "upper-glass", "wall": "back", "fromCorner": 0, "width": 610, "height": 1260, "depth": 293, "y": 1350},
+            {"id": "TT3", "type": "upper", "wall": "back", "fromCorner": 610, "width": 610, "height": 1260, "depth": 293, "y": 1350, "doorStyle": "glass"},
+            {"id": "TD1", "type": "base", "wall": "back", "fromCorner": 0, "width": 600, "height": 840, "depth": 550, "y": 0},
+        ]
+        self.spec = from_data(KitchenSpec, {"name": "t", "common": {"material": {"base": "Trắng"}}, "module": mods})
+
+    def test_compound_sentence_makes_the_glass_cabinet_wooden_in_that_wood(self):
+        r = edit_intent.interpret_edit(self.spec, "thay bằng cánh gỗ , vật liệu gỗ vàng", ["TT2"])
+        self.assertEqual(r["status"], "ok", r)
+        after = edit.apply_op(self.spec, r["operation"]).find("TT2")
+        self.assertEqual((after.type, after.material), ("upper", "Gỗ vàng"))
+        self.assertEqual(len(r["summary"]), 2)
+
+    def test_glass_door_style_becomes_flat_and_the_wood_is_kept_in_one_clause(self):
+        r = edit_intent.interpret_edit(self.spec, "cánh gỗ sồi", ["TT3"])
+        self.assertEqual(r["operation"], {"op": "update", "id": "TT3", "changes": {"doorStyle": "flat", "material": "Gỗ sồi"}})
+
+    def test_a_colour_after_wood_is_a_wood_of_that_colour_a_colour_alone_is_paint(self):
+        self.assertEqual(edit_intent.interpret_edit(self.spec, "vật liệu gỗ vàng", ["TD1"])["operation"]["changes"], {"material": "Gỗ vàng"})
+        self.assertEqual(edit_intent.interpret_edit(self.spec, "màu vàng", ["TD1"])["operation"]["changes"], {"material": "Vàng"})
+
+    def test_wood_on_doors_that_are_solid_already_is_their_material_or_a_question(self):
+        self.assertEqual(edit_intent.interpret_edit(self.spec, "đổi màu cánh tủ này sang gỗ sồi", ["TD1"])["operation"],
+                         {"op": "update", "id": "TD1", "changes": {"material": "Gỗ sồi"}})
+        asked = edit_intent.interpret_edit(self.spec, "cánh gỗ", ["TD1"])
+        self.assertEqual(asked["status"], "clarify")
+        self.assertTrue(asked["choices"])
+
+
 if __name__ == "__main__":
     unittest.main()

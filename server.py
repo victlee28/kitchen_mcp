@@ -56,6 +56,14 @@ def bind_floorplan(design_id: str, back_edge: int | None=None, offset: float=0.0
     """Place the kitchen's back run against a wall of the imported room (auto-detected unless back_edge is given)."""
     return _call(svc().bind_floorplan, design_id, back_edge, offset, base_rev)
 
+def auto_place(design_id: str, base_rev: int | None=None, country: str | None=None) -> dict[str, Any]:
+    """Build what the imported floorplan draws, in one revision (the web's "Auto place"): every door / window hole gets a room opening
+    (type from its label and width: a 3920 mm sliding door gets four leaves), every cabinet element a cabinet system in its place (TV unit,
+    wine cabinet, kitchen... from its tag and label, else from its size). Returns placed and skipped elements with a summary each;
+    no revision when nothing new is built. revert_design undoes it."""
+    return _call(svc().auto_place, design_id, base_rev, country)
+
+
 def design_kitchen(customer_prompt: str) -> dict[str, Any]:
     """Create a design by parsing a free-form customer request."""
     if not customer_prompt.strip():
@@ -137,14 +145,18 @@ def propose_change(design_id: str, op: dict[str, Any], base_rev: int | None=None
     """
     return _call(svc().propose, design_id, op, base_rev, scope_modules)
 
-def interpret_edit(design_id: str, text: str, base_rev: int | None=None, scope_modules: list[str] | None=None, use_llm: bool=False) -> dict[str, Any]:
+def interpret_edit(design_id: str, text: str, base_rev: int | None=None, scope_modules: list[str] | None=None, use_llm: bool=False,
+                   surfaces: list[str] | None=None) -> dict[str, Any]:
     """Turn a free-form edit sentence (e.g. 'xóa TD3', 'tủ trên đổi cánh kính') into a previewed operation; nothing is saved.
+
+    surfaces: the wall faces the user picked (a menu command's place.surfaces, e.g. ["wall_h02#side-b"]): a sentence about a colour or
+    finish then changes only those faces (operation surface-material), never every wall of the design.
 
     status 'ok' returns operation + proposal (same as propose_change): confirm with the matching editing tool and expect=proposal.opHash.
     status 'clarify' returns a question (and choices) to put to the user; 'unsupported' means the sentence was not understood.
     use_llm lets DeepSeek try only when the rules cannot read the sentence and a key is configured.
     """
-    return _call(svc().interpret, design_id, text, base_rev, scope_modules, None, use_llm)
+    return _call(svc().interpret, design_id, text, base_rev, scope_modules, None, use_llm, surfaces)
 
 def recognize_design(design_id: str, source: dict[str, Any], recognizer: str | None=None, base_rev: int | None=None,
                      anchor: dict[str, Any] | None=None, mode: str='add', opening_type: str | None=None) -> dict[str, Any]:
@@ -292,23 +304,29 @@ def regenerate_image_job(job_id: str, seed: int | None=None) -> dict[str, Any]:
 def list_menu_commands(status: Literal['pending', 'working', 'done', 'failed', 'question', 'dropped', 'replied'] | None = 'pending', design_id: str | None = None) -> dict[str, Any]:
     """The command inbox: sentences the user typed in the right-click menu of the web app, left for you to carry out (oldest first).
 
-    Each command: id, designId, text (the sentence, as typed), place (what was right-clicked: kind module|part|group|appliance|structure|floor|opening,
-    id, part?, point? {x, z} in the wall-axis frame, structureId? (a floorplan element), module?, modules? (a selected group), surfaces? (picked
-    wall faces), title?), baseRev (the revision it was said on), lang, status; a reply of the user to your earlier answer also has replyTo
-(that command's id) and context {text, reply, status} (the sentence and what you answered): read it with that in mind. To carry one out: read the design (get_design), turn the sentence
-    into an operation with the matching tool, as the menu would (opening_command for doors / windows / passages and "lưu vào database";
-    interpret_edit with scope_modules = the clicked module or group otherwise; propose_template for a run along a floorplan object), check the
-    proposal, save it with apply_change (expect = proposal.opHash), then answer_menu_command. Ask the user in chat when a
-    sentence is unclear rather than guessing; a sentence you cannot do is answered status 'failed' with the reason.
+    Each command: id, designId, text (the sentence, as typed), place (what was right-clicked: kind, id, part?, point?, structureId?,
+    module?, modules?, surfaces?, title?), baseRev, lang, status; a reply to an earlier answer also has replyTo and context.
 
-    When carrying one out hits a problem the user must decide (the space is too shallow, an appliance does not fit, the preview brings
-    in an error), save nothing and answer 'question' with 2-4 choices of how to go on: the web app puts them up in a question panel and the
-    user's pick comes back as a new command (replyTo). The inbox is a queue: when asked to do the inbox, carry out every pending command one after another, oldest first, taking each
-    with start_menu_command before working on it (a background model may be carrying the queue out too; 'working' = taken, with worker
-    'worker' or 'claude'; a command start_menu_command refuses as taken is skipped). The user can keep sending while you work: list again
-    when the queue is empty.
+    HOW to carry the commands out is the skill ``kitchen-inbox`` (the procedure, which tool for which sentence, the checks, when to
+    ask): the result has ``skill`` = {name, version}, and its ``text`` too when commands are pending (and the call lists pending ones).
+    Follow it; if you already read this version, you need not read it again. Its reference files come from get_inbox_skill.
+    In short: take each command with start_menu_command, preview, save with apply_change (expect = opHash), answer with
+    answer_menu_command (done / question with 2-4 choices / failed).
     """
-    return {'mode': svc().command_mode(), 'commands': _call(svc().command_list, status, design_id)}
+    result: dict[str, Any] = {'mode': svc().command_mode(), 'commands': _call(svc().command_list, status, design_id)}
+    try:
+        skill = svc().inbox_skill()
+    except KeyError:                  # NotFound: no skill in this data folder
+        return result
+    result['skill'] = {'name': skill['name'], 'version': skill['version'], 'references': skill['references']}
+    if status == 'pending' and result['commands']:
+        result['skill']['text'] = skill['text']
+    return result
+
+def get_inbox_skill(reference: str | None = None) -> dict[str, Any]:
+    """The skill ``kitchen-inbox``: how to carry out the command inbox (list_menu_commands). Without ``reference``: {name, description,
+    version, text, references}; with ``reference`` (one of references, e.g. "ops.md", "checks.md"): that file's text."""
+    return _call(svc().inbox_skill, reference)
 
 def get_menu_command(command_id: str) -> dict[str, Any]:
     """One command of the inbox (see list_menu_commands), by id."""
@@ -342,7 +360,7 @@ def model_usage(day: str | None = None) -> dict[str, Any]:
     known (data/model-prices.json), per provider; the daily budget and the providers set."""
     return _call(svc().model_usage, day)
 
-TOOLS = [list_menu_commands, model_usage, get_menu_command, start_menu_command, answer_menu_command, opening_command, apply_change, create_design, list_floorplan_rooms, import_floorplan, bind_floorplan, design_kitchen, list_designs, get_design, design_history, list_openings, opening_types, propose_opening, add_module, update_module, remove_module, update_global, set_moldings, list_molding_profiles, apply_action, propose_change, interpret_edit, recognize_design, propose_template, save_layout_template, revert_design, validate_design, get_scene, export_threejs, render_views, search_knowledge, list_regions, add_knowledge, export_ai_package, list_layers, get_view_status, regenerate_stale_views, create_image_job, get_image_job, list_image_jobs, submit_image_result, import_base_image, accept_image_job, reject_image_job, regenerate_image_job, send_image_job]
+TOOLS = [list_menu_commands, get_inbox_skill, model_usage, get_menu_command, start_menu_command, answer_menu_command, opening_command, apply_change, create_design, list_floorplan_rooms, import_floorplan, bind_floorplan, auto_place, design_kitchen, list_designs, get_design, design_history, list_openings, opening_types, propose_opening, add_module, update_module, remove_module, update_global, set_moldings, list_molding_profiles, apply_action, propose_change, interpret_edit, recognize_design, propose_template, save_layout_template, revert_design, validate_design, get_scene, export_threejs, render_views, search_knowledge, list_regions, add_knowledge, export_ai_package, list_layers, get_view_status, regenerate_stale_views, create_image_job, get_image_job, list_image_jobs, submit_image_result, import_base_image, accept_image_job, reject_image_job, regenerate_image_job, send_image_job]
 for tool_function in TOOLS:
     mcp.add_tool(tool_function, name=tool_function.__name__, description=(tool_function.__doc__ or '').strip(), structured_output=False if tool_function is render_views else None)
 

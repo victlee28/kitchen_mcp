@@ -57,6 +57,22 @@
   "text": "Shoot it as a professional architectural interior photograph: full-frame camera, 24–35 mm rectilinear lens at eye level about 1.5 m, f/8 with everything in focus, vertical lines kept perfectly vertical, no fisheye."
  },
  {
+  "id": "photo-camera-topdown",
+  "description": {
+   "vi": "Ảnh chụp từ trên xuống (góc toàn cảnh, mặt bằng)",
+   "en": "Picture taken from above (overview, plan)"
+  },
+  "text": "The picture looks straight down on the room from above, with the ceiling taken away, like a photorealistic 3D floor plan or a dollhouse cutaway: we see the floor, the cut tops of the walls, the tops of the cabinets and countertops, the stairs and the furniture from above. Keep that bird's-eye camera: do not turn it into an eye-level photograph, do not show cabinet fronts that the image does not show, keep every outline where it is, everything in focus."
+ },
+ {
+  "id": "photo-camera-ortho",
+  "description": {
+   "vi": "Mặt bằng chiếu song song (ortho)",
+   "en": "Orthographic plan"
+  },
+  "text": "The view is orthographic, like an architectural plan drawing: no perspective at all, every wall, cabinet and stair drawn to scale with only its top visible; do not add perspective, depth tilt or the sides of objects."
+ },
+ {
   "id": "photo-post",
   "description": {
    "vi": "Hậu kỳ và độ thật (ảnh đầy đủ)",
@@ -89,10 +105,66 @@
   "text": "a built-in TV wall unit closed from floor to ceiling: tall cabinets on both sides and wall cabinets above an open TV niche, a low media console with drawers in the niche and a flat TV mounted on the wall"
  },
  {
+  "id": "unit-wine",
+  "description": {
+   "vi": "Tủ rượu",
+   "en": "Wine cabinet"
+  },
+  "text": "a built-in wine cabinet wall: tall storage columns at both ends, low cabinets with doors along the floor with no stone top, an open niche above them for bottles and glasses, and glass-door display cabinets above showing rows of wine bottles on shelves"
+ },
+ {
+  "id": "unit-low",
+  "description": {
+   "vi": "Tủ thấp",
+   "en": "Low cabinets"
+  },
+  "text": "a row of built-in low cabinets with doors along the wall, with no stone top and nothing above them"
+ },
+ {
+  "id": "topdown-kitchen",
+  "description": {
+   "vi": "Nhìn từ trên: dãy tủ bếp",
+   "en": "From above: a kitchen run"
+  },
+  "text": "a kitchen run against the wall, seen from above as a continuous stone countertop on the base cabinets"
+ },
+ {
+  "id": "topdown-tv",
+  "description": {
+   "vi": "Nhìn từ trên: tủ tivi",
+   "en": "From above: a TV unit"
+  },
+  "text": "a low TV media console against the wall, seen from above as a narrow cabinet top with the thin edge of a flat TV on the wall behind it"
+ },
+ {
+  "id": "topdown-unit-wine",
+  "description": {
+   "vi": "Nhìn từ trên: tủ rượu",
+   "en": "From above: a wine cabinet"
+  },
+  "text": "a built-in wine cabinet against the wall, seen from above as the tops of its tall columns and display cabinets"
+ },
+ {
+  "id": "topdown-unit-low",
+  "description": {
+   "vi": "Nhìn từ trên: tủ thấp",
+   "en": "From above: low cabinets"
+  },
+  "text": "a row of low cabinets against the wall, seen from above as their plain tops"
+ },
+ {
+  "id": "topdown-stair",
+  "description": {
+   "vi": "Nhìn từ trên: cầu thang",
+   "en": "From above: a staircase"
+  },
+  "text": "a staircase seen from above as a flight of treads"
+ },
+ {
   "id": "inbox-worker",
   "description": {
-   "vi": "Lời dặn cho model tự làm các lệnh trong hộp thư lệnh (worker)",
-   "en": "Instructions for the model that carries out the command inbox (worker)"
+   "vi": "Lời dặn dự phòng cho model tự làm các lệnh trong hộp thư (chỉ dùng khi thiếu skill data/skills/kitchen-inbox)",
+   "en": "Fallback instructions for the model that carries out the command inbox (used only when the skill data/skills/kitchen-inbox is missing)"
   },
   "text": "You carry out ONE command a kitchen designer typed in the right-click menu of a kitchen design app. You change the design only through the tools. Steps: read the command and what was clicked; if you need it, read the design with get_design; turn the sentence into a previewed operation with the matching tool (opening_command for room doors, windows and passages, their size, their sill above the floor, and for saving the clicked door or cabinet system to the catalog; interpret_edit with the clicked cabinet or group as scope for anything about cabinets, worktop, colours, handles, moldings; propose_template for a run of cabinets along a floorplan object; propose_change when you can write the operation yourself). Check the preview: it must change only what the sentence asks. Then save it with apply_change(expect = the preview's opHash). Finish with answer: status done with one short line saying what changed, in the command's language; status question when the sentence is unclear, a tool asks back, or the preview shows a problem the user must decide (a space too shallow, an appliance that does not fit, an error the change brings in): save nothing, put the question with 2 to 4 short choices of how to go on (the app shows them as a panel the user picks from), never guess sizes or which cabinet; status failed when it cannot be done (say why). Never remove, replace or resize something the sentence does not name. One command, then answer."
  },

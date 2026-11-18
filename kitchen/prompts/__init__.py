@@ -2,6 +2,7 @@
 
 * ``photo``       what makes a picture look like a photograph (light, camera, surfaces) and what to avoid: ``full`` / ``local``.
 * ``layer``       the style sentence of a whole kitchen and the sentence for one edited layer.
+* ``seen``        what one view's picture shows, so its prompt tells of that only: ``Seen``, ``seen_in``.
 * ``instruction`` the instructions for a model that takes images + text (Gemini, request package): ``gemini_text*``.
 
 Pure functions of a design and plain values (rule R1); no I/O. Change wording here only; the golden/tests pin the shape.
@@ -11,13 +12,15 @@ from __future__ import annotations
 from .instruction import gemini_text, gemini_text_edit, gemini_text_geometry, gemini_text_multi, style_note
 from .layer import NEGATIVE_LAYER, edit_task_prompt, global_prompt, layer_prompt
 from .recognition import SCHEMA as RECOGNITION_SCHEMA, recognition_text
+from .seen import Seen, from_instances as seen_in
 from .photo import LIGHTING, LIGHTING_VI, NEGATIVE_PHOTO, full, lighting, lighting_names, local, text, words
 from .. import builtin
 from ..catalog import Catalog
 
 __all__ = ["gemini_text", "gemini_text_edit", "gemini_text_geometry", "gemini_text_multi", "style_note", "NEGATIVE_LAYER", "edit_task_prompt",
            "global_prompt", "layer_prompt", "RECOGNITION_SCHEMA", "recognition_text", "LIGHTING", "LIGHTING_VI", "NEGATIVE_PHOTO", "full", "local",
-           "negative_prompt", "lighting", "lighting_names", "text", "words"]
+           "negative_prompt", "lighting", "lighting_names", "text", "words",
+           "Seen", "seen_in"]
 
 
 def negative_prompt(extra: list[str] | None = None, catalog: Catalog = builtin.CATALOG) -> str:

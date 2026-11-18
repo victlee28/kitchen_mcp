@@ -7,7 +7,7 @@ The finish names a design leaves out (``materials``) are drawn from the builtin 
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from . import builtin
@@ -35,6 +35,7 @@ class Defaults:
     hinge: str = "clip-110-soft"      # the catalog hinge of a door whose design names none
     hinge_edge: float = 100.0         # top and bottom hinge from the door's edge (mm)
     hinge_counts: tuple[tuple[float, int], ...] = ((900.0, 2), (1600.0, 3), (2000.0, 4), (2600.0, 5))   # (door up to mm, hinges)
+    auto_place: Mapping[str, Any] = field(default_factory=lambda: {})   # the words and sizes of "Auto place" (``auto_place``)
 
 
 def _number(v: Any) -> float | None:
@@ -71,7 +72,8 @@ def _build(catalog: Catalog) -> Defaults:
     run, stretch, hole = (_section(data, fallback, k) for k in ("run", "stretch", "applianceHole"))
     return Defaults(float(run["moduleWidth"]), float(run["minWidth"]), float(run["maxRun"]), float(run["cornerMaxWidth"]),
                     float(stretch["min"]), float(stretch["max"]), float(hole["side"]), float(hole["worktopEdge"]), float(hole["hoodSide"]), _section(data, fallback, "newDesign"), _section(data, fallback, "menu"),
-                    _section(data, fallback, "openings"), _names(data, fallback, "materials"), *_hinge(data, fallback))
+                    _section(data, fallback, "openings"), _names(data, fallback, "materials"), *_hinge(data, fallback),
+                    {**(as_dict(fallback.get("autoPlace")) or {}), **(as_dict(data.get("autoPlace")) or {})})
 
 
 def of(catalog: Catalog = builtin.CATALOG) -> Defaults:

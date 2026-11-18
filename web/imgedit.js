@@ -8,6 +8,7 @@ import { modelChoices } from './menu-logic.js';
 import './boot.js';
 import { PALETTES } from './palette-client.js';
 import { applianceName, tx } from './i18n.js';
+import { fitted, clampView, zoomAt, panBy, wheelFactor, transformOf, ZOOM_STEP, DRAG_PX } from './zoom-logic.js';
 const S = { id: null, view: null, data: null, layer: null, job: null, jobs: [], poll: null, maskImg: null, tasks: [], maskCache: {}, sel: [], key: '' };
 const PALETTE = (PALETTES.zone || []).map((z) => z.rgb).concat(PALETTES.zone?.length ? [] : [[255, 0, 0]]);   // numbered edit zones (catalog palette "zone")
 const MAX_TASKS = 8;
@@ -16,20 +17,23 @@ const { setStatus: status, run } = createStatus($('status'));
 const bust = (u) => u && `${u}${u.includes('?') ? '&' : '?'}t=${Date.now()}`;
 
 // ---------------- tab
-const FIRST_VIEW = 'plan';      // the view this tab opens on the first time (the whole floor plan), when the design has it
+const FIRST_VIEW = 'plan';      // the view this tab opens on: the first time, and on every design opened while it is shown (the whole floor plan)
 let firstOpen = true;
+/** Switch to FIRST_VIEW when the design has it and another view is on; true when it switched (the 'view-changed' it sends loads this tab). */
+function toFirstView() {
+  const vs = $('viewSelect');
+  if (vs.value === FIRST_VIEW || ![...vs.options].some((o) => o.value === FIRST_VIEW)) return false;
+  vs.value = FIRST_VIEW; vs.dispatchEvent(new Event('change'));      // the view changes everywhere; 'view-changed' loads this tab
+  return true;
+}
 function showTab(img, skipLoad = false) {
   startHere = false;          // a tab picked before the first design opens wins
   $('tab3d').classList.toggle('on', !img); $('tabImg').classList.toggle('on', img);
   $('tab3d').setAttribute('aria-selected', String(!img)); $('tabImg').setAttribute('aria-selected', String(img));
   $('pane3d').hidden = img; $('paneImg').hidden = !img; $('bar3d').hidden = img; $('barImg').hidden = !img;
-  const vs = $('viewSelect');
-  if (img && firstOpen && vs.options.length) {
+  if (img && firstOpen && $('viewSelect').options.length) {
     firstOpen = false;
-    if (!skipLoad && vs.value !== FIRST_VIEW && [...vs.options].some((o) => o.value === FIRST_VIEW)) {
-      vs.value = FIRST_VIEW; vs.dispatchEvent(new Event('change'));      // the view changes everywhere; 'view-changed' loads this tab
-      return;
-    }
+    if (!skipLoad && toFirstView()) return;
   }
   if (img && !skipLoad) run(tx('ui.mo-anh'), load);
 }
@@ -41,7 +45,7 @@ const active = () => !$('paneImg').hidden;
 async function load() {
   S.id = $('designSelect').value; S.view = $('viewSelect').value;
   if (!S.id || !S.view) return;
-  if (S.key !== `${S.id}|${S.view}`) { S.key = `${S.id}|${S.view}`; S.sel = []; S.tasks = []; S.layer = null; renderTasks(); }  // chọn/việc chỉ có nghĩa trong đúng thiết kế + góc
+  if (S.key !== `${S.id}|${S.view}`) { S.key = `${S.id}|${S.view}`; S.sel = []; S.tasks = []; S.layer = null; renderTasks(); setZoom(fitted()); }  // chọn/việc chỉ có nghĩa trong đúng thiết kế + góc
   const d = await api(`/api/designs/${S.id}/layers?view=${encodeURIComponent(S.view)}`);
   S.data = d;
   geometryForm(); fillStyleFrom();
@@ -186,8 +190,48 @@ $('tAdd').addEventListener('click', () => run(tx('ui.them-viec'), async () => {
 $('tClear').addEventListener('click', () => { S.tasks = []; renderTasks(); drawMask().catch(console.error); });
 $('layerSelect').addEventListener('change', (e) => run(tx('ui.chon-layer'), () => selectLayer(e.target.value, [])));
 $('showMask').addEventListener('change', () => { $('maskOverlay').hidden = !$('showMask').checked; });
-$('imgBase').addEventListener('click', (ev) => {
+// ---------------- zoom and pan of the picture (zoom-logic.js): wheel about the pointer, drag to move, buttons; a drag is not a click
+let Z = fitted(); let drag = null; let dragged = false;
+const frame = () => ({ w: $('stage').clientWidth || 1, h: $('stage').clientHeight || 1 });
+function setZoom(v) {
+  Z = v; $('stageInner').style.transform = Z.scale === 1 ? '' : transformOf(Z);
+  $('stage').classList.toggle('zoomed', Z.scale > 1);
+  $('zoomPct').textContent = `${Math.round(Z.scale * 100)}%`;
+}
+function zoomBy(factor, px, py) { const { w, h } = frame(); setZoom(zoomAt(Z, factor, px ?? w / 2, py ?? h / 2, w, h)); }
+$('stage').addEventListener('wheel', (ev) => {
   if (!S.data) return;
+  ev.preventDefault();
+  const r = $('stage').getBoundingClientRect();
+  zoomBy(wheelFactor(ev.deltaY), ev.clientX - r.left, ev.clientY - r.top);
+}, { passive: false });
+$('stage').addEventListener('pointerdown', (ev) => {
+  if (Z.scale === 1 || (ev.button !== 0 && ev.button !== 1)) return;
+  drag = { x: ev.clientX, y: ev.clientY, from: Z, id: ev.pointerId }; dragged = false;
+  if (ev.button === 1) ev.preventDefault();
+});
+$('stage').addEventListener('pointermove', (ev) => {
+  if (!drag || ev.pointerId !== drag.id) return;
+  const dx = ev.clientX - drag.x, dy = ev.clientY - drag.y;
+  if (!dragged && Math.hypot(dx, dy) < DRAG_PX) return;
+  if (!dragged) { dragged = true; $('stage').setPointerCapture(ev.pointerId); $('stage').classList.add('panning'); }
+  const { w, h } = frame(); setZoom(panBy(drag.from, dx, dy, w, h));
+});
+for (const end of ['pointerup', 'pointercancel']) {
+  $('stage').addEventListener(end, (ev) => {
+    if (!drag || ev.pointerId !== drag.id) return;
+    drag = null; $('stage').classList.remove('panning');
+    setTimeout(() => { dragged = false; }, 0);       // the click that ends a drag picks nothing
+  });
+}
+$('stage').addEventListener('dragstart', (ev) => ev.preventDefault());        // the browser's own image drag would cancel the pan
+$('zoomIn').addEventListener('click', () => zoomBy(ZOOM_STEP));
+$('zoomOut').addEventListener('click', () => zoomBy(1 / ZOOM_STEP));
+$('zoomFit').addEventListener('click', () => setZoom(fitted()));
+new ResizeObserver(() => { const { w, h } = frame(); setZoom(clampView(Z, w, h)); }).observe($('stage'));      // the page resized
+
+$('imgBase').addEventListener('click', (ev) => {
+  if (!S.data || dragged) return;
   const im = ev.currentTarget; const r = im.getBoundingClientRect();
   const x = Math.floor(((ev.clientX - r.left) / r.width) * S.data.width), y = Math.floor(((ev.clientY - r.top) / r.height) * S.data.height);
   const ctrl = ev.ctrlKey || ev.metaKey, shift = ev.shiftKey;
@@ -491,9 +535,11 @@ window.addEventListener('image-edit-request', async (ev) => { try {
   else status(tx('ui.goc-nhin-px-chon-che-do-backend', { 0: module || layer, 1: best.view, 2: best.px }), 'ok');
 } catch (e) { console.error(e); status(e.message, 'warn'); } });
 let startHere = true;       // the page opens on this tab (on the floor plan, see showTab) once the first design is shown
-window.addEventListener('design-opened', () => {
+window.addEventListener('design-opened', (ev) => {
   if (startHere) { showTab(true); return; }
-  if (active()) run(tx('ui.mo-anh'), load);
+  if (!active()) return;
+  if (!ev.detail?.keepView && toFirstView()) return;     // a design opened here shows its floor plan; a reload after a change keeps the view
+  run(tx('ui.mo-anh'), load);
 });
 window.addEventListener('view-changed', () => { if (active()) run(tx('ui.mo-anh'), load); });
 $('designSelect').addEventListener('change', () => { S.layer = null; S.sel = []; S.job = null; S.tasks = []; renderTasks(); });

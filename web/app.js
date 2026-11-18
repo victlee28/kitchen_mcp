@@ -83,7 +83,7 @@ function showDesign({ id, rev, spec, scene: sc, validation: v, doc, keepView }) 
   $('openRender').href = `render.html?design=${encodeURIComponent(id)}`;
   refreshViewSync().catch((e) => console.warn('view-status', e));
   syncAiExport().catch((e) => setStatus(tx('ui.xuat-json-cho-ai-loi') + e.message, 'warn'));
-  window.dispatchEvent(new CustomEvent('design-opened', { detail: { id, rev } }));
+  window.dispatchEvent(new CustomEvent('design-opened', { detail: { id, rev, keepView } }));
 }
 // ---------------- panels
 const clearSelection = () => editor.clearSelection();

@@ -81,6 +81,38 @@
      "count": 5
     }
    ]
+  },
+  "autoPlace": {
+   "cabinetTags": [
+    "cabinet",
+    "kitchen",
+    "wardrobe",
+    "shelf_unit",
+    "tv_unit",
+    "wine_cabinet"
+   ],
+   "kitchenTags": [
+    "cabinet_kitchen_set",
+    "kitchen",
+    "kitchen_cabinet"
+   ],
+   "tvTags": [
+    "tv_unit",
+    "tv_cabinet",
+    "cabinet_tv"
+   ],
+   "unitTags": {
+    "wine_cabinet": "wine",
+    "cabinet_wine": "wine",
+    "cabinet_low": "low"
+   },
+   "kitchenWords": [
+    "kitchen",
+    "bep"
+   ],
+   "kitchenMinDepth": 500,
+   "unitMinDepth": 250,
+   "shallowUnit": "low"
   }
  }
 ]

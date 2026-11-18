@@ -9,11 +9,14 @@ Nội dung suy từ thiết kế: có cửa sổ thì có nắng chiếu qua c�
 """
 from __future__ import annotations
 
+from typing import Any
+
 from .. import builtin, vocab
 from ..catalog import Catalog
 from ..i18n import pick
 from ..jsonview import as_dict, as_list
 from ..spec import KitchenSpec
+from .seen import Seen, kitchen_uppers_seen, shown, window_seen, worktop_seen
 
 def lighting(catalog: Catalog = builtin.CATALOG) -> dict[str, str]:
     """Lighting id -> the English sentence (catalog kind ``lighting``; the workshop edits or adds them)."""
@@ -51,14 +54,22 @@ def _has_window(spec: KitchenSpec, catalog: Catalog = builtin.CATALOG) -> bool:
     return any(e.get("tag") == "window" and e.get("kind") == "opening" and bool(e.get("attached")) and e.get("id") not in removed for e in elements)
 
 
-def _material_name(spec: KitchenSpec) -> list[str]:
-    return [*spec.common.material.values(), *(m.material or "" for m in spec.module), spec.common.handle.material or "",
-            *(h.material or "" for h in (spec.common.handleByStorey or {}).values()), *(m.handle.material or "" for m in spec.module if m.handle)]
+def _material_name(spec: KitchenSpec, modules: list[Any] | None = None) -> list[str]:
+    """The material names of the design (``modules``: only these cabinets' own, with the design's common ones; the countertop and wall
+    tile only when one of them is a kitchen base cabinet)."""
+    mods = list(spec.module) if modules is None else modules
+    common = dict(spec.common.material)
+    if modules is not None and not worktop_seen(spec, Seen(frozenset(m.id for m in mods), frozenset())):
+        common.pop("countertop", None)
+        common.pop("wallTile", None)
+    return [*common.values(), *(m.material or "" for m in mods), spec.common.handle.material or "",
+            *(h.material or "" for h in (spec.common.handleByStorey or {}).values()), *(m.handle.material or "" for m in mods if m.handle)]
 
 
-def _materials(spec: KitchenSpec | None, extra: list[str] | None = None) -> list[str]:
-    """Mô tả bề mặt theo tên vật liệu (của cả thiết kế nếu có spec, cộng thêm extra), mỗi loại một câu ngắn, không lặp."""
-    names = " ".join([*(_material_name(spec) if spec is not None else []), *(extra or [])]).lower()
+def _materials(spec: KitchenSpec | None, extra: list[str] | None = None, modules: list[Any] | None = None) -> list[str]:
+    """Mô tả bề mặt theo tên vật liệu (của cả thiết kế nếu có spec, cộng thêm extra), mỗi loại một câu ngắn, không lặp.
+    ``modules``: only the cabinets one picture shows."""
+    names = " ".join([*(_material_name(spec, modules) if spec is not None else []), *(extra or [])]).lower()
     t = vocab.norm(names)  # bỏ dấu, chữ thường
     out: list[str] = []
     if any(vocab.has(t, k) for k in ("vân gỗ", "gỗ", "sồi", "óc chó", "tần bì", "xoan đào", "teak", "veneer")):
@@ -82,36 +93,47 @@ def _materials(spec: KitchenSpec | None, extra: list[str] | None = None) -> list
     return out
 
 
-def _contact(spec: KitchenSpec) -> list[str]:
+TOP_DOWN_CONTACT = ["soft ambient-occlusion contact shadows where cabinets, walls and furniture meet the floor",
+                    "thin dark joints between the tops of neighbouring cabinets", "clean flat cut tops on the walls and columns"]
+
+
+def _contact(spec: KitchenSpec, seen: Seen | None = None) -> list[str]:
+    if seen is not None and seen.top_down:
+        return list(TOP_DOWN_CONTACT)
+    worktop = worktop_seen(spec, seen)
     out = ["thin dark shadow lines in the 2–3 mm reveal gaps between doors and drawers",
            "soft ambient-occlusion contact shadows where cabinets meet the wall, floor and ceiling, and in inside corners",
-           "a soft shadow under the countertop overhang and inside the toe-kick recess",
+           "a soft shadow under the countertop overhang and inside the toe-kick recess" if worktop else "a soft shadow inside the toe-kick recess",
            "door and panel edges have tiny rounded bevels that catch a thin line of light"]
-    if any(m.storey in ("upper", "loft") for m in spec.module):
+    if worktop and kitchen_uppers_seen(spec, seen):
         out.append("a soft shadow band on the backsplash under the wall cabinets")
     return out
 
 
-def _lights(spec: KitchenSpec, light: str, catalog: Catalog = builtin.CATALOG) -> list[str]:
+def _lights(spec: KitchenSpec, light: str, catalog: Catalog = builtin.CATALOG, seen: Seen | None = None) -> list[str]:
     table = lighting(catalog)
     lighting_id = light
     out = [table.get(lighting_id) or table.get("daylight") or LIGHTING["daylight"]]
-    if _has_window(spec, catalog) and lighting_id != "dim-evening":
+    if window_seen(spec, seen, _has_window(spec, catalog)) and lighting_id != "dim-evening":
         out.append("daylight enters through the window as the key light, brightest near it, with a natural exposure that keeps "
                    "the window view slightly bright but not blown out")
-    if any(m.storey in ("upper", "loft") for m in spec.module):
+    if worktop_seen(spec, seen) and kitchen_uppers_seen(spec, seen) and not (seen is not None and seen.top_down):
         out.append("warm LED strip light under the wall cabinets washes the backsplash and countertop"
                    + (" (subtle in daylight)" if lighting_id != "dim-evening" else ""))
     return out
 
 
-def full(spec: KitchenSpec, light: str = "daylight", catalog: Catalog = builtin.CATALOG) -> str:
-    """Đoạn yêu cầu ảnh thật cho ảnh ĐẦY ĐỦ (gen-0 / xuất cho AI). Câu chữ: catalog kinds ``lighting`` và ``prompt-text``."""
-    camera = text("photo-camera", catalog)
-    light_text = "Lighting: " + "; ".join(_lights(spec, light, catalog)) + "."
-    mats = _materials(spec)
+def full(spec: KitchenSpec, light: str = "daylight", catalog: Catalog = builtin.CATALOG, seen: Seen | None = None) -> str:
+    """Đoạn yêu cầu ảnh thật cho ảnh ĐẦY ĐỦ (gen-0 / xuất cho AI). Câu chữ: catalog kinds ``lighting`` và ``prompt-text``.
+    ``seen``: what the picture of one view holds (``prompts.seen``): no window light, LED or worktop it does not show; None: whole design."""
+    if seen is not None and seen.top_down:       # the overview and the plan look down on the room: not an eye-level photograph
+        camera = " ".join(x for x in (text("photo-camera-topdown", catalog), seen.ortho and text("photo-camera-ortho", catalog)) if x)
+    else:
+        camera = text("photo-camera", catalog)
+    light_text = "Lighting: " + "; ".join(_lights(spec, light, catalog, seen)) + "."
+    mats = _materials(spec, None, shown(spec, seen) if seen is not None else None)
     material_text = ("Materials: " + "; ".join(mats) + ".") if mats else ""
-    contact = "Physically plausible detail: " + "; ".join(_contact(spec)) + "."
+    contact = "Physically plausible detail: " + "; ".join(_contact(spec, seen)) + "."
     post = text("photo-post", catalog)
     preferences = ("Image preferences: " + "; ".join(spec.renderPreferences) + ".") if spec.renderPreferences else ""
     return " ".join(x for x in (camera, light_text, material_text, contact, preferences, post) if x)

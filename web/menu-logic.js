@@ -57,7 +57,7 @@ export function pickTarget(hits, moduleIds) {
   return null;
 }
 
-const IMAGE_APPLIANCES = ['cooktop', 'sink', 'faucet', 'hood', 'fridge', 'oven', 'tv'];
+const IMAGE_APPLIANCES = ['cooktop', 'sink', 'faucet', 'hood', 'fridge', 'oven', 'tv', 'painting'];
 /** The menu target of a pixel of the layered image (an instance of the render's instances.json: {id, module, type}), as the 3D view's
  *  right click gives it: a floorplan element, an appliance, a door / drawer front / handle / worktop, or the cabinet; null for what the
  *  menu has nothing for (floor, a room door's own parts). A wall face carries its id (``surface``), as a right click on a lit face in

@@ -53,7 +53,7 @@
         <label class="file">Import floorplan JSON<input id="floorplanFile" type="file" accept=".json,application/json"></label>
         <label id="fpRoomRow" hidden>Room<select id="fpRoom"></select></label>
         <button id="fpImport" hidden>Import selected room</button>
-        <button id="fpBind" title="Place the kitchen against a wall of the imported room">Place kitchen on a wall</button>
+        <button id="fpAuto" title="Tự động tạo cửa đi, cửa sổ và các hệ tủ (bếp, tivi, rượu...) theo file mặt bằng đã nhập; thiếu thông tin thì chọn mẫu theo kích thước" data-i18n-attr="title:ui.auto-place-title"><span data-i18n="ui.auto-place">Tự động đặt</span></button>
         <ul id="fpInfo" class="muted small"></ul>
         <div id="fpElements" hidden>
           <h3>Floorplan elements</h3>
@@ -168,9 +168,18 @@
         <div class="imgedit">
           <div class="stagewrap">
             <div id="stage" class="stage" title="Bấm vào ảnh để chọn chi tiết" data-i18n-attr="title:ui.bam-vao-anh-de-chon-chi-tiet">
-              <img id="imgBase" alt="Ảnh gốc" data-i18n-attr="alt:ui.anh-goc">
-              <img id="imgAfter" alt="Ảnh sau khi sửa" hidden data-i18n-attr="alt:ui.anh-sau-khi-sua">
-              <canvas id="maskOverlay"></canvas>
+              <div id="stageInner" class="stage-inner">
+                <img id="imgBase" alt="Ảnh gốc" data-i18n-attr="alt:ui.anh-goc">
+                <img id="imgAfter" alt="Ảnh sau khi sửa" hidden data-i18n-attr="alt:ui.anh-sau-khi-sua">
+                <canvas id="maskOverlay"></canvas>
+              </div>
+            </div>
+            <div class="zoombar">
+              <button id="zoomOut" type="button" class="ghost" title="Thu nhỏ" data-i18n-attr="title:ui.zoom-out">−</button>
+              <span id="zoomPct">100%</span>
+              <button id="zoomIn" type="button" class="ghost" title="Phóng to" data-i18n-attr="title:ui.zoom-in">+</button>
+              <button id="zoomFit" type="button" class="ghost"><span data-i18n="ui.zoom-fit">Vừa khung</span></button>
+              <span class="muted small" data-i18n="ui.zoom-hint">Lăn chuột trên ảnh: phóng to / thu nhỏ · kéo ảnh: di chuyển · bấm: chọn chi tiết</span>
             </div>
             <label id="cmpWrap" class="cmp" hidden><span data-i18n="ui.truoc-sau">Trước ◀ ▶ Sau</span> <input id="cmpSlider" type="range" min="0" max="100" value="50"></label>
             <div class="baserow">

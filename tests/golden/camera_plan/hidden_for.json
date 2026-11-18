@@ -79,7 +79,8 @@
    },
    "expected": {
     "hidden": [
-     "STRUCT-C"
+     "STRUCT-C",
+     "STRUCT-T"
     ]
    }
   },

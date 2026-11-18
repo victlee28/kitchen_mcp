@@ -95,6 +95,9 @@ def _in_picture(view, point, aspect=camera_plan.ASPECT):
     u = [r[1] * f[2] - r[2] * f[1], r[2] * f[0] - r[0] * f[2], r[0] * f[1] - r[1] * f[0]]
     q = [b - a for a, b in zip(eye, point)]
     depth = sum(a * b for a, b in zip(q, f))
+    if view.get("orthoHeight"):          # orthographic: a strip orthoHeight (m) tall, as wide as the aspect allows, at any depth
+        half = view["orthoHeight"] * 500
+        return depth > 0 and abs(sum(a * b for a, b in zip(q, u))) <= half + 1 and abs(sum(a * b for a, b in zip(q, r))) <= half * aspect + 1
     tv = math.tan(math.radians(view["verticalFov"] / 2))
     return depth > 0 and abs(sum(a * b for a, b in zip(q, u))) <= depth * tv + 1 and abs(sum(a * b for a, b in zip(q, r))) <= depth * tv * aspect + 1
 
@@ -117,11 +120,17 @@ class TestWholeRoom(unittest.TestCase):
         self.assertEqual(out["plan"]["lookAt"], (7.0, 0.0, 2.25))
         self.assertGreaterEqual(out["overhead"]["position"][1] * 1000 - out["overhead"]["lookAt"][1] * 1000, 0)
 
-    def test_the_overview_hides_the_wall_in_front_and_keeps_the_far_one(self):
+    def test_the_plan_is_orthographic_and_the_overview_looks_straight_down(self):      # 18/11/2026
         out = camera_plan.whole_room(self.BEFORE, self.LONG, self.WALLS, None)
-        near = "W-near" if out["overhead"]["position"][2] > 2.25 else "W-far"     # the long wall on the camera's side
-        self.assertEqual(out["overhead"]["hide"], [near])
-        self.assertEqual(out["plan"]["hide"], [])
+        plan, over = out["plan"], out["overhead"]
+        self.assertGreater(plan["orthoHeight"], 4.5)                          # the room, 4.5 m deep, with its walls and a margin
+        self.assertGreaterEqual(plan["orthoHeight"] * camera_plan.ASPECT + 0.005, 14.0 * camera_plan.PLAN_MARGIN)
+        self.assertEqual(plan["hide"], [])
+        self.assertGreater(plan["position"][1], 2.7)                          # above the walls
+        self.assertIsNone(over.get("orthoHeight"))
+        self.assertAlmostEqual(over["position"][0], over["lookAt"][0])         # straight down, as the plan was
+        self.assertAlmostEqual(over["position"][2], over["lookAt"][2], delta=0.002)
+        self.assertEqual(over["lookAt"], plan["lookAt"])
 
     def test_a_room_only_design_frames_its_floorplan(self):
         import json

@@ -80,9 +80,14 @@ class TestLayoutRules(unittest.TestCase):
 
 class TestFitDepth(unittest.TestCase):
     def test_base_and_tall_follow_the_object_wall_cabinets_only_when_shallow(self):
-        mods = [{"type": "base", "depth": 580.0}, {"type": "tall-fridge", "depth": 640.0}, {"type": "upper", "depth": 320.0}, {"type": "upper-loft", "depth": 320.0}]
+        mods = [{"type": "base", "depth": 580.0}, {"type": "tall", "depth": 580.0}, {"type": "upper", "depth": 320.0}, {"type": "upper-loft", "depth": 320.0}]
         self.assertEqual([m["depth"] for m in cabinet_run.fit_depth(mods, 600.0)], [600.0, 600.0, 320.0, 320.0])
         self.assertEqual([m["depth"] for m in cabinet_run.fit_depth(mods, 330.0)], [330.0, 330.0, 330.0, 330.0])
+
+    def test_the_fridge_cabinet_keeps_the_depth_its_fridge_needs(self):      # 17/11/2026: a 594 mm object made a 620 mm fridge stick out
+        mods = [{"type": "tall-fridge", "depth": 640.0}]
+        self.assertEqual([m["depth"] for m in cabinet_run.fit_depth(mods, 600.0)], [640.0])
+        self.assertEqual([m["depth"] for m in cabinet_run.fit_depth(mods, 700.0)], [700.0])
 
 
 class TestPlanReplace(unittest.TestCase):

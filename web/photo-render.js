@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { buildKitchen } from './scene-loader.js';
+import { buildKitchen, makeCamera } from './scene-loader.js';
 import './boot.js';   // wording + catalog palettes (appliance box colours)
 
 export const viewOf = (cameraId) => cameraId.replace(/^CAM-/, '');
@@ -60,7 +60,7 @@ export async function renderDoc(doc, opts = {}) {
   for (const [cameraId, c] of Object.entries(k.cameras)) {
     const view = viewOf(cameraId);
     if (want && !want.has(view) && !want.has(cameraId)) continue;
-    const camera = new THREE.PerspectiveCamera(c.fov, W / H, c.near, c.far);
+    const camera = makeCamera(THREE, c, W / H);       // the plan is orthographic, the other views perspective
     camera.up.set(...c.up);
     camera.position.set(...c.position);
     camera.lookAt(new THREE.Vector3(...c.target));

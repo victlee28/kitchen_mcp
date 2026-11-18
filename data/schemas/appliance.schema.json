@@ -34,7 +34,8 @@
     "hood",
     "fridge",
     "oven",
-    "tv"
+    "tv",
+    "painting"
    ],
    "x-label": {
     "vi": "Loại",

@@ -338,7 +338,7 @@ class Module(_Base):
 class Appliance(_Base):
     id: str
     name: str = ""
-    type: Literal["fridge", "sink", "faucet", "cooktop", "hood", "oven", "light", "tv", "other"] = "other"
+    type: Literal["fridge", "sink", "faucet", "cooktop", "hood", "oven", "light", "tv", "painting", "other"] = "other"
     dimensions: str | None = None
     position: str | None = None
     module: str | None = Field(default=None, description="Module chứa thiết bị")
@@ -423,6 +423,8 @@ class ViewAngle(_Base):
     position: tuple[float, float, float]
     lookAt: tuple[float, float, float]
     verticalFov: float = Field(default=50, gt=1, lt=170)
+    orthoHeight: float | None = Field(default=None, gt=0, description="Orthographic view (the plan): the height in metres of the strip of "
+                                      "the world the picture shows; verticalFov is then not used. None: a perspective view")
     hide: list[str] = Field(default_factory=list, description="Ids of floorplan structures (STRUCT-...) left out of this view because they stand between the camera and the cabinets")
 
 

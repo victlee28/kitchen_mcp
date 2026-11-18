@@ -35,7 +35,7 @@ TIER = {"base": "base", "upper": "wall", "loft": "top", "tall": "tall", "corner"
 MODULE_TYPE = {"base": "base_cabinet", "upper": "wall_cabinet", "loft": "wall_cabinet", "tall": "tall_pantry", "corner": "open_shelf"}
 SEMANTIC = {"carcass": "carcass", "plinth": "plinth", "door": "door", "glass-door": "glass_door", "drawer": "drawer", "side-panel": "panel",
             "shelf": "shelf", "countertop": "countertop", "fridge": "refrigerator", "sink": "sink", "faucet": "faucet", "cooktop": "cooktop",
-            "hood": "range_hood", "oven": "microwave", "tv": "television", "wall": "wall", "floor": "floor", "wall-tile": "backsplash", "handle": "handle",
+            "hood": "range_hood", "oven": "microwave", "tv": "television", "painting": "painting", "wall": "wall", "floor": "floor", "wall-tile": "backsplash", "handle": "handle",
             "molding": "molding"}
 
 
@@ -570,7 +570,7 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
     run_docs = _run_docs(spec, modules)
 
     # thiết bị & phụ kiện
-    app_type = {"fridge": "Refrigerator", "hood": "Range_Hood_Insert", "oven": "BuiltIn_Oven", "tv": "Television"}
+    app_type = {"fridge": "Refrigerator", "hood": "Range_Hood_Insert", "oven": "BuiltIn_Oven", "tv": "Television", "painting": "Painting"}
     appliances: list[dict[str, Any]] = []
     accessories: list[dict[str, Any]] = []
     for tb in spec.appliances:
@@ -594,9 +594,10 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
                 ("Microwave" if cat.get("box", {}).get("kind") == "microwave" else "BuiltIn_Oven") if tb.type == "oven" else app_type[tb.type]
             a: dict[str, Any] = {"id": f"APP-{tb.id}", "type": t, "name": tb.name or tb.id, "assetId": "ASSET-APPLIANCE-BOX", "dimensions": dims,
                  "transform": _tf(fr.pos, fr.rot), "materialId": mats["cooktop"] if tb.type in ("cooktop", "tv") else mats["inox"], "sourceRef": tb.id,
-                 "energy": energy or ("induction" if tb.type == "cooktop" else "electric"),
+                 "energy": energy or ("induction" if tb.type == "cooktop" else "none" if tb.type == "painting" else "electric"),
                  "installation": {"mountType": "wall_mounted" if hanging else {"fridge": "freestanding" if (tb.mount or "freestanding") != "built_in" else "built_in",
-                                                                                  "cooktop": "built_in", "hood": "built_in", "oven": "built_in", "tv": "wall_mounted"}[tb.type]}, **look}
+                                                                                  "cooktop": "built_in", "hood": "built_in", "oven": "built_in", "tv": "wall_mounted",
+                                                                                  "painting": "wall_mounted"}[tb.type]}, **look}
             if cat.get("asset3d"):
                 a["modelUrl"] = cat["asset3d"]
             if host:
@@ -718,12 +719,15 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
         d = [b - a for a, b in zip(pos, tgt)]
         n = math.sqrt(sum(x * x for x in d)) or 1
         up = _v(0, 0, -1) if abs(d[1] / n) > 0.999 else _v(0, 1, 0)
-        lv = two_point.level(v.position, v.lookAt)
+        lv = None if v.orthoHeight is not None else two_point.level(v.position, v.lookAt)
         # two-point perspective (``two_point``): the camera looks level, at lookAt (eye height), and the picture window is shifted so the
         # target stays in the middle: three.js setViewOffset(w, h, 0, lensShiftY × h / 2, w, h) (the window moves down when positive)
         two = {"twoPoint": {"lookAt": _v(pos[0] + lv.forward[0] * 1000, pos[1], pos[2] + lv.forward[2] * 1000),
                             "lensShiftY": round_half_away(-lv.shift / math.tan(math.radians(v.verticalFov) / 2), 4)}} if lv else {}
-        cameras.append({"id": f"CAM-{key}", "name": v.name or key, "position": _v(pos[0], pos[1], pos[2]), "target": _v(tgt[0], tgt[1], tgt[2]), "projection": "perspective",
+        # an orthographic view (the plan): THREE.OrthographicCamera with top - bottom = orthoHeight (mm) and left/right by the aspect
+        ortho = {"projection": "orthographic", "orthoHeight": round_half_away(v.orthoHeight * 1000, 1)} if v.orthoHeight is not None \
+            else {"projection": "perspective"}
+        cameras.append({"id": f"CAM-{key}", "name": v.name or key, "position": _v(pos[0], pos[1], pos[2]), "target": _v(tgt[0], tgt[1], tgt[2]), **ortho,
                         "fov": v.verticalFov, "fovAxis": "vertical", "near": 50, "far": 50000, "up": up, "aspect": round_half_away(4 / 3, 4),
                         **two, **({"hide": list(v.hide)} if v.hide else {})})
 

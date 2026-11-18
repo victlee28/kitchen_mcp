@@ -19,6 +19,7 @@
    "faucet": "#8a8f96",
    "cooktop": "#121212",
    "tv": "#0b0d10",
+   "painting": "#8a6a4a",
    "hood": "#6f747a",
    "oven": "#3a3d42",
    "wall": "#ece7de",
@@ -131,6 +132,11 @@
     20,
     20,
     120
+   ],
+   "painting": [
+    200,
+    40,
+    40
    ],
    "wall": [
     180,
@@ -295,6 +301,7 @@
   },
   "colors": {
    "black-glass": "#141414",
+   "painting-frame": "#6b5236",
    "black": "#1e1e1e",
    "white": "#f1f1ee",
    "steel": null,

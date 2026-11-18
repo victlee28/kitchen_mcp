@@ -51,6 +51,7 @@
          0.0
         ],
         "verticalFov": 50.0,
+        "orthoHeight": null,
         "hide": []
        }
       },
@@ -69,6 +70,7 @@
          0.2
         ],
         "verticalFov": 44.0,
+        "orthoHeight": null,
         "hide": []
        },
        "new": null
@@ -88,6 +90,7 @@
          2.05
         ],
         "verticalFov": 48.0,
+        "orthoHeight": null,
         "hide": []
        },
        "new": null
@@ -107,6 +110,7 @@
          0.5
         ],
         "verticalFov": 50.0,
+        "orthoHeight": null,
         "hide": []
        },
        "new": null
@@ -126,6 +130,7 @@
          2.3
         ],
         "verticalFov": 54.0,
+        "orthoHeight": null,
         "hide": []
        },
        "new": null
@@ -145,6 +150,7 @@
          1.75
         ],
         "verticalFov": 56.0,
+        "orthoHeight": null,
         "hide": []
        },
        "new": null
@@ -164,6 +170,7 @@
          3.0833
         ],
         "verticalFov": 45.62,
+        "orthoHeight": null,
         "hide": []
        },
        "new": null
@@ -183,6 +190,7 @@
          1.1
         ],
         "verticalFov": 44.0,
+        "orthoHeight": null,
         "hide": []
        },
        "new": null
@@ -202,6 +210,7 @@
          1.42
         ],
         "verticalFov": 36.0,
+        "orthoHeight": null,
         "hide": []
        },
        "new": null
@@ -260,6 +269,7 @@
          0.2
         ],
         "verticalFov": 44.0,
+        "orthoHeight": null,
         "hide": []
        },
        "new": null
@@ -279,6 +289,7 @@
          2.05
         ],
         "verticalFov": 48.0,
+        "orthoHeight": null,
         "hide": []
        },
        "new": null
@@ -298,6 +309,7 @@
          0.5
         ],
         "verticalFov": 50.0,
+        "orthoHeight": null,
         "hide": []
        },
        "new": null
@@ -317,6 +329,7 @@
          2.3
         ],
         "verticalFov": 54.0,
+        "orthoHeight": null,
         "hide": []
        },
        "new": null
@@ -336,6 +349,7 @@
          1.75
         ],
         "verticalFov": 56.0,
+        "orthoHeight": null,
         "hide": []
        },
        "new": null
@@ -355,6 +369,7 @@
          3.0833
         ],
         "verticalFov": 45.62,
+        "orthoHeight": null,
         "hide": []
        },
        "new": null
@@ -374,6 +389,7 @@
          1.1
         ],
         "verticalFov": 44.0,
+        "orthoHeight": null,
         "hide": []
        },
        "new": null
@@ -393,6 +409,7 @@
          1.42
         ],
         "verticalFov": 36.0,
+        "orthoHeight": null,
         "hide": []
        },
        "new": null

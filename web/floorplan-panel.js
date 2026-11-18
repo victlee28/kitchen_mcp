@@ -1,5 +1,6 @@
-// Floor-plan panel: import a plan (choosing a room when there are several) and bind the kitchen to a wall.
+// Floor-plan panel: import a plan (choosing a room when there are several) and "Auto place": build the doors, windows and cabinet systems it draws.
 import { $, el } from './dom.js';
+import { tx } from './i18n.js';
 
 export function createFloorplanPanel({ state, api, run, setStatus, loadDesigns, openDesign }) {
   let pendingFloorplan = null;
@@ -39,8 +40,16 @@ export function createFloorplanPanel({ state, api, run, setStatus, loadDesigns, 
     });
   });
   $('fpImport').addEventListener('click', () => run('import floorplan', () => importFloorplan($('fpRoom').value)));
-  $('fpBind').addEventListener('click', () => {
+  // Auto place: every door / window hole and every cabinet of the plan built in one revision (POST .../auto-place); the lines say what
+  // was made of each element and what was skipped, and why
+  $('fpAuto').addEventListener('click', () => {
     if (!state.id) return;
-    run('place kitchen', async () => { const r = await api(`/api/designs/${state.id}/floorplan-bind`, 'POST', { rev: state.rev }); showFloorplanInfo(r); await openDesign(state.id, true); });
+    run(tx('ui.auto-place'), async () => {
+      const r = await api(`/api/designs/${state.id}/auto-place`, 'POST', { rev: state.rev });
+      const ul = $('fpInfo'); ul.replaceChildren();
+      for (const line of [...(r.summary || []), ...[...(r.placed || []), ...(r.skipped || [])].flatMap((x) => x.summary || [])]) ul.appendChild(el('li', {}, String(line)));
+      setStatus((r.summary || []).join(' '), r.placed?.length ? 'ok' : 'warn');
+      if (r.rev !== state.rev) await loadDesigns(state.id);           // the list shows the new revision, the design opens on it
+    });
   });
 }

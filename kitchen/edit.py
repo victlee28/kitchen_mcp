@@ -236,13 +236,14 @@ def set_run_unit(spec: KitchenSpec, id: str, unit: Any) -> KitchenSpec:
 
 
 APPLIANCE_FIELDS = ("model", "name", "dimensions", "size", "cutout", "mount", "energy", "module")   # module: another kind (appliance_kind)
+# ``type`` changes only with a model of another wall-hung type (a TV for a painting): appliance_models.swaps
 
 
 def update_appliance(spec: KitchenSpec, id: str, model: Any = None, changes: dict[str, Any] | None = None,
                      catalog: Catalog = builtin.CATALOG) -> KitchenSpec:
     """Give an appliance another model (catalog kind ``appliance``): its name, dimensions, size, cut-out, mount and energy become the model's;
     its id, module, wall and centre stay, so it stays where it is. ``changes`` may set those fields by hand instead."""
-    from .appliance_models import changes_for, model as model_of
+    from .appliance_models import changes_for, model as model_of, swaps
     s = _clone(spec)
     hit = next((a for a in s.appliances if a.id == id), None)
     if hit is None:
@@ -250,9 +251,11 @@ def update_appliance(spec: KitchenSpec, id: str, model: Any = None, changes: dic
     upd: dict[str, Any] = {}
     if model is not None:
         m = model_of(str(model), catalog)
-        if m["type"] != hit.type:
+        if not swaps(hit.type, m["type"]):
             raise InvalidInput(f"{m['name']} is a {m['type']}, {id} is a {hit.type}", code="model-wrong-type", params={"model": m["name"], "id": id})
         upd.update(changes_for(m))
+        if m["type"] != hit.type:
+            upd["type"] = m["type"]            # a painting in a TV's place (or back)
     bad = [k for k in (changes or {}) if k not in APPLIANCE_FIELDS]
     if bad:
         raise InvalidInput(f"update-appliance cannot change {bad}; only {', '.join(APPLIANCE_FIELDS)}", code="bad-appliance-field",

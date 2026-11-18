@@ -10,7 +10,7 @@ KITCHEN = ROOT / "kitchen"
 # R1: modules that must stay free of I/O, clocks, randomness and Pydantic behaviour.
 CORE_MODULES = (
     "placement", "roomctx", "rules", "rules_kb", "rules_nkba", "edit", "proposal", "geometry", "moldings", "handles", "hardware",
-    "structure_mesh", "camera_plan", "layers", "threejs_export", "lexicon", "vocab", "edit_intent", "cabinet_run", "run_join", "legs", "run_line", "runs", "rows_to_runs", "system_replace", "tv_system", "unit_system", "wall_line", "appliance_models", "appliance_kind", "regions", "errors", "palette", "numeric", "jsonview", "i18n", "defaults", "words", "cabinet_types", "layout_solver", "rules_openings", "wall_surfaces", "menu_commands", "model_contract", "two_point",
+    "structure_mesh", "camera_plan", "layers", "threejs_export", "lexicon", "vocab", "edit_intent", "cabinet_run", "run_join", "legs", "run_line", "runs", "rows_to_runs", "system_replace", "tv_system", "unit_system", "wall_line", "appliance_models", "appliance_kind", "regions", "errors", "palette", "numeric", "jsonview", "i18n", "defaults", "words", "cabinet_types", "layout_solver", "rules_openings", "wall_surfaces", "menu_commands", "model_contract", "two_point", "auto_place",
 )
 CORE_PACKAGES = ("prompts", "floorplan", "recognition", "catalog", "openings")          # packages whose every file is core (the files are found on disk)
 
@@ -24,7 +24,7 @@ CORE_ALL = CORE_MODULES + tuple(m for pkg in CORE_PACKAGES for m in _package_mod
 # Data-model modules a core module may import (the boundary types); everything else it imports from kitchen must be core.
 DATA_MODULES = ("spec", "knowledge_seed", "builtin")   # boundary types; constant data tables (their SQL helpers take a connection argument)
 
-SHELL_MODULES = ("store", "migrations", "service", "opening_service", "identity", "backends", "ai_export", "legacy", "config", "intent", "run_template", "llm", "recognizers", "catalog_files", "catalog_csv", "command_inbox", "model_gateway", "inbox_worker")      # touch disk, network, env, clock
+SHELL_MODULES = ("store", "migrations", "service", "opening_service", "identity", "backends", "ai_export", "legacy", "config", "intent", "run_template", "llm", "recognizers", "catalog_files", "catalog_csv", "command_inbox", "model_gateway", "inbox_worker", "skills")      # touch disk, network, env, clock
 PIXEL_MODULES = ("render", "imaging", "geometry_edit", "request_check", "view_sync")        # the image-job package kitchen/images/ is pixel zone as a whole (see test_architecture)
 PIXEL_PACKAGES = ("images",)                                                                   # numpy / PIL / job orchestration (every file in the package)
 ENV_READERS = ("config", "service")                                                # may read os.environ / getenv

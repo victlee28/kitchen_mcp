@@ -47,7 +47,8 @@ class KitchenService:
         self.clock = clock or utc_now
         self.config = Config.from_env()      # the environment is read here, once; below this line the service uses the value
         self.store = Store(db_path or self.config.db_path)
-        self.builtin = catalog_files.load_builtin(Path(data_dir or self.config.data_dir or Path(__file__).resolve().parent.parent / "data"))
+        self.data_dir = Path(data_dir or self.config.data_dir or Path(__file__).resolve().parent.parent / "data")
+        self.builtin = catalog_files.load_builtin(self.data_dir)
         self._catalog_cache: tuple[int, cat.Catalog] | None = None
         self._default_names: i18n.Names | None = None
         self.store.snapshot = self._snapshot_json
@@ -63,7 +64,7 @@ class KitchenService:
         from .command_inbox import CommandInbox
         self.commands = CommandInbox(self.config.command_inbox or Path(self.store.path).parent / "command-inbox", self.clock)
         from .model_gateway import ModelGateway
-        prices_file = Path(data_dir or self.config.data_dir or Path(__file__).resolve().parent.parent / "data") / "model-prices.json"
+        prices_file = self.data_dir / "model-prices.json"
         self.models = ModelGateway(self.config, Path(self.store.path).parent / "logs" / "model-usage.jsonl",
                                    json.loads(prices_file.read_text(encoding="utf-8")) if prices_file.exists() else {}, clock=self.clock)
         # a second look at a door built from a picture (P4): (photo, line drawing, question) -> the model's answer text; None = no check
@@ -71,12 +72,41 @@ class KitchenService:
         if self.config.opening_check != 'off':
             self.opening_checker = self._model_opening_check
 
+    INBOX_SKILL = 'kitchen-inbox'
+
+    def inbox_skill(self, reference: str | None = None) -> dict:
+        """The inbox procedure for any AI (``data/skills/kitchen-inbox``): ``{name, description, version, text, references}``, or with
+        ``reference`` one file of its ``references/`` folder ``{name, version, reference, text}``. Raises NotFound when it is missing."""
+        from . import skills
+        skill = skills.load(self.INBOX_SKILL, self.data_dir)
+        if skill is None:
+            raise NotFound(f'skill {self.INBOX_SKILL} not found in {self.data_dir}')
+        if reference is None:
+            return {'name': skill.name, 'description': skill.description, 'version': skill.version, 'text': skill.body,
+                    'references': list(skill.references)}
+        text = skills.reference(self.INBOX_SKILL, reference, self.data_dir)
+        if text is None:
+            raise NotFound(f'reference {reference!r} not found; the skill has {list(skill.references)}')
+        return {'name': skill.name, 'version': skill.version, 'reference': reference, 'text': text}
+
+    def inbox_instructions(self) -> str:
+        """The background worker's instructions: the kitchen-inbox skill with its references; the catalog text
+        ``prompt-text/inbox-worker`` when the skill is missing (the fallback)."""
+        from . import skills
+        skill = skills.load(self.INBOX_SKILL, self.data_dir)
+        if skill is None or not skill.body.strip():
+            from .prompts import photo as prompt_texts
+            return prompt_texts.text('inbox-worker', self.catalog())
+        parts = [skill.body]
+        for ref in skill.references:
+            parts.append(f'\n\n# references/{ref}\n\n' + (skills.reference(self.INBOX_SKILL, ref, self.data_dir) or ''))
+        return ''.join(parts)
+
     def inbox_worker(self):
-        """The model that carries out the command inbox without a chat (``KITCHEN_INBOX_WORKER=on``); its instructions are the catalog
-        text ``prompt-text/inbox-worker``."""
+        """The model that carries out the command inbox without a chat (``KITCHEN_INBOX_WORKER=on``); its instructions come from
+        ``inbox_instructions`` (the kitchen-inbox skill, the prompt-text fallback)."""
         from .inbox_worker import InboxWorker
-        from .prompts import photo as prompt_texts
-        return InboxWorker(self, self.config.inbox_provider, lambda: prompt_texts.text('inbox-worker', self.catalog()))
+        return InboxWorker(self, self.config.inbox_provider, self.inbox_instructions)
 
     def start_inbox_worker(self, every: float = 5.0) -> dict:
         """Start the worker when the settings ask for it and a model is set: ``{"started", "provider", "why"?}``."""
@@ -681,6 +711,96 @@ class KitchenService:
         revision = self.store.add_revision(design_id, base_revision, spec, {'op': 'bind-floorplan', 'back': binding['back'], 'source': binding['source']}, 'bind-floorplan')
         return {'id': design_id, 'rev': revision, 'binding': binding}
 
+    def auto_place(self, design_id: str, base_revision: int | None = None, country: str | None = None) -> dict:
+        """Build what the imported floorplan draws, in one revision ("Auto place"): every door and window hole gets a room opening, every
+        piece of furniture that is a cabinet a cabinet system in its place, as the right-click menu would make them. What to build comes
+        from each element's tag and label (``auto_place``), else from its size; the opening type from its label and width. Elements already
+        built are left alone; the others that cannot be built are listed under ``skipped`` with the reason. No revision when nothing is built."""
+        from . import auto_place as auto, openings as room_openings
+        from .openings import command as opening_cmd
+        from .recognition.openings import element_hole
+        spec, current = self.store.get(design_id)
+        if base_revision is not None and base_revision != current:
+            raise ConflictError(f'base_rev={base_revision}, but the latest revision is {current}; reload before editing', params={'base': base_revision, 'latest': current})
+        if not isinstance(spec.floorplan, dict):
+            raise InvalidInput('The design has no imported floorplan', code='no-floorplan')
+        catalog = self.catalog()
+        listed = spec.floorplan.get('elements')
+        elements = [e for e in listed if isinstance(e, dict) and e.get('id')] if isinstance(listed, list) else []
+        placed: list[dict] = []
+        skipped: list[dict] = []
+        ops: list[dict] = []
+
+        def skip(eid: str, key: str, **params: Any) -> None:
+            skipped.append({'element': eid, 'reason': key, 'summary': [words.said(f'summary.auto.{key}', id=eid, **params)]})
+
+        for e in (x for x in elements if x.get('kind') == 'opening'):        # the openings first: the cabinets then see the doors
+            eid = str(e['id'])
+            if any(o.sourceElement == eid and not o.removed for o in spec.openings):
+                skip(eid, 'exists')
+                continue
+            scene = geometry.compile_spec(spec, catalog)
+            data = to_data(spec)
+            axes = room_openings.wall_axes.for_spec(data, scene.lsau, scene.lphai)
+            existing = room_openings.effective(data, catalog, axes, spec.country)
+            hole = element_hole(e, axes)
+            pts = [(float(q['x']), float(q['z'])) for q in e.get('outline') or [] if isinstance(q, dict)]
+            if hole is None or not pts:
+                skip(eid, 'no-wall')
+                continue
+            kind, preferred = opening_cmd.hole_type(e)
+            type_id, size = auto.opening_choice(kind, preferred, float(numeric.round_half_away(hole[2], 0)), catalog)
+            wish = {'action': 'make', 'kind': kind, 'type': type_id, **({'size': size} if size else {})}
+            try:
+                op, _what, facts = opening_cmd.operation(wish, numeric.polygon_centroid(pts), axes, catalog, existing, eid,
+                                                         [x for x in data['floorplan']['elements'] if isinstance(x, dict)], country or spec.country)
+                spec = edit.apply_op(spec, op, catalog)
+            except KitchenError as err:
+                skip(eid, 'error', error=str(err))
+                continue
+            ops.append(op)
+            placed.append({'element': eid, 'what': 'opening', 'type': type_id,
+                           'summary': [words.said('summary.auto.opening', id=eid, type=self._type_label(type_id), width=f"{facts['width']:g}",
+                                                  height=f"{facts['height']:g}")]})
+
+        for e in (x for x in elements if x.get('kind') == 'furniture'):
+            eid = str(e['id'])
+            if eid in roomctx.replaced(spec.floorplan or {}):
+                skip(eid, 'exists')
+                continue
+            scene = geometry.compile_spec(spec, catalog)
+            ctx = roomctx.for_spec(spec, scene.lsau, scene.lphai)
+            struct = next((st for st in ctx.structures if st['id'] == f'STRUCT-{eid}'), None) if ctx is not None else None
+            if struct is None:
+                skip(eid, 'error', error=eid)
+                continue
+            depth = auto.depth_of([(float(q['x']), float(q['z'])) for q in struct['outline']])
+            choice = auto.furniture_choice(e, depth, catalog)
+            if choice.kind == 'skip':
+                skip(eid, choice.reason, tag=str(e.get('tag') or ''), depth=f'{depth:.0f}')
+                continue
+            try:
+                args = (spec, struct['id'], choice.prompt if choice.kind != 'plain' else None, None, country)
+                _struct, plan = self._replace_object(*args, tv_unit=choice.kind == 'tv', unit_layout=choice.unit)
+                if plan.get('status') == 'choose-edge':      # no edge against a wall: the longest edge takes the backs
+                    edges = plan.get('edges') or []
+                    back = max(edges, key=lambda x: x['length'])['index'] if edges else None
+                    _struct, plan = self._replace_object(spec, struct['id'], args[2], back, country, tv_unit=choice.kind == 'tv', unit_layout=choice.unit)
+                spec = edit.apply_op(spec, plan['operation'], catalog)
+            except KitchenError as err:
+                skip(eid, 'error', error=str(err))
+                continue
+            ops.append(plan['operation'])
+            head = words.said(f'summary.auto.{choice.kind}', id=eid, label=str(e.get('label') or ''), depth=f'{depth:.0f}')
+            placed.append({'element': eid, 'what': choice.kind, 'reason': choice.reason, 'summary': [head, *plan['summary']]})
+
+        out: dict[str, Any] = {'id': design_id, 'placed': placed, 'skipped': skipped}
+        if not ops:
+            return {**out, 'rev': current, 'summary': [words.said('summary.auto.nothing')]}
+        revision = self.store.add_revision(design_id, current, spec, {'op': 'auto-place', 'ops': ops}, 'auto-place')
+        return {**out, 'rev': revision, 'fromRev': current,
+                'summary': [words.said('summary.auto.done', placed=len(placed), skipped=len(skipped))]}
+
     @staticmethod
     def _by_runs(spec: KitchenSpec, catalog: cat.Catalog = builtin.CATALOG) -> KitchenSpec:
         """A kitchen written by explicit runs (``rows_to_runs``): generators and old files still think in walls, a design is stored by runs."""
@@ -1084,7 +1204,8 @@ class KitchenService:
             return None
         return next((st['kind'] for st in ctx.structures if st['id'] == structure_id), None)
 
-    def _replace_object(self, spec: KitchenSpec, structure_id: str, prompt: str | None, back_edge: int | None, country: str | None) -> tuple[dict, dict]:
+    def _replace_object(self, spec: KitchenSpec, structure_id: str, prompt: str | None, back_edge: int | None, country: str | None,
+                        tv_unit: bool = False, unit_layout: str | None = None) -> tuple[dict, dict]:
         """``(object, plan)``: the runs that replace a piece of furniture (``wall_line.replace_lines`` + ``cabinet_run.plan_replace``), in the
         kitchen frame the design will have (see ``_settle``). Without a sentence the runs hold base cabinets, with one the cabinets it describes
         (the longest run all of it, the others plain cabinets). Base and tall cabinets are as deep as the object (``cabinet_run.fit_depth``).
@@ -1098,8 +1219,8 @@ class KitchenService:
         if struct is None:
             raise NotFound(f"No such object: {structure_id}", code='structure-not-found')
         element = runs.system_id(struct.get('sourceElement') or str(struct['id']).removeprefix('STRUCT-'))
-        tv = tv_system.asks_tv(prompt)           # "tạo hệ tủ tivi": a TV unit, not kitchen cabinets
-        unit = None if tv else unit_system.asks(prompt, self.catalog())      # "tạo hệ tủ rượu", "tủ thấp": a furniture unit (unit-layout)
+        tv = tv_unit or tv_system.asks_tv(prompt)           # "tạo hệ tủ tivi": a TV unit, not kitchen cabinets
+        unit = None if tv else unit_layout or unit_system.asks(prompt, self.catalog())   # "tạo hệ tủ rượu", "tủ thấp": a furniture unit (unit-layout)
         described = intent.parse_prompt(prompt, self.catalog()) if prompt and prompt.strip() and not tv and unit is None else None
 
         def planner(place: Any) -> dict:
@@ -1127,6 +1248,7 @@ class KitchenService:
                         color = color.model_copy(update={'country': country})
                     built = run_template.run_from_template(color if i == 0 else color.model_copy(update={'fridge': False}), length, self.catalog())
                     modules = built['modules'] if i == 0 else system_replace.plain_cabinets(built['modules'], self.catalog())
+                    modules = cabinet_run.fit_levels(modules, spec, self.catalog())     # the template's heights -> the design's levels
                     if i == 0 and built['common']:
                         changes = dict(built['common'])
                         if 'material' in changes:
@@ -1174,7 +1296,8 @@ class KitchenService:
                 continue
             c = color if i == 0 else color.model_copy(update={'fridge': False})
             built = run_template.run_from_template(c, slot.length // 10 * 10, catalog)
-            laid[slot.run] = built['modules'] if i == 0 else system_replace.plain_cabinets(built['modules'], catalog)   # sink, hob, fridge: the main run only
+            laid[slot.run] = cabinet_run.fit_levels(built['modules'] if i == 0 else system_replace.plain_cabinets(built['modules'], catalog),
+                                                    spec, catalog)   # sink, hob, fridge: the main run only; on the design's levels
             if i == 0:
                 fronts = {k: built['common'][k] for k in ('material', 'handle') if k in built['common']}
         said = prompt.lower()
@@ -1248,7 +1371,7 @@ class KitchenService:
         if 'material' in changes:
             changes['material'] = {**spec.common.material, **changes['material']}
         after = [{'op': 'common', 'changes': changes}] if changes else []
-        plan = run_line.plan_on_line(spec, line, built['modules'], after=after, system=system)
+        plan = run_line.plan_on_line(spec, line, cabinet_run.fit_levels(built['modules'], spec, catalog), after=after, system=system)
         made = sorted({m['type'] for m in built['modules']})
         explicit = 'backWallLength' in color.model_fields_set
         kept = [n for n in notes if explicit or words.key_of(n) != intent.NO_LENGTH]          # the "no length given, 3000 mm" note does not apply: the edge sets it

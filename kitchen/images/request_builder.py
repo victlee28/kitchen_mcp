@@ -145,7 +145,7 @@ class RequestBuilder(Component):
             req["tasks"] = recs
             req["referenceImage"] = ref_info
             req["maskPixels"] = int(union.sum())
-            req["globalPrompt"] = prompts.global_prompt(cur, self.env.catalog())
+            req["globalPrompt"] = prompts.global_prompt(cur, self.env.catalog(), self._seen(d))
             req["targetLayer"] = first["targetLayer"] + (f" +{len(recs) - 1}" if len(recs) > 1 else "")
             # Keep the single-task prompt field for request consumers.
             req["prompt"] = first.get("prompt", "") if len(recs) == 1 else "; ".join(f"[{k + 1}] {r.get('prompt', '')}" for k, r in enumerate(recs))
@@ -153,9 +153,10 @@ class RequestBuilder(Component):
             req["targetParts"] = [p for r in recs for p in r.get("targetParts", [])]
             req["scope"] = "; ".join(r.get("scope", "") for r in recs if r.get("scope")) or None
         else:
-            req["globalPrompt"] = prompts.global_prompt(spec, self.env.catalog())
-            req["photoImage"] = prompts.full(spec, lighting, self.env.catalog())
-            req["prompt"] = " ".join(x for x in (prompts.global_prompt(spec, self.env.catalog()), prompts.full(spec, lighting, self.env.catalog()), instruction.strip()) if x)
+            seen = self._seen(d)        # the prompt tells of what this view shows, not the whole design
+            req["globalPrompt"] = prompts.global_prompt(spec, self.env.catalog(), seen)
+            req["photoImage"] = prompts.full(spec, lighting, self.env.catalog(), seen)
+            req["prompt"] = " ".join(x for x in (req["globalPrompt"], req["photoImage"], instruction.strip()) if x)
         self._attach_style(jdir, req, new, (W, H))
         (jdir / "job.json").write_text(json.dumps({"id": jid, **req}, ensure_ascii=False, indent=2), encoding="utf-8")
         return req
@@ -175,6 +176,16 @@ class RequestBuilder(Component):
         img, _ = imaging.load_rgb(Path(job["result"]["dir"]) / "composite.png", size)
         Image.fromarray(img).save(jdir / "style_reference.png")
         req["styleReference"] = src
+
+    @staticmethod
+    def _seen(view_dir: Path) -> "prompts.Seen | None":
+        """What the rendered view in ``view_dir`` shows (its ``instances.json``), for its prompt; None when it was not written."""
+        f = view_dir / "instances.json"
+        if not f.exists():
+            return None
+        cam = view_dir / "camera.json"
+        return prompts.seen_in(json.loads(f.read_text(encoding="utf-8")),
+                               camera=json.loads(cam.read_text(encoding="utf-8")) if cam.exists() else None)
 
     @staticmethod
     def _others(cat: list[dict[str, Any]], visible: set[str], ids: list[str], type: str) -> int:
@@ -231,7 +242,7 @@ class RequestBuilder(Component):
         Image.fromarray(imaging.mark_regions(ref, [(m, ZONE_COLORS[0][1], "1")], gap=GROW_PX + 2)).save(jdir / "reference_marked.png")
         en = "; ".join(x["en"] for x in desc)
         vi = "; ".join(x["vi"] for x in desc)
-        common = prompts.global_prompt(nxt, self.env.catalog())
+        common = prompts.global_prompt(nxt, self.env.catalog(), self._seen(nd))
         task: Task = {"targetLayer": "geometry_edit", "name": vi, "roleEn": en, "position": describe_position(m), "instruction": instruction, "material": None,
                       "operation": tt, "targetParts": info["part"], "maskPixels": int(m.sum()),
                       "prompt": ", ".join(x for x in (en, instruction, common) if x)}

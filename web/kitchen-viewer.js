@@ -26,7 +26,10 @@ export function createViewer(opts) {
   if ('environmentIntensity' in scene3) scene3.environmentIntensity = 0.5;
   renderer.shadowMap.enabled = true;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  const camera = new THREE.PerspectiveCamera(50, 1, 0.05, 100);
+  // two cameras: perspective for the eye-level and overview views, orthographic for the plan (to scale); `camera` is the one in use
+  const persp = new THREE.PerspectiveCamera(50, 1, 0.05, 100);
+  const ortho = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.05, 100);
+  let camera = persp; let orthoHeight = 0;
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
   const root = new THREE.Group(); scene3.add(root);
@@ -37,10 +40,17 @@ export function createViewer(opts) {
   let size = { w: 1, h: 1 };
   function resize() {
     const w = container.clientWidth, h = container.clientHeight; size = { w: Math.max(w, 1), h: Math.max(h, 1) };
-    renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+    renderer.setSize(w, h, false); persp.aspect = w / h; persp.updateProjectionMatrix();
+    if (orthoHeight) frameOrtho();
+  }
+  // the orthographic camera shows `orthoHeight` from top to bottom and as much across as the canvas is wide (zoom stays the orbit's)
+  function frameOrtho() {
+    const half = orthoHeight / 2, a = size.w / size.h;
+    Object.assign(ortho, { left: -half * a, right: half * a, top: half, bottom: -half }); ortho.updateProjectionMatrix();
   }
   // two-point perspective: after the orbit controls aim the camera, an eye-level view is levelled and its picture shifted (two-point.js)
   function levelCamera() {
+    if (camera !== persp) return;
     const p = camera.position, t = controls.target;
     const tp = twoPoint([p.x, p.y, p.z], [t.x, t.y, t.z], camera.fov, size.h);
     if (tp) { camera.lookAt(...tp.look); camera.setViewOffset(size.w, size.h, 0, tp.offsetY, size.w, size.h); } else if (camera.view?.enabled) camera.clearViewOffset();
@@ -286,7 +296,11 @@ export function createViewer(opts) {
       // the document's camera is in the frame the scene is drawn in (an imported floorplan moves the kitchen into its room); the view's own numbers
       // are in the kitchen frame and only stand in when the document has no such camera
       const c = docCams[`CAM-${key}`];
-      camera.position.set(...(c ? c.position : v.position)); camera.fov = c ? c.fov : v.verticalFov; camera.updateProjectionMatrix();
+      const oh = c ? c.orthoHeight : v.orthoHeight;         // the plan: orthographic
+      if (oh) { camera = ortho; orthoHeight = oh; ortho.zoom = 1; frameOrtho(); } else { camera = persp; orthoHeight = 0; persp.fov = c ? c.fov : v.verticalFov; }
+      if (persp.view?.enabled && camera !== persp) persp.clearViewOffset();
+      controls.object = camera;
+      camera.position.set(...(c ? c.position : v.position)); camera.updateProjectionMatrix();
       controls.target.set(...(c ? c.target : v.lookAt)); controls.update();
     },
   };

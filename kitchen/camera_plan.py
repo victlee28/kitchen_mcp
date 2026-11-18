@@ -112,13 +112,17 @@ def blocks(eye: tuple[float, float, float], target: tuple[float, float, float], 
     return False
 
 
+TARGET_ALONG = (-0.47, -0.25, 0.0, 0.25, 0.47)   # where along the front the camera must see it: out to its ends (a solid hiding only an end
+TARGET_UP = (0.05, 0.35, 0.65, 0.95)             # column or the top of the run still spoils the picture), a hair inside so a wall it abuts is not "in the way"
+
+
 def face_targets(face: Face) -> list[tuple[float, float, float]]:
-    """Points on the front of the run (3 along x 3 heights) the camera must see."""
+    """Points on the front of the run the camera must see: a grid out to its ends, floor and top (``TARGET_ALONG`` x ``TARGET_UP``)."""
     ux, uz = face.normal[1], -face.normal[0]            # along the run, to the right of someone facing the doors
     top = max(face.height, 900.0)
     out: list[tuple[float, float, float]] = []
-    for f in (-0.4, 0.0, 0.4):
-        for h in (0.2, 0.55, 0.9):
+    for f in TARGET_ALONG:
+        for h in TARGET_UP:
             out.append((face.center[0] + ux * face.length * f, top * h, face.center[1] + uz * face.length * f))
     return out
 
@@ -273,16 +277,28 @@ def _view(name: str, pos: Pt, look: tuple[float, float, float], fov: float, hide
 
 
 PLAN_MARGIN = 1.08               # room left around the floorplan in the plan and overview views (x the size that just fits)
-OVERVIEW_ELEVATION_MIN = 45.0    # degrees: the overview looks down at least this steeply, so the near walls hide little
 ROOM_TOP = 2700.0                # mm: the least height the overview frames (walls of an imported plan without one)
+PLAN_ABOVE = 1000.0              # mm: the orthographic plan camera stands this far above the highest thing it shows
+
+
+def _rounded_m(p: Sequence[float]) -> tuple[float, float, float]:
+    return (round_half_away(p[0] / 1000, 3), round_half_away(p[1] / 1000, 3), round_half_away(p[2] / 1000, 3))
+
+
+def ortho_plan(view: dict[str, Any], cx: float, cz: float, hx: float, hz: float, top: float) -> dict[str, Any]:
+    """The plan (``ViewAngle`` data, metres): orthographic, straight down on (``cx``, ``cz``), framing ``hx`` x ``hz`` either side
+    (mm, x across the picture, z up it) at the renderer's aspect, from ``PLAN_ABOVE`` over ``top``. Nothing is hidden: a plan shows
+    the tops of walls and columns, as a drawing does."""
+    height = 2.0 * max(hz, hx / ASPECT)
+    return {**view, "position": _rounded_m((cx, top + PLAN_ABOVE, cz + 1.0)), "lookAt": _rounded_m((cx, 0.0, cz)),
+            "orthoHeight": round_half_away(height / 1000, 3), "hide": []}
 
 
 def whole_room(views: dict[str, dict[str, Any]], room: list[Pt], solids: list[Obstacle],
                cabinets: tuple[Sequence[float], Sequence[float]] | None) -> dict[str, dict[str, Any]]:
     """``plan`` and ``overhead`` (``ViewAngle`` data, metres) framed on the whole floorplan: the room outline, its walls and columns,
-    and the cabinets' box ``cabinets`` (min, max; mm). The solids between the camera and the room's floor are hidden. The plan looks
-    straight down from just high enough; the overview looks down at least ``OVERVIEW_ELEVATION_MIN``, from its own heading or one 45°
-    further round if the room fits closer from there, and stands back until the whole room fits."""
+    and the cabinets' box ``cabinets`` (min, max; mm). The plan is orthographic, straight down (``ortho_plan``); the overview is a
+    perspective camera straight down from just high enough for its lens, the solids between it and the room's floor hidden."""
     solid = [ob for ob in solids if ob.kind not in NON_BLOCKING]
     pts = [*room, *(p for ob in solid for p in ob.outline)]
     top = max([ROOM_TOP, *(ob.y1 for ob in solid)])
@@ -296,46 +312,10 @@ def whole_room(views: dict[str, dict[str, Any]], room: list[Pt], solids: list[Ob
     floor = [(x0 + (x1 - x0) * i / 6, 0.0, z0 + (z1 - z0) * j / 6) for i in range(1, 6) for j in range(1, 6)]
     floor = [t for t in floor if point_in_poly((t[0], t[2]), room)] or [(cx, 0.0, cz)]
 
-    def metres(p: Sequence[float]) -> tuple[float, float, float]:
-        return (round_half_away(p[0] / 1000, 3), round_half_away(p[1] / 1000, 3), round_half_away(p[2] / 1000, 3))
-
-    plan = views["plan"]
-    tv = math.tan(math.radians(float(plan["verticalFov"]) / 2))
+    over = views["overhead"]
+    tv = math.tan(math.radians(float(over["verticalFov"]) / 2))
     height = top + max(hz / tv, hx / (tv * ASPECT))       # the picture's height runs along z, its width along x
     eye = (cx, height, cz + 1.0)
-    out: dict[str, dict[str, Any]] = {"plan": {**plan, "position": metres(eye), "lookAt": metres((cx, 0.0, cz)),
-                                               "hide": blockers(eye, floor, solids)}}
-    over = views["overhead"]
-    (px, py, pz), (lx, ly, lz) = over["position"], over["lookAt"]
-    flat = math.hypot(px - lx, pz - lz) or 1.0
-    rise = math.radians(max(OVERVIEW_ELEVATION_MIN, math.degrees(math.atan2(py - ly, flat))))
-    tv = math.tan(math.radians(float(over["verticalFov"]) / 2))
-    look = (cx, top / 3, cz)
-    corners = [(x - cx, y - look[1], z - cz) for x in (cx - hx, cx + hx) for y in (0.0, top) for z in (cz - hz, cz + hz)]
-    start = math.atan2(pz - lz, px - lx)
-    best: tuple[float, float] | None = None
-    for k in range(8):
-        heading = start + k * math.pi / 4
-        dist = _fit_distance(corners, heading, rise, tv)
-        if best is None or dist < best[0] * 0.97:
-            best = (dist, heading)
-    assert best is not None
-    dist, heading = best
-    eye = (look[0] + math.cos(heading) * math.cos(rise) * dist, look[1] + math.sin(rise) * dist,
-           look[2] + math.sin(heading) * math.cos(rise) * dist)
-    out["overhead"] = {**over, "position": metres(eye), "lookAt": metres(look), "hide": blockers(eye, floor, solids)}
-    return out
-
-
-def _fit_distance(corners: list[tuple[float, float, float]], heading: float, rise: float, tan_v: float) -> float:
-    """How far from the look point (along ``heading`` around it, ``rise`` above the horizon) a camera stands so every corner (relative
-    to the look point, mm) is in a picture of vertical half field ``tan_v`` (as a tangent) at the renderer's aspect."""
-    w = (math.cos(heading) * math.cos(rise), math.sin(rise), math.sin(heading) * math.cos(rise))      # towards the camera
-    r = (-math.sin(heading), 0.0, math.cos(heading))                                                   # to the picture's side
-    u = (w[1] * r[2] - w[2] * r[1], w[2] * r[0] - w[0] * r[2], w[0] * r[1] - w[1] * r[0])              # the picture's up
-    tan_h = tan_v * ASPECT
-    need = 0.0
-    for q in corners:
-        depth = sum(a * b for a, b in zip(q, w))
-        need = max(need, depth + abs(sum(a * b for a, b in zip(q, r))) / tan_h, depth + abs(sum(a * b for a, b in zip(q, u))) / tan_v)
-    return need
+    return {"plan": ortho_plan(views["plan"], cx, cz, hx, hz, top),
+            "overhead": {**over, "position": _rounded_m(eye), "lookAt": _rounded_m((cx, 0.0, cz)), "orthoHeight": None,
+                         "hide": blockers(eye, floor, solids)}}

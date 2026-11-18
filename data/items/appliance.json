@@ -830,5 +830,81 @@
   "fits": {
    "nicheFrom": 0
   }
+ },
+ {
+  "id": "painting-120x80",
+  "type": "painting",
+  "name": {
+   "vi": "Tranh treo tường 1200 × 800",
+   "en": "Wall painting 1200 × 800"
+  },
+  "size": {
+   "w": 1200,
+   "d": 30,
+   "h": 800
+  },
+  "mount": "wall",
+  "default": true,
+  "box": {
+   "finish": "painting-frame",
+   "kind": "painting"
+  },
+  "visual": {
+   "finish": "thin wooden frame around a canvas",
+   "features": {
+    "hanging": "flat on the wall"
+   }
+  },
+  "prompt": "framed painting about 1200 by 800 mm hung flat on the wall, thin wooden frame, an abstract canvas in soft colours"
+ },
+ {
+  "id": "painting-90x60",
+  "type": "painting",
+  "name": {
+   "vi": "Tranh treo tường 900 × 600",
+   "en": "Wall painting 900 × 600"
+  },
+  "size": {
+   "w": 900,
+   "d": 30,
+   "h": 600
+  },
+  "mount": "wall",
+  "box": {
+   "finish": "painting-frame",
+   "kind": "painting"
+  },
+  "visual": {
+   "finish": "thin wooden frame around a canvas",
+   "features": {
+    "hanging": "flat on the wall"
+   }
+  },
+  "prompt": "framed painting about 900 by 600 mm hung flat on the wall, thin wooden frame, an abstract canvas in soft colours"
+ },
+ {
+  "id": "painting-150x100",
+  "type": "painting",
+  "name": {
+   "vi": "Tranh treo tường 1500 × 1000",
+   "en": "Wall painting 1500 × 1000"
+  },
+  "size": {
+   "w": 1500,
+   "d": 30,
+   "h": 1000
+  },
+  "mount": "wall",
+  "box": {
+   "finish": "painting-frame",
+   "kind": "painting"
+  },
+  "visual": {
+   "finish": "thin wooden frame around a canvas",
+   "features": {
+    "hanging": "flat on the wall"
+   }
+  },
+  "prompt": "framed painting about 1500 by 1000 mm hung flat on the wall, thin wooden frame, an abstract canvas in soft colours"
  }
 ]

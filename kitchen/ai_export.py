@@ -138,11 +138,16 @@ def build(svc, did: str, rev: int | None = None, views: list[str] | None = None,
         man = json.loads((rd / "manifest.json").read_text(encoding="utf-8")) if (rd / "manifest.json").exists() else {}
         camera = next((c for c in doc["cameras"] if c["id"] == f"CAM-{v}"), None)
         seen = _visible_appliances(rd, facts)
+        # each view's prompt tells of what its picture shows (its instances.json), the package's commonPrompt of the whole design
+        in_view = prompts.seen_in(json.loads((rd / "instances.json").read_text(encoding="utf-8")),
+                                  camera=json.loads((rd / "camera.json").read_text(encoding="utf-8")) if (rd / "camera.json").exists() else None) \
+            if (rd / "instances.json").exists() else None
         v_out.append({
             "id": v, "name": g.name or v, "dimensions": [man.get("width", 1280), man.get("height", 960)],
             "renderKey": man.get("renderKey"), "camera": camera,
             "suggestedInputImages": "beauty" if "beauty" in files else ("albedo" if "albedo" in files else "lines"),
-            "prompt": prompts.gemini_text("gen0", "", part, common, realism=photo_image) + _appliance_text(seen, facts),
+            "prompt": prompts.gemini_text("gen0", "", part, prompts.global_prompt(spec, catalog, in_view) if in_view else common,
+                                          realism=prompts.full(spec, lighting, catalog, in_view) if in_view else photo_image) + _appliance_text(seen, facts),
             "image": files,
             "appliances": seen,
             **({"approvedImage": {k: x for k, x in sync[v].items() if k in ("status", "changed", "approvedJob")}} if v in sync else {}),

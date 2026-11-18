@@ -166,7 +166,7 @@ def saved_type(opening: Opening, type_data: Mapping[str, Any], name: str) -> dic
     return data
 
 
-def _hole_type(element: Mapping[str, Any]) -> tuple[str, str]:
+def hole_type(element: Mapping[str, Any]) -> tuple[str, str]:
     """(kind, type id) of a floorplan opening element drawn without a type: its tag (door / window), a sliding or folding door when its
     label says so ("Cửa trượt", "sliding"), else the kind's default type."""
     from ..lexicon import fold
@@ -194,7 +194,7 @@ def hole_opening(point: Pt | None, axes: Sequence[WallAxis], catalog: Catalog, s
     if element is None or hole is None:
         return None
     axis, center, width = hole
-    kind, type_id = _hole_type(element)
+    kind, type_id = hole_type(element)
     data = get(catalog, type_id)
     elev = as_dict(element.get("elev")) or {}
     drawn = elev.get("height")

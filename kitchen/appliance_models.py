@@ -23,7 +23,13 @@ from . import lexicon
 SIDE = defaults.BUILTIN.side                  # mm: cabinet side panel; a hole must fit between the two (catalog kind defaults)
 WORKTOP_EDGE = defaults.BUILTIN.worktop_edge  # mm: worktop left in front of and behind a hole
 HOOD_SIDE = defaults.BUILTIN.hood_side        # mm: an integrated hood needs this much room each side inside its cabinet
-TYPES = ("cooktop", "sink", "faucet", "hood", "fridge", "oven", "tv")
+TYPES = ("cooktop", "sink", "faucet", "hood", "fridge", "oven", "tv", "painting")
+WALL_HUNG = ("tv", "painting")                # flat things hung on the wall: one may take the other's place (same spot, other type)
+
+
+def swaps(app_type: str, model_type: str) -> bool:
+    """Whether a model of ``model_type`` may take the place of an appliance of ``app_type``: the same type, or two wall-hung types."""
+    return app_type == model_type or (app_type in WALL_HUNG and model_type in WALL_HUNG)
 
 
 def models(catalog: Catalog = builtin.CATALOG) -> dict[str, dict[str, Any]]:
@@ -87,6 +93,8 @@ def dimension_string(m: dict[str, Any]) -> str:
         return f(s["w"], s["h"], s["d"])
     if t in ("oven", "hood"):
         return f(s["w"], s["h"])
+    if t in ("tv", "painting"):                 # hung on the wall: width × height × depth, as tv_system writes it
+        return f(s["w"], s["h"], s["d"])
     if t in ("sink", "cooktop"):
         return f(s["w"], s["d"])
     if t == "faucet":
@@ -133,6 +141,8 @@ def cannot(reason: str) -> bool:
 def fit(spec: KitchenSpec, app: Appliance, m: dict[str, Any], catalog: Catalog = builtin.CATALOG) -> tuple[str, list[Said]]:
     """``(status, reasons)`` for model ``m`` in the place of ``app``: ``ok``, ``bad`` (does not fit), ``check`` (could not be checked, or
     another kind of appliance that changes the cabinets around it: say what happens), ``blocked`` (another kind that cannot go there)."""
+    if m["type"] != app.type and swaps(app.type, m["type"]):
+        return "ok", []                       # a TV for a painting or back: it hangs on the same wall, nothing around it changes
     if m["type"] != app.type:
         return "bad", [said("reason.model-wrong-type", model=m['name'], type=said(f"appliance.type.{m['type']}"), want=said(f"appliance.type.{app.type}"))]
     h = host(spec, app)
@@ -253,18 +263,22 @@ WISHES: tuple[tuple[str, Callable[[dict[str, Any]], bool]], ...] = (       # dic
     ("pull", lambda m: "pull" in m["prompt"]),
     ("side-by-side", lambda m: m.get("box", {}).get("doors") == "sbs"),
     ("microwave", lambda m: m.get("box", {}).get("kind") == "microwave"),
+    ("painting", lambda m: m["type"] == "painting"),
+    ("tv", lambda m: m["type"] == "tv"),
 )
 
 
 def candidates(spec: KitchenSpec, app: Appliance, text: str = "", catalog: Catalog = builtin.CATALOG) -> list[dict[str, Any]]:
-    """The models that could take ``app``'s place, as the popup lists them: same type, filtered by what the sentence asks for (gas / từ,
+    """The models that could take ``app``'s place, as the popup lists them: same type (a TV and a painting stand in for each other when
+    the sentence names the other one), filtered by what the sentence asks for (gas / từ,
     đôi / đơn, đen, granite, rút dây, side-by-side, vi sóng); its current model is left out. Each: ``{id, name, size, cutout, mount, energy,
     status, reasons}``, models that fit first. A sentence that filters everything out gives every model of the type."""
     said = unicodedata.normalize("NFC", (text or "").lower())
     wanted = [test for wish, test in WISHES if lexicon.pattern(f"wish.{wish}", catalog).search(said)]
     now = model_id(app, catalog)
-    same = [m for m in models(catalog).values() if m["type"] == app.type and m["id"] != now]
-    picked = [m for m in same if all(w(m) for w in wanted)] or same
+    same = [m for m in models(catalog).values() if swaps(app.type, m["type"]) and m["id"] != now]
+    own = [m for m in same if m["type"] == app.type]          # another wall-hung type only when the sentence asks for it ("bức tranh")
+    picked = ([m for m in same if all(w(m) for w in wanted)] if wanted else own) or own or same
     out: list[dict[str, Any]] = []
     for m in picked:
         status, reasons = fit(spec, app, m, catalog)
@@ -301,7 +315,7 @@ def where(spec: KitchenSpec, app: Appliance, catalog: Catalog = builtin.CATALOG)
         return f"hidden behind the full-height doors of {h.id} ({h.name or h.type})"
     place = {"cooktop": "built into the worktop above", "sink": "set into the worktop above", "faucet": "on the worktop behind the sink above",
              "hood": "inside the wall cabinet", "fridge": "in the tall cabinet", "oven": "built into the cabinet",
-             "tv": "on the wall above the TV console"}.get(app.type, "in")
+             "tv": "on the wall above the TV console", "painting": "hung on the wall above"}.get(app.type, "in")
     return f"{place} {h.id} ({h.name or h.type})" if h is not None else "at its place in the kitchen"
 
 

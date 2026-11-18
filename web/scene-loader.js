@@ -4,6 +4,18 @@
 // opts.edges=false: không vẽ đường viền; opts.opaqueWalls=true: tường đặc (ảnh chụp), mặc định tường mờ để dễ sửa.
 const SCALE = { mm: 0.001, cm: 0.01, m: 1 };
 
+/**
+ * The three.js camera of a document camera (as buildKitchen returns it): an OrthographicCamera when its projection is orthographic (the
+ * plan: `orthoHeight` scene units from top to bottom, the width by `aspect`), else a PerspectiveCamera of its vertical fov.
+ */
+export function makeCamera(THREE, c, aspect) {
+  if (c.projection === 'orthographic' && c.orthoHeight) {
+    const h = c.orthoHeight / 2;
+    return new THREE.OrthographicCamera(-h * aspect, h * aspect, h, -h, c.near, c.far);
+  }
+  return new THREE.PerspectiveCamera(c.fov, aspect, c.near, c.far);
+}
+
 export function buildKitchen(doc, THREE, opts = {}) {
   const s = SCALE[doc.units || 'mm'];
   if (doc.coordinateSystem?.positionAnchor && doc.coordinateSystem.positionAnchor !== 'bottom_back_left') {
@@ -288,6 +300,7 @@ export function buildKitchen(doc, THREE, opts = {}) {
   const cameras = {};
   for (const c of doc.cameras || []) {
     cameras[c.id] = { name: c.name || c.id, fov: c.fov, near: (c.near || 50) * s, far: (c.far || 50000) * s,
+      projection: c.projection || 'perspective', orthoHeight: c.orthoHeight ? c.orthoHeight * s : null,
       position: [c.position.x * s, c.position.y * s, c.position.z * s], target: [c.target.x * s, c.target.y * s, c.target.z * s],
       up: c.up ? [c.up.x, c.up.y, c.up.z] : [0, 1, 0], hide: c.hide || [] };
   }
@@ -437,6 +450,7 @@ export function applianceDecor(box, dims) {
   if (box.doors === 2) out.push({ kind: 'slot', x: w / 2, y: h * 0.38, z: d + 1, w: w - 20, h: 8, color: 0x2a2a2a });
   if (box.doors === 'sbs') out.push({ kind: 'slot', x: w / 2, y: h / 2, z: d + 1, w: 8, h: h - 20, color: 0x2a2a2a });
   if (box.kind === 'tv') out.push({ kind: 'slot', x: w / 2, y: h / 2, z: d + 1, w: w - 24, h: h - 24, color: 0x0a0d14 });   // the screen inside a thin bezel
+  if (box.kind === 'painting') out.push({ kind: 'slot', x: w / 2, y: h / 2, z: d + 1, w: w - 60, h: h - 60, color: 0xd9cbb0 });   // the canvas inside its frame
   if (box.kind === 'oven' || box.kind === 'microwave') out.push({ kind: 'slot', x: w / 2, y: h * 0.45, z: d + 1, w: w * 0.8, h: h * 0.55, color: 0x050505 });
   return out;
 }

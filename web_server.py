@@ -25,6 +25,7 @@ API:
   GET  /api/catalog-csv/<kind>             {csv}; POST {csv}: ghi từng dòng vào lớp của vai trò
   GET  /api/regions                       khu vực, quốc gia, số mục
   GET  /api/designs/<id>/history         lịch sử
+  POST /api/designs/<id>/auto-place    {"rev"?, "country"?}: tự động đặt cửa và các hệ tủ theo mặt bằng đã nhập (một revision)
   POST /api/designs/<id>/opening-command {"prompt", "point", "structureId"?, "module"?, "baseRev"?}: câu lệnh về cửa đi / cửa sổ ở điểm bấm chuột phải (xem trước), hoặc "lưu vào database" cửa / hệ tủ vừa bấm
   POST /api/designs/<id>/command        {"text", "place"?: {kind, id, part?, point?, structureId?, module?, modules?, surfaces?, title?}, "baseRev"?, "lang"?}: câu lệnh chuột phải gửi vào hộp thư của Claude (KITCHEN_MENU_COMMANDS=inbox); 201 bản ghi lệnh
   GET  /api/model-usage[?day=YYYY-MM-DD]  lời gọi model trong ngày: số lần, token, USD (khi có giá), theo hãng; hạn mức
@@ -295,7 +296,7 @@ class Handler(BaseHTTPRequestHandler):
                 b = self._body()
                 return self._json(201, self._job_out(s.images.regenerate(jid, b.get("seed"))))
             raise ApiError(405, "Phương thức không hỗ trợ")
-        m = re.fullmatch(r"/api/designs/([a-z0-9-]+)(?:/(scene|threejs|validate|history|catalog-updates|openings|ops|revert|render|layers|mask|pick|image-jobs|beauty|base-image|ai-export|floorplan-bind|view-status|regenerate-stale|propose|interpret|recognize|recognize-job|template|layout-template|opening-command|command))?", p)
+        m = re.fullmatch(r"/api/designs/([a-z0-9-]+)(?:/(scene|threejs|validate|history|catalog-updates|openings|ops|revert|render|layers|mask|pick|image-jobs|beauty|base-image|ai-export|floorplan-bind|auto-place|view-status|regenerate-stale|propose|interpret|recognize|recognize-job|template|layout-template|opening-command|command))?", p)
         if not m:
             raise ApiError(404, "Không có endpoint")
         did, sub = m.groups()
@@ -343,6 +344,8 @@ class Handler(BaseHTTPRequestHandler):
             if sub == "regenerate-stale":
                 return self._json(201, s.images.regenerate_stale(did, b.get("views") if isinstance(b.get("views"), list) else None,
                                                                  b.get("backend") or "recolor", b.get("baseRev")))
+            if sub == "auto-place":
+                return self._json(200, s.auto_place(did, b.get("rev"), b.get("country")))
             if sub == "floorplan-bind":
                 be = b.get("backEdge")
                 return self._json(200, s.bind_floorplan(did, int(be) if be is not None else None, float(b.get("offset") or 0), b.get("rev")))

@@ -7,6 +7,7 @@ left wall as -x); the caller maps the object's outline from the room into that f
 from __future__ import annotations
 
 import math
+import re
 from typing import Any
 
 from . import builtin, defaults
@@ -187,14 +188,55 @@ def plan_corner(spec: KitchenSpec, run_a: str, run_b: str, width: float = 900.0,
 SHALLOW = 350.0      # mm: an object this shallow or shallower also sets the depth of wall cabinets and the loft row
 
 
+FRIDGE_BACK_GAP = 30.0   # mm: air behind a fridge standing in a tall cabinet (the cabinet is at least the fridge's depth plus this)
+
+
+def _fridge_depth(m: LaidModule) -> float:
+    """The depth a cabinet needs for the fridge standing in it (its third dimension plus ``FRIDGE_BACK_GAP``); 0 without one."""
+    need = 0.0
+    for a in m.get("appliances") or []:
+        if a.get("type") == "fridge":
+            dims = [float(x.replace(",", ".")) for x in re.findall(r"\d+(?:[.,]\d+)?", str(a.get("dimensions") or ""))]
+            if len(dims) >= 3:
+                need = max(need, dims[2] + FRIDGE_BACK_GAP)
+    return need
+
+
 def fit_depth(modules: list[LaidModule], depth: float) -> list[LaidModule]:
     """The cabinets made as deep as the object they replace: base and tall cabinets always; wall cabinets and the loft row only when the
-    object is ``SHALLOW`` or shallower (otherwise they keep their own depth)."""
+    object is ``SHALLOW`` or shallower (otherwise they keep their own depth). A fridge cabinet is never made shallower than its fridge needs
+    (``_fridge_depth``) nor than it was laid: a 594 mm object does not squeeze a 620 mm fridge."""
     out: list[LaidModule] = []
     for m in modules:
         n = m.copy()
         if not str(m["type"]).startswith("upper") or depth <= SHALLOW:
             n["depth"] = float(depth)
+        if m["type"] == "tall-fridge" or _fridge_depth(m):
+            n["depth"] = max(float(n["depth"]), float(m.get("depth") or 0.0) if m["type"] == "tall-fridge" else 0.0, _fridge_depth(m))
+        out.append(n)
+    return out
+
+
+def fit_levels(modules: list[LaidModule], spec: KitchenSpec, catalog: Catalog = builtin.CATALOG) -> list[LaidModule]:
+    """Kitchen cabinets laid by a template (its own heights) put on the design's levels (``spec.common``, what rule GEO-HEIGHTS checks):
+    base cabinets up to ``baseTop``; wall cabinets from ``upperBottom`` to ``upperTierSplit``, the hood cabinet keeping its height under
+    that top; the loft row from ``upperTierSplit`` to ``cabinetTop``; tall cabinets up to ``cabinetTop``. Others (corner) are left alone."""
+    from .cabinet_types import storey_of
+    c = spec.common
+    out: list[LaidModule] = []
+    for m in modules:
+        n = m.copy()
+        storey = storey_of(str(m["type"]), catalog)
+        if storey == "base":
+            n["y"], n["height"] = 0.0, float(c.baseTop)
+        elif storey == "upper" and m["type"] == "upper-hood":
+            n["y"] = float(c.upperTierSplit) - float(m["height"])
+        elif storey == "upper":
+            n["y"], n["height"] = float(c.upperBottom), float(c.upperTierSplit) - float(c.upperBottom)
+        elif storey == "loft":
+            n["y"], n["height"] = float(c.upperTierSplit), float(c.cabinetTop) - float(c.upperTierSplit)
+        elif storey == "tall":
+            n["height"] = float(c.cabinetTop) - float(m.get("y") or 0.0)
         out.append(n)
     return out
 

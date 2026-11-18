@@ -85,7 +85,7 @@ class TestWorker(unittest.TestCase):
                 windows = [o for o in self.svc.get(self.did)["spec"]["openings"] if o.get("kind") == "window" and not o.get("removed")]
                 self.assertEqual(windows[-1]["sill"], 900.0)
                 self.assertIn("tạo cửa sổ", json.dumps(self.svc.models.transport.bodies[0], ensure_ascii=False))
-                self.assertIn("right-click menu", json.dumps(self.svc.models.transport.bodies[0]), "the catalog's instructions are sent")
+                self.assertIn("# Kitchen design: the command inbox", json.dumps(self.svc.models.transport.bodies[0]), "the kitchen-inbox skill is sent")
 
     def test_only_a_previewed_operation_can_be_saved(self):
         rev = self.svc.get(self.did)["rev"]

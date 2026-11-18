@@ -99,6 +99,8 @@ Use the project's virtual environment when available. The web editor is normally
 
 Project skills live in `.claude/skills/`: `domain-modeling`, `tdd`, `diagnosing-bugs`, `code-review`, `improve-codebase-architecture`, `codebase-design`, `git-guardrails-claude-code`.
 
+App skills ship with the app in `data/skills/` (open Agent Skills format, loaded by `kitchen/skills.py`). `data/skills/kitchen-inbox/SKILL.md` is the procedure for the right-click command inbox: the background worker uses it as instructions (fallback: `prompt-text/inbox-worker`), and MCP agents get it from `list_menu_commands` / `get_inbox_skill`. Change the procedure there, not in tool docstrings.
+
 ### Issue tracker
 
 Issues live on GitHub (`origin`, use the `gh` CLI). See `docs/agents/issue-tracker.md`.

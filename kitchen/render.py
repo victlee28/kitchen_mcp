@@ -57,11 +57,14 @@ def _face_normals(part) -> np.ndarray:
 
 class Camera:
     """A pinhole camera for a view. Eye-level views are two-point perspective (``two_point``): the camera is level and the principal point
-    is moved (``cy``) so the point the view aims at stays in the middle; vertical edges stay vertical."""
+    is moved (``cy``) so the point the view aims at stays in the middle; vertical edges stay vertical.
+    A view with ``orthoHeight`` is orthographic (the plan): parallel rays along the view direction, ``scale`` pixels per metre, so the
+    picture is to scale everywhere; ``focal`` is then that scale and depth is the distance along the view direction."""
     def __init__(self, view: ViewAngle, width: int, height: int):
         self.p = np.array(view.position, float)
         t = np.array(view.lookAt, float)
-        lv = two_point.level(view.position, view.lookAt)
+        self.ortho = view.orthoHeight is not None
+        lv = None if self.ortho else two_point.level(view.position, view.lookAt)
         f = np.array(lv.forward, float) if lv else t - self.p
         f /= np.linalg.norm(f)
         up = np.array([0.0, 1.0, 0.0])
@@ -71,18 +74,46 @@ class Camera:
         u = np.cross(r, f)
         self.f, self.r, self.u = f, r, u
         self.w, self.h = width, height
-        self.focal = (height / 2) / math.tan(math.radians(view.verticalFov) / 2)
+        if self.ortho:
+            self.focal = height / float(view.orthoHeight or 1.0)      # pixels per metre
+        else:
+            self.focal = (height / 2) / math.tan(math.radians(view.verticalFov) / 2)
         self.cx, self.cy = width / 2, height / 2 + (self.focal * lv.shift if lv else 0.0)     # image row of the horizon (two-point)
 
     def to_camera(self, pts: np.ndarray) -> np.ndarray:
         d = pts - self.p
         return np.stack([d @ self.r, d @ self.u, d @ self.f], axis=-1)
 
+    def project(self, P: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Camera-frame points -> (pixel x, pixel y, the value interpolated linearly across a triangle: 1/z in perspective, z in ortho)."""
+        if self.ortho:
+            return self.cx + self.focal * P[:, 0], self.cy - self.focal * P[:, 1], P[:, 2]
+        return self.cx + self.focal * P[:, 0] / P[:, 2], self.cy - self.focal * P[:, 1] / P[:, 2], 1.0 / P[:, 2]
+
+    def depth(self, interpolated: np.ndarray) -> np.ndarray:
+        """The depth of a pixel from the interpolated value of ``project``."""
+        return interpolated if self.ortho else 1.0 / interpolated
+
+    def toward(self, point: np.ndarray) -> np.ndarray:
+        """A vector from a world point towards the camera (back-face test): to the eye, or against the view direction in ortho."""
+        return -self.f if self.ortho else self.p - point
+
+    def unproject(self, px: np.ndarray, py: np.ndarray, z: np.ndarray) -> np.ndarray:
+        """World points (metres) of pixel centres ``px``, ``py`` at depth ``z``."""
+        if self.ortho:
+            xc, yc = (px - self.cx) / self.focal, -(py - self.cy) / self.focal
+        else:
+            xc, yc = (px - self.cx) / self.focal * z, -(py - self.cy) / self.focal * z
+        return self.p + xc[..., None] * self.r + yc[..., None] * self.u + z[..., None] * self.f
+
     def json(self) -> dict:
         R = np.stack([self.r, -self.u, self.f])  # hàng: trục camera (x phải, y xuống, z tới) theo OpenCV
-        return {"width": self.w, "height": self.h, "fx": self.focal, "fy": self.focal, "cx": self.cx, "cy": self.cy,
-                "R_world_to_cam": R.tolist(), "t": (-R @ self.p).tolist(), "position_m": self.p.tolist(),
-                "convention": "OpenCV: x phải, y xuống, z hướng nhìn; toạ độ thế giới tính bằng mét"}
+        out = {"width": self.w, "height": self.h, "fx": self.focal, "fy": self.focal, "cx": self.cx, "cy": self.cy,
+               "R_world_to_cam": R.tolist(), "t": (-R @ self.p).tolist(), "position_m": self.p.tolist(),
+               "convention": "OpenCV: x phải, y xuống, z hướng nhìn; toạ độ thế giới tính bằng mét"}
+        if self.ortho:      # u = cx + fx * x_cam, v = cy + fy * y_cam (no division by z): fx = pixels per metre
+            out["projection"] = "orthographic"
+        return out
 
 
 def _clip_near(poly: list[np.ndarray]) -> list[np.ndarray]:
@@ -115,15 +146,13 @@ def rasterize(scene: Scene, camera: Camera):
         for fi, (idx, normal) in enumerate(_FACES):
             # bỏ mặt quay lưng
             center = corners[list(idx)].mean(0)
-            if np.dot(fnormals[fi], camera.p - center) <= 0:
+            if np.dot(fnormals[fi], camera.toward(center)) <= 0:
                 continue
             poly = _clip_near([cc[i] for i in idx])
             if len(poly) < 3:
                 continue
             P = np.array(poly)
-            sx = camera.cx + camera.focal * P[:, 0] / P[:, 2]
-            sy = camera.cy - camera.focal * P[:, 1] / P[:, 2]
-            iz = 1.0 / P[:, 2]
+            sx, sy, iz = camera.project(P)
             for t in range(1, len(P) - 1):
                 tri = [0, t, t + 1]
                 x0, x1 = int(max(0, math.floor(sx[tri].min()))), int(min(W, math.ceil(sx[tri].max()) + 1))
@@ -141,7 +170,7 @@ def rasterize(scene: Scene, camera: Camera):
                 inside = (w0 >= -1e-9) & (w1 >= -1e-9) & (w2 >= -1e-9)
                 if not inside.any():
                     continue
-                z = 1.0 / (w0 * iz[tri[0]] + w1 * iz[tri[1]] + w2 * iz[tri[2]])
+                z = camera.depth(w0 * iz[tri[0]] + w1 * iz[tri[1]] + w2 * iz[tri[2]])
                 zb = zbuf[y0:y1, x0:x1]
                 win = inside & (z < zb - 1e-7)
                 zb[win] = z[win]
@@ -160,15 +189,13 @@ def rasterize(scene: Scene, camera: Camera):
             if ln < 1e-12:
                 continue
             n = n / ln
-            if np.dot(n, camera.p - tri_w.mean(0)) < 0:
+            if np.dot(n, camera.toward(tri_w.mean(0))) < 0:
                 n = -n  # pháp tuyến hướng về camera
             poly = _clip_near([VC[a], VC[b], VC[c]])
             if len(poly) < 3:
                 continue
             P = np.array(poly)
-            sx = camera.cx + camera.focal * P[:, 0] / P[:, 2]
-            sy = camera.cy - camera.focal * P[:, 1] / P[:, 2]
-            iz = 1.0 / P[:, 2]
+            sx, sy, iz = camera.project(P)
             group = _face_group(f_idx, nprof, len(mesh.faces))
             for t in range(1, len(P) - 1):
                 tri = [0, t, t + 1]
@@ -187,7 +214,7 @@ def rasterize(scene: Scene, camera: Camera):
                 inside = (w0 >= -1e-9) & (w1 >= -1e-9) & (w2 >= -1e-9)
                 if not inside.any():
                     continue
-                z = 1.0 / (w0 * iz[tri[0]] + w1 * iz[tri[1]] + w2 * iz[tri[2]])
+                z = camera.depth(w0 * iz[tri[0]] + w1 * iz[tri[1]] + w2 * iz[tri[2]])
                 zb = zbuf[y0:y1, x0:x1]
                 win = inside & (z < zb - 1e-7)
                 zb[win] = z[win]
@@ -250,7 +277,7 @@ def scene_hash(scene: Scene) -> str:
 
 
 def render_key(scene: Scene, view: ViewAngle, width: int, height: int) -> str:
-    v = json.dumps(view.model_dump(mode="json"), sort_keys=True)
+    v = json.dumps(view.model_dump(mode="json", exclude={"orthoHeight"} if view.orthoHeight is None else None), sort_keys=True)
     return hashlib.sha256(f"{scene_hash(scene)}|{v}|{width}x{height}|{two_point.PROJECTION}".encode()).hexdigest()[:16]
 
 
@@ -405,9 +432,7 @@ def render_view(scene: Scene, view: ViewAngle, out_dir: Path, width: int = 1280,
     if wall_face_refs:                          # each wall face its own instance (layer): "<wall part>#<face>", with the face's id
         ys0, xs0 = np.mgrid[0:height, 0:width]
         zc = np.where(hit, zbuf, 0.0)
-        xc = (xs0 + 0.5 - camera.cx) / camera.focal * zc
-        yc = -(ys0 + 0.5 - camera.cy) / camera.focal * zc
-        world = (camera.p + xc[..., None] * camera.r + yc[..., None] * camera.u + zc[..., None] * camera.f) * 1000
+        world = camera.unproject(xs0 + 0.5, ys0 + 0.5, zc) * 1000
         ipid, split = _split_faces(pid, hit, nw, world, all_parts, wall_face_refs)
     if len(all_parts) + len(split) >= 65535:
         raise InvalidInput("Too many parts for a 16-bit instance image", code="too-many-parts")
@@ -466,7 +491,7 @@ def part_colors(spec: KitchenSpec, scene: Scene) -> list[tuple[int, int, int]]:
             out.append(_hex_rgb_part(p))
             continue
         _, name = layers.material_slot(spec, p.module, p.type)
-        c = vocab.color(name) if p.type not in ("sink", "cooktop", "oven", "glass-door", "plinth", "fridge", "faucet", "hood") else None
+        c = vocab.color(name) if p.type not in ("sink", "cooktop", "oven", "glass-door", "plinth", "fridge", "faucet", "hood", "painting") else None
         out.append(vocab.hex_rgb(c) if c else _hex_rgb_part(p))
     return out
 

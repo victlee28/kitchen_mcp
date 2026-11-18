@@ -558,6 +558,97 @@
      }
     }
    }
+  },
+  "autoPlace": {
+   "type": "object",
+   "additionalProperties": false,
+   "x-label": {
+    "vi": "Tự động đặt tủ và cửa theo mặt bằng",
+    "en": "Auto place cabinets and doors from the floorplan"
+   },
+   "properties": {
+    "cabinetTags": {
+     "type": "array",
+     "items": {
+      "type": "string",
+      "minLength": 1
+     },
+     "x-label": {
+      "vi": "Nhãn (tag) được coi là tủ",
+      "en": "Tags that mean a cabinet"
+     }
+    },
+    "kitchenTags": {
+     "type": "array",
+     "items": {
+      "type": "string",
+      "minLength": 1
+     },
+     "x-label": {
+      "vi": "Nhãn tủ bếp",
+      "en": "Tags of a kitchen"
+     }
+    },
+    "tvTags": {
+     "type": "array",
+     "items": {
+      "type": "string",
+      "minLength": 1
+     },
+     "x-label": {
+      "vi": "Nhãn tủ tivi",
+      "en": "Tags of a TV unit"
+     }
+    },
+    "unitTags": {
+     "type": "object",
+     "additionalProperties": {
+      "type": "string",
+      "minLength": 1
+     },
+     "x-label": {
+      "vi": "Nhãn → mẫu tủ (unit-layout)",
+      "en": "Tag → unit layout"
+     }
+    },
+    "kitchenWords": {
+     "type": "array",
+     "items": {
+      "type": "string",
+      "minLength": 1
+     },
+     "x-label": {
+      "vi": "Từ trong tên cho biết là tủ bếp (không dấu)",
+      "en": "Words of a name that mean a kitchen"
+     }
+    },
+    "kitchenMinDepth": {
+     "type": "number",
+     "minimum": 0,
+     "maximum": 2000,
+     "x-label": {
+      "vi": "Sâu từ mức này: tủ dưới (mm)",
+      "en": "From this depth: base cabinets (mm)"
+     }
+    },
+    "unitMinDepth": {
+     "type": "number",
+     "minimum": 0,
+     "maximum": 2000,
+     "x-label": {
+      "vi": "Sâu từ mức này: tủ thấp, nông hơn bỏ qua (mm)",
+      "en": "From this depth: low unit; shallower is skipped (mm)"
+     }
+    },
+    "shallowUnit": {
+     "type": "string",
+     "minLength": 1,
+     "x-label": {
+      "vi": "Mẫu tủ cho vật nông",
+      "en": "Unit layout of a shallow object"
+     }
+    }
+   }
   }
  }
 }

@@ -96,8 +96,33 @@ def _color(f: str, catalog: Catalog) -> str | None:
     rows += [(r[2], r[0], True) for r in vocab.woods(catalog) if len(r) > 2 and r[2]] + [(r[2], r[0], False) for r in vocab.colors(catalog) if len(r) > 2 and r[2]]
     for word, name, wood in sorted(rows, key=lambda t: -len(t[0])):
         if _has(f, fold(word)):
+            if not wood and any(_has(f, f"{w} {fold(word)}") for w, _ in _words("edit-wood", catalog)):
+                wood = True                       # "gỗ vàng": a wood of that colour, not a paint
             return say("material.wood-named", wood=name) if wood else (name[:1].upper() + name[1:])
     return None
+
+
+def _solid_doors(spec: KitchenSpec, f: str, targets: list[str], catalog: Catalog) -> tuple[dict[str, Any], Said] | None:
+    """"cánh gỗ" / "cánh đặc": glass fronts of the targets made solid (a glass-door type becomes its plain type, a glass door style
+    becomes flat), with the material the clause names. None when no target has glass, so the clause reads on as a colour."""
+    color = _color(f, catalog)
+    ops: list[dict[str, Any]] = []
+    for m in spec.module:
+        if m.id not in targets:
+            continue
+        change: dict[str, Any] = {}
+        if m.type.endswith("-glass"):
+            change["type"] = m.type[:-len("-glass")]
+        if m.doorStyle == "glass":
+            change["doorStyle"] = "flat"
+        if change and color:
+            change["material"] = color
+        if change:
+            ops.append({"op": "update", "id": m.id, "changes": change})
+    if not ops:
+        return None
+    ids = ", ".join(o["id"] for o in ops)
+    return combine_ops(ops), (said("summary.edit.solid-material", ids=ids, value=color) if color else said("summary.edit.solid", ids=ids))
 
 
 def _storeys_in(f: str, catalog: Catalog) -> tuple[str, ...] | None:
@@ -186,6 +211,15 @@ def _clause(spec: KitchenSpec, f: str, ids: list[str], catalog: Catalog) -> dict
         handle = {**current, **change}
         return {"op": "common", "changes": {"handle": handle}}, said("summary.edit.handle-common", change=change)
     style = _first(f, "edit-door", catalog)
+    if style == "solid" and _says(f, "door", catalog):
+        targets = _pick(spec, ids, storeys)
+        solid = _solid_doors(spec, f, targets, catalog)
+        if solid is not None:
+            return solid
+        if targets and _color(f, catalog) is None:      # the doors are solid already and no material is named: which wood?
+            return _clarify(said("edit.ask.solid-material", ids=", ".join(targets)),
+                            [say("material.wood-named", wood=w[0]) for w in vocab.woods(catalog)[:4]])
+        style = None                              # no glass to make solid: "cánh gỗ sồi" is the colour of the front
     if style and _says(f, "door", catalog):
         targets = _pick(spec, ids, storeys)
         if not targets:
