@@ -279,17 +279,38 @@ test('a cabinet added beside another can take any type of the same storey', () =
 
 test('a pixel of the layered picture opens the same menu target as the 3D view', () => {
   const ids = ['TD1', 'TC2'];
-  assert.deepEqual(imageTarget({ id: 'STRUCT-furniture_021', module: 'STRUCT-furniture_021', type: 'structure-furniture' }, ids), { kind: 'structure', id: 'STRUCT-furniture_021' });
+  assert.deepEqual(imageTarget({ id: 'STRUCT-furniture_021', module: 'STRUCT-furniture_021', type: 'structure-furniture' }, ids), { kind: 'structure', id: 'STRUCT-furniture_021', structureKind: 'furniture' });
   assert.deepEqual(imageTarget({ id: 'TB4-cooktop-1', module: 'TB4', type: 'cooktop' }, ids), { kind: 'appliance', id: 'TB4', applianceType: 'cooktop' });
   assert.deepEqual(imageTarget({ id: 'room-countertop-1', module: null, type: 'countertop' }, ids), { kind: 'part', part: 'countertop', id: 'back' });
   assert.deepEqual(imageTarget({ id: 'TD1-drawer-1', module: 'TD1', type: 'drawer' }, ids), { kind: 'part', part: 'drawer', id: 'TD1' });
   assert.deepEqual(imageTarget({ id: 'TD1-handle-1', module: 'TD1', type: 'handle' }, ids), { kind: 'part', part: 'handle', id: 'TD1' });
   assert.deepEqual(imageTarget({ id: 'TC2-carcass-1', module: 'TC2', type: 'carcass' }, ids), { kind: 'module', id: 'TC2' });
-  assert.deepEqual(imageTarget({ id: 'STRUCT-wall_006#inside', module: 'STRUCT-wall_006', type: 'wall-face', surface: 'wall_006#inside' }, ids),
-    { kind: 'structure', id: 'STRUCT-wall_006', surface: 'wall_006#inside' }, 'a face of a floorplan wall');
+  assert.deepEqual(imageTarget({ id: 'STRUCT-wall_006#inside', module: 'STRUCT-wall_006', type: 'wall-face', surface: 'wall_006#inside', parentType: 'structure-wall' }, ids),
+    { kind: 'structure', id: 'STRUCT-wall_006', structureKind: 'wall', surface: 'wall_006#inside' }, 'a face of a floorplan wall');
   assert.deepEqual(imageTarget({ id: 'room-wall-1-2#inside', module: null, type: 'wall-face', surface: 'WALL-BACK#inside' }, ids),
     { kind: 'surface', id: 'WALL-BACK#inside', surface: 'WALL-BACK#inside' }, 'a face of a default wall');
-  for (const nothing of [{ id: 'room-wall-1-2', module: null, type: 'wall' }, { id: 'OP3-leaf-1', module: 'OP3', type: 'opening-leaf' }, { id: 'TD9-door-1', module: 'TD9', type: 'door' }, null]) {
+  for (const nothing of [{ id: 'room-wall-1-2', module: null, type: 'wall' }, { id: 'TD9-door-1', module: 'TD9', type: 'door' }, null]) {
     assert.equal(imageTarget(nothing, ids), null);
   }
+});
+
+test('the picture gives the point of the plan its pixel lies on: the floor opens the run drawing, the rest carry the point (19/11)', () => {
+  const ids = ['TD1'];
+  const at = { point: { x: 1200.5, z: -340 }, floor: true };
+  assert.deepEqual(imageTarget(null, ids, at), { kind: 'floor', id: 'floor', point: { x: 1200.5, z: -340 } }, 'nothing under the pixel: the floor');
+  assert.deepEqual(imageTarget({ id: 'room-floor-1', module: null, type: 'floor' }, ids, at), { kind: 'floor', id: 'floor', point: { x: 1200.5, z: -340 } });
+  assert.equal(imageTarget(null, ids, { point: null, floor: true }), null, 'a pixel above the horizon meets no floor');
+  assert.equal(imageTarget(null, ids), null);
+  const part = { point: { x: 10, z: 20 }, floor: false };
+  assert.deepEqual(imageTarget({ id: 'STRUCT-furniture_021', module: 'STRUCT-furniture_021', type: 'structure-furniture' }, ids, part),
+    { kind: 'structure', id: 'STRUCT-furniture_021', structureKind: 'furniture', point: { x: 10, z: 20 } }, 'run-i along an object needs its point');
+  assert.deepEqual(imageTarget({ id: 'TD1-door-1', module: 'TD1', type: 'door' }, ids, part), { kind: 'part', part: 'door', id: 'TD1', point: { x: 10, z: 20 } });
+  assert.deepEqual(imageTarget({ id: 'OP3-leaf-1', module: 'OP3', type: 'opening-leaf' }, ids, part), { kind: 'opening', id: 'OP3', point: { x: 10, z: 20 } },
+    'a door the design placed');
+  assert.deepEqual(actionsFor({ kind: 'opening', id: 'OP3' }, {}).map((a) => a.id), ['opening-edit', 'opening-reveal', 'image', 'opening-remove']);
+});
+
+test('a right click on a placed door or window in the 3D view opens its menu', () => {
+  const hits = [{ object: { visible: true, userData: { type: 'opening', openingId: 'OP2', role: 'opening-leaf' } }, point: { x: 1, z: 2 } }];
+  assert.deepEqual(pickTarget(hits, ['TD1']), { kind: 'opening', id: 'OP2', point: { x: 1, z: 2 } });
 });

@@ -300,7 +300,7 @@ def _face_parts(spec: KitchenSpec, scene: Scene, faces: Sequence[FaceRef]) -> li
         for p in parts:
             if face_owner(p, fc):
                 out.append({"id": face_part_id(p.id, fc.face), "variant": "part", "module": p.module, "type": "wall-face",
-                            "semanticClass": "wall", "surface": fc.id, "name": say("layer.surface", surface=fc.id),
+                            "semanticClass": "wall", "surface": fc.id, "room": fc.room, "name": say("layer.surface", surface=fc.id),
                             "material": finishes.get(fc.id), "materialLocked": f"surface:{fc.id}", "storey": None, "parent": p.id,
                             "cabinetSystemId": None, "selectable": True, "allowAppearanceChange": True,
                             "allowGeometryChange": False, "allowPositionChange": False})

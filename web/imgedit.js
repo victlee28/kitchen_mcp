@@ -1,6 +1,6 @@
 // Tab "Sửa ảnh theo lớp": chọn chi tiết trên ảnh (instance mask phía máy chủ), tạo job, so sánh trước/sau, duyệt.
 // Không phụ thuộc three.js: vẫn chạy khi CDN three.js lỗi. Mọi chữ hiển thị qua textContent.
-import { partIndex, shiftGroupId, ctrlIds, toggleIds, layerIdFor, partitionByType, targetFor, partsOf, targetLabel, roleName, selectedModules } from './selection.js';
+import { partIndex, shiftGroupId, ctrlIds, roomFaceIds, toggleIds, layerIdFor, partitionByType, targetFor, partsOf, targetLabel, roleName, selectedModules } from './selection.js';
 import { $, el } from './dom.js';
 import { api, createStatus } from './api-client.js';
 import { styleFromOptions, styleFromValue } from './assist-logic.js';
@@ -248,6 +248,11 @@ $('imgBase').addEventListener('click', (ev) => {
     if (!p.part) return status(tx('ui.khong-co-chi-tiet-o-diem-nay'));
     const idx = partIndex(S.data.layers); const part = idx.get(p.part.id);
     if (!part) return selectLayer(p.layers[0], p.layers);
+    if (shift && part.type === 'wall-face') {   // Shift on a wall face: every face looking into the same room, as in the 3D view
+      const r = roomFaceIds(part, S.data.layers);
+      if (r.alone) status(tx('ui.surface.no-region'), 'warn', { hold: 4000 });
+      return setSel(r.ids, []);
+    }
     if (shift) {  // cả nhóm cùng vai trò, cùng tầng, cùng hệ tủ
       const gid = shiftGroupId(part, S.data.layers); const g = gid && S.data.layers.find((l) => l.id === gid);
       if (!g) throw new Error(tx('ui.khong-co-nhom-cung-loai-de-chon'));
@@ -273,13 +278,17 @@ $('imgBase').addEventListener('contextmenu', (ev) => {
   const at = { x: ev.clientX, y: ev.clientY };
   run(tx('ui.chon-chi-tiet'), async () => {
     const p = await pickAt(x, y);
-    if (!p.part) return status(tx('ui.khong-co-chi-tiet-o-diem-nay'));
-    if (!S.sel.includes(p.part.id)) await selectLayer(p.layers[0], p.layers);      // a right click on the picked parts keeps them
+    if (!p.part && !(p.floor && p.point)) return status(tx('ui.khong-co-chi-tiet-o-diem-nay'));
+    if (!p.part) {      // the floor (or nothing in front of it): the menu that draws a run, at the floor point under the pointer
+      window.dispatchEvent(new CustomEvent('image-context-menu', { detail: { part: null, at, surfaces: [], modules: [], point: p.point, floor: true } }));
+      return;
+    }
+    if (!S.sel.includes(p.part.id) && p.layers.length) await selectLayer(p.layers[0], p.layers);      // a right click on the picked parts keeps them
     // wall faces picked on the picture (one, or several with Ctrl+click): the sentence is about them, as faces lit in the 3D view
     const faceOf = new Map((S.data.layers || []).filter((l) => l.variant === 'part' && l.surface).map((l) => [l.id, l.surface]));
     const surfaces = p.part.surface ? [...new Set(S.sel.map((i) => faceOf.get(i)).filter(Boolean))] : [];
     const modules = selectedModules(S.sel, partIndex(S.data.layers || []));     // several parts picked: the sentence is about all their cabinets
-    window.dispatchEvent(new CustomEvent('image-context-menu', { detail: { part: p.part, at, surfaces, modules } }));
+    window.dispatchEvent(new CustomEvent('image-context-menu', { detail: { part: p.part, at, surfaces, modules, point: p.point, floor: p.floor } }));
   });
 });
 

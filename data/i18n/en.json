@@ -1358,5 +1358,13 @@
  "summary.auto.nothing": "Nothing new to place: the plan's doors and cabinets are built already or cannot be",
  "summary.auto.done": "Placed {placed} elements automatically, skipped {skipped}",
  "ui.auto-place": "Auto place",
- "ui.auto-place-title": "Build the doors, windows and cabinet systems (kitchen, TV, wine...) the imported floorplan draws; with too little information a model is picked by size"
+ "ui.auto-place-title": "Build the doors, windows and cabinet systems (kitchen, TV, wine...) the imported floorplan draws; with too little information a model is picked by size",
+ "ui.opening-menu.title": "{1} {0} · {2}",
+ "ui.opening-menu.edit": "Edit this opening (size, place, type)",
+ "ui.opening-menu.reveal": "Pick the faces inside the hole (finish them on their own)",
+ "ui.opening-menu.image": "Edit the picture of this opening",
+ "ui.opening-menu.remove": "Remove this opening (preview)",
+ "ui.opening-menu.no-reveal": "Opening {0} has no faces inside a wall hole",
+ "ui.opening-menu.placeholder": "E.g. make it a 2-leaf sliding door, 1200 wide — Enter",
+ "ui.opening-menu.not-understood": "Not understood for this opening: name a door type or a size"
 }

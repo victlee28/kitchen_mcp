@@ -1,4 +1,5 @@
 // Context menu on a cabinet module in the 3D view: pick an action, fill a small form, preview what it would change, confirm.
+import { removeOp } from './opening-logic.js';
 // The server decides what a change means (POST .../propose previews, POST .../ops saves); nothing here edits data directly.
 import { el } from './dom.js';
 import { request } from './api-client.js';
@@ -192,6 +193,7 @@ export function createModuleMenu(ctx) {
     const faces = facesForTarget(target, ctx.getState().surfaces);        // wall faces picked before the right click: the sentence is about them
     const title = faces.length ? tx('ui.surface.menu-title', { n: faces.length }) : target.modules?.length > 1 ? tx('ui.selection.menu-title', { n: target.modules.length, ids: target.modules.join(', ') }) : appl ? `${applianceName(appl.type)} ${appl.id}${appl.name ? ` · ${appl.name}` : ''}` : target.kind === 'part' ? (target.part === 'countertop' ? tx('ui.mat-ban-2') : `${partName} · ${target.id}`)
       : target.kind === 'module' ? `Module ${target.id}` : target.kind === 'floor' ? (lineFrom ? tx('ui.san-dang-ve-day-tu') : tx('ui.san-2'))
+        : target.kind === 'opening' ? openingTitle(target.id, spec)
         : tx('ui.thanh-phan-mat-bang', { 0: target.id.replace(/^STRUCT-/, '') });
     box.onkeydown = null;
     lastTitle = title;
@@ -203,7 +205,7 @@ export function createModuleMenu(ctx) {
   // A free sentence about THIS module (a floorplan object has no module: the sentence then covers the whole design) ("đổi sang màu trắng", "rộng 800"): the server reads it, the preview shows the result, nothing is saved before Áp dụng.
   function commandBox(text = '', message = '', choices = []) {
     watchInbox();                      // the user opened the command box: look again if a command of this design still waits
-    const input = el('input', { type: 'text', value: text, placeholder: facesForTarget(target, ctx.getState().surfaces).length ? tx('ui.surface.placeholder') : target.kind === 'floor' ? tx('ui.opening-command-placeholder') : target.kind === 'structure' ? tx('ui.ra-lenh-cho-ca-thiet-ke-enter') : target.kind === 'appliance' ? tx('ui.vd-doi-sang-bep-gas-thay-chau') : tx('ui.ra-lenh-cho-enter', { 0: target.id }), autocomplete: 'off', 'aria-label': tx('ui.cau-lenh-cho-module-nay') });
+    const input = el('input', { type: 'text', value: text, placeholder: facesForTarget(target, ctx.getState().surfaces).length ? tx('ui.surface.placeholder') : target.kind === 'floor' ? tx('ui.opening-command-placeholder') : target.kind === 'structure' ? tx('ui.ra-lenh-cho-ca-thiet-ke-enter') : target.kind === 'appliance' ? tx('ui.vd-doi-sang-bep-gas-thay-chau') : target.kind === 'opening' ? tx('ui.opening-menu.placeholder') : tx('ui.ra-lenh-cho-enter', { 0: target.id }), autocomplete: 'off', 'aria-label': tx('ui.cau-lenh-cho-module-nay') });
     const run = () => {
       if (attached && materialFromPicture(input.value)) {     // "ốp tường bằng vật liệu trong ảnh": Claude looks at the picture
         return inboxMode ? sendToInbox(input.value, attached) : redraw(input.value, tx('ui.command.picture-needs-inbox'));
@@ -248,6 +250,11 @@ export function createModuleMenu(ctx) {
     if (inboxMode) return sendToInbox(text);          // Claude reads and carries out the sentence (command inbox)
     const { id, rev } = ctx.getState();
     if (mentionsReference(text)) return redraw(text, tx('ui.cau-lenh-nhac-toi-anh-tham-chieu'));
+    if (target.kind === 'opening') {                 // a placed door or window: the sentence turns it into another type, size, ...
+      const said = await openingOnServer(text);
+      if (said === 'not-opening') redraw(text, tx('ui.opening-menu.not-understood'));
+      return;
+    }
     const onCabinets = ['module', 'part', 'group'].includes(target.kind);
     if (onCabinets && joinsRuns(text)) return joinOnServer(text);
     const picked = facesForTarget(target, ctx.getState().surfaces);      // selected wall faces: the sentence is about them
@@ -403,11 +410,44 @@ export function createModuleMenu(ctx) {
     fresh.querySelector('input')?.focus();
   }
 
+  // A placed door or window: "Cửa đi OP3 · door-swing-1"
+  function openingTitle(id, spec) {
+    const o = (spec?.openings || []).find((x) => x.id === id);
+    const kind = ['door', 'window', 'passage'].includes(o?.kind) ? o.kind : 'door';
+    return tx('ui.opening-menu.title', { 0: id, 1: tx(`ui.opening.kind.${kind}`), 2: o?.openingType || '' });
+  }
+
+  // "Chọn mặt trong lỗ cửa": the reveal faces of this opening's hole become the picked faces, and the menu is theirs (a finish of their own)
+  function pickReveal() {
+    const id = target.id;
+    const faces = (ctx.getState().doc?.room?.surfaces || []).filter((sf) => sf.opening === id && sf.span).map((sf) => sf.id);
+    if (!faces.length) { close(); return ctx.setStatus(tx('ui.opening-menu.no-reveal', { 0: id }), 'warn'); }
+    target = { kind: 'surface', id: faces[0], surface: faces[0] };
+    ctx.select?.(target, faces);
+    list();
+  }
+
+  // "Xóa cửa này": the removal previewed first, saved on Áp dụng (the hole is filled again)
+  async function removeOpening() {
+    if (busy) return; const { id, rev } = ctx.getState();
+    busy = true; ctx.setStatus(tx('ui.xem-truoc-thay-doi'));
+    try {
+      const { status, data } = await call(`/api/designs/${id}/propose`, { op: removeOp(target.id), baseRev: rev });
+      busy = false;
+      if (status === 409) return stale('opening-remove');
+      if (!data || data.error) return redraw('', data?.error || tx('ui.loi', { 0: status }));
+      showPreview('opening-remove', data);
+    } catch (e) { busy = false; redraw('', e.message); }
+  }
+
   function choose(action) {
     if (action === 'run-i') return runI();
     if (action === 'line-start') { lineFrom = { ...target.point }; close(); return ctx.setStatus(tx('ui.da-dat-diem-dau-cua-day-tu'), 'ok'); }
     if (action === 'line-cancel') { lineFrom = null; close(); return ctx.setStatus(tx('ui.da-bo-day-dang-ve')); }
     if (action === 'line-end') return lineForm();
+    if (action === 'opening-edit') { const id = target.id; close(); window.dispatchEvent(new CustomEvent('opening-edit-request', { detail: { id } })); return; }
+    if (action === 'opening-reveal') return pickReveal();
+    if (action === 'opening-remove') return removeOpening();
     if (action === 'struct-hide') { ctx.structure.hide(); return close(); }
     if (action === 'struct-isolate') { ctx.structure.isolate(); return close(); }
     if (action === 'struct-all') { ctx.structure.showAll(); return close(); }
@@ -636,9 +676,9 @@ export function createModuleMenu(ctx) {
     const lines = [...extra.map((x) => (typeof x === 'string' ? { kind: 'info', text: x } : x)), ...describeProposal(p)];
     const confirm = el('button', { type: 'button', class: p.validation?.introducesErrors ? 'danger' : 'primary', disabled: !p.applicable || p.unchanged,
       onclick: () => apply(action, p) }, p.validation?.introducesErrors ? tx('ui.van-ap-dung') : tx('ui.ap-dung'));
-    const back = ['run-i', 'run-line', 'cmd', 'appliance'].includes(action) ? list : () => form(action);
+    const back = ['run-i', 'run-line', 'cmd', 'appliance', 'opening-remove'].includes(action) ? list : () => form(action);
     box.replaceChildren(header(tx('ui.xem-truoc-2', { 0: action === 'run-line' ? tx('ui.day-tu-moi') : target.group ? groupLabel(target.group) : target.id })), el('ul', { class: 'ctx-preview' }, ...lines.map((l) => el('li', { class: l.kind }, l.text))),
-      el('div', { class: 'row' }, confirm, el('button', { type: 'button', class: 'ghost', onclick: back }, ['run-i', 'run-line', 'cmd', 'appliance'].includes(action) ? tx('ui.quay-lai') : tx('ui.sua-lai')), el('button', { type: 'button', class: 'ghost', onclick: close }, tx('ui.huy'))));
+      el('div', { class: 'row' }, confirm, el('button', { type: 'button', class: 'ghost', onclick: back }, ['run-i', 'run-line', 'cmd', 'appliance', 'opening-remove'].includes(action) ? tx('ui.quay-lai') : tx('ui.sua-lai')), el('button', { type: 'button', class: 'ghost', onclick: close }, tx('ui.huy'))));
     confirm.focus();
   }
 
@@ -648,7 +688,7 @@ export function createModuleMenu(ctx) {
       const { status, data } = await call(`/api/designs/${p.id}/ops`, { op: p.operation, baseRev: p.baseRev, expect: p.opHash });
       busy = false;
       if (status === 409) return stale(action);
-      if (!data || data.error) { ctx.setStatus(data?.error || tx('ui.loi', { 0: status }), 'warn'); return ['cmd', 'appliance'].includes(action) ? list() : form(action, data?.error || tx('ui.loi', { 0: status })); }
+      if (!data || data.error) { ctx.setStatus(data?.error || tx('ui.loi', { 0: status }), 'warn'); return ['cmd', 'appliance', 'opening-remove'].includes(action) ? list() : form(action, data?.error || tx('ui.loi', { 0: status })); }
       if (previewOfJob && previewOfJob === pendingJob) setJob(null);
       previewOfJob = null;
       if (action === 'run-line') lineFrom = null;
@@ -658,7 +698,7 @@ export function createModuleMenu(ctx) {
         ctx.imageEdit({ layer: applianceLayer(swapped.id, swapped.type), module: swapped.id, material: '',     // not a material: the model goes in the request
           instruction: swapped.facts?.prompt || '', mode: 'quick', preview: true });
       }
-    } catch (e) { busy = false; if (['cmd', 'appliance'].includes(action)) ctx.setStatus(e.message, 'warn'); else form(action, e.message); }
+    } catch (e) { busy = false; if (['cmd', 'appliance', 'opening-remove'].includes(action)) ctx.setStatus(e.message, 'warn'); else form(action, e.message); }
   }
 
   function stale(action) {
@@ -669,9 +709,9 @@ export function createModuleMenu(ctx) {
 
   // a right click on the layered picture (image tab): the same menu, on what the picture shows there
   window.addEventListener('image-context-menu', (ev) => {
-    const { part, at, surfaces, modules } = ev.detail || {};
+    const { part, at, surfaces, modules, point, floor } = ev.detail || {};
     const { spec } = ctx.getState();
-    const t = withSelection(imageTarget(part, spec ? spec.module.map((m) => m.id) : []), modules);
+    const t = withSelection(imageTarget(part, spec ? spec.module.map((m) => m.id) : [], { point, floor }), modules);
     if (!t || !at) { close(); ctx.setStatus(tx('ui.image-menu.nothing'), 'warn'); return; }
     ctx.select?.(t, Array.isArray(surfaces) ? surfaces : []);
     api.open(t, at.x, at.y);

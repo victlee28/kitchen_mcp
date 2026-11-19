@@ -292,10 +292,40 @@ class FaceColor:
     structure: str | None        # floorplan wall: the structure id its meshes carry as ``module``
     normal: tuple[float, float, float]
     rgb: tuple[int, int, int]
+    span: tuple[float, float, float, float, float, float, float, float, float] | None = None     # a reveal (FaceRef.span)
 
 
 FACE_NORMAL_COS = 0.95
-INSTANCE_FORMAT = 2           # 2: each wall face is an instance of its own; a render of an older format is redone (same renderKey)
+INSTANCE_FORMAT = 3           # 2: each wall face is an instance of its own; 3: the reveals of openings too. An older render is redone (same renderKey)
+REVEAL_EPS_MM = 5.0           # a reveal's box is grown this much when its pixels are looked for
+REVEAL_SIDE_COS = 0.5         # a reveal pixel's normal is across the wall's (jamb, head, sill), never along it
+
+
+def _span_kitchen(sf: dict[str, Any], ctx: Any) -> tuple[float, float, float, float, float, float, float, float, float] | None:
+    """A reveal's box (``sf["span"]``, document frame) in the render's kitchen frame; None for a face that is not a reveal."""
+    sp = sf.get("span")
+    if not isinstance(sp, dict):
+        return None
+    try:
+        (sx, sz), (dx, dz) = [float(v) for v in sp["start"]][:2], [float(v) for v in sp["dir"]][:2]
+        e0, e1, y0, y1, half = (float(sp[k]) for k in ("e0", "e1", "y0", "y1", "half"))
+    except (KeyError, TypeError, ValueError):
+        return None
+    if ctx is not None:
+        a, b = ctx.placement.to_kitchen(0.0, 0.0), ctx.placement.to_kitchen(dx, dz)
+        dx, dz = b[0] - a[0], b[1] - a[1]
+        sx, sz = ctx.placement.to_kitchen(sx, sz)
+    return (sx, sz, dx, dz, e0, e1, y0, y1, half)
+
+
+def _in_span(world: np.ndarray, nw: np.ndarray, span: tuple[float, ...]) -> np.ndarray:
+    """Which of the points (``world``, mm, with normals ``nw``) lie on the reveal of ``span``: inside the hole's box, facing across the wall."""
+    sx, sz, dx, dz, e0, e1, y0, y1, half = span
+    rx, rz = world[..., 0] - sx, world[..., 2] - sz
+    along, across = rx * dx + rz * dz, rx * -dz + rz * dx
+    e = REVEAL_EPS_MM
+    inside = (along > e0 - e) & (along < e1 + e) & (world[..., 1] > y0 - e) & (world[..., 1] < y1 + e) & (np.abs(across) < half + e)
+    return inside & (np.abs(nw[..., 0] * -dz + nw[..., 2] * dx) < REVEAL_SIDE_COS)
 FACE_PLANE_MM = 25.0          # a pixel lies on a wall face when it is this close to the face's plane (an opening's reveal is not)
 
 
@@ -317,13 +347,15 @@ def wall_faces(spec: KitchenSpec, catalog: Catalog = builtin.CATALOG, scene: Sce
         else:
             px, py, pz = (float(v) for v in (list(sf.get("origin") or []) + [0.0, 0.0, 0.0])[:3])
         sid, face = str(sf.get("id")), str(sf.get("face") or "")
+        room = str(sf["room"]) if sf.get("room") else None
+        span = _span_kitchen(sf, ctx)
         if ctx is not None:
             a, b = ctx.placement.to_kitchen(0.0, 0.0), ctx.placement.to_kitchen(nx, nz)
             nx, nz = b[0] - a[0], b[1] - a[1]
             px, pz = ctx.placement.to_kitchen(px, pz)
-            out.append(FaceRef(sid, face, None, str(sf.get("structure") or ""), (nx, ny, nz), (px, py, pz)))
+            out.append(FaceRef(sid, face, None, str(sf.get("structure") or ""), (nx, ny, nz), (px, py, pz), room, span))
         else:
-            out.append(FaceRef(sid, face, str(sf.get("wall") or "").removeprefix("WALL-").lower(), None, (nx, ny, nz), (px, py, pz)))
+            out.append(FaceRef(sid, face, str(sf.get("wall") or "").removeprefix("WALL-").lower(), None, (nx, ny, nz), (px, py, pz), room, span))
     return out
 
 
@@ -334,15 +366,18 @@ def _split_faces(pid: np.ndarray, hit: np.ndarray, nw: np.ndarray, world: np.nda
     out = pid.copy()
     added: list[tuple[int, FaceRef]] = []
     nxt = len(all_parts)
-    for fc in faces:
+    for fc in sorted(faces, key=lambda f: f.span is not None):      # reveals last: a hole's inside is theirs whatever plane it lies near
         own = np.array([face_owner(p, fc) for p in all_parts] + [False], bool)
         n = np.asarray(fc.normal, float)
-        if not own.any() or not np.isfinite(n).all() or float(np.linalg.norm(n)) < 0.5:
+        if not own.any() or (fc.span is None and (not np.isfinite(n).all() or float(np.linalg.norm(n)) < 0.5)):
             continue
         ys, xs = np.nonzero(hit & own[pid])        # only the pixels of the face's wall are tested (the whole image per face was ~2 s)
         if not len(ys):
             continue
-        on = ((nw[ys, xs] @ n) > FACE_NORMAL_COS) & (np.abs((world[ys, xs] - np.asarray(fc.point, float)) @ n) < FACE_PLANE_MM)
+        if fc.span is not None:
+            on = _in_span(world[ys, xs], nw[ys, xs], fc.span)
+        else:
+            on = ((nw[ys, xs] @ n) > FACE_NORMAL_COS) & (np.abs((world[ys, xs] - np.asarray(fc.point, float)) @ n) < FACE_PLANE_MM)
         ys, xs = ys[on], xs[on]
         parts = pid[ys, xs]
         for part in np.unique(parts).tolist():
@@ -354,10 +389,19 @@ def _split_faces(pid: np.ndarray, hit: np.ndarray, nw: np.ndarray, world: np.nda
 
 
 def _paint_faces(alb: np.ndarray, hit: np.ndarray, pid: np.ndarray, nw: np.ndarray, shade: np.ndarray, all_parts: list,
-                 faces: list[FaceColor]) -> None:
-    """Give the pixels of each finished face its colour (the albedo's shading kept): pixels of the face's wall whose normal is the face's."""
-    for fc in faces:
+                 faces: list[FaceColor], world: np.ndarray | None = None) -> None:
+    """Give the pixels of each finished face its colour (the albedo's shading kept): pixels of the face's wall whose normal is the face's;
+    a reveal's: the pixels of its hole's inside (``world``: the pixels' points, mm; reveals are skipped without it). Reveals go last."""
+    for fc in sorted(faces, key=lambda f: f.span is not None):
         own = np.array([face_owner(p, fc) for p in all_parts] + [False], bool)
+        if fc.span is not None:
+            if world is None:
+                continue
+            ys, xs = np.nonzero(hit & own[pid])
+            on = _in_span(world[ys, xs], nw[ys, xs], fc.span)
+            ys, xs = ys[on], xs[on]
+            alb[ys, xs] = np.asarray(fc.rgb, float) * shade[ys, xs][:, None]
+            continue
         n = np.asarray(fc.normal, float)
         mask = hit & own[pid] & ((nw @ n) > FACE_NORMAL_COS)
         alb[mask] = np.asarray(fc.rgb, float) * shade[mask][:, None]
@@ -434,10 +478,12 @@ def render_view(scene: Scene, view: ViewAngle, out_dir: Path, width: int = 1280,
     if mesh_hit.any():
         nw[mesh_hit] = mesh_n[mesh_hit]
     ipid, split = pid, []
-    if wall_face_refs:                          # each wall face its own instance (layer): "<wall part>#<face>", with the face's id
+    world = None
+    if wall_face_refs or any(f.span is not None for f in faces or []):     # the pixels' points (mm): wall faces and reveals are found by them
         ys0, xs0 = np.mgrid[0:height, 0:width]
         zc = np.where(hit, zbuf, 0.0)
         world = camera.unproject(xs0 + 0.5, ys0 + 0.5, zc) * 1000
+    if wall_face_refs and world is not None:    # each wall face its own instance (layer): "<wall part>#<face>", with the face's id
         ipid, split = _split_faces(pid, hit, nw, world, all_parts, wall_face_refs)
     if len(all_parts) + len(split) >= 65535:
         raise InvalidInput("Too many parts for a 16-bit instance image", code="too-many-parts")
@@ -466,7 +512,7 @@ def render_view(scene: Scene, view: ViewAngle, out_dir: Path, width: int = 1280,
     alb = np.full((height, width, 3), 244.0)
     alb[hit] = col[pid[hit]] * shade[hit][:, None]
     if faces:
-        _paint_faces(alb, hit, pid, nw, shade, all_parts, faces)
+        _paint_faces(alb, hit, pid, nw, shade, all_parts, faces, world)
     alb[lines] *= 0.72
     Image.fromarray(alb.clip(0, 255).astype(np.uint8), "RGB").save(out_dir / "albedo.png")
 
@@ -545,12 +591,13 @@ def face_colors(spec: KitchenSpec, catalog: Catalog = builtin.CATALOG, views: di
         rgb = (int(hexc[1:3], 16), int(hexc[3:5], 16), int(hexc[5:7], 16))
         n = [float(v) for v in sf.get("normal") or (0.0, 0.0, 0.0)]
         nx, ny, nz = (n + [0.0, 0.0, 0.0])[:3] if len(n) == 3 else (n[0], 0.0, n[1]) if len(n) == 2 else (0.0, 0.0, 0.0)
+        span = _span_kitchen(sf, ctx)
         if ctx is not None:
             a = ctx.placement.to_kitchen(0.0, 0.0)
             b = ctx.placement.to_kitchen(nx, nz)
             nx, nz = b[0] - a[0], b[1] - a[1]
-            out.append(FaceColor(None, str(sf.get("structure") or ""), (nx, ny, nz), rgb))
+            out.append(FaceColor(None, str(sf.get("structure") or ""), (nx, ny, nz), rgb, span))
         else:
             wall = str(sf.get("wall") or "").removeprefix("WALL-").lower()
-            out.append(FaceColor(wall, None, (nx, ny, nz), rgb))
+            out.append(FaceColor(wall, None, (nx, ny, nz), rgb, span))
     return out

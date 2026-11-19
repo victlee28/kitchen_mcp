@@ -52,3 +52,17 @@ test('a Shift group right-clicked: the clicked cabinet with the group, recorded 
   const place = commandPlace({ kind: 'part', part: 'drawer', id: 'TD16', modules: [...g.modules], group: g }, 'Nhóm');
   assert.deepEqual([place.kind, place.module, place.modules], ['part', 'TD16', ['TD15', 'TD16', 'TD17']]);
 });
+
+// 19/11/2026: Shift+click on a wall face of the picture takes every face looking into the same room, as the 3D view does.
+test('Shift on a wall face of the picture: the faces of its room', async () => {
+  const { roomFaceIds } = await import('../../web/selection.js');
+  const layers = [
+    { id: 'w1#inside', variant: 'part', type: 'wall-face', surface: 'w1#inside', room: 'kitchen' },
+    { id: 'w2#inside', variant: 'part', type: 'wall-face', surface: 'w2#inside', room: 'kitchen' },
+    { id: 'w2#outside', variant: 'part', type: 'wall-face', surface: 'w2#outside', room: 'hall' },
+    { id: 'w1#reveal-op1', variant: 'part', type: 'wall-face', surface: 'w1#reveal-op1', room: null },
+    { id: 'surface:w1#inside', variant: 'group', type: 'wall-face', room: 'kitchen' },
+    { id: 'TD1-door-1', variant: 'part', type: 'door' }];
+  assert.deepEqual(roomFaceIds(layers[0], layers), { ids: ['w1#inside', 'w2#inside'], alone: false });
+  assert.deepEqual(roomFaceIds(layers[3], layers), { ids: ['w1#reveal-op1'], alone: true }, 'a reveal looks into no room');
+});

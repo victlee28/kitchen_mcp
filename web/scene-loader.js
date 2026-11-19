@@ -121,7 +121,7 @@ export function buildKitchen(doc, THREE, opts = {}) {
         mesh.position.set((bx.x0 + sx / 2) * s, (bx.y0 + sy / 2) * s, flip * (bx.z0 + sz / 2) * s);
         mesh.castShadow = mesh.receiveShadow = true;
         mesh.userData = { type: 'opening', openingId: opening.id, role };
-        group.add(mesh);
+        group.add(mesh); pickables.push(mesh);        // a right click on it opens the door's or window's menu
       };
       const leafFrameMaterial = new THREE.MeshStandardMaterial({ color: 0x4a4d50, roughness: 0.45, metalness: 0.35 });
       const handleMaterial = new THREE.MeshStandardMaterial({ color: 0xc8cacc, roughness: 0.3, metalness: 0.8 });
@@ -313,6 +313,14 @@ export function buildKitchen(doc, THREE, opts = {}) {
  * on the wall by its basis (u to the right seen from in front, y up, normal towards the viewer); a top or bottom: the outline at height `y`.
  */
 export function surfaceGeometry(sf, s, THREE) {
+  if (Array.isArray(sf.quads)) {         // the inside of an opening's hole (reveal): its pieces, corners counter-clockwise seen from the hole
+    const pos = [];
+    for (const q of sf.quads) for (const i of [0, 1, 2, 0, 2, 3]) pos.push(q[i][0] * s, q[i][1] * s, q[i][2] * s);
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.computeVertexNormals();
+    return g;
+  }
   if (sf.outline) {
     const shape = new THREE.Shape();
     sf.outline.forEach((p, i) => i ? shape.lineTo(p.x * s, sf.face === 'bottom' ? p.z * s : -p.z * s) : shape.moveTo(p.x * s, sf.face === 'bottom' ? p.z * s : -p.z * s));

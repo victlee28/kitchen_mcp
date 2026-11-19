@@ -48,6 +48,7 @@ export function pickTarget(hits, moduleIds) {
     const face = u.surfaceId && h === hits[0] ? { surface: u.surfaceId } : {};      // the nearest thing is a wall face (schema 1.7 room.surfaces)
     if (u.structureId && h.object.visible !== false) return { kind: 'structure', id: u.structureId, ...(u.kind ? { structureKind: u.kind } : {}), ...face, ...point };   // point: where the ray hit, scene units
     if (face.surface && h.object.visible !== false) return { kind: 'surface', id: u.surfaceId, ...face, ...point };     // a face of a default wall
+    if (u.openingId && h.object.visible !== false) return { kind: 'opening', id: u.openingId, ...point };       // a door or window the design placed
     if (u.appliance) return { kind: 'appliance', id: u.appliance, applianceType: u.role, ...point };     // a hob, sink, tap, hood, fridge or oven
     const part = u.part;   // schema 1.4 partRef: a door, drawer front, handle or countertop run
     if (part?.kind === 'countertop') return { kind: 'part', part: 'countertop', id: part.wall || 'back', ...point };
@@ -59,20 +60,26 @@ export function pickTarget(hits, moduleIds) {
 
 const IMAGE_APPLIANCES = ['cooktop', 'sink', 'faucet', 'hood', 'fridge', 'oven', 'tv', 'painting'];
 /** The menu target of a pixel of the layered image (an instance of the render's instances.json: {id, module, type}), as the 3D view's
- *  right click gives it: a floorplan element, an appliance, a door / drawer front / handle / worktop, or the cabinet; null for what the
- *  menu has nothing for (floor, a room door's own parts). A wall face carries its id (``surface``), as a right click on a lit face in
- *  the 3D view does. No point: the picture has no floor position. */
-export function imageTarget(inst, moduleIds = []) {
-  if (!inst || typeof inst !== 'object') return null;
+ *  right click gives it: a floorplan element, a room opening the design placed (``opening``: a door or a glazed opening), an appliance, a door / drawer front /
+ *  handle / worktop, the cabinet, or the floor. ``at``: what the server's pick says of the pixel: ``point`` (its place on the plan, mm,
+ *  the 3D view's frame) and ``floor`` (the pixel shows the floor or nothing: a run can be drawn there). A wall face carries its id
+ *  (``surface``), as a right click on a lit face in the 3D view does. null for what the menu has nothing for. */
+export function imageTarget(inst, moduleIds = [], at = {}) {
+  const point = at?.point && Number.isFinite(at.point.x) && Number.isFinite(at.point.z) ? { point: { x: at.point.x, z: at.point.z } } : {};
+  if (!inst || typeof inst !== 'object' || inst.type === 'floor') return at?.floor && point.point ? { kind: 'floor', id: 'floor', ...point } : null;
   const m = typeof inst.module === 'string' ? inst.module : '';
-  const face = inst.type === 'wall-face' && typeof inst.surface === 'string' ? { surface: inst.surface } : {};   // a wall face (its own layer)
-  if (m.startsWith('STRUCT-')) return { kind: 'structure', id: m, ...face };
-  if (face.surface) return { kind: 'surface', id: face.surface, ...face };     // a face of a default wall
-  if (IMAGE_APPLIANCES.includes(inst.type) && /^TB\d+$/.test(m)) return { kind: 'appliance', id: m, applianceType: inst.type };
-  if (inst.type === 'countertop') return { kind: 'part', part: 'countertop', id: 'back' };
+  const type = String(inst.type || '');
+  const face = type === 'wall-face' && typeof inst.surface === 'string' ? { surface: inst.surface } : {};   // a wall face (its own layer)
+  const structType = type.startsWith('structure-') ? type : String(inst.parentType || '');
+  const structureKind = structType.startsWith('structure-') ? { structureKind: structType.slice('structure-'.length) } : {};
+  if (m.startsWith('STRUCT-')) return { kind: 'structure', id: m, ...structureKind, ...face, ...point };
+  if (face.surface) return { kind: 'surface', id: face.surface, ...face, ...point };     // a face of a default wall
+  if (type.startsWith('opening-') && m) return { kind: 'opening', id: m, ...point };    // a door or window the design placed (OP…)
+  if (IMAGE_APPLIANCES.includes(type) && /^TB\d+$/.test(m)) return { kind: 'appliance', id: m, applianceType: type, ...point };
+  if (type === 'countertop') return { kind: 'part', part: 'countertop', id: 'back', ...point };
   if (!moduleIds.includes(m)) return null;
-  if (['door', 'drawer', 'handle'].includes(inst.type)) return { kind: 'part', part: inst.type, id: m };
-  return { kind: 'module', id: m };
+  if (['door', 'drawer', 'handle'].includes(type)) return { kind: 'part', part: type, id: m, ...point };
+  return { kind: 'module', id: m, ...point };
 }
 
 /** A cabinet target with the cabinets selected together with it (``modules``, from the image tab's multi-selection): kept only when
@@ -102,6 +109,10 @@ export function actionsFor(target, spec, drawing = null) {
       { id: 'handleVariant', label: tx('ui.doi-kieu-tay-nam') }, { id: 'image', label: tx('ui.sua-anh-cua-module-nay') }, ...runActions(spec?.module?.find((x) => x.id === target.id))];
   }
   if (target.kind === 'appliance') return [];       // an appliance: its title and the command box only ("đổi sang bếp gas", "thay chậu đôi")
+  if (target.kind === 'opening') {                   // a door or window the design placed: the sentence box ("đổi sang cửa trượt") and these
+    return [{ id: 'opening-edit', label: tx('ui.opening-menu.edit') }, { id: 'opening-reveal', label: tx('ui.opening-menu.reveal') },
+      { id: 'image', label: tx('ui.opening-menu.image') }, { id: 'opening-remove', label: tx('ui.opening-menu.remove') }];
+  }
   if (target.kind === 'structure') return [...(target.point ? [{ id: 'run-i', label: target.structureKind === 'furniture' ? tx('ui.thay-vat-nay-bang-day-tu') : tx('ui.tao-day-tu-chu-i-doc-canh') }] : []), { id: 'struct-hide', label: tx('ui.an-thanh-phan-nay') }, { id: 'struct-isolate', label: tx('ui.chi-giu-thanh-phan-nay') }, { id: 'struct-all', label: tx('ui.hien-tat-ca') }];
   const m = spec?.module?.find((x) => x.id === target.id);
   const out = [{ id: 'material', label: tx('ui.doi-vat-lieu-mat-truoc') }, { id: 'doorStyle', label: tx('ui.doi-kieu-canh') }];

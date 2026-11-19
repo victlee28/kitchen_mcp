@@ -51,7 +51,9 @@ Read `text`, `lang` and `place` (`kind`, `id`, `part`, `point` {x, z} in the roo
   run replaced (`runs[].system`, e.g. `furniture_017`). Find the run from the clicked module (`module`, `modules`) or from
   `structureId`; do not compare `place.point` with `runs[].x/z` (room frame vs kitchen frame).
 - **A door, window or passage** (a floorplan opening, a wall, an existing `OPn`), and "lưu vào database / lưu cửa này": `opening_command`
-  with `place` = `{point, structureId, module}` of the command.
+  with `place` = `{point, structureId, module}` of the command. A right click on a door or window the design placed gives
+  `place.kind` = `opening`, `place.id` = `OPn` and a `point` inside it: a new type or size goes through `opening_command` with that point;
+  a move or a removal through `propose_change` (`move-opening`, `update-opening`, `remove-opening` with `id` = `OPn`).
 - **Cabinet changes** (width, doors, handles, colours, worktop, moldings, remove): `interpret_edit`, `scope_modules` = `place.modules`
   when it is there (every cabinet the user selected; change them all, not only `place.id`), else the clicked module. Check that the
   preview's `affectedModules` covers the whole selection; when a cabinet of it cannot take the change, say which in the answer.
@@ -61,6 +63,7 @@ Read `text`, `lang` and `place` (`kind`, `id`, `part`, `point` {x, z} in the roo
   ("thay bằng bức tranh") take each other's place.
 - **Picked wall faces** (`place.surfaces`): `interpret_edit` with `surfaces` = `place.surfaces`, or `propose_change`
   `{"op": "surface-material", "surfaces": [...], "material": "..."}`. Never change the material of every wall when faces were picked.
+  A face `<wall>#reveal-<opening>` is the inside of that opening's hole (jambs, head, sill): it takes its own finish like any face.
 - **A reference picture sent with the sentence** (the record has `attachment`) and a sentence such as
   "ốp tường bằng vật liệu trong ảnh tham chiếu" (clad, paint, tile, a material or colour "in the picture"): take the material from it. Look at it (`get_command_picture`), keep it (`material_sample` → `sample`, `color`), name
   the material in the catalog's Vietnamese words for what you see (e.g. "Đá marble trắng vân xám", "Gỗ óc chó", "Gạch thẻ xanh rêu"), and

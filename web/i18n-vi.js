@@ -1359,5 +1359,13 @@ export default {
  "summary.auto.nothing": "Không có gì mới để đặt: các cửa và tủ của mặt bằng đã có hoặc không đặt được",
  "summary.auto.done": "Đã tự động đặt {placed} thành phần, bỏ qua {skipped}",
  "ui.auto-place": "Tự động đặt",
- "ui.auto-place-title": "Tự động tạo cửa đi, cửa sổ và các hệ tủ (bếp, tivi, rượu...) theo file mặt bằng đã nhập; thiếu thông tin thì chọn mẫu theo kích thước"
+ "ui.auto-place-title": "Tự động tạo cửa đi, cửa sổ và các hệ tủ (bếp, tivi, rượu...) theo file mặt bằng đã nhập; thiếu thông tin thì chọn mẫu theo kích thước",
+ "ui.opening-menu.title": "{1} {0} · {2}",
+ "ui.opening-menu.edit": "Sửa cửa này (kích thước, vị trí, kiểu)",
+ "ui.opening-menu.reveal": "Chọn mặt trong lỗ cửa (để sơn riêng)",
+ "ui.opening-menu.image": "Sửa ảnh của cửa này",
+ "ui.opening-menu.remove": "Xóa cửa này (xem trước)",
+ "ui.opening-menu.no-reveal": "Cửa {0} không có mặt trong lỗ nào trên tường",
+ "ui.opening-menu.placeholder": "VD: đổi sang cửa trượt 2 cánh, rộng 1200 — Enter",
+ "ui.opening-menu.not-understood": "Chưa hiểu câu lệnh cho cửa này: hãy nói kiểu cửa hoặc kích thước"
 };

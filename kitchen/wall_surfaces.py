@@ -7,7 +7,10 @@ revision while the floorplan does not change, whatever the openings cut out of t
 * a four-sided wall (long sides clearly longer than the ends): ``inside`` / ``outside`` when exactly one long side looks into the kitchen
   room, else ``side-a`` (the long side whose outward normal points along +x, or +z) / ``side-b``; ``start`` / ``end`` for the short sides,
   ``start`` lying first along the long sides (towards -x, or -z); ``top``, ``bottom``;
-* any other outline: ``e<k>`` for the side on edge k of the outline as given; ``top``, ``bottom``.
+* any other outline: ``e<k>`` for the side on edge k of the outline as given; ``top``, ``bottom``;
+* ``reveal-<opening>``: the inside of the hole an opening of the design cuts through the wall (its jambs, its head and, above the floor,
+  its sill), one face per hole, so the reveal can be finished on its own. It is drawn as ``quads`` (each four corners facing into the
+  hole) and found in a picture by ``span`` (the hole's box: along the opening's axis, its heights and half the wall's thickness).
 
 ``room``: the room a side looks into: where most of ten points 50 mm in front of it, spread along it, fall; ``None`` when none falls in a
 room (the top, the bottom and the ends of a wall too). Rooms come from the data only, nothing is guessed (plan ``claude/ke-hoach-chon-mat-tuong``).
@@ -43,6 +46,23 @@ class Hole:
     y0: float
     y1: float
     reach: float
+    id: str = ""                    # the opening's id: names its reveal face
+
+
+@dataclass(frozen=True)
+class Span:
+    """The box of a hole (a reveal face): ``s`` from ``e0`` to ``e1`` along the line through ``start`` with unit direction ``dir``, heights
+    ``y0``-``y1``, ``half`` of the wall's thickness on each side of the line."""
+    start: Pt
+    dir: Pt
+    e0: float
+    e1: float
+    y0: float
+    y1: float
+    half: float
+
+    def to_data(self) -> dict[str, Any]:
+        return {"start": list(self.start), "dir": list(self.dir), "e0": self.e0, "e1": self.e1, "y0": self.y0, "y1": self.y1, "half": self.half}
 
 
 @dataclass(frozen=True)
@@ -59,12 +79,17 @@ class Surface:
     outline: tuple[Pt, ...]         # caps only: the floor outline at height origin.y
     holes: tuple[tuple[float, float, float, float], ...]     # sides only: (u0, u1, v0, v1), v up from the bottom of the face
     room: str | None
+    opening: str | None = None      # reveals only: the opening whose hole it lines
+    span: Span | None = None        # reveals only
+    quads: tuple[tuple[Pt3, Pt3, Pt3, Pt3], ...] = ()       # reveals only: each piece, corners counter-clockwise seen from inside the hole
 
     def to_data(self) -> dict[str, Any]:
         out: dict[str, Any] = {"id": self.id, "wall": self.wall, "face": self.face, "normal": list(self.normal), "room": self.room}
         if self.structure:
             out["structure"] = self.structure
-        if self.outline:
+        if self.span is not None:
+            out.update(opening=self.opening, span=self.span.to_data(), quads=[[list(p) for p in q] for q in self.quads])
+        elif self.outline:
             out.update(y=self.origin[1], outline=[{"x": p[0], "z": p[1]} for p in self.outline])
         else:
             out.update(origin=list(self.origin), u=list(self.u), width=self.width, height=self.height,
@@ -82,6 +107,10 @@ class FaceRef:
     structure: str | None
     normal: Pt3
     point: Pt3
+    room: str | None = None
+    span: tuple[float, float, float, float, float, float, float, float, float] | None = None
+    """A reveal: its hole's box (start x, start z, dir x, dir z, e0, e1, y0, y1, half; kitchen frame, mm); the face is then found by
+    that box, not by a plane."""
 
 
 def face_part_id(part_id: str, face: str) -> str:
@@ -204,10 +233,54 @@ def of_wall(wall: str, outline: Sequence[Pt], y0: float, y1: float, rooms: Seque
                            (_r(s["a"][0]), _r(y0), _r(s["a"][1])), (round_half_away(s["u"][0], 6) + 0.0, round_half_away(s["u"][1], 6) + 0.0),
                            _r(s["len"]), _r(y1 - y0), (), _hole_rects(s["a"], s["u"], s["n"], s["len"], y0, y1, holes),
                            None if is_end else s["room"]))
+    for k, h in enumerate(holes):                                # the inside of each hole that cuts a side of this wall
+        if any(_hole_rects(s["a"], s["u"], s["n"], s["len"], y0, y1, [h]) for s in sides):
+            rv = reveal(wall, structure, h, y0, y1, k)
+            if rv is not None:
+                out.append(rv)
     caps = tuple((_r(x), _r(z)) for x, z in poly)
     out.append(Surface(f"{wall}#top", wall, structure, "top", (0.0, 1.0, 0.0), (0.0, _r(y1), 0.0), (1.0, 0.0), 0.0, 0.0, caps, (), None))
     out.append(Surface(f"{wall}#bottom", wall, structure, "bottom", (0.0, -1.0, 0.0), (0.0, _r(y0), 0.0), (1.0, 0.0), 0.0, 0.0, caps, (), None))
     return out
+
+
+def reveal_face(opening_id: str, k: int = 0) -> str:
+    """The face name of a hole's reveal: ``reveal-<opening id>`` (lower case, as surface ids are), ``reveal-<k>`` for a hole with no id."""
+    tail = "".join(c if c.isascii() and c.isalnum() else "-" for c in opening_id.lower())[:13] if opening_id else str(k)
+    return f"reveal-{tail}"
+
+
+def reveal(wall: str, structure: str | None, h: Hole, y0: float, y1: float, k: int = 0) -> Surface | None:
+    """The reveal of hole ``h`` in a wall standing from ``y0`` to ``y1``: its two jambs, its head (below the top of the wall) and its sill
+    (above the bottom), each a quad facing into the hole; None for a hole with no height or width left."""
+    half = max(1.0, h.reach - HOLE_REACH_MM)
+    ya, yb = max(h.y0, y0), min(h.y1, y1)
+    if yb - ya <= 1.0 or h.e1 - h.e0 <= 1.0:
+        return None
+    d, n = h.dir, (-h.dir[1], h.dir[0])
+
+    def at(s: float, c: float, y: float) -> Pt3:
+        return (_r(h.start[0] + d[0] * s + n[0] * c), _r(y), _r(h.start[1] + d[1] * s + n[1] * c))
+
+    def quad(pts: tuple[Pt3, Pt3, Pt3, Pt3], facing: Pt3) -> tuple[Pt3, Pt3, Pt3, Pt3]:
+        a, b, c = pts[0], pts[1], pts[2]
+        e1, e2 = (b[0] - a[0], b[1] - a[1], b[2] - a[2]), (c[0] - a[0], c[1] - a[1], c[2] - a[2])
+        cross = (e1[1] * e2[2] - e1[2] * e2[1], e1[2] * e2[0] - e1[0] * e2[2], e1[0] * e2[1] - e1[1] * e2[0])
+        return pts if sum(x * f for x, f in zip(cross, facing)) >= 0 else (pts[0], pts[3], pts[2], pts[1])
+
+    quads: list[tuple[Pt3, Pt3, Pt3, Pt3]] = []
+    for s_, sign in ((h.e0, 1.0), (h.e1, -1.0)):          # jambs: facing along the axis, into the hole
+        quads.append(quad((at(s_, -half, ya), at(s_, half, ya), at(s_, half, yb), at(s_, -half, yb)), (d[0] * sign, 0.0, d[1] * sign)))
+    if yb < y1 - 1.0:                                     # head: facing down
+        quads.append(quad((at(h.e0, -half, yb), at(h.e1, -half, yb), at(h.e1, half, yb), at(h.e0, half, yb)), (0.0, -1.0, 0.0)))
+    if ya > y0 + 1.0:                                     # sill: facing up
+        quads.append(quad((at(h.e0, -half, ya), at(h.e1, -half, ya), at(h.e1, half, ya), at(h.e0, half, ya)), (0.0, 1.0, 0.0)))
+    face = reveal_face(h.id, k)
+    normal = (round_half_away(n[0], 6) + 0.0, 0.0, round_half_away(n[1], 6) + 0.0)
+    span = Span((_r(h.start[0]), _r(h.start[1])), (round_half_away(d[0], 6) + 0.0, round_half_away(d[1], 6) + 0.0), _r(h.e0), _r(h.e1),
+                _r(ya), _r(yb), _r(half))
+    return Surface(f"{wall}#{face}", wall, structure, face, normal, (0.0, _r(ya), 0.0), (1.0, 0.0), 0.0, 0.0, (), (), None,
+                   h.id or None, span, tuple(quads))
 
 
 def box_outline(start: Pt, end: Pt, inward: Pt, thickness: float) -> list[Pt]:

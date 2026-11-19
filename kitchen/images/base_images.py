@@ -14,7 +14,7 @@ from PIL import Image
 import numpy as np
 import numpy.typing as npt
 
-from .. import geometry, imaging, layers, render
+from .. import geometry, imaging, layers, render, roomctx
 from ..errors import InvalidInput
 from ..jsonview import as_dict
 from .common import Component, VIEW_COLORS
@@ -31,6 +31,7 @@ class _Built:
     views: dict[str, Any]
     faces: list[Any]
     catalogue: list[dict[str, Any]]
+    placement: Any = None           # an imported floorplan: kitchen frame -> its room frame (the 3D view's), else None (the same frame)
 
 
 class BaseImages(Component):
@@ -70,7 +71,11 @@ class BaseImages(Component):
             scene = geometry.compile_spec(spec, dc)
             views = geometry.views_of(spec, dc)
             faces = render.wall_faces(spec, dc, scene, views)    # the same catalog the render's instance image is made with
-            out = _Built(spec, r, dc, scene, views, faces, layers.catalogue(spec, scene, faces))
+            try:
+                ctx = roomctx.for_spec(spec, scene.lsau, scene.lphai) if isinstance(spec.floorplan, dict) else None
+            except ValueError:
+                ctx = None
+            out = _Built(spec, r, dc, scene, views, faces, layers.catalogue(spec, scene, faces), ctx.placement if ctx else None)
             with self._cache_lock:
                 self._cache[key] = out
                 self._cache.move_to_end(key)
@@ -142,14 +147,42 @@ class BaseImages(Component):
         return buf.getvalue()
 
     def pick(self, did: str, view: str, x: int, y: int, rev: int | None = None, radius: int = 0) -> dict[str, Any]:
-        _spec, r, _scene, d, _ = self.ensure_render(did, rev, view)
+        """The part at a pixel and the layers holding it, with ``point``: where the pixel lies on the floor plan ({x, z}, mm, in the frame
+        of the 3D view, as its right click gives it; None when the pixel's ray never meets the floor) and ``floor``: true when the pixel
+        shows the floor or nothing (a run can be drawn there)."""
+        _spec, r, _scene, d, man = self.ensure_render(did, rev, view)
         hit = imaging.pick(d, x, y, max(0, min(int(radius), 24)))
+        point = self.floor_point(did, r, view, d, man, x, y, hit is not None)
+        floor = hit is None or hit.get("type") == "floor"
         if not hit:
-            return {"part": None, "layers": []}
+            return {"part": None, "layers": [], "point": point, "floor": floor}
         cat = self.built(did, r).catalogue
         groups = [g["id"] for g in cat if g["id"] == hit["id"] or hit["id"] in (g.get("component") or [])]
         groups.sort(key=lambda g: not g.startswith("surface:"))      # a wall face: its own layer first
-        return {"part": hit, "layers": groups}
+        return {"part": hit, "layers": groups, "point": point, "floor": floor}
+
+    def floor_point(self, did: str, rev: int, view: str, d: Path, man: dict[str, Any], x: int, y: int, on_part: bool) -> dict[str, float] | None:
+        """The pixel's point on the plan (x, z; mm; the 3D view's frame): where its ray meets what it shows (``depth16.png``), or the floor
+        (y = 0) when it shows nothing. The render's camera is rebuilt from its view, so the point is exact for the picture's own pixels."""
+        b = self.built(did, rev)
+        cam = render.Camera(b.views[view], int(man["width"]), int(man["height"]))
+        px, py = np.array([x + 0.5]), np.array([y + 0.5])
+        z = 0.0
+        if on_part:
+            with Image.open(d / "depth16.png") as im:
+                z = float(np.asarray(im)[y, x]) / 1000.0
+        if z > 0:
+            p = cam.unproject(px, py, np.array([z]))[0]
+        else:
+            a, e = cam.unproject(px, py, np.array([0.0]))[0], cam.unproject(px, py, np.array([1.0]))[0]
+            ray = e - a
+            if ray[1] > -1e-9:          # looking level or up: the ray never meets the floor
+                return None
+            p = a + ray * (-a[1] / ray[1])
+        mx, mz = float(p[0]) * 1000, float(p[2]) * 1000
+        if b.placement is not None:
+            mx, mz = b.placement.to_room(mx, mz)
+        return {"x": round(mx, 1), "z": round(mz, 1)}
 
     def save_beauty(self, did: str, view: str, image: bytes, rev: int | None = None) -> dict[str, Any]:
         """Ảnh render three.js (trình duyệt) -> beauty.png của rev/góc; dùng làm ảnh gốc khi chưa có ảnh AI đã duyệt."""

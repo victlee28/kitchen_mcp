@@ -645,7 +645,7 @@ def design_surfaces(spec: KitchenSpec, scene: Scene, catalog: Catalog = builtin.
         if axis is not None:
             half = axis.thickness_at(o.center) / 2
             holes.append(wall_surfaces.Hole(axis.start, axis.dir, o.center - o.width / 2, o.center + o.width / 2, o.sill, o.sill + o.height,
-                                            half + wall_surfaces.HOLE_REACH_MM))
+                                            half + wall_surfaces.HOLE_REACH_MM, o.id))
 
     def pts(value: Any) -> list[tuple[float, float]]:
         return [(float(p.get("x") or 0.0), float(p.get("z") or 0.0)) for p in (as_dict(q) for q in as_list(value) or []) if p is not None]

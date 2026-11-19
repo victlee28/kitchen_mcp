@@ -89,7 +89,8 @@ def openings_wall_axes(i):
 
 def wall_surfaces_of_wall(i):
     from kitchen import wall_surfaces
-    holes = [wall_surfaces.Hole(tuple(h["start"]), tuple(h["dir"]), h["e0"], h["e1"], h["y0"], h["y1"], h["reach"]) for h in i.get("holes", [])]
+    holes = [wall_surfaces.Hole(tuple(h["start"]), tuple(h["dir"]), h["e0"], h["e1"], h["y0"], h["y1"], h["reach"], h.get("id", ""))
+             for h in i.get("holes", [])]
     rooms = [(r["id"], [tuple(p) for p in r["outline"]]) for r in i.get("rooms", [])]
     return {"surfaces": [s.to_data() for s in wall_surfaces.of_wall(i["wall"], [tuple(p) for p in i["outline"]], i["y0"], i["y1"], rooms,
                                                                      i.get("kitchen"), holes, i.get("structure"))]}

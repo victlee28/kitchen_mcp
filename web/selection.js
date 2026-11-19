@@ -24,6 +24,13 @@ export function shiftGroupId(part, layers = []) {
   return ids.find((id) => layers.some((l) => l.id === id)) || null;
 }
 
+/** Shift+click on a wall face of the picture, as in the 3D view: every face (its parts in this picture) looking into the same room;
+ *  a face that looks into no room selects itself alone (``alone``: say so). ``part``: the clicked layer part ({id, type, room}). */
+export function roomFaceIds(part, layers = []) {
+  if (!part?.room) return { ids: part?.id ? [part.id] : [], alone: true };
+  return { ids: layers.filter((l) => l.variant === 'part' && l.type === 'wall-face' && l.room === part.room).map((l) => l.id), alone: false };
+}
+
 /** Part IDs a Ctrl+click adds or removes. With a handle selected, a door/drawer stands for its own handle(s), and the reverse. */
 export function ctrlIds(selType, part, layers) {
   if (!selType || part.type === selType) return { ids: [part.id] };

@@ -781,7 +781,7 @@
               },
               "face": {
                 "type": "string",
-                "description": "inside | outside | side-a | side-b | start | end | top | bottom | e<k>"
+                "description": "inside | outside | side-a | side-b | start | end | top | bottom | e<k> | reveal-<cửa>"
               },
               "normal": {
                 "type": "array",
@@ -850,6 +850,67 @@
                     "z": {
                       "type": "number"
                     }
+                  }
+                }
+              },
+              "opening": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Mặt trong lỗ cửa (reveal): cửa tạo ra lỗ"
+              },
+              "span": {
+                "type": "object",
+                "description": "Mặt trong lỗ cửa: hộp của lỗ (start + dir: trục cửa trên sàn, e0-e1 dọc trục, y0-y1 cao độ, half: nửa bề dày tường)",
+                "properties": {
+                  "start": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "minItems": 2,
+                    "maxItems": 2
+                  },
+                  "dir": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "minItems": 2,
+                    "maxItems": 2
+                  },
+                  "e0": {
+                    "type": "number"
+                  },
+                  "e1": {
+                    "type": "number"
+                  },
+                  "y0": {
+                    "type": "number"
+                  },
+                  "y1": {
+                    "type": "number"
+                  },
+                  "half": {
+                    "type": "number"
+                  }
+                }
+              },
+              "quads": {
+                "type": "array",
+                "description": "Mặt trong lỗ cửa: từng tấm (hai má, đầu, bậu), 4 góc [x, y, z] ngược chiều kim đồng hồ nhìn từ trong lỗ",
+                "items": {
+                  "type": "array",
+                  "minItems": 4,
+                  "maxItems": 4,
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "minItems": 3,
+                    "maxItems": 3
                   }
                 }
               },

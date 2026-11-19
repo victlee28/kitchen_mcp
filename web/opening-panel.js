@@ -85,5 +85,10 @@ export function createOpeningPanel({ state, api, run, afterChange, showAxes = ()
   }));
   $('opForm').addEventListener('submit', (ev) => { ev.preventDefault(); run(tx('ui.opening.saving'), () => apply(operation())); });
   window.addEventListener('design-opened', () => { current = null; $('opForm').hidden = true; showAxes([]); run(tx('ui.opening.loading'), load); });
+  // "Sửa cửa này" in the right-click menu of a placed door or window (3D view or layered picture): this panel, with that opening in the form
+  window.addEventListener('opening-edit-request', (ev) => {
+    const id = ev.detail?.id; if (!id) return;
+    run(tx('ui.opening.loading'), async () => { await load(); edit(id); $('openingPanel')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); });
+  });
   return { load };
 }
