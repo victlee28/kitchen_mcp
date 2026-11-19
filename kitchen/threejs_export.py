@@ -153,6 +153,22 @@ def _guess_base(text: str, catalog: Catalog) -> dict[str, Any]:
     return dict(_NO_LOOK)
 
 
+SAMPLE_URL = "/api/material-samples/{}"       # the web server's route for a stored reference picture (service.material_sample)
+SAMPLE_TILE_MM = 1000.0                       # one picture covers this many mm of the surface each way
+
+
+def _sampled(mats: list[dict[str, Any]], samples: Mapping[str, Mapping[str, str]]) -> list[dict[str, Any]]:
+    """Materials named after a reference picture (``spec.materialSamples``) get the picture as their texture and its average colour."""
+    for m in mats:
+        s = samples.get(str(m.get("name") or ""))
+        if s and s.get("sample"):
+            m["map"] = SAMPLE_URL.format(s["sample"])
+            m["textureRepeat"] = {"u": 1000.0 / SAMPLE_TILE_MM, "v": 1000.0 / SAMPLE_TILE_MM}
+            if s.get("color"):
+                m["color"] = s["color"]
+    return mats
+
+
 def _surface_materials(surfaces: list[dict[str, Any]], finishes: Mapping[str, str], mats_list: list[dict[str, Any]], catalog: Catalog) -> None:
     """Single wall faces with a finish of their own (``spec.surfaceMaterials``): one material per finish name (``MAT-SURFACE-n``), set
     as the face's ``materialId``."""
@@ -512,8 +528,10 @@ def wall_thickness_limit(wall: Mapping[str, Any]) -> float:
 
 
 def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: list[dict[str, Any]] | None = None,
-           country: str | None = None, created_at: str = UNSET_TIME, catalog: Catalog = builtin.CATALOG) -> dict[str, Any]:
-    """Scene document for ``spec``. Pure: ``created_at`` (ISO-8601 UTC) comes from the caller's clock, never from the wall clock here."""
+           country: str | None = None, created_at: str = UNSET_TIME, catalog: Catalog = builtin.CATALOG,
+           views: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Scene document for ``spec``. Pure: ``created_at`` (ISO-8601 UTC) comes from the caller's clock, never from the wall clock here.
+    ``views``: the camera views when the caller has them already (planning them again costs about a second)."""
     from .rules import default_rows
     from .rules_kb import select
     from .rows_to_runs import as_runs
@@ -713,7 +731,7 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
 
     # camera (gocNhin: m -> mm)
     cameras: list[dict[str, Any]] = []
-    for key, v in views_of(spec, catalog).items():
+    for key, v in (views if views is not None else views_of(spec, catalog)).items():
         pos = [x * 1000 for x in v.position]
         tgt = [x * 1000 for x in v.lookAt]
         d = [b - a for a, b in zip(pos, tgt)]
@@ -763,7 +781,7 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
                                             {"wallId": "WALL-LEFT", "origin": _v(-lsau, 0, 0), "alongAxis": _v(0, 0, 1), "frontAxis": _v(1, 0, 0), "rotationY": 90}],
                              "notes": "Gốc ở góc trong tường sau/tường phải. Anchor = góc dưới-sau-trái nhìn từ phía trước. Hệ cục bộ module: "
                                       "x dọc bề rộng, y lên, z từ hậu ra trước. part/cánh/ngăn kéo theo hệ module; tay nắm theo hệ cánh."},
-        "room": room, "lighting": lighting, "materials": mats_list, "assets": assets, "modules": modules, "appliances": appliances,
+        "room": room, "lighting": lighting, "materials": _sampled(mats_list, spec.materialSamples or {}), "assets": assets, "modules": modules, "appliances": appliances,
         **({"runs": run_docs} if run_docs else {}),
         "accessories": accessories, "decorations": decorations, "cameras": cameras, "constraints": constraints,
         "renderSettings": {"backgroundColor": "#FFFFFF", "exposure": 1.0, "shadows": True, "antialias": True, "toneMapping": "ACESFilmicToneMapping",

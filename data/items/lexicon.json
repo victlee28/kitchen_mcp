@@ -1525,7 +1525,13 @@
   "group": "edit-verb",
   "aliases": {
    "vi": [
-    "cánh"
+    "cánh",
+    "cửa tủ",
+    "cửa gỗ",
+    "cửa kính",
+    "cửa đặc",
+    "cửa khung",
+    "cửa phẳng"
    ],
    "en": [
     "door",
@@ -1772,6 +1778,7 @@
   "group": "edit-wood",
   "aliases": {
    "vi": [
+    "gỗ màu",
     "gỗ"
    ],
    "en": [
@@ -1818,7 +1825,8 @@
   "aliases": {
    "vi": [
     "nút",
-    "núm"
+    "núm",
+    "tròn"
    ],
    "en": [
     "knob",

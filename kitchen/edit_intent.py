@@ -55,7 +55,13 @@ def _verb_words(verb: str, catalog: Catalog) -> tuple[str, ...]:
 
 
 def _has(f: str, word: str) -> bool:
-    return re.search(rf"(?<![a-z0-9]){re.escape(word)}(?![a-z0-9])", f) is not None
+    return _at(f, word) >= 0
+
+
+def _at(f: str, word: str) -> int:
+    """Where the whole word (or phrase) ``word`` first stands in the folded text, -1 when it does not."""
+    hit = re.search(rf"(?<![a-z0-9]){re.escape(word)}(?![a-z0-9])", f)
+    return hit.start() if hit else -1
 
 
 def _ids_in(spec: KitchenSpec, f: str) -> list[str]:
@@ -96,8 +102,9 @@ def _color(f: str, catalog: Catalog) -> str | None:
     rows += [(r[2], r[0], True) for r in vocab.woods(catalog) if len(r) > 2 and r[2]] + [(r[2], r[0], False) for r in vocab.colors(catalog) if len(r) > 2 and r[2]]
     for word, name, wood in sorted(rows, key=lambda t: -len(t[0])):
         if _has(f, fold(word)):
-            if not wood and any(_has(f, f"{w} {fold(word)}") for w, _ in _words("edit-wood", catalog)):
-                wood = True                       # "gỗ vàng": a wood of that colour, not a paint
+            at = _at(f, fold(word))
+            if not wood and any(0 <= _at(f, w) < at for w, _ in _words("edit-wood", catalog)):
+                wood = True                       # "gỗ vàng", "gỗ đặc màu đen": a wood of that colour, not a paint
             return say("material.wood-named", wood=name) if wood else (name[:1].upper() + name[1:])
     return None
 
@@ -178,7 +185,8 @@ def _clause(spec: KitchenSpec, f: str, ids: list[str], catalog: Catalog) -> dict
         found = _item_named(f, "handle", catalog)
         named = found[0] if found else None
         rest = f.replace(found[1], " " * len(found[1])) if found else f      # the item's own name says nothing more (its colour, its length)
-        variant = _first(rest, "edit-handle", catalog)
+        into = _into_at(rest, catalog)          # "đổi tay nắm thành dạng tròn": the kind is what follows "thành" (which folds like "thanh", a bar)
+        variant = _first(rest[into:] if into is not None else rest, "edit-handle", catalog)
         color = _color(rest, catalog)
         length = _mm(rest, _verb_words("length", catalog))
         change: dict[str, Any] = {}

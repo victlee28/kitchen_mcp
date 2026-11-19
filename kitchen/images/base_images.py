@@ -3,8 +3,12 @@ from __future__ import annotations
 
 from typing import Any
 
+from collections import OrderedDict
+from dataclasses import dataclass
 from pathlib import Path
+import hashlib
 import json
+import threading
 
 from PIL import Image
 import numpy as np
@@ -16,30 +20,99 @@ from ..jsonview import as_dict
 from .common import Component, VIEW_COLORS
 
 
+@dataclass(frozen=True)
+class _Built:
+    """What every base-image request of one stored revision needs, computed once: the spec, its catalog, the compiled scene, the
+    camera views (planning them is the slow part: ~1 s), the wall faces and the layer catalogue. Callers must not mutate these."""
+    spec: Any
+    rev: int
+    catalog: Any
+    scene: Any
+    views: dict[str, Any]
+    faces: list[Any]
+    catalogue: list[dict[str, Any]]
+
+
 class BaseImages(Component):
-    def ensure_render(self, did: str, rev: int | None, view: str, width: int | None = None, height: int | None = None):
+    CACHE_SIZE = 8          # revisions kept built (each a few MB at most)
+
+    def __init__(self, env: Any) -> None:
+        super().__init__(env)
+        self._cache: OrderedDict[tuple[Any, ...], _Built] = OrderedDict()
+        self._cache_lock = threading.Lock()
+        self._build_locks: dict[tuple[Any, ...], threading.Lock] = {}    # one build per revision at a time; same for each view's render
+        self._render_locks: dict[tuple[Any, ...], threading.Lock] = {}
+
+    @staticmethod
+    def _lock_of(table: dict[tuple[Any, ...], threading.Lock], guard: threading.Lock, key: tuple[Any, ...]) -> threading.Lock:
+        with guard:
+            return table.setdefault(key, threading.Lock())
+
+    def built(self, did: str, rev: int | None) -> _Built:
+        """The revision built for base-image work, from the cache when the stored spec and the catalog have not changed since.
+        Requests arriving together (a view switch fires layers, masks and picks at once) wait for one build instead of each doing it."""
         spec, r = self.store.get(did, rev)
-        dc = self.env.design_catalog(did, r)          # the catalog this revision is built with (its snapshot)
-        views = geometry.views_of(spec, dc)
+        stamp_of = getattr(self.store, "catalog_stamp", None)
+        stamp = stamp_of() if callable(stamp_of) else None
+        digest = hashlib.sha1(spec.model_dump_json().encode("utf-8")).hexdigest()
+        key = (did, r, stamp, digest)
+        with self._cache_lock:
+            hit = self._cache.get(key)
+            if hit is not None:
+                self._cache.move_to_end(key)
+                return hit
+        with self._lock_of(self._build_locks, self._cache_lock, key):
+            with self._cache_lock:
+                hit = self._cache.get(key)
+                if hit is not None:
+                    return hit
+            dc = self.env.design_catalog(did, r)          # the catalog this revision is built with (its snapshot)
+            scene = geometry.compile_spec(spec, dc)
+            views = geometry.views_of(spec, dc)
+            faces = render.wall_faces(spec, dc, scene, views)    # the same catalog the render's instance image is made with
+            out = _Built(spec, r, dc, scene, views, faces, layers.catalogue(spec, scene, faces))
+            with self._cache_lock:
+                self._cache[key] = out
+                self._cache.move_to_end(key)
+                while len(self._cache) > self.CACHE_SIZE:
+                    old, _ = self._cache.popitem(last=False)
+                    self._build_locks.pop(old, None)
+            return out
+
+    def ensure_render(self, did: str, rev: int | None, view: str, width: int | None = None, height: int | None = None):
+        b = self.built(did, rev)
+        spec, r, dc, scene, views = b.spec.model_copy(deep=True), b.rev, b.catalog, b.scene, b.views    # callers get their own spec, as before
         if view not in views:
             raise InvalidInput(f"No view {view!r}; there are: {', '.join(views)}", code="view-not-found", params={"view": view, "views": ', '.join(views)})
         d = self.view_dir(did, r, view)
         man = d / "manifest.json"
-        scene = geometry.compile_spec(spec, dc)
-        if man.exists():
+
+        def current() -> dict[str, Any] | None:
+            if not man.exists():
+                return None
             m = json.loads(man.read_text(encoding="utf-8"))
             w, h = width or m["width"], height or m["height"]
             if m.get("renderKey") == render.render_key(scene, views[view], w, h) and (d / "instance.png").exists() \
                     and m.get("instanceFormat", 1) >= render.INSTANCE_FORMAT:
-                return spec, r, scene, d, m
+                return m
+            return None
+
+        m = current()
+        if m is not None:
+            return spec, r, scene, d, m
         w, h = width or VIEW_COLORS[0], height or VIEW_COLORS[1]
         if not (256 <= w <= 4096 and 256 <= h <= 4096):
             raise InvalidInput("width/height must be 256-4096", code="bad-image-size")
-        render.render_views(spec, d.parent, [view], w, h, meta={"designId": did, "rev": r}, catalog=dc)
-        return spec, r, scene, d, json.loads(man.read_text(encoding="utf-8"))
+        with self._lock_of(self._render_locks, self._cache_lock, (str(d),)):   # one render of a view at a time; the others reuse it
+            m = current()
+            if m is not None:
+                return spec, r, scene, d, m
+            render.render_views(spec, d.parent, [view], w, h, meta={"designId": did, "rev": r}, catalog=dc, view_angles=views)
+            return spec, r, scene, d, json.loads(man.read_text(encoding="utf-8"))
 
     def layers(self, did: str, view: str, rev: int | None = None, all_layers: bool = False) -> dict[str, Any]:
         spec, r, scene, d, man = self.ensure_render(did, rev, view)
+        cat = self.built(did, r).catalogue
         _, meta = imaging.load_instances(d)
         px: dict[str, int] = {}
         for i in meta["instances"]:           # a wall face's pixels also count for the wall part they were split from
@@ -47,7 +120,7 @@ class BaseImages(Component):
                 if key:
                     px[key] = px.get(key, 0) + int(i["pixels"])
         out: list[dict[str, Any]] = []
-        for x in layers.catalogue(spec, scene, render.wall_faces(spec, scene=scene)):
+        for x in cat:
             ids = x.get("component") or [x["id"]]
             n = sum(px.get(i, 0) for i in ids)
             if n or all_layers:
@@ -62,18 +135,18 @@ class BaseImages(Component):
 
     def mask_png(self, did: str, view: str, layer_id: str, rev: int | None = None) -> bytes:
         import io
-        spec, _r, scene, d, _ = self.ensure_render(did, rev, view)
-        _, ids = layers.resolve(layers.catalogue(spec, scene, render.wall_faces(spec, scene=scene)), layer_id)
+        _spec, r, _scene, d, _ = self.ensure_render(did, rev, view)
+        _, ids = layers.resolve(self.built(did, r).catalogue, layer_id)
         buf = io.BytesIO()
         Image.fromarray(imaging.mask_of(d, ids).astype(np.uint8) * 255, "L").save(buf, "PNG")
         return buf.getvalue()
 
     def pick(self, did: str, view: str, x: int, y: int, rev: int | None = None, radius: int = 0) -> dict[str, Any]:
-        spec, _r, scene, d, _ = self.ensure_render(did, rev, view)
+        _spec, r, _scene, d, _ = self.ensure_render(did, rev, view)
         hit = imaging.pick(d, x, y, max(0, min(int(radius), 24)))
         if not hit:
             return {"part": None, "layers": []}
-        cat = layers.catalogue(spec, scene, render.wall_faces(spec, scene=scene))
+        cat = self.built(did, r).catalogue
         groups = [g["id"] for g in cat if g["id"] == hit["id"] or hit["id"] in (g.get("component") or [])]
         groups.sort(key=lambda g: not g.startswith("surface:"))      # a wall face: its own layer first
         return {"part": hit, "layers": groups}

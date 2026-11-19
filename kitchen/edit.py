@@ -436,6 +436,31 @@ def surface_material(spec: KitchenSpec, surfaces: Any, material: Any) -> Kitchen
     return from_data(KitchenSpec, data)
 
 
+SAMPLE_ID = re.compile(r"^smp-[0-9a-f]{16}$")
+HEX_COLOR = re.compile(r"^#[0-9a-fA-F]{6}$")
+
+
+def material_sample(spec: KitchenSpec, name: Any, sample: Any, color: Any = None) -> KitchenSpec:
+    """{"op": "material-sample", "name": "Đá marble trắng vân xám", "sample": "smp-…", "color"?: "#rrggbb"}: the material ``name`` looks like
+    the stored reference picture ``sample`` (service.material_sample keeps it); ``sample`` null forgets it. Surfaces get the name by the
+    usual operations (surface-material, update material, common material)."""
+    label = str(name).strip() if isinstance(name, str) else ""
+    if not label or len(label) > 120:
+        raise InvalidInput("name must be a material name (120 characters at most)", code="bad-material")
+    data = to_data(_clone(spec))
+    samples: dict[str, Any] = {str(k): v for k, v in (as_dict(data.get("materialSamples")) or {}).items()}
+    if sample is None:
+        samples.pop(label, None)
+    else:
+        if not isinstance(sample, str) or not SAMPLE_ID.fullmatch(sample):
+            raise InvalidInput("sample must be a stored material sample id (smp-<16 hex>)", code="bad-sample")
+        if color is not None and (not isinstance(color, str) or not HEX_COLOR.fullmatch(color)):
+            raise InvalidInput("color must be #rrggbb", code="bad-color")
+        samples[label] = {"sample": sample, **({"color": color.lower()} if isinstance(color, str) else {})}
+    data["materialSamples"] = dict(sorted(samples.items())) or None
+    return from_data(KitchenSpec, data)
+
+
 def update_common(spec: KitchenSpec, changes: dict[str, Any]) -> KitchenSpec:
     s = _clone(spec)
     data = to_data(s)
@@ -549,6 +574,7 @@ def _apply_op(spec: KitchenSpec, op: dict[str, Any], catalog: Catalog = builtin.
     {"op": "set-run-tv", "id": "R1", "layout": "columns" | "shelves" | "full" | null}  — a TV unit run (null: a kitchen run again)
     {"op": "set-run-unit", "id": "R1", "unit": "wine" | "low" | null}  — a furniture unit run (catalog unit-layout; null: a kitchen run again)
     {"op": "update-appliance", "id": "TB4", "model": "hob-gas-2b-75", "changes"?: {...}}  — another model in the same place
+    {"op": "material-sample", "name": "...", "sample": "smp-…", "color"?: "#rrggbb"}  — a material that looks like a reference picture
     {"op": "replace-element", "id": "furniture_003", "replaced": true|false}  — a floorplan element replaced by cabinets (no longer built) / back
     {"op": "stretch-run", "id": "R1", "end": "start"|"end", "delta": mm}  — drag one end; the cabinets at that end take the change
     {"op": "add", "module": {...}, "afterModule": "TD3"} | {"op": "add", "module": {...}, "beforeModule": "TD3"} | {"op": "remove", "id": "TD3"}
@@ -569,6 +595,8 @@ def _apply_op(spec: KitchenSpec, op: dict[str, Any], catalog: Catalog = builtin.
         return _opening_op(spec, kind, op, catalog)
     if kind == "surface-material":
         return surface_material(spec, op.get("surfaces"), op.get("material"))
+    if kind == "material-sample":
+        return material_sample(spec, op.get("name"), op.get("sample"), op.get("color"))
     if kind == "add-run":
         return add_run(spec, op["run"])
     if kind == "move-run":

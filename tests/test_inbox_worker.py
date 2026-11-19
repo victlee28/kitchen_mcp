@@ -159,5 +159,24 @@ class TestWorker(unittest.TestCase):
             self.svc._worker.stop()
 
 
+class TestSelection(unittest.TestCase):
+    """18/11/2026: the user picks several cabinets and right-clicks one: a sentence about them changes them all, not only the clicked one."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+        self.svc = KitchenService(self.tmp / "k.db", self.tmp / "renders")
+        self.did = self.svc.create_from_template(KitchenTemplate.model_validate({"geometry_edit": "I", "backWallLength": 3600}), "t")["id"]
+
+    def test_interpret_without_scope_takes_the_selection(self):
+        from kitchen.inbox_worker import InboxWorker
+        worker = InboxWorker(self.svc)
+        place = {"kind": "part", "part": "drawer", "id": "TD1", "module": "TD1", "modules": ["TD1", "TD3", "TD5"]}
+        out = worker._tool(mc.ToolCall("1", "interpret_edit", {"text": "sửa tay nắm thành tay nắm tròn"}), self.did, place, {}, {})
+        ops = out["operation"]["ops"] if out["operation"]["op"] == "multi" else [out["operation"]]
+        self.assertEqual(sorted(o["id"] for o in ops), ["TD1", "TD3", "TD5"])
+        self.assertTrue(all(o["changes"]["handle"]["variant"] == "knob" for o in ops))
+
+
 if __name__ == "__main__":
     unittest.main()

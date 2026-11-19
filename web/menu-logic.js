@@ -75,6 +75,14 @@ export function imageTarget(inst, moduleIds = []) {
   return { kind: 'module', id: m };
 }
 
+/** A cabinet target with the cabinets selected together with it (``modules``, from the image tab's multi-selection): kept only when
+ *  there are several and the clicked one is among them, so the menu's sentence is about all of them. */
+export function withSelection(target, modules) {
+  if (!target || !['module', 'part'].includes(target.kind) || target.part === 'countertop') return target;
+  const ids = (Array.isArray(modules) ? modules : []).filter((m) => typeof m === 'string');
+  return ids.length > 1 && ids.includes(target.id) ? { ...target, modules: ids.slice(0, 50) } : target;
+}
+
 /** What can be done to the whole run a cabinet stands in (a click on a cabinet usually lands on its door, so doors offer these too). */
 function runActions(m) {
   return m?.run ? [{ id: 'runMove', label: tx('ui.doi-xoay-day', { 0: m.run }) }, { id: 'runStretch', label: tx('ui.keo-dai-thu-ngan-day', { 0: m.run }) }, { id: 'runRemove', label: tx('ui.xoa-ca-day', { 0: m.run }) }] : [];
@@ -431,7 +439,7 @@ export function openingCommand(text, target, spec, doc) {
     width, height, sill: 0, opens: 'in', source: 'human' } };
   const ops = [];
   if (replace) {
-    const moduleIds = target.kind === 'group' ? target.group.modules
+    const moduleIds = target.modules?.length ? target.modules : target.kind === 'group' ? target.group.modules
       : ['module', 'part'].includes(target.kind) ? [target.id] : [];
     const modules = new Set((spec?.module || []).map((module) => module.id));
     if (moduleIds.length && moduleIds.every((id) => modules.has(id))) {

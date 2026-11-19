@@ -41,6 +41,16 @@ Material and finish names are the catalog's Vietnamese names; `interpret_edit` f
 
 `material: null` gives the faces back the wall's own finish.
 
+## A material taken from a reference picture
+
+```json
+{"op": "multi", "ops": [
+ {"op": "material-sample", "name": "Đá marble trắng vân xám", "sample": "smp-0123456789abcdef", "color": "#d9d6d0"},
+ {"op": "surface-material", "surfaces": ["wall_011#inside"], "material": "Đá marble trắng vân xám"}]}
+```
+
+`sample` and `color` come from `material_sample`. The same name on cabinets: `{"op": "update", "id": "TD1", "changes": {"material": "..."}}`.
+
 ## Openings (prefer `opening_command`, which fills the hole, the type and the sill)
 
 ```json

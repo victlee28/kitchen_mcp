@@ -1,6 +1,6 @@
 // Tab "Sửa ảnh theo lớp": chọn chi tiết trên ảnh (instance mask phía máy chủ), tạo job, so sánh trước/sau, duyệt.
 // Không phụ thuộc three.js: vẫn chạy khi CDN three.js lỗi. Mọi chữ hiển thị qua textContent.
-import { partIndex, shiftGroupId, ctrlIds, toggleIds, layerIdFor, partitionByType, targetFor, partsOf, targetLabel, roleName } from './selection.js';
+import { partIndex, shiftGroupId, ctrlIds, toggleIds, layerIdFor, partitionByType, targetFor, partsOf, targetLabel, roleName, selectedModules } from './selection.js';
 import { $, el } from './dom.js';
 import { api, createStatus } from './api-client.js';
 import { styleFromOptions, styleFromValue } from './assist-logic.js';
@@ -230,14 +230,21 @@ $('zoomOut').addEventListener('click', () => zoomBy(1 / ZOOM_STEP));
 $('zoomFit').addEventListener('click', () => setZoom(fitted()));
 new ResizeObserver(() => { const { w, h } = frame(); setZoom(clampView(Z, w, h)); }).observe($('stage'));      // the page resized
 
+// One pick at a time: clicks while the server is still answering are dropped instead of queueing behind it (each waits for the others).
+let picking = false;
+async function pickAt(x, y) {
+  picking = true;
+  try { return await api(`/api/designs/${S.id}/pick?view=${encodeURIComponent(S.view)}&x=${x}&y=${y}&radius=4`); } finally { picking = false; }
+}
+
 $('imgBase').addEventListener('click', (ev) => {
-  if (!S.data || dragged) return;
+  if (!S.data || dragged || picking) return;
   const im = ev.currentTarget; const r = im.getBoundingClientRect();
   const x = Math.floor(((ev.clientX - r.left) / r.width) * S.data.width), y = Math.floor(((ev.clientY - r.top) / r.height) * S.data.height);
   const ctrl = ev.ctrlKey || ev.metaKey, shift = ev.shiftKey;
   run(tx('ui.chon-chi-tiet'), async () => {
     // radius: tay nắm chỉ rộng 23–86 px, cho phép bấm lệch vài điểm ảnh
-    const p = await api(`/api/designs/${S.id}/pick?view=${encodeURIComponent(S.view)}&x=${x}&y=${y}&radius=4`);
+    const p = await pickAt(x, y);
     if (!p.part) return status(tx('ui.khong-co-chi-tiet-o-diem-nay'));
     const idx = partIndex(S.data.layers); const part = idx.get(p.part.id);
     if (!part) return selectLayer(p.layers[0], p.layers);
@@ -260,17 +267,19 @@ $('imgBase').addEventListener('click', (ev) => {
 $('imgBase').addEventListener('contextmenu', (ev) => {
   if (!S.data) return;
   ev.preventDefault();
+  if (picking) return;
   const im = ev.currentTarget; const r = im.getBoundingClientRect();
   const x = Math.floor(((ev.clientX - r.left) / r.width) * S.data.width), y = Math.floor(((ev.clientY - r.top) / r.height) * S.data.height);
   const at = { x: ev.clientX, y: ev.clientY };
   run(tx('ui.chon-chi-tiet'), async () => {
-    const p = await api(`/api/designs/${S.id}/pick?view=${encodeURIComponent(S.view)}&x=${x}&y=${y}&radius=4`);
+    const p = await pickAt(x, y);
     if (!p.part) return status(tx('ui.khong-co-chi-tiet-o-diem-nay'));
     if (!S.sel.includes(p.part.id)) await selectLayer(p.layers[0], p.layers);      // a right click on the picked parts keeps them
     // wall faces picked on the picture (one, or several with Ctrl+click): the sentence is about them, as faces lit in the 3D view
     const faceOf = new Map((S.data.layers || []).filter((l) => l.variant === 'part' && l.surface).map((l) => [l.id, l.surface]));
     const surfaces = p.part.surface ? [...new Set(S.sel.map((i) => faceOf.get(i)).filter(Boolean))] : [];
-    window.dispatchEvent(new CustomEvent('image-context-menu', { detail: { part: p.part, at, surfaces } }));
+    const modules = selectedModules(S.sel, partIndex(S.data.layers || []));     // several parts picked: the sentence is about all their cabinets
+    window.dispatchEvent(new CustomEvent('image-context-menu', { detail: { part: p.part, at, surfaces, modules } }));
   });
 });
 

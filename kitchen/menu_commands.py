@@ -44,6 +44,20 @@ MAX_CHOICES = 6
 MAX_CHOICE = 160
 NAME = re.compile(r"^[A-Za-z0-9_.:-]{1,80}$")
 SURFACE = re.compile(r"^[A-Za-z0-9_.:-]{1,80}#[A-Za-z0-9_-]{1,20}$")     # a wall face: "<wall>#<face>" (wall_surfaces)
+PICTURE_TYPES = {"image/png": "png", "image/jpeg": "jpg", "image/webp": "webp"}      # a reference picture sent with a command
+MAX_PICTURE = 8 * 1024 * 1024
+
+
+def picture_info(data: bytes, mime: Any, name: Any) -> dict[str, Any]:
+    """``attachment`` of a command record for a picture sent with it: ``{file, name, mime, bytes}`` (the file sits beside the record).
+    Refused when it is not a PNG / JPEG / WebP or is larger than ``MAX_PICTURE``."""
+    if mime not in PICTURE_TYPES:
+        raise InvalidInput("A reference picture must be PNG, JPEG or WebP", code="command-picture-type", params={"type": str(mime)[:40]})
+    if not data or len(data) > MAX_PICTURE:
+        raise InvalidInput(f"A reference picture is at most {MAX_PICTURE // (1024 * 1024)} MB", code="command-picture-size",
+                           params={"max": MAX_PICTURE})
+    label = name.strip()[:120] if isinstance(name, str) and name.strip() else "picture"
+    return {"name": label, "mime": mime, "bytes": len(data)}
 
 
 def clean_id(value: Any) -> str:
@@ -123,6 +137,8 @@ def new_record(cid: str, design_id: str, text: Any, place: Any, base_rev: Any, l
                           "status": str(answering.get("status"))}
         if not out["place"]:
             out["place"] = clean_place(answering.get("place"))
+        if isinstance(answering.get("attachment"), dict):
+            out["attachment"] = dict(answering["attachment"])     # the reply is about the same reference picture
     return out
 
 

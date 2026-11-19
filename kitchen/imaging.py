@@ -254,3 +254,16 @@ def mark_regions(ref: np.ndarray, regions: list[tuple[np.ndarray, tuple[int, int
         dr.ellipse((cx - r, cy - r, cx + r, cy + r), fill=tuple(rgb), outline=(255, 255, 255), width=2)
         dr.text((cx, cy), lab, fill=(255, 255, 255) if sum(rgb) < 560 else (0, 0, 0), font=font, anchor="mm")
     return np.array(im)
+
+
+def mean_color(data: bytes) -> str:
+    """The average colour of a picture (its middle 80 %, to leave out a frame or a border) as ``#rrggbb``."""
+    import io
+    try:
+        im = Image.open(io.BytesIO(data)).convert("RGB")
+    except (OSError, ValueError) as e:
+        raise InvalidInput("The reference picture cannot be read", code="picture-unreadable") from e
+    w, h = im.size
+    box = im.crop((w // 10, h // 10, max(w // 10 + 1, w - w // 10), max(h // 10 + 1, h - h // 10))).resize((64, 64))
+    r, g, b = (int(v) for v in np.asarray(box, dtype=np.float64).reshape(-1, 3).mean(axis=0).round())
+    return f"#{r:02x}{g:02x}{b:02x}"

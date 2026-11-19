@@ -323,6 +323,19 @@ def list_menu_commands(status: Literal['pending', 'working', 'done', 'failed', '
         result['skill']['text'] = skill['text']
     return result
 
+def get_command_picture(command_id: str) -> list[Any]:
+    """The reference picture the user sent with an inbox command (its record has ``attachment``): the picture itself, to look at, and
+    {name, mime, bytes}. Use it for sentences such as "ốp tường bằng vật liệu trong ảnh tham chiếu": see what the material is."""
+    data, mime, att = _call(svc().command_picture, command_id)
+    return [Image(data=data, format={'image/png': 'png', 'image/jpeg': 'jpeg', 'image/webp': 'webp'}.get(mime, 'png')),
+            {'name': att.get('name'), 'mime': mime, 'bytes': att.get('bytes')}]
+
+def material_sample(design_id: str, command_id: str) -> dict[str, Any]:
+    """Keep the reference picture of an inbox command as a material sample: {sample, color, url}. Then preview
+    {"op": "multi", "ops": [{"op": "material-sample", "name": <a descriptive material name>, "sample", "color"}, <the operation that puts
+    that name on the selected surfaces>]} with propose_change: the 3D view lays the picture on every surface of that name."""
+    return _call(svc().material_sample, design_id, command_id)
+
 def get_inbox_skill(reference: str | None = None) -> dict[str, Any]:
     """The skill ``kitchen-inbox``: how to carry out the command inbox (list_menu_commands). Without ``reference``: {name, description,
     version, text, references}; with ``reference`` (one of references, e.g. "ops.md", "checks.md"): that file's text."""
@@ -360,7 +373,7 @@ def model_usage(day: str | None = None) -> dict[str, Any]:
     known (data/model-prices.json), per provider; the daily budget and the providers set."""
     return _call(svc().model_usage, day)
 
-TOOLS = [list_menu_commands, get_inbox_skill, model_usage, get_menu_command, start_menu_command, answer_menu_command, opening_command, apply_change, create_design, list_floorplan_rooms, import_floorplan, bind_floorplan, auto_place, design_kitchen, list_designs, get_design, design_history, list_openings, opening_types, propose_opening, add_module, update_module, remove_module, update_global, set_moldings, list_molding_profiles, apply_action, propose_change, interpret_edit, recognize_design, propose_template, save_layout_template, revert_design, validate_design, get_scene, export_threejs, render_views, search_knowledge, list_regions, add_knowledge, export_ai_package, list_layers, get_view_status, regenerate_stale_views, create_image_job, get_image_job, list_image_jobs, submit_image_result, import_base_image, accept_image_job, reject_image_job, regenerate_image_job, send_image_job]
+TOOLS = [list_menu_commands, get_inbox_skill, get_command_picture, material_sample, model_usage, get_menu_command, start_menu_command, answer_menu_command, opening_command, apply_change, create_design, list_floorplan_rooms, import_floorplan, bind_floorplan, auto_place, design_kitchen, list_designs, get_design, design_history, list_openings, opening_types, propose_opening, add_module, update_module, remove_module, update_global, set_moldings, list_molding_profiles, apply_action, propose_change, interpret_edit, recognize_design, propose_template, save_layout_template, revert_design, validate_design, get_scene, export_threejs, render_views, search_knowledge, list_regions, add_knowledge, export_ai_package, list_layers, get_view_status, regenerate_stale_views, create_image_job, get_image_job, list_image_jobs, submit_image_result, import_base_image, accept_image_job, reject_image_job, regenerate_image_job, send_image_job]
 for tool_function in TOOLS:
     mcp.add_tool(tool_function, name=tool_function.__name__, description=(tool_function.__doc__ or '').strip(), structured_output=False if tool_function is render_views else None)
 

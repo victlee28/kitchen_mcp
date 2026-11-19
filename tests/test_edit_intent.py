@@ -107,6 +107,25 @@ class SolidDoorTests(unittest.TestCase):
         self.assertEqual(edit_intent.interpret_edit(self.spec, "vật liệu gỗ vàng", ["TD1"])["operation"]["changes"], {"material": "Gỗ vàng"})
         self.assertEqual(edit_intent.interpret_edit(self.spec, "màu vàng", ["TD1"])["operation"]["changes"], {"material": "Vàng"})
 
+    def test_cua_with_a_door_word_is_the_cabinet_door_and_wood_mau_colour_is_a_wood(self):
+        r = edit_intent.interpret_edit(self.spec, "thay bằng cửa gỗ màu vàng", ["TT2"])
+        self.assertEqual(r["operation"], {"op": "update", "id": "TT2", "changes": {"type": "upper", "material": "Gỗ vàng"}})
+        self.assertEqual(edit_intent.interpret_edit(self.spec, "cửa kính cho TD1")["operation"]["changes"], {"doorStyle": "glass"})
+
+    def test_wood_anywhere_before_the_colour_in_the_clause(self):
+        r = edit_intent.interpret_edit(self.spec, "Đổi TT2 sang cánh gỗ đặc màu đen")
+        self.assertEqual(r["operation"]["changes"], {"type": "upper", "material": "Gỗ đen"})
+        self.assertEqual(edit_intent.interpret_edit(self.spec, "màu đen", ["TD1"])["operation"]["changes"], {"material": "Đen"})
+
+    def test_handle_kind_is_read_after_thanh_into(self):
+        r = edit_intent.interpret_edit(self.spec, "thay đổi kiểu tay nắm thành dạng tròn", ["TD1"])
+        self.assertEqual(r["operation"]["changes"], {"handle": {"variant": "knob"}})
+        self.assertEqual(edit_intent.interpret_edit(self.spec, "đổi tay nắm thành thanh", ["TD1"])["operation"]["changes"], {"handle": {"variant": "bar"}})
+        self.assertEqual(edit_intent.interpret_edit(self.spec, "tay nắm tròn", ["TD1"])["operation"]["changes"], {"handle": {"variant": "knob"}})
+
+    def test_cua_alone_folds_like_cua_of_and_is_no_door(self):
+        self.assertEqual(edit_intent.interpret_edit(self.spec, "xóa tủ của dãy này", ["TD1"])["operation"], {"op": "remove", "id": "TD1"})
+
     def test_wood_on_doors_that_are_solid_already_is_their_material_or_a_question(self):
         self.assertEqual(edit_intent.interpret_edit(self.spec, "đổi màu cánh tủ này sang gỗ sồi", ["TD1"])["operation"],
                          {"op": "update", "id": "TD1", "changes": {"material": "Gỗ sồi"}})

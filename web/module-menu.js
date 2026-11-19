@@ -2,9 +2,9 @@
 // The server decides what a change means (POST .../propose previews, POST .../ops saves); nothing here edits data directly.
 import { el } from './dom.js';
 import { request } from './api-client.js';
-import { opensOrSaves, replacesWithDoor, joinsRuns, interpretBody, describeInterpret, templateIntent, systemIntent, mentionsReference, checkUpload, recognizeBody, recognizeJobBody, anchorFor, photoOpeningHeadline, describeRecognition, recognitionLines, commandPlace, facesForTarget, commandBody, inboxNews, taskList, describeCommandAnswer, answerCard, replyBody, keepAnswers, openQuestions } from './assist-logic.js';
+import { opensOrSaves, replacesWithDoor, joinsRuns, interpretBody, describeInterpret, templateIntent, systemIntent, mentionsReference, materialFromPicture, checkUpload, recognizeBody, recognizeJobBody, anchorFor, photoOpeningHeadline, describeRecognition, recognitionLines, commandPlace, facesForTarget, commandBody, inboxNews, taskList, describeCommandAnswer, answerCard, replyBody, keepAnswers, openQuestions } from './assist-logic.js';
 import { createAskPanel } from './ask-panel.js';
-import { actionsFor, buildGroupOp, buildOp, describeProposal, groupActions, layerFor, lineTemplate, menuPosition, DOOR_STYLES, HANDLE_VARIANTS, RUN_ACTIONS, RUN_TURNS, systemTemplate, edgeChoices, modelChoices, applianceLayer, lineAlongWall, wallSegments, openingCommand, cabinetTypeChoices, imageTarget } from './menu-logic.js';
+import { actionsFor, buildGroupOp, buildOp, describeProposal, groupActions, layerFor, lineTemplate, menuPosition, DOOR_STYLES, HANDLE_VARIANTS, RUN_ACTIONS, RUN_TURNS, systemTemplate, edgeChoices, modelChoices, applianceLayer, lineAlongWall, wallSegments, openingCommand, cabinetTypeChoices, imageTarget, withSelection } from './menu-logic.js';
 import { groupLabel, groupLayerIds, manySystems } from './design-logic.js';
 import * as catalog from './catalog-client.js';
 import { applianceName, lang, tx } from './i18n.js';
@@ -45,8 +45,11 @@ export function createModuleMenu(ctx) {
   let inboxMode = false; let inboxWorker = false; let sent = readSent(); let answers = readAnswers(); let waitingNow = []; let lastTitle = ''; let poller = null;   // inboxWorker: a model carries the inbox out (else Claude by chat)
   request('/api/command-inbox?status=pending').then(({ data }) => { inboxMode = data?.mode === 'inbox'; inboxWorker = !!data?.worker; if (sent.length) watchInbox(); }).catch(() => { /* old server: direct */ });
 
+  // Asks the inbox every POLL_MS only while a command this page sent for the design on screen is still waiting; starts again when the
+  // user sends one, opens the command box, or loads the page (design not known yet: one look, then it stops if nothing waits).
   function watchInbox() {
-    if (poller || !sent.length) return;
+    const { id } = ctx.getState();
+    if (poller || !sent.some((c) => !id || c.designId === id)) return;
     poller = setInterval(pollInbox, POLL_MS);
     pollInbox();
   }
@@ -59,12 +62,13 @@ export function createModuleMenu(ctx) {
     try { ({ data } = await request(`/api/command-inbox?design=${encodeURIComponent(id)}`)); } catch { return; }
     const commands = Array.isArray(data?.commands) ? data.commands : [];
     inboxWorker = !!data?.worker;
-    const { waiting, news } = inboxNews(commands, sent.filter((c) => c.designId === id).map((c) => c.id));
-    const gone = new Set([...news.map((c) => c.id), ...sent.filter((c) => c.designId === id && !commands.some((x) => x.id === c.id)).map((c) => c.id)]);
+    const { waiting, news, settled } = inboxNews(commands, sent.filter((c) => c.designId === id).map((c) => c.id));
+    const gone = new Set(settled);      // answered, replied to, dropped or gone: nothing more to ask about
     const sig = (list) => list.map((c) => `${c.id}:${c.status}`).join();
     const before = sig(waitingNow);
     waitingNow = waiting;
     if (gone.size) { sent = sent.filter((c) => !gone.has(c.id)); keepSent(sent); }
+    if (!sent.some((c) => c.designId === id)) { clearInterval(poller); poller = null; }   // nothing of this design waits: stop asking
     if (news.length) { answers = keepAnswers(answers, news); keepAnswersStored(answers); asker.ask(openQuestions(news, id, rev)); }
     const said = news.map((c) => describeCommandAnswer(c, rev));
     if (said.some((d) => d.reload)) { try { await ctx.reload(); } catch { /* the reply is still shown */ } }
@@ -72,10 +76,14 @@ export function createModuleMenu(ctx) {
     if ((news.length || before !== sig(waitingNow)) && !box.hidden && box.querySelector('.ctx-cmd')) redraw(box.querySelector('.ctx-cmd input')?.value || '', '');
   }
 
-  async function sendToInbox(text) {
+  async function sendToInbox(text, picture = null) {
     const { id, rev } = ctx.getState();
     let body;
-    try { body = commandBody(text, rev, commandPlace(target, lastTitle, facesForTarget(target, ctx.getState().surfaces)), lang()); } catch (e) { return redraw(text, e.message); }
+    try {
+      if (picture) { const bad = checkUpload(picture.file); if (bad) throw new Error(bad); }
+      const pic = picture ? { name: picture.file.name, type: picture.file.type, data: await fileBase64(picture.file) } : null;
+      body = commandBody(text, rev, commandPlace(target, lastTitle, facesForTarget(target, ctx.getState().surfaces)), lang(), pic);
+    } catch (e) { return redraw(text, e.message); }
     busy = true;
     try {
       const { status, data } = await call(`/api/designs/${id}/command`, body);
@@ -83,6 +91,7 @@ export function createModuleMenu(ctx) {
       if (!data || data.error || status !== 201) return redraw(text, data?.error || tx('ui.loi', { 0: status }));
       sent = [...sent, { id: data.id, text: data.text, designId: id }]; keepSent(sent);
       waitingNow = [...waitingNow, data];
+      if (picture) attached = null;
       const line = tx(inboxWorker ? 'ui.command.sent-worker' : 'ui.command.sent', { 0: data.id });
       ctx.setStatus(line, 'ok');
       redraw('', line);
@@ -167,7 +176,9 @@ export function createModuleMenu(ctx) {
   function listGroup() {
     const g = target.group;
     box.onkeydown = null;
-    box.replaceChildren(header(tx('ui.nhom-2', { 0: groupLabel(g) })), el('ul', { class: 'ctx-list' }, ...groupActions(g).map((a) =>
+    lastTitle = tx('ui.nhom-2', { 0: groupLabel(g) });
+    const cmd = commandBox();          // the same prompt box as for one cabinet: the sentence is about every cabinet of the group
+    box.replaceChildren(header(lastTitle), ...(cmd ? [cmd] : []), el('ul', { class: 'ctx-list' }, ...groupActions(g).map((a) =>
       el('li', {}, el('button', { type: 'button', onclick: () => choose(a.id) }, a.label)))));
   }
 
@@ -179,7 +190,7 @@ export function createModuleMenu(ctx) {
     const partName = { door: tx('ui.canh-2'), drawer: tx('ui.mat-ngan-keo-2'), handle: tx('ui.tay-nam-3'), countertop: tx('ui.mat-ban-2') }[target.part];
     const appl = target.kind === 'appliance' ? spec.appliances?.find((a) => a.id === target.id) : null;
     const faces = facesForTarget(target, ctx.getState().surfaces);        // wall faces picked before the right click: the sentence is about them
-    const title = faces.length ? tx('ui.surface.menu-title', { n: faces.length }) : appl ? `${applianceName(appl.type)} ${appl.id}${appl.name ? ` · ${appl.name}` : ''}` : target.kind === 'part' ? (target.part === 'countertop' ? tx('ui.mat-ban-2') : `${partName} · ${target.id}`)
+    const title = faces.length ? tx('ui.surface.menu-title', { n: faces.length }) : target.modules?.length > 1 ? tx('ui.selection.menu-title', { n: target.modules.length, ids: target.modules.join(', ') }) : appl ? `${applianceName(appl.type)} ${appl.id}${appl.name ? ` · ${appl.name}` : ''}` : target.kind === 'part' ? (target.part === 'countertop' ? tx('ui.mat-ban-2') : `${partName} · ${target.id}`)
       : target.kind === 'module' ? `Module ${target.id}` : target.kind === 'floor' ? (lineFrom ? tx('ui.san-dang-ve-day-tu') : tx('ui.san-2'))
         : tx('ui.thanh-phan-mat-bang', { 0: target.id.replace(/^STRUCT-/, '') });
     box.onkeydown = null;
@@ -191,8 +202,14 @@ export function createModuleMenu(ctx) {
 
   // A free sentence about THIS module (a floorplan object has no module: the sentence then covers the whole design) ("đổi sang màu trắng", "rộng 800"): the server reads it, the preview shows the result, nothing is saved before Áp dụng.
   function commandBox(text = '', message = '', choices = []) {
+    watchInbox();                      // the user opened the command box: look again if a command of this design still waits
     const input = el('input', { type: 'text', value: text, placeholder: facesForTarget(target, ctx.getState().surfaces).length ? tx('ui.surface.placeholder') : target.kind === 'floor' ? tx('ui.opening-command-placeholder') : target.kind === 'structure' ? tx('ui.ra-lenh-cho-ca-thiet-ke-enter') : target.kind === 'appliance' ? tx('ui.vd-doi-sang-bep-gas-thay-chau') : tx('ui.ra-lenh-cho-enter', { 0: target.id }), autocomplete: 'off', 'aria-label': tx('ui.cau-lenh-cho-module-nay') });
-    const run = () => (attached ? recognizeImage(attached.file, attached.kind, input.value) : command(input.value));
+    const run = () => {
+      if (attached && materialFromPicture(input.value)) {     // "ốp tường bằng vật liệu trong ảnh": Claude looks at the picture
+        return inboxMode ? sendToInbox(input.value, attached) : redraw(input.value, tx('ui.command.picture-needs-inbox'));
+      }
+      return attached ? recognizeImage(attached.file, attached.kind, input.value) : command(input.value);
+    };
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); run(); } });
     const kind = el('select', { 'aria-label': tx('ui.loai-anh-tham-chieu'), title: tx('ui.loai-anh-tham-chieu') }, el('option', { value: 'photo' }, tx('ui.anh-chup')), el('option', { value: 'drawing' }, tx('ui.ban-ve')));
     const mode = el('select', { 'aria-label': tx('ui.cach-dat-day-tu-nhan-dien'), title: tx('ui.them-day-tu-vao-cac-tu-hien') },
@@ -206,7 +223,7 @@ export function createModuleMenu(ctx) {
     kind.addEventListener('change', () => { if (attached) attached.kind = kind.value; });
     if (attached) kind.value = attached.kind;
     const attach = el('button', { type: 'button', class: 'ghost', title: tx('ui.nhap-anh-chup-bep-hoac-ban-ve'), onclick: () => file.click() }, tx('ui.anh-tham-chieu'));
-    const chip = attached ? el('div', { class: 'ctx-pending' }, el('span', {}, tx('ui.bam-xem-truoc-de-nhan-dien', { 0: attached.file.name })),
+    const chip = attached ? el('div', { class: 'ctx-pending' }, el('span', {}, tx('ui.picture-attached', { 0: attached.file.name })),
       el('button', { type: 'button', class: 'ghost small', title: tx('ui.bo-anh'), onclick: () => { attached = null; redraw(input.value, ''); } }, tx('ui.bo-anh'))) : null;
     const waiting = pendingJob ? el('div', { class: 'ctx-pending' },
       el('span', {}, tx('ui.job-dang-cho-claude', { 0: pendingJob })),
@@ -243,7 +260,7 @@ export function createModuleMenu(ctx) {
     if (opening) {
       busy = true; ctx.setStatus(tx('ui.doc-cau-lenh-2'));
       try {
-        const scope = target.kind === 'module' || (target.kind === 'part' && target.part !== 'countertop') ? [target.id] : undefined;
+        const scope = target.modules?.length ? target.modules : target.kind === 'module' || (target.kind === 'part' && target.part !== 'countertop') ? [target.id] : undefined;
         const { status, data } = await call(`/api/designs/${id}/propose`, { op: opening.operation, baseRev: rev, scope });
         busy = false;
         if (status === 409) return stale('cmd');
@@ -263,7 +280,7 @@ export function createModuleMenu(ctx) {
       if (!intent.described) return redraw(text, tx('ui.muon-tao-day-tu-doc-mot-canh'));
     }
     let body;
-    try { body = interpretBody(text, rev, { scope: target.kind === 'structure' ? undefined : [target.id] }); } catch (e) { return ctx.setStatus(e.message, 'warn'); }
+    try { body = interpretBody(text, rev, { scope: target.kind === 'structure' ? undefined : (target.modules?.length ? target.modules : [target.id]) }); } catch (e) { return ctx.setStatus(e.message, 'warn'); }
     return interpret(text, body);
   }
 
@@ -652,9 +669,9 @@ export function createModuleMenu(ctx) {
 
   // a right click on the layered picture (image tab): the same menu, on what the picture shows there
   window.addEventListener('image-context-menu', (ev) => {
-    const { part, at, surfaces } = ev.detail || {};
+    const { part, at, surfaces, modules } = ev.detail || {};
     const { spec } = ctx.getState();
-    const t = imageTarget(part, spec ? spec.module.map((m) => m.id) : []);
+    const t = withSelection(imageTarget(part, spec ? spec.module.map((m) => m.id) : []), modules);
     if (!t || !at) { close(); ctx.setStatus(tx('ui.image-menu.nothing'), 'warn'); return; }
     ctx.select?.(t, Array.isArray(surfaces) ? surfaces : []);
     api.open(t, at.x, at.y);
@@ -671,7 +688,7 @@ export function createModuleMenu(ctx) {
     open(t, x, y) {
       const g = ctx.getState().multi;      // a right click on a module of the Shift-selected group: the group's menu
       const onGroup = g && t && (t.kind === 'module' || (t.kind === 'part' && t.part !== 'countertop')) && g.modules.includes(t.id);
-      target = onGroup ? { kind: 'group', id: t.id, group: g } : t;
+      target = onGroup ? { ...t, modules: [...g.modules], group: g } : t;      // the clicked cabinet with its group: the prompt box acts on all
       list(); place(x, y); box.querySelector('button:not(.ctx-x)')?.focus();
     },
     /** A run handle was dragged in the 3D view: the same previewed change the menu would make, shown where the drag ended. */

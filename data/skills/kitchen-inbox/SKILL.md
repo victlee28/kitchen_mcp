@@ -26,6 +26,8 @@ Chat agents use the MCP tools; the background worker of the server gets a short 
 | close the command | `answer_menu_command` | `answer` |
 | look at the result | `render_views` | (not available) |
 | build the whole floorplan | `auto_place` | (not available) |
+| see the reference picture | `get_command_picture` | (in the first message) |
+| keep it as a material sample | `material_sample` (design and command ids) | `material_sample` |
 
 ## The queue (chat agents)
 
@@ -50,14 +52,22 @@ Read `text`, `lang` and `place` (`kind`, `id`, `part`, `point` {x, z} in the roo
   `structureId`; do not compare `place.point` with `runs[].x/z` (room frame vs kitchen frame).
 - **A door, window or passage** (a floorplan opening, a wall, an existing `OPn`), and "lưu vào database / lưu cửa này": `opening_command`
   with `place` = `{point, structureId, module}` of the command.
-- **Cabinet changes** (width, doors, handles, colours, worktop, moldings, remove): `interpret_edit`, `scope_modules` = the clicked module
-  or group.
+- **Cabinet changes** (width, doors, handles, colours, worktop, moldings, remove): `interpret_edit`, `scope_modules` = `place.modules`
+  when it is there (every cabinet the user selected; change them all, not only `place.id`), else the clicked module. Check that the
+  preview's `affectedModules` covers the whole selection; when a cabinet of it cannot take the change, say which in the answer.
 - **An appliance** (`place.kind` = `appliance`, `place.id` = `TBn`): another model in its place. `propose_template`
   `{"kind": "replace-appliance", "id": <TBn>, "prompt": <the sentence>}` lists the models (`status: "choose-model"`, those that fit
   first); preview the best one with `{"kind": "replace-appliance", "id": <TBn>, "model": <id>}`. A TV and a wall painting
   ("thay bằng bức tranh") take each other's place.
 - **Picked wall faces** (`place.surfaces`): `interpret_edit` with `surfaces` = `place.surfaces`, or `propose_change`
   `{"op": "surface-material", "surfaces": [...], "material": "..."}`. Never change the material of every wall when faces were picked.
+- **A reference picture sent with the sentence** (the record has `attachment`) and a sentence such as
+  "ốp tường bằng vật liệu trong ảnh tham chiếu" (clad, paint, tile, a material or colour "in the picture"): take the material from it. Look at it (`get_command_picture`), keep it (`material_sample` → `sample`, `color`), name
+  the material in the catalog's Vietnamese words for what you see (e.g. "Đá marble trắng vân xám", "Gỗ óc chó", "Gạch thẻ xanh rêu"), and
+  preview one `{"op": "multi"}`: `{"op": "material-sample", "name", "sample", "color"}` + the operation that puts that name on the
+  selection (`surface-material` for `place.surfaces`, `update` `material` for each of `place.modules` / the clicked cabinet, `common`
+  for a whole tier or the worktop). The 3D view lays the picture on those surfaces. If the picture shows several materials, or it is not
+  clear which surface the sentence means, ask (`question`) with the choices.
 - **"Tự động đặt" / build what the floorplan draws**: `auto_place` (one revision; it reports what it skipped).
 - Anything else you can write as an operation: `propose_change`. Operation shapes: `references/ops.md`.
 

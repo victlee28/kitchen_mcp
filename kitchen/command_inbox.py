@@ -51,10 +51,19 @@ class CommandInbox:
                 return cid
             low = n + 1
 
-    def put(self, design_id: str, text: Any, place: Any, base_rev: Any, lang: Any, reply_to: str | None = None) -> dict[str, Any]:
-        """A new command; ``reply_to``: the answered command it answers (marked ``followUp``, and ``replied`` if it asked)."""
+    def put(self, design_id: str, text: Any, place: Any, base_rev: Any, lang: Any, reply_to: str | None = None,
+            picture: tuple[bytes, str, str] | None = None) -> dict[str, Any]:
+        """A new command; ``reply_to``: the answered command it answers (marked ``followUp``, and ``replied`` if it asked). ``picture``:
+        ``(bytes, mime, file name)`` of a reference picture sent with it, kept as ``<id>.<ext>`` beside the record (``attachment``)."""
         answering = self.get(reply_to) if reply_to is not None else None
-        record = self._write(mc.new_record(self._new_id(), design_id, text, place, base_rev, lang, self.clock(), answering))
+        draft = mc.new_record(self._new_id(), design_id, text, place, base_rev, lang, self.clock(), answering)
+        if picture is not None:
+            info = mc.picture_info(picture[0], picture[1], picture[2])
+            file = f"{draft['id']}.{mc.PICTURE_TYPES[info['mime']]}"
+            self.root.mkdir(parents=True, exist_ok=True)
+            (self.root / file).write_bytes(picture[0])
+            draft["attachment"] = {"file": file, **info}
+        record = self._write(draft)
         if answering is not None:
             self._write(mc.followed(answering, record["id"]))
         return record
@@ -64,6 +73,16 @@ class CommandInbox:
         if not path.exists():
             raise NotFound(f"No command {cid}", code="command-not-found", params={"id": cid})
         return json.loads(path.read_text(encoding="utf-8"))
+
+    def picture(self, cid: str) -> tuple[bytes, str, dict[str, Any]]:
+        """``(bytes, mime, attachment)`` of the reference picture sent with a command; NotFound when it has none."""
+        att = self.get(cid).get("attachment")
+        if not isinstance(att, dict):
+            raise NotFound(f"Command {cid} has no reference picture", code="command-no-picture", params={"id": cid})
+        path = self.root / str(att.get("file"))
+        if path.parent != self.root or not path.is_file():
+            raise NotFound(f"Command {cid} has no reference picture", code="command-no-picture", params={"id": cid})
+        return path.read_bytes(), str(att.get("mime") or "image/png"), dict(att)
 
     def list(self, status: str | None = None, design_id: str | None = None) -> list[dict[str, Any]]:
         records = []

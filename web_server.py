@@ -27,10 +27,11 @@ API:
   GET  /api/designs/<id>/history         lịch sử
   POST /api/designs/<id>/auto-place    {"rev"?, "country"?}: tự động đặt cửa và các hệ tủ theo mặt bằng đã nhập (một revision)
   POST /api/designs/<id>/opening-command {"prompt", "point", "structureId"?, "module"?, "baseRev"?}: câu lệnh về cửa đi / cửa sổ ở điểm bấm chuột phải (xem trước), hoặc "lưu vào database" cửa / hệ tủ vừa bấm
-  POST /api/designs/<id>/command        {"text", "place"?: {kind, id, part?, point?, structureId?, module?, modules?, surfaces?, title?}, "baseRev"?, "lang"?}: câu lệnh chuột phải gửi vào hộp thư của Claude (KITCHEN_MENU_COMMANDS=inbox); 201 bản ghi lệnh
+  POST /api/designs/<id>/command        {"text", "place"?: {kind, id, part?, point?, structureId?, module?, modules?, surfaces?, title?}, "baseRev"?, "lang"?, "picture"?: {name, type, data base64}}: câu lệnh chuột phải gửi vào hộp thư của Claude (KITCHEN_MENU_COMMANDS=inbox); 201 bản ghi lệnh
   GET  /api/model-usage[?day=YYYY-MM-DD]  lời gọi model trong ngày: số lần, token, USD (khi có giá), theo hãng; hạn mức
   GET  /api/command-inbox[?design=&status=]  {"mode": "inbox"|"direct", "commands": [...]}: các lệnh trong hộp thư (cũ nhất trước)
-  GET  /api/command-inbox/<mã>           một lệnh;  POST /api/command-inbox/<mã>/drop: rút lại lệnh chưa làm
+  GET  /api/command-inbox/<mã>           một lệnh;  POST /api/command-inbox/<mã>/drop: rút lại lệnh chưa làm;  GET …/picture: ảnh tham chiếu gửi kèm
+  GET  /api/material-samples/<smp-…>     ảnh mẫu vật liệu (vật liệu lấy theo ảnh tham chiếu; texture của khung 3D)
   POST /api/designs/<id>/layout-template {"label"?, "id"?, "system"?, "rev"?, "save"?: true} hệ tủ của thiết kế thành một mẫu bố trí (lưu vào danh mục)
   GET  /api/designs/<id>/catalog-updates[?rev=N]  mục danh mục đã đổi kể từ khi bản lưu được ghi + thao tác cập nhật ({"op": "catalog-refresh"})
   POST /api/designs/<id>/ops             {"baseRev": N, "op": {...}, "expect"?: opHash của /propose: chỉ lưu đúng thao tác đã xem trước}
@@ -248,11 +249,18 @@ class Handler(BaseHTTPRequestHandler):
         if p == "/api/command-inbox" and method == "GET":
             return self._json(200, {"mode": s.command_mode(), "worker": s.command_worker(),
                                     "commands": s.command_list(q.get("status") or None, q.get("design") or None)})
-        m = re.fullmatch(r"/api/command-inbox/(\d{8}-\d{6}-[a-z0-9]{4})(?:/(drop))?", p)
+        m = re.fullmatch(r"/api/material-samples/(smp-[0-9a-f]{16})", p)
+        if m and method == "GET":
+            path = s.material_sample_file(m.group(1))
+            return self._send(200, path.read_bytes(), {"png": "image/png", "jpg": "image/jpeg", "webp": "image/webp"}[path.suffix[1:]])
+        m = re.fullmatch(r"/api/command-inbox/(\d{8}-\d{6}-[a-z0-9]{4})(?:/(drop|picture))?", p)
         if m:
             cid, sub = m.groups()
             if method == "GET" and sub is None:
                 return self._json(200, s.command_get(cid))
+            if method == "GET" and sub == "picture":
+                data, mime, _ = s.command_picture(cid)
+                return self._send(200, data, mime)
             if method == "POST" and sub == "drop":
                 return self._json(200, s.command_drop(cid))
             raise ApiError(405, "Phương thức không hỗ trợ")
@@ -340,7 +348,7 @@ class Handler(BaseHTTPRequestHandler):
             if sub == "pick":
                 return self._json(200, s.images.pick(did, self._need(q, "view"), int(self._need(q, "x")), int(self._need(q, "y")), rev, int(q.get("radius") or 0)))
         if method == "POST":
-            b = self._body(MAX_IMAGE_BODY if sub in ("beauty", "base-image", "recognize", "recognize-job") else MAX_BODY)
+            b = self._body(MAX_IMAGE_BODY if sub in ("beauty", "base-image", "recognize", "recognize-job", "command") else MAX_BODY)
             if sub == "regenerate-stale":
                 return self._json(201, s.images.regenerate_stale(did, b.get("views") if isinstance(b.get("views"), list) else None,
                                                                  b.get("backend") or "recolor", b.get("baseRev")))
@@ -393,7 +401,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(200, s.layout_template_from_design(did, self._role(), str(b.get("label") or ""), str(b.get("id") or ""),
                                                                      b.get("system") or None, b.get("rev"), b.get("save", True) is not False))
             if sub == "command":
-                return self._json(201, s.command_put(did, b.get("text"), b.get("place"), b.get("baseRev"), b.get("lang"), b.get("replyTo")))
+                return self._json(201, s.command_put(did, b.get("text"), b.get("place"), b.get("baseRev"), b.get("lang"), b.get("replyTo"),
+                                                     b.get("picture")))
             if sub == "opening-command":
                 if not isinstance(b.get("prompt"), str):
                     raise ApiError(400, "thiếu prompt")

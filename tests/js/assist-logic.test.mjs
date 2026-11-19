@@ -123,6 +123,9 @@ test('command inbox: what was clicked, the body sent, the answers shown', () => 
   const { waiting, news } = inboxNews(list, ['a', 'b', 'c']);
   assert.deepEqual(waiting.map((c) => c.id), ['a']);
   assert.deepEqual(news.map((c) => c.id), ['b', 'c'], 'only the commands this page sent');
+  const more = [...list, { id: 'r', status: 'replied' }, { id: 'd', status: 'dropped' }];
+  assert.deepEqual(inboxNews(more, ['a', 'b', 'r', 'd', 'gone']).settled, ['b', 'r', 'd', 'gone'],
+    'replied, dropped and vanished commands are settled too, so the page stops asking about them; pending ones are not');
   const done = describeCommandAnswer(list[1], 4);
   assert.equal(done.tone, 'ok'); assert.equal(done.reload, true); assert.match(done.text, /Đã xóa/);
   assert.equal(describeCommandAnswer(list[1], 5).reload, false, 'already on that revision');

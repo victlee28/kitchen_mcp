@@ -299,12 +299,12 @@ INSTANCE_FORMAT = 2           # 2: each wall face is an instance of its own; a r
 FACE_PLANE_MM = 25.0          # a pixel lies on a wall face when it is this close to the face's plane (an opening's reveal is not)
 
 
-def wall_faces(spec: KitchenSpec, catalog: Catalog = builtin.CATALOG, scene: Scene | None = None) -> list[FaceRef]:
+def wall_faces(spec: KitchenSpec, catalog: Catalog = builtin.CATALOG, scene: Scene | None = None, views: dict[str, Any] | None = None) -> list[FaceRef]:
     """Every face of every wall (the three.js export's ``room.surfaces``) in the render's kitchen frame, for the instance image to give
-    each face a layer of its own."""
+    each face a layer of its own. ``views``: the camera views when the caller has them (else the export plans them again, ~1 s)."""
     from . import roomctx
     from .threejs_export import export
-    doc = export(spec, catalog=catalog)
+    doc = export(spec, catalog=catalog, views=views)
     scene = scene or compile_spec(spec, catalog)
     ctx = roomctx.for_spec(spec, scene.lsau, scene.lphai) if isinstance(spec.floorplan, dict) else None
     out: list[FaceRef] = []
@@ -339,10 +339,15 @@ def _split_faces(pid: np.ndarray, hit: np.ndarray, nw: np.ndarray, world: np.nda
         n = np.asarray(fc.normal, float)
         if not own.any() or not np.isfinite(n).all() or float(np.linalg.norm(n)) < 0.5:
             continue
-        on = hit & own[pid] & ((nw @ n) > FACE_NORMAL_COS) & (np.abs((world - np.asarray(fc.point, float)) @ n) < FACE_PLANE_MM)
-        for part in np.unique(pid[on]).tolist():
-            sel = on & (pid == part)
-            out[sel] = nxt
+        ys, xs = np.nonzero(hit & own[pid])        # only the pixels of the face's wall are tested (the whole image per face was ~2 s)
+        if not len(ys):
+            continue
+        on = ((nw[ys, xs] @ n) > FACE_NORMAL_COS) & (np.abs((world[ys, xs] - np.asarray(fc.point, float)) @ n) < FACE_PLANE_MM)
+        ys, xs = ys[on], xs[on]
+        parts = pid[ys, xs]
+        for part in np.unique(parts).tolist():
+            sel = parts == part
+            out[ys[sel], xs[sel]] = nxt
             added.append((int(part), fc))
             nxt += 1
     return out, added
@@ -497,10 +502,12 @@ def part_colors(spec: KitchenSpec, scene: Scene) -> list[tuple[int, int, int]]:
 
 
 def render_views(spec: KitchenSpec, out_root: Path, views: list[str] | None = None,
-                 width: int = 1280, height: int = 960, meta: dict[str, Any] | None = None, catalog: Catalog = builtin.CATALOG) -> dict[str, Any]:
+                 width: int = 1280, height: int = 960, meta: dict[str, Any] | None = None, catalog: Catalog = builtin.CATALOG,
+                 view_angles: dict[str, Any] | None = None) -> dict[str, Any]:
+    """``view_angles``: the camera views of ``spec`` when the caller has them already (planning them again costs about a second)."""
     scene = compile_spec(spec, catalog)
     colors = part_colors(spec, scene)
-    all_views = views_of(spec, catalog)
+    all_views = view_angles if view_angles is not None else views_of(spec, catalog)
     chosen = views or list(all_views)
     unknown = [v for v in chosen if v not in all_views]
     if unknown:
@@ -511,21 +518,21 @@ def render_views(spec: KitchenSpec, out_root: Path, views: list[str] | None = No
               "seg_module": {**{m.id: list(_module_color(m.id)) for m in spec.module},
                              **{x.id: list(_module_color(x.id)) for x in spec.moldings}}}
     (out_root / "legend.json").write_text(json.dumps(legend, ensure_ascii=False, indent=2), encoding="utf-8")
-    faces = face_colors(spec, catalog)
-    refs = wall_faces(spec, catalog, scene)
+    faces = face_colors(spec, catalog, all_views)
+    refs = wall_faces(spec, catalog, scene, all_views)
     results = {v: render_view(scene, all_views[v], out_root / v, width, height, colors=colors, meta=meta, faces=faces, wall_face_refs=refs)
                for v in chosen}
     return {"outDir": str(out_root), "views": results, "legend": "legend.json"}
 
 
-def face_colors(spec: KitchenSpec, catalog: Catalog = builtin.CATALOG) -> list[FaceColor]:
+def face_colors(spec: KitchenSpec, catalog: Catalog = builtin.CATALOG, views: dict[str, Any] | None = None) -> list[FaceColor]:
     """The wall faces with a finish of their own and its colour (the three.js export's surface materials), in the render's kitchen
     frame. Empty without ``spec.surfaceMaterials``."""
     if not spec.surfaceMaterials:
         return []
     from . import roomctx
     from .threejs_export import export
-    doc = export(spec, catalog=catalog)
+    doc = export(spec, catalog=catalog, views=views)
     room = doc.get("room") or {}
     colours = {m.get("id"): m.get("color") for m in doc.get("materials") or [] if isinstance(m, dict)}
     scene = compile_spec(spec, catalog)

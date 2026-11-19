@@ -2,6 +2,7 @@
 from __future__ import annotations
 import base64
 import binascii
+import hashlib
 import datetime as _dt
 import json
 import re
@@ -135,15 +136,61 @@ class KitchenService:
         """``inbox`` (the menu sends sentences to Claude) or ``direct`` (the server reads them at once, as before)."""
         return self.config.menu_commands
 
-    def command_put(self, design_id: str, text: Any, place: Any, base_rev: Any = None, lang: Any = None, reply_to: Any = None) -> dict:
+    def command_put(self, design_id: str, text: Any, place: Any, base_rev: Any = None, lang: Any = None, reply_to: Any = None,
+                    picture: Any = None) -> dict:
         """A right-click sentence, with what was clicked, left for Claude (the design must exist). ``reply_to``: the id of an answered
-        command this sentence answers (Claude's question, or a change the user wants otherwise)."""
+        command this sentence answers (Claude's question, or a change the user wants otherwise). ``picture``: a reference picture sent
+        with it, ``{"name", "type", "data": base64}`` ("ốp tường bằng vật liệu trong ảnh tham chiếu")."""
         spec, _ = self.store.get(design_id)
         if isinstance(place, dict) and place.get('structureId') and not isinstance(place.get('point'), dict):
             at = self._structure_point(spec, str(place['structureId']))      # picked on the layered picture: no floor point, the object's middle
             if at is not None:
                 place = {**place, 'point': at}
-        return self.commands.put(design_id, text, place, base_rev, lang, clean_command_id(reply_to) if reply_to is not None else None)
+        return self.commands.put(design_id, text, place, base_rev, lang, clean_command_id(reply_to) if reply_to is not None else None,
+                                 self._picture(picture))
+
+    @staticmethod
+    def _picture(picture: Any) -> tuple[bytes, str, str] | None:
+        if picture is None:
+            return None
+        if not isinstance(picture, dict) or not isinstance(picture.get('data'), str):
+            raise InvalidInput('picture must be {"name", "type", "data": base64}', code='command-picture-bad')
+        try:
+            data = base64.b64decode(picture['data'], validate=True)
+        except (ValueError, binascii.Error) as e:
+            raise InvalidInput('picture data is not base64', code='command-picture-bad') from e
+        return data, str(picture.get('type') or ''), str(picture.get('name') or '')
+
+    def command_picture(self, command_id: str) -> tuple[bytes, str, dict]:
+        """The reference picture sent with a command: ``(bytes, mime, attachment)``."""
+        return self.commands.picture(clean_command_id(command_id))
+
+    def material_samples_dir(self) -> Path:
+        return Path(self.store.path).parent / 'material-samples'
+
+    def material_sample(self, design_id: str, command_id: str) -> dict:
+        """Keep the reference picture of a command as a material sample of the design's library: ``{sample, color, url}``. ``sample`` goes
+        into ``{"op": "material-sample", "name", "sample", "color"}``, which ties a material name to the picture (3D texture, AI prompt)."""
+        self.store.get(design_id)
+        data, mime, _ = self.command_picture(command_id)
+        sample = 'smp-' + hashlib.sha1(data).hexdigest()[:16]
+        ext = {'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp'}[mime]
+        folder = self.material_samples_dir()
+        folder.mkdir(parents=True, exist_ok=True)
+        path = folder / f'{sample}.{ext}'
+        if not path.exists():
+            path.write_bytes(data)
+        from . import imaging
+        return {'sample': sample, 'color': imaging.mean_color(data), 'url': f'/api/material-samples/{sample}'}
+
+    def material_sample_file(self, sample: str) -> Path:
+        """The stored picture of a material sample (NotFound for an unknown id)."""
+        if not re.fullmatch(r'smp-[0-9a-f]{16}', str(sample)):
+            raise NotFound(f'No material sample {sample!r}', code='sample-not-found', params={'id': str(sample)[:40]})
+        hit = next(iter(sorted(self.material_samples_dir().glob(f'{sample}.*'))), None) if self.material_samples_dir().exists() else None
+        if hit is None:
+            raise NotFound(f'No material sample {sample!r}', code='sample-not-found', params={'id': str(sample)})
+        return hit
 
     def _structure_point(self, spec: KitchenSpec, structure_id: str) -> dict | None:
         """The middle of a floorplan object (room frame, mm): where a click on it stands in when none was given (a pick on the layered

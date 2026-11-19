@@ -18,4 +18,5 @@ _backup_before_english_rename.tgz
 _to_delete/
 .pytest_cache/
 command-inbox/
+material-samples/
 rust/

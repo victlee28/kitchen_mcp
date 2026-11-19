@@ -443,6 +443,8 @@ class KitchenSpec(_Base):
     floorplan: dict[str, Any] | None = Field(default=None, description="Derived room geometry imported from an audited floorplan (mm); the source document is stored once, referenced by floorplan.ref")
     openings: list[Opening] = Field(default_factory=list, description="Manual, recognized or explicitly overridden room openings; floorplan openings remain in floorplan data")
     level: Level | None = Field(default=None, description="Building level of the kitchen; unset = level 1 at elevation 0")
+    materialSamples: dict[str, dict[str, str]] | None = Field(default=None, description="Materials taken from a reference picture: material "
+                                                                                  "name -> {sample: 'smp-<16 hex>', color: '#rrggbb'}; the 3D view lays the picture on every surface of that name")
     surfaceMaterials: dict[str, str] | None = Field(default=None, description="Finish of single wall faces: surface id (kitchen.wall_surfaces, '<wall>#<face>') -> material name; unset faces keep the wall's")
     promptInterpretation: list[dict[str, Any]] | None = Field(default=None, description="How each term of the creation prompt was understood: term, canonical, scope, target, status, message")
     common: Common = Field(default_factory=lambda: Common())

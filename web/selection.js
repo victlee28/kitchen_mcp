@@ -78,3 +78,13 @@ export function targetLabel(target, layers) {
   const p = layers.find((l) => l.id === ids[0]);
   return `${ids.length} × ${roleName(p?.type || '?')}`;
 }
+
+/** The cabinets (module ids, in selection order, no repeats) the selected parts belong to; walls and openings (STRUCT-…) are left out. */
+export function selectedModules(ids, index) {
+  const out = [];
+  for (const id of ids || []) {
+    const m = index.get(id)?.module;
+    if (typeof m === 'string' && m && !m.startsWith('STRUCT-') && !out.includes(m)) out.push(m);
+  }
+  return out;
+}

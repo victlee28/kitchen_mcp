@@ -183,6 +183,15 @@ export function mentionsReference(text) {
   return /\b(anh|hinh|hinh anh|ban ve)\s+(tham\s+chieu|mau|goc|nay|da\s+chon)\b|\bgiong\s+(voi\s+)?(anh|hinh|ban ve)\b|\btheo\s+(anh|hinh|ban ve)\b/.test(f);
 }
 
+/** Whether a sentence sent with a reference picture asks for the picture's material on what was selected ("ốp tường bằng vật liệu
+ *  trong ảnh tham chiếu", "sơn tủ màu giống ảnh", "lát sàn gạch như hình"), not for cabinets read from it ("tạo tủ theo ảnh"). */
+export function materialFromPicture(text) {
+  const f = plain(text);
+  const material = /\b(vat lieu|chat lieu|op|lat|son|mau|gach|da|go|giay dan|be mat|hoa van|van|material|finish|colou?r|tile|stone|wood|paint|clad)\b/.test(f);
+  const builds = /\b(tao|them|nhan dien|ve|day tu|he tu|build|create|recogni[sz]e)\b/.test(f);
+  return material && !builds;
+}
+
 /** Lines for a preview from a recognition answer, as [{kind, text}] (draft first). Empty when there is no draft. */
 export function recognitionLines(r) {
   const d = describeRecognition(r);
@@ -213,16 +222,17 @@ export function commandPlace(target, title = '', surfaces = []) {
   const module = ['module', 'part'].includes(target.kind) ? target.id : target.kind === 'group' ? target.group?.modules?.[0] : undefined;
   if (module) out.module = module;
   if (target.kind === 'group' && target.group?.modules?.length) out.modules = target.group.modules.slice(0, 50);
+  else if (target.modules?.length > 1) out.modules = target.modules.slice(0, 50);     // several cabinets selected in the image tab
   if (surfaces.length) out.surfaces = surfaces.slice(0, 50);
   if (title) out.title = String(title).slice(0, 120);
   return out;
 }
 
-/** The body of POST /api/designs/<id>/command. */
-export function commandBody(text, baseRev, place, language) {
+/** The body of POST /api/designs/<id>/command; ``picture``: a reference picture sent with it, {name, type, data (base64)}. */
+export function commandBody(text, baseRev, place, language, picture = null) {
   const t = String(text ?? '').trim();
   if (!t) throw new Error(tx('ui.command.empty'));
-  return { text: t.slice(0, 500), place, baseRev, lang: language === 'en' ? 'en' : 'vi' };
+  return { text: t.slice(0, 500), place, baseRev, lang: language === 'en' ? 'en' : 'vi', ...(picture ? { picture } : {}) };
 }
 
 /** Claude's answer as the menu keeps showing it until the user decides: {id, text, reply, status, tone, head, choices, undoTo}. ``undoTo``:
@@ -256,12 +266,15 @@ export function keepAnswers(kept, news, max = 5) {
 }
 
 /** What the menu shows of the inbox for a design: {waiting: [records still with Claude], news: [records answered since the menu last
- *  looked, oldest first]}. ``known``: ids the page sent and has not shown an answer for yet. */
+ *  looked, oldest first], settled: [ids of ``known`` no longer waiting: answered, replied to, dropped, or gone from the inbox]}.
+ *  ``known``: ids the page sent and has not shown an answer for yet; once settled the page stops asking about them. */
 export function inboxNews(commands, known) {
   const mine = new Set(known);
   const waiting = commands.filter((c) => mine.has(c.id) && (c.status === 'pending' || c.status === 'working'));
   const news = commands.filter((c) => mine.has(c.id) && ['done', 'failed', 'question'].includes(c.status));
-  return { waiting, news };
+  const still = new Set(waiting.map((c) => c.id));
+  const settled = [...mine].filter((id) => !still.has(id));
+  return { waiting, news, settled };
 }
 
 /** The task list of the command box: the design's waiting commands in the order they are carried out (oldest first), numbered;

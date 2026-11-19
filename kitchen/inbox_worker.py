@@ -14,6 +14,7 @@ The guard rails do not depend on the model:
 """
 from __future__ import annotations
 
+import base64
 import json
 import logging
 import threading
@@ -52,6 +53,9 @@ TOOLS = (
                 "\"TD1\", \"changes\": {\"width\": 600}}). Returns the proposal with its opHash.", _schema({"op": OBJ, "scope_modules": IDS}, ["op"])),
     mc.ToolSpec("propose_template", "Preview a cabinet template against a floorplan object, e.g. {\"kind\": \"run-i\", \"structureId\": "
                 "\"STRUCT-...\", \"point\": {\"x\", \"z\"}}.", _schema({"template": OBJ}, ["template"])),
+    mc.ToolSpec("material_sample", "Keep the reference picture sent with this command as a material sample: {sample, color}. Then "
+                "preview {\"op\": \"multi\", \"ops\": [{\"op\": \"material-sample\", \"name\": <descriptive material name>, \"sample\", "
+                "\"color\"}, <the operation that puts that name on the selected surfaces>]} with propose_change.", _schema({}, [])),
     mc.ToolSpec("apply_change", "Save the operation of a preview made in this command, exactly as previewed. expect = that preview's opHash.",
                 _schema({"expect": STR}, ["expect"])),
     mc.ToolSpec("answer", "Close the command: status done (reply = one line on what changed), question (reply = what the user must "
@@ -122,12 +126,21 @@ class InboxWorker:
         cid, did = str(command["id"]), str(command["designId"])
         place = dict(command.get("place") or {})
         previews: dict[str, tuple[dict[str, Any], int]] = {}
-        state: dict[str, Any] = {"revision": None, "fromRev": None}
+        state: dict[str, Any] = {"revision": None, "fromRev": None, "command": cid}
         said: dict[str, Any] = {"command": command.get("text"), "language": command.get("lang", "vi"), "clicked": place, "designId": did,
                                 "revision": command.get("baseRev")}
         if command.get("replyTo"):          # the user's answer to an earlier answer: what was said and answered then
             said["answering"] = command.get("context")
-        messages: list[dict[str, Any]] = [{"role": "user", "text": json.dumps(said, ensure_ascii=False)}]
+        first: dict[str, Any] = {"role": "user", "text": json.dumps(said, ensure_ascii=False)}
+        if command.get("attachment"):        # a reference picture sent with the sentence: the model looks at it
+            try:
+                data, mime, _ = self.svc.command_picture(cid)
+                first["images"] = [{"mime": mime, "data": base64.b64encode(data).decode("ascii")}]
+                said["picture"] = "attached: the reference picture the user sent"
+                first["text"] = json.dumps(said, ensure_ascii=False)
+            except KitchenError:
+                pass
+        messages: list[dict[str, Any]] = [first]
         for _ in range(MAX_STEPS):
             try:
                 reply = self.svc.models.ask(mc.ModelRequest(self.instructions(), tuple(messages), TOOLS, max_tokens=1500, task="inbox"),
@@ -178,11 +191,13 @@ class InboxWorker:
                 where = {k: place[k] for k in ("point", "structureId", "module") if k in place}
                 out = s.opening_command(did, str(a.get("text") or ""), where, "user")
             elif call.name == "interpret_edit":
-                scope = [str(x) for x in a.get("scope_modules") or []] or None
+                scope = [str(x) for x in a.get("scope_modules") or place.get("modules") or []] or None   # default: everything selected
                 out = s.interpret(did, str(a.get("text") or ""), None, scope, None, False, place.get("surfaces"))
             elif call.name == "propose_change":
-                scope = [str(x) for x in a.get("scope_modules") or []] or None
+                scope = [str(x) for x in a.get("scope_modules") or place.get("modules") or []] or None
                 out = s.propose(did, dict(a.get("op") or {}), None, scope)
+            elif call.name == "material_sample":
+                out = s.material_sample(did, str(state.get("command") or ""))
             elif call.name == "propose_template":
                 out = s.template(did, dict(a.get("template") or {}), None)
             elif call.name == "apply_change":
