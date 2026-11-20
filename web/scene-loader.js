@@ -16,6 +16,11 @@ export function makeCamera(THREE, c, aspect) {
   return new THREE.PerspectiveCamera(c.fov, aspect, c.near, c.far);
 }
 
+/** Show the objects drawn on the plan only (door sweeps) when `plan` is true, hide them otherwise. */
+export function showPlanOnly(root, plan) {
+  root.traverse((o) => { if (o.userData?.planOnly) o.visible = !!plan; });
+}
+
 export function buildKitchen(doc, THREE, opts = {}) {
   const s = SCALE[doc.units || 'mm'];
   if (doc.coordinateSystem?.positionAnchor && doc.coordinateSystem.positionAnchor !== 'bottom_back_left') {
@@ -29,6 +34,17 @@ export function buildKitchen(doc, THREE, opts = {}) {
   const root = new THREE.Group(); root.name = doc.metadata?.projectName || 'Kitchen';
   const byModule = new Map(); const pickables = [];
   const structures = new Map(); // structure id -> { record, meshes (pickable solids), parts (every object, lines included) }
+  // the floor a door leaf sweeps: a flat fan drawn on the plan only (userData.planOnly; showPlanOnly turns it on and off), never picked
+  const sweepMat = new THREE.MeshBasicMaterial({ color: 0xbfe3d6, transparent: true, opacity: 0.7, side: THREE.DoubleSide, depthWrite: false });
+  const sweepFan = (pts, y) => {         // pts: [x, z] in metres, the first one the hinge (or a corner of a convex sheet)
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pts.flatMap(([x, z]) => [x, y, z]), 3));
+    const idx = []; for (let i = 1; i < pts.length - 1; i++) idx.push(0, i, i + 1);
+    g.setIndex(idx);
+    const mesh = new THREE.Mesh(g, sweepMat);
+    mesh.userData = { planOnly: true }; mesh.visible = false; mesh.renderOrder = 1;
+    return mesh;
+  };
 
   const rad = (r) => (r?.unit === 'rad' ? 1 : Math.PI / 180);
   function place(obj, tf) {
@@ -128,6 +144,9 @@ export function buildKitchen(doc, THREE, opts = {}) {
       (opening.frame || []).forEach((bx) => piece(`frame-${bx.part}`, bx, bx.leafFrame ? leafFrameMaterial : frameMaterial, bx.leafFrame ? 'opening-leaf-frame' : 'opening-frame'));
       (opening.leaves || []).forEach((bx, i) => piece(`leaf-${i + 1}`, bx, bx.glass ? glassMaterial : leafMaterial, bx.glass ? 'opening-glass' : 'opening-leaf'));
       (opening.handles || []).forEach((bx) => piece(`handle-${bx.leaf + 1}-${bx.part}`, bx, handleMaterial, 'opening-handle'));
+      for (const poly of opening.sweeps || []) {
+        if (poly.length >= 3) group.add(sweepFan(poly.map((p) => [p.x * s, flip * p.z * s]), (2 - (opening.sillHeight || 0)) * s));
+      }
       room.add(group);
     }
   }
@@ -188,9 +207,10 @@ export function buildKitchen(doc, THREE, opts = {}) {
       const mesh = add(new THREE.Mesh(new THREE.ShapeGeometry(shape), mat));
       mesh.rotation.x = -Math.PI / 2; mesh.position.y = ((st.base || 0) + 1) * s;
     }
-    if (st.swing?.length >= 2) {
-      const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(st.swing.map((p) => new THREE.Vector3(p.x * s, 0.02, p.z * s))), new THREE.LineBasicMaterial({ color }));
-      line.userData = info; room.add(line); entry.parts.push(line);
+    if (st.swing?.length >= 2) {        // plan only: the arc, and the fan from the hinge when there is one
+      const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(st.swing.map((p) => new THREE.Vector3(p.x * s, ((st.base || 0) + 3) * s, p.z * s))), new THREE.LineBasicMaterial({ color }));
+      line.userData = { planOnly: true }; line.visible = false; room.add(line);
+      if (st.hinge) room.add(sweepFan([st.hinge, ...st.swing].map((p) => [p.x * s, p.z * s]), ((st.base || 0) + 2) * s));
     }
   }
 

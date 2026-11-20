@@ -81,12 +81,21 @@ def main():
                                                                     "center": {"type": "number", "description": "[v1.6, ADR 0005] Centre along the wall axis, mm from its start"},
                                                                     "frame": {"type": "array", "description": "[v1.6, ADR 0005] Frame boxes: x along the wall from offset, y above the sill, z across from the wall centreline towards the room (mm)",
                                                                               "items": {"type": "object", "required": ["part", "x0", "x1", "y0", "y1", "z0", "z1"],
-                                                                                        "properties": {"part": {"type": "string"}, **{k: {"type": "number"} for k in ("x0", "x1", "y0", "y1", "z0", "z1")}}}},
+                                                                                        "properties": {"part": {"type": "string"},
+                                                                                                       "leafFrame": {"type": "boolean", "description": "The stile or rail of a framed glass leaf (opening type leafFrame > 0), not the fixed frame"},
+                                                                                                       **{k: {"type": "number"} for k in ("x0", "x1", "y0", "y1", "z0", "z1")}}}},
                                                                     "leaves": {"type": "array", "description": "[v1.6, ADR 0005] Closed leaves, same box coordinates as frame",
                                                                                "items": {"type": "object", "required": ["operation", "x0", "x1", "y0", "y1", "z0", "z1"],
                                                                                          "properties": {"operation": {"type": "string"}, "glass": {"type": "boolean"},
                                                                                                         **{k: {"type": "number"} for k in ("x0", "x1", "y0", "y1", "z0", "z1")}}}},
-                                                                    "sourceElement": {"type": "string", "description": "[v1.6] Floorplan element of the opening"}}}},
+                                                                    "sourceElement": {"type": "string", "description": "[v1.6] Floorplan element of the opening"},
+                                                                    "handles": {"type": "array", "description": "Handles of the leaves that open, both faces; same box coordinates as frame",
+                                                                                "items": {"type": "object", "required": ["part", "leaf", "x0", "x1", "y0", "y1", "z0", "z1"],
+                                                                                          "properties": {"part": {"type": "string"}, "leaf": {"type": "integer"},
+                                                                                                         **{k: {"type": "number"} for k in ("x0", "x1", "y0", "y1", "z0", "z1")}}}},
+                                                                    "sweeps": {"type": "array", "description": "Floor a turning leaf sweeps (hinge first, then the arc), points x along the wall from offset and z across like frame (mm); drawn on the plan only",
+                                                                               "items": {"type": "array", "items": {"type": "object", "required": ["x", "z"],
+                                                                                                                    "properties": {"x": {"type": "number"}, "z": {"type": "number"}}}}}}}},
                         "Cửa sổ / cửa đi trên tường (cần cho quy tắc không đặt bếp dưới cửa sổ, và cho ảnh)")
     w["sourceElement"] = opt({"type": "string"}, "[v1.5] Floorplan wall element this scene wall comes from")
     w["floorplanWallId"] = opt({"type": "string"}, "[v1.5] Imported floorplan wall record (WALL-FP-n)")

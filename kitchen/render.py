@@ -276,7 +276,19 @@ def scene_hash(scene: Scene) -> str:
     return h.hexdigest()
 
 
+PLAN_ONLY = ("structure-swing", "opening-sweep")    # the floor a door leaf sweeps: drawn on the plan only, never in a perspective view
+
+
+def view_scene(scene: Scene, view: ViewAngle) -> Scene:
+    """What ``view`` shows of ``scene``: without the structures it hides (``view.hide``) and, unless it is the plan (orthographic),
+    without the door sweeps (``PLAN_ONLY``). Idempotent."""
+    plan = view.orthoHeight is not None
+    meshes = [m for m in scene.meshes if m.module not in view.hide and (plan or m.type not in PLAN_ONLY)]
+    return scene if len(meshes) == len(scene.meshes) else replace(scene, meshes=meshes)
+
+
 def render_key(scene: Scene, view: ViewAngle, width: int, height: int) -> str:
+    scene = view_scene(scene, view)
     v = json.dumps(view.model_dump(mode="json", exclude={"orthoHeight"} if view.orthoHeight is None else None), sort_keys=True)
     return hashlib.sha256(f"{scene_hash(scene)}|{v}|{width}x{height}|{two_point.PROJECTION}".encode()).hexdigest()[:16]
 
@@ -411,8 +423,7 @@ def render_view(scene: Scene, view: ViewAngle, out_dir: Path, width: int = 1280,
                 legend: dict | None = None, colors: list | None = None, meta: dict | None = None,
                 faces: list[FaceColor] | None = None, wall_face_refs: list[FaceRef] | None = None) -> dict:
     out_dir.mkdir(parents=True, exist_ok=True)
-    if view.hide:  # structures that would stand between this camera and the cabinets
-        scene = replace(scene, meshes=[m for m in scene.meshes if m.module not in view.hide])
+    scene = view_scene(scene, view)   # structures standing between this camera and the cabinets, door sweeps outside the plan
     camera = Camera(view, width, height)
     zbuf, pid, nid, mesh_n = rasterize(scene, camera)
     nparts = len(scene.parts)

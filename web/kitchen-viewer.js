@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { buildKitchen } from './scene-loader.js';
+import { buildKitchen, showPlanOnly } from './scene-loader.js';
 import { clickEffect, dragChange, dragTurn, floorPoint, isClick, opensMenu, pickTarget, sceneToMm, surfaceHit } from './menu-logic.js';
 import { twoPoint } from './two-point.js';
 
@@ -263,7 +263,7 @@ export function createViewer(opts) {
       doc = next;
       root.clear(); hiddenByView = [];
       const k = buildKitchen(doc, THREE, { RectAreaLightUniformsLib, loadModel });
-      root.add(k.root);
+      root.add(k.root); showPlanOnly(k.root, camera === ortho);      // door sweeps: on the plan only
       meshes = k.pickables; byModule = k.byModule; docCams = k.cameras || {};
       faces = k.surfaces || new Map(); wallFaces = (k.surfacePickables || []).filter((m) => m.userData.type === 'wall'); litFaces = [];
       opts.onSceneBuilt(k);
@@ -298,6 +298,7 @@ export function createViewer(opts) {
       const c = docCams[`CAM-${key}`];
       const oh = c ? c.orthoHeight : v.orthoHeight;         // the plan: orthographic
       if (oh) { camera = ortho; orthoHeight = oh; ortho.zoom = 1; frameOrtho(); } else { camera = persp; orthoHeight = 0; persp.fov = c ? c.fov : v.verticalFov; }
+      showPlanOnly(root, !!oh);
       if (persp.view?.enabled && camera !== persp) persp.clearViewOffset();
       controls.object = camera;
       camera.position.set(...(c ? c.position : v.position)); camera.updateProjectionMatrix();

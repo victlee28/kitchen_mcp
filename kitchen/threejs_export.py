@@ -433,6 +433,13 @@ def _run_docs(spec: KitchenSpec, modules: list[dict[str, Any]]) -> list[dict[str
 UNSET_TIME = "1970-01-01T00:00:00+00:00"   # what an export made without a clock says; the service always passes the real time
 
 
+def _local_point(axis: Any, edges: Any, same: float, towards: float, p: Any) -> dict[str, float]:
+    """A point of the kitchen frame in an exported opening's own frame: x along the wall from its offset, z across towards the room."""
+    sv, dv = axis.s_of(p), axis.d_of(p)
+    x = (sv - edges[0]) if same > 0 else (edges[1] - sv)
+    return {"x": round_half_away(x, 1), "z": round_half_away(dv * towards, 1)}
+
+
 def _export_openings(doc: dict[str, Any], spec: KitchenSpec, catalog: Catalog, lsau: float, lphai: float) -> None:
     """Put the openings the design places (its own, its overrides of floorplan openings) on the exported wall they sit in, with their
     frame and leaves as boxes the browser draws: ``x`` along the wall from the opening's ``offset``, ``y`` above the sill, ``z``
@@ -494,6 +501,8 @@ def _export_openings(doc: dict[str, Any], spec: KitchenSpec, catalog: Catalog, l
                        if lf["index"] not in {p["leaf"] for p in sh["leafParts"]}]
                       + [{"operation": sh["leaves"][p["leaf"]]["operation"], "glass": True, **local(p)} for p in sh["leafParts"] if p["part"] == "pane"],
             "handles": [{"part": str(hb["part"]), "leaf": hb["leaf"], **local(hb)} for hb in sh["handles"]],
+            # the floor a leaf sweeps (x along the wall from offset, z across like the boxes): drawn on the plan only
+            "sweeps": [[_local_point(axis, sh["edges"], same, towards, q) for q in poly] for poly in sh["sweeps"] if len(poly) >= 3],
             **({"sourceElement": opening.source_element} if opening.source_element else {})}
         wall["openings"] = [o for o in wall["openings"] if o["id"] != opening.id] + [record]
 

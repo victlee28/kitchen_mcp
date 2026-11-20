@@ -94,6 +94,21 @@ class TestStructureMask(unittest.TestCase):
         scene = geometry.compile_spec(spec)
         self.assertTrue([m for m in scene.meshes if m.type == "structure-swing" and m.module == "STRUCT-opening_002"])
 
+    def test_door_swing_is_drawn_on_the_plan_only(self):
+        from test_floorplan import BUILDING
+        spec = _spec(False)
+        spec.floorplan = fpm.normalize(BUILDING, "room_003")
+        scene = geometry.compile_spec(spec)
+        persp = ViewAngle(position=(1.0, 1.5, 4.0), lookAt=(1.0, 1.0, 0.0))
+        plan = ViewAngle(position=(1.0, 10.0, 1.0), lookAt=(1.0, 0.0, 1.0), orthoHeight=6.0)
+        swings = lambda sc: [m for m in sc.meshes if m.type in render.PLAN_ONLY]     # noqa: E731
+        self.assertTrue(swings(render.view_scene(scene, plan)))
+        self.assertEqual(swings(render.view_scene(scene, persp)), [])
+        # the key a caller computes from the whole scene is the one the render writes (it drew the view's own scene)
+        with tempfile.TemporaryDirectory() as d:
+            out = render.render_view(scene, persp, Path(d), 64, 48)
+        self.assertEqual(out["renderKey"], render.render_key(scene, persp, 64, 48))
+
     def test_stair_is_stepped(self):
         fp = _spec().floorplan
         st = {"id": "S", "kind": "stair", "outline": [{"x": 0, "z": 0}, {"x": 1000, "z": 0}, {"x": 1000, "z": 3000}, {"x": 0, "z": 3000}],

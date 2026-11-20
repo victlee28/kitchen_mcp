@@ -456,6 +456,10 @@
                           "part": {
                             "type": "string"
                           },
+                          "leafFrame": {
+                            "type": "boolean",
+                            "description": "The stile or rail of a framed glass leaf (opening type leafFrame > 0), not the fixed frame"
+                          },
                           "x0": {
                             "type": "number"
                           },
@@ -473,10 +477,6 @@
                           },
                           "z1": {
                             "type": "number"
-                          },
-                          "leafFrame": {
-                            "type": "boolean",
-                            "description": "The stile or rail of a framed glass leaf (opening type leafFrame > 0), not the fixed frame"
                           }
                         }
                       }
@@ -566,6 +566,28 @@
                           },
                           "z1": {
                             "type": "number"
+                          }
+                        }
+                      }
+                    },
+                    "sweeps": {
+                      "type": "array",
+                      "description": "Floor a turning leaf sweeps (hinge first, then the arc), points x along the wall from offset and z across like frame (mm); drawn on the plan only",
+                      "items": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "required": [
+                            "x",
+                            "z"
+                          ],
+                          "properties": {
+                            "x": {
+                              "type": "number"
+                            },
+                            "z": {
+                              "type": "number"
+                            }
                           }
                         }
                       }

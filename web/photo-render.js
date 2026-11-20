@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { buildKitchen, makeCamera } from './scene-loader.js';
+import { buildKitchen, makeCamera, showPlanOnly } from './scene-loader.js';
 import './boot.js';   // wording + catalog palettes (appliance box colours)
 
 export const viewOf = (cameraId) => cameraId.replace(/^CAM-/, '');
@@ -67,6 +67,7 @@ export async function renderDoc(doc, opts = {}) {
     camera.updateProjectionMatrix();
     const hidden = [];      // structures standing between this camera and the cabinets (walls, stairs, furniture) are left out of its picture
     if (c.hide?.length) { const h = new Set(c.hide); k.root.traverse((o) => { if (o.visible && h.has(o.userData?.structureId)) { o.visible = false; hidden.push(o); } }); }
+    showPlanOnly(k.root, !!camera.isOrthographicCamera);       // door sweeps: on the plan only
     renderer.render(scene, camera);
     for (const o of hidden) o.visible = true;
     out.push({ cameraId, view, name: c.name, width: W, height: H, dataUrl: canvas.toDataURL('image/png') });

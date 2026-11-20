@@ -66,7 +66,9 @@ class TestRunExport(unittest.TestCase):
                   "const d = JSON.parse((await import('node:fs')).readFileSync(0, 'utf8'));"
                   "const k = L.buildKitchen(d, THREE, {edges: false});"
                   "const door = k.root.getObjectByName('OP1');"
-                  "console.log(JSON.stringify({found: !!door, meshes: door?.children.filter(x => x.isMesh).length || 0}));")
+                  "const ms = door?.children.filter(x => x.isMesh) || []; const sw = ms.filter(x => x.userData.planOnly);"
+                  "const hidden = sw.every(x => !x.visible); L.showPlanOnly(k.root, true);"
+                  "console.log(JSON.stringify({found: !!door, meshes: ms.length - sw.length, sweeps: sw.length, hidden, plan: sw.every(x => x.visible)}));")
         three = ROOT / "web" / "vendor" / "three" / "build" / "three.module.js"
         if not three.exists():
             three = ROOT / "web" / "vendor" / "three" / "build" / "three.module.min.js"
@@ -76,6 +78,8 @@ class TestRunExport(unittest.TestCase):
         rendered = json.loads(out.stdout)
         self.assertTrue(rendered["found"])
         self.assertEqual(rendered["meshes"], len(door["frame"]) + len(door["leaves"]) + len(door.get("handles", [])))
+        # the floor the leaf sweeps: one sheet, drawn on the plan only
+        self.assertEqual((len(door["sweeps"]), rendered["sweeps"], rendered["hidden"], rendered["plan"]), (1, 1, True, True))
 
     def test_countertop_names_its_run(self):
         doc = threejs_export.export(_run_spec(30))
