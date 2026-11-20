@@ -1,0 +1,106 @@
+{
+ "function": "numeric.polygon_centroid",
+ "cases": [
+  {
+   "name": "L shape",
+   "input": {
+    "points": [
+     [
+      0,
+      0
+     ],
+     [
+      4,
+      0
+     ],
+     [
+      4,
+      1
+     ],
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      3
+     ],
+     [
+      0,
+      3
+     ]
+    ]
+   },
+   "expected": {
+    "centroid": [
+     1.5,
+     1.0
+    ]
+   }
+  },
+  {
+   "name": "square clockwise",
+   "input": {
+    "points": [
+     [
+      0,
+      0
+     ],
+     [
+      0,
+      2
+     ],
+     [
+      2,
+      2
+     ],
+     [
+      2,
+      0
+     ]
+    ]
+   },
+   "expected": {
+    "centroid": [
+     1.0,
+     1.0
+    ]
+   }
+  },
+  {
+   "name": "degenerate line",
+   "input": {
+    "points": [
+     [
+      0,
+      0
+     ],
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      2
+     ]
+    ]
+   },
+   "expected": {
+    "centroid": [
+     1.0,
+     1.0
+    ]
+   }
+  },
+  {
+   "name": "empty",
+   "input": {
+    "points": []
+   },
+   "error": {
+    "kind": "validation",
+    "code": "empty-polygon"
+   }
+  }
+ ]
+}

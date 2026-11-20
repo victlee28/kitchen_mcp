@@ -1,0 +1,43 @@
+{
+ "function": "catalog.check.scope_for",
+ "cases": [
+  {
+   "name": "workshop",
+   "input": {
+    "role": "workshop"
+   },
+   "expected": {
+    "scope": "workshop"
+   }
+  },
+  {
+   "name": "a user",
+   "input": {
+    "role": "user",
+    "user": "bob"
+   },
+   "expected": {
+    "scope": "user:bob"
+   }
+  },
+  {
+   "name": "the default user",
+   "input": {
+    "role": "user"
+   },
+   "expected": {
+    "scope": "user:default"
+   }
+  },
+  {
+   "name": "unknown role",
+   "input": {
+    "role": "admin"
+   },
+   "error": {
+    "kind": "validation",
+    "code": "bad-role"
+   }
+  }
+ ]
+}

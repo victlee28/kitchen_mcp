@@ -38,6 +38,17 @@
     "vi": "Đoạn văn (tiếng Anh)",
     "en": "Text (English)"
    }
+  },
+  "table": {
+   "type": "object",
+   "additionalProperties": {
+    "type": "string",
+    "minLength": 1
+   },
+   "x-label": {
+    "vi": "Bảng mã → cụm (tiếng Anh)",
+    "en": "Key → phrase (English)"
+   }
   }
  }
 }

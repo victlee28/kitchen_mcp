@@ -40,6 +40,8 @@ def kind_info(name: str, raw: Any) -> KindInfo:
     if bad:
         raise InvalidInput(f"kind {name}: unknown role {bad}", code="catalog-kind-invalid")
     refs: list[tuple[str, str]] = []
+    if "refs" in d and as_list(d.get("refs")) is None:
+        raise InvalidInput(f"kind {name}: refs is a list of [path, kind]", code="catalog-kind-invalid")
     for r in as_list(d.get("refs")) or []:
         pair = as_list(r)
         if pair is None or len(pair) != 2:

@@ -1,0 +1,145 @@
+{
+ "function": "menu_commands.answered",
+ "cases": [
+  {
+   "name": "done",
+   "input": {
+    "record": {
+     "id": "20261119-101500-ab12",
+     "designId": "d1",
+     "text": "đổi màu tủ dưới",
+     "place": {
+      "kind": "module",
+      "id": "TD1"
+     },
+     "baseRev": 3,
+     "lang": "vi",
+     "createdAt": "2026-11-19T10:15:00Z",
+     "status": "working",
+     "worker": "claude",
+     "startedAt": "t0"
+    },
+    "status": "done",
+    "reply": " Đã đổi ",
+    "revision": 4,
+    "fromRev": 3,
+    "now": "t1",
+    "choices": [
+     "Màu khác",
+     "Màu khác",
+     ""
+    ]
+   },
+   "expected": {
+    "id": "20261119-101500-ab12",
+    "designId": "d1",
+    "text": "đổi màu tủ dưới",
+    "place": {
+     "kind": "module",
+     "id": "TD1"
+    },
+    "baseRev": 3,
+    "lang": "vi",
+    "createdAt": "2026-11-19T10:15:00Z",
+    "status": "done",
+    "reply": "Đã đổi",
+    "answeredAt": "t1",
+    "revision": 4,
+    "fromRev": 3,
+    "choices": [
+     "Màu khác"
+    ]
+   }
+  },
+  {
+   "name": "question drops old revision and choices",
+   "input": {
+    "record": {
+     "id": "20261119-101500-ab12",
+     "designId": "d1",
+     "text": "đổi màu tủ dưới",
+     "place": {
+      "kind": "module",
+      "id": "TD1"
+     },
+     "baseRev": 3,
+     "lang": "vi",
+     "createdAt": "2026-11-19T10:15:00Z",
+     "status": "pending",
+     "revision": 9,
+     "choices": [
+      "x"
+     ]
+    },
+    "status": "question",
+    "reply": "Màu nào?",
+    "revision": null,
+    "now": "t1",
+    "fromRev": 2
+   },
+   "expected": {
+    "id": "20261119-101500-ab12",
+    "designId": "d1",
+    "text": "đổi màu tủ dưới",
+    "place": {
+     "kind": "module",
+     "id": "TD1"
+    },
+    "baseRev": 3,
+    "lang": "vi",
+    "createdAt": "2026-11-19T10:15:00Z",
+    "status": "question",
+    "reply": "Màu nào?",
+    "answeredAt": "t1"
+   }
+  },
+  {
+   "name": "bad status",
+   "input": {
+    "record": {
+     "id": "20261119-101500-ab12",
+     "designId": "d1",
+     "text": "đổi màu tủ dưới",
+     "place": {
+      "kind": "module",
+      "id": "TD1"
+     },
+     "baseRev": 3,
+     "lang": "vi",
+     "createdAt": "2026-11-19T10:15:00Z",
+     "status": "pending"
+    },
+    "status": "dropped",
+    "now": "t"
+   },
+   "error": {
+    "kind": "validation",
+    "code": "command-bad-status"
+   }
+  },
+  {
+   "name": "closed",
+   "input": {
+    "record": {
+     "id": "20261119-101500-ab12",
+     "designId": "d1",
+     "text": "đổi màu tủ dưới",
+     "place": {
+      "kind": "module",
+      "id": "TD1"
+     },
+     "baseRev": 3,
+     "lang": "vi",
+     "createdAt": "2026-11-19T10:15:00Z",
+     "status": "done"
+    },
+    "status": "done",
+    "now": "t"
+   },
+   "error": {
+    "kind": "validation",
+    "code": "command-closed"
+   }
+  }
+ ]
+}

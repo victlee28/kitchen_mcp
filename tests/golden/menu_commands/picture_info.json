@@ -1,0 +1,52 @@
+{
+ "function": "menu_commands.picture_info",
+ "cases": [
+  {
+   "name": "png",
+   "input": {
+    "bytes": 10,
+    "mime": "image/png",
+    "name": " ảnh mẫu.png "
+   },
+   "expected": {
+    "name": "ảnh mẫu.png",
+    "mime": "image/png",
+    "bytes": 10
+   }
+  },
+  {
+   "name": "no name",
+   "input": {
+    "bytes": 3,
+    "mime": "image/webp"
+   },
+   "expected": {
+    "name": "picture",
+    "mime": "image/webp",
+    "bytes": 3
+   }
+  },
+  {
+   "name": "gif refused",
+   "input": {
+    "bytes": 3,
+    "mime": "image/gif"
+   },
+   "error": {
+    "kind": "validation",
+    "code": "command-picture-type"
+   }
+  },
+  {
+   "name": "empty refused",
+   "input": {
+    "bytes": 0,
+    "mime": "image/png"
+   },
+   "error": {
+    "kind": "validation",
+    "code": "command-picture-size"
+   }
+  }
+ ]
+}

@@ -1,0 +1,131 @@
+{
+ "function": "cabinet_run.fit_levels",
+ "cases": [
+  {
+   "name": "template heights to the design's",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "modules": [
+     {
+      "id": "N1",
+      "type": "base",
+      "wall": "back",
+      "fromCorner": 0,
+      "width": 600,
+      "y": 0,
+      "height": 700,
+      "depth": 560
+     },
+     {
+      "id": "N2",
+      "type": "upper",
+      "wall": "back",
+      "fromCorner": 0,
+      "width": 600,
+      "y": 1400,
+      "height": 600,
+      "depth": 300
+     },
+     {
+      "id": "N3",
+      "type": "tall",
+      "wall": "back",
+      "fromCorner": 600,
+      "width": 600,
+      "y": 0,
+      "height": 2000,
+      "depth": 560
+     },
+     {
+      "id": "N4",
+      "type": "upper-hood",
+      "wall": "back",
+      "fromCorner": 1200,
+      "width": 600,
+      "y": 1500,
+      "height": 400,
+      "depth": 350
+     },
+     {
+      "id": "N5",
+      "type": "corner-shelf",
+      "wall": "corner",
+      "fromCorner": 0,
+      "width": 300,
+      "y": 900,
+      "height": 600,
+      "depth": 300
+     }
+    ]
+   },
+   "expected": {
+    "modules": [
+     {
+      "id": "N1",
+      "type": "base",
+      "wall": "back",
+      "fromCorner": 0,
+      "width": 600,
+      "y": 0.0,
+      "height": 840.0,
+      "depth": 560
+     },
+     {
+      "id": "N2",
+      "type": "upper",
+      "wall": "back",
+      "fromCorner": 0,
+      "width": 600,
+      "y": 1530.0,
+      "height": 750.0,
+      "depth": 300
+     },
+     {
+      "id": "N3",
+      "type": "tall",
+      "wall": "back",
+      "fromCorner": 600,
+      "width": 600,
+      "y": 0,
+      "height": 2610.0,
+      "depth": 560
+     },
+     {
+      "id": "N4",
+      "type": "upper-hood",
+      "wall": "back",
+      "fromCorner": 1200,
+      "width": 600,
+      "y": 1880.0,
+      "height": 400,
+      "depth": 350
+     },
+     {
+      "id": "N5",
+      "type": "corner-shelf",
+      "wall": "corner",
+      "fromCorner": 0,
+      "width": 300,
+      "y": 900,
+      "height": 600,
+      "depth": 300
+     }
+    ]
+   }
+  },
+  {
+   "name": "nothing to fit",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "modules": []
+   },
+   "expected": {
+    "modules": []
+   }
+  }
+ ]
+}

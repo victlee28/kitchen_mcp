@@ -18,7 +18,6 @@ import hashlib
 import json
 from typing import TYPE_CHECKING, Any
 
-from . import geometry
 
 if TYPE_CHECKING:  # pragma: no cover
     from .images import ImageJobs
@@ -57,9 +56,9 @@ def _changed(was: dict[str, Any], now: dict[str, Any]) -> list[dict[str, Any]]:
 
 def view_status(images: "ImageJobs", did: str, rev: int | None = None) -> dict[str, dict[str, Any]]:
     """Status of every view of the design at ``rev`` (latest by default). Views with no approved image are not rendered."""
-    spec, r = images.store.get(did, rev)
+    _, r = images.store.get(did, rev)
     out: dict[str, dict[str, Any]] = {}
-    for view in geometry.views_of(spec):
+    for view in images.views(did, r):
         accepted = images.store.list_jobs(did, view, "accepted", 200)
         if not accepted:
             out[view] = {"status": "none"}
@@ -94,10 +93,9 @@ def style_source(images: "ImageJobs", did: str, view: str, wanted: str = "auto")
     the views whose status is ``current``, so a stale image never becomes the guide."""
     from .errors import InvalidInput
     if wanted not in ("auto", "", None):
-        spec, _ = images.store.get(did)
         if wanted == view:
             raise InvalidInput("styleFrom must be a different view than the one being made", code="style-from-same-view")
-        if wanted not in geometry.views_of(spec):
+        if wanted not in images.views(did):
             raise InvalidInput(f"styleFrom: no view '{wanted}'", code="view-not-found", params={"view": wanted, "views": "-"})
         accepted = images.store.list_jobs(did, wanted, "accepted", 200)
         if not accepted:

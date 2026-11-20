@@ -1,0 +1,357 @@
+{
+ "function": "openings.meshes",
+ "cases": [
+  {
+   "name": "a swing door",
+   "input": {
+    "room": {
+     "back": 3600,
+     "side": 3000
+    },
+    "opening": {
+     "id": "OP1",
+     "kind": "door",
+     "openingType": "door-swing-1",
+     "wallAxis": {
+      "id": "back"
+     },
+     "center": 1500.0,
+     "width": 900.0,
+     "height": 2100.0
+    },
+    "box": [
+     [
+      -3600.0,
+      0.0,
+      -100.0
+     ],
+     [
+      0.0,
+      2700.0,
+      0.0
+     ]
+    ],
+    "polygon": [
+     [
+      -3600.0,
+      -100.0
+     ],
+     [
+      0.0,
+      -100.0
+     ],
+     [
+      0.0,
+      0.0
+     ],
+     [
+      -3600.0,
+      0.0
+     ]
+    ],
+    "y": [
+     0.0,
+     2700.0
+    ]
+   },
+   "expected": {
+    "meshes": [
+     [
+      "OP1-frame-jamb-start",
+      "opening-frame",
+      8
+     ],
+     [
+      "OP1-frame-jamb-end",
+      "opening-frame",
+      8
+     ],
+     [
+      "OP1-frame-head",
+      "opening-frame",
+      8
+     ],
+     [
+      "OP1-frame-casing-plus-start",
+      "opening-frame",
+      8
+     ],
+     [
+      "OP1-frame-casing-plus-end",
+      "opening-frame",
+      8
+     ],
+     [
+      "OP1-frame-casing-plus-head",
+      "opening-frame",
+      8
+     ],
+     [
+      "OP1-frame-casing-minus-start",
+      "opening-frame",
+      8
+     ],
+     [
+      "OP1-frame-casing-minus-end",
+      "opening-frame",
+      8
+     ],
+     [
+      "OP1-frame-casing-minus-head",
+      "opening-frame",
+      8
+     ],
+     [
+      "OP1-leaf-1",
+      "opening-leaf",
+      8
+     ],
+     [
+      "OP1-handle-1-rose-front",
+      "opening-handle",
+      8
+     ],
+     [
+      "OP1-handle-1-lever-front",
+      "opening-handle",
+      8
+     ],
+     [
+      "OP1-handle-1-rose-back",
+      "opening-handle",
+      8
+     ],
+     [
+      "OP1-handle-1-lever-back",
+      "opening-handle",
+      8
+     ],
+     [
+      "OP1-sweep-1",
+      "opening-sweep",
+      14
+     ]
+    ],
+    "leafTypes": [
+     "opening-leaf",
+     "opening-glass",
+     "opening-leaf"
+    ],
+    "hole": [
+     1050.0,
+     1950.0,
+     0.0,
+     2100.0
+    ],
+    "cutBox": [
+     [
+      [
+       -3600.0,
+       0.0,
+       -100.0
+      ],
+      [
+       -1900.0,
+       2700.0,
+       0.0
+      ]
+     ],
+     [
+      [
+       -1000.0,
+       0.0,
+       -100.0
+      ],
+      [
+       0.0,
+       2700.0,
+       0.0
+      ]
+     ],
+     [
+      [
+       -1900.0,
+       2100.0,
+       -100.0
+      ],
+      [
+       -1000.0,
+       2700.0,
+       0.0
+      ]
+     ]
+    ],
+    "cutPolygon": 3
+   }
+  },
+  {
+   "name": "a sliding window",
+   "input": {
+    "room": {
+     "back": 3600,
+     "side": 3000
+    },
+    "opening": {
+     "id": "OP2",
+     "kind": "window",
+     "openingType": "window-sliding-2",
+     "wallAxis": {
+      "id": "back"
+     },
+     "center": 1800.0,
+     "width": 1400.0,
+     "height": 1200.0,
+     "sill": 900.0
+    },
+    "box": [
+     [
+      -100.0,
+      0.0,
+      0.0
+     ],
+     [
+      0.0,
+      2700.0,
+      3000.0
+     ]
+    ]
+   },
+   "expected": {
+    "meshes": [
+     [
+      "OP2-frame-jamb-start",
+      "opening-frame",
+      8
+     ],
+     [
+      "OP2-frame-jamb-end",
+      "opening-frame",
+      8
+     ],
+     [
+      "OP2-frame-head",
+      "opening-frame",
+      8
+     ],
+     [
+      "OP2-frame-sill",
+      "opening-frame",
+      8
+     ],
+     [
+      "OP2-frame-casing-plus-start",
+      "opening-frame",
+      8
+     ],
+     [
+      "OP2-frame-casing-plus-end",
+      "opening-frame",
+      8
+     ],
+     [
+      "OP2-frame-casing-plus-head",
+      "opening-frame",
+      8
+     ],
+     [
+      "OP2-frame-casing-minus-start",
+      "opening-frame",
+      8
+     ],
+     [
+      "OP2-frame-casing-minus-end",
+      "opening-frame",
+      8
+     ],
+     [
+      "OP2-frame-casing-minus-head",
+      "opening-frame",
+      8
+     ],
+     [
+      "OP2-leaf-1-stile-start",
+      "opening-leaf-frame",
+      8
+     ],
+     [
+      "OP2-leaf-1-stile-end",
+      "opening-leaf-frame",
+      8
+     ],
+     [
+      "OP2-leaf-1-rail-bottom",
+      "opening-leaf-frame",
+      8
+     ],
+     [
+      "OP2-leaf-1-rail-top",
+      "opening-leaf-frame",
+      8
+     ],
+     [
+      "OP2-leaf-1-pane",
+      "opening-glass",
+      8
+     ],
+     [
+      "OP2-leaf-2-stile-start",
+      "opening-leaf-frame",
+      8
+     ],
+     [
+      "OP2-leaf-2-stile-end",
+      "opening-leaf-frame",
+      8
+     ],
+     [
+      "OP2-leaf-2-rail-bottom",
+      "opening-leaf-frame",
+      8
+     ],
+     [
+      "OP2-leaf-2-rail-top",
+      "opening-leaf-frame",
+      8
+     ],
+     [
+      "OP2-leaf-2-pane",
+      "opening-glass",
+      8
+     ],
+     [
+      "OP2-handle-1-pull-front",
+      "opening-handle",
+      8
+     ],
+     [
+      "OP2-handle-1-pull-back",
+      "opening-handle",
+      8
+     ],
+     [
+      "OP2-handle-2-pull-front",
+      "opening-handle",
+      8
+     ],
+     [
+      "OP2-handle-2-pull-back",
+      "opening-handle",
+      8
+     ]
+    ],
+    "leafTypes": [
+     "opening-glass",
+     "opening-glass",
+     "opening-glass"
+    ],
+    "hole": [
+     1100.0,
+     2500.0,
+     900.0,
+     2100.0
+    ],
+    "cutBox": null
+   }
+  }
+ ]
+}

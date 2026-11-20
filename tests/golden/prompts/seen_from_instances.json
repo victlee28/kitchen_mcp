@@ -1,0 +1,325 @@
+{
+ "function": "prompts.seen.from_instances",
+ "cases": [
+  {
+   "name": "eye level",
+   "input": {
+    "doc": {
+     "width": 100,
+     "height": 100,
+     "instances": [
+      {
+       "module": "TD1",
+       "type": "door",
+       "pixels": 900,
+       "bbox": [
+        0,
+        50,
+        30,
+        80
+       ]
+      },
+      {
+       "module": "TD1",
+       "type": "handle",
+       "pixels": 20,
+       "bbox": [
+        25,
+        60,
+        28,
+        70
+       ]
+      },
+      {
+       "module": "TT1",
+       "type": "door",
+       "pixels": 300,
+       "bbox": [
+        0,
+        0,
+        30,
+        20
+       ]
+      },
+      {
+       "module": "TD9",
+       "type": "door",
+       "pixels": 50
+      },
+      {
+       "type": "wall",
+       "pixels": 5000
+      }
+     ]
+    }
+   },
+   "expected": {
+    "modules": [
+     "TD1",
+     "TD9",
+     "TT1"
+    ],
+    "parts": [
+     [
+      "TD1",
+      "door"
+     ],
+     [
+      "TD1",
+      "handle"
+     ],
+     [
+      "TD9",
+      "door"
+     ],
+     [
+      "TT1",
+      "door"
+     ]
+    ],
+    "boxes": {
+     "TD1": [
+      0.0,
+      50.0,
+      30.0,
+      80.0
+     ],
+     "TT1": [
+      0.0,
+      0.0,
+      30.0,
+      20.0
+     ]
+    },
+    "size": [
+     100.0,
+     100.0
+    ],
+    "topDown": false,
+    "ortho": false
+   }
+  },
+  {
+   "name": "from above (smaller share counts)",
+   "input": {
+    "doc": {
+     "width": 100,
+     "height": 100,
+     "instances": [
+      {
+       "module": "TD1",
+       "type": "door",
+       "pixels": 900,
+       "bbox": [
+        0,
+        50,
+        30,
+        80
+       ]
+      },
+      {
+       "module": "TD1",
+       "type": "handle",
+       "pixels": 20,
+       "bbox": [
+        25,
+        60,
+        28,
+        70
+       ]
+      },
+      {
+       "module": "TT1",
+       "type": "door",
+       "pixels": 300,
+       "bbox": [
+        0,
+        0,
+        30,
+        20
+       ]
+      },
+      {
+       "module": "TD9",
+       "type": "door",
+       "pixels": 50
+      },
+      {
+       "type": "wall",
+       "pixels": 5000
+      }
+     ]
+    },
+    "camera": {
+     "view": {
+      "position": [
+       0,
+       5000,
+       100
+      ],
+      "lookAt": [
+       0,
+       0,
+       0
+      ]
+     }
+    }
+   },
+   "expected": {
+    "modules": [
+     "TD1",
+     "TD9",
+     "TT1"
+    ],
+    "parts": [
+     [
+      "TD1",
+      "door"
+     ],
+     [
+      "TD1",
+      "handle"
+     ],
+     [
+      "TD9",
+      "door"
+     ],
+     [
+      "TT1",
+      "door"
+     ]
+    ],
+    "boxes": {
+     "TD1": [
+      0.0,
+      50.0,
+      30.0,
+      80.0
+     ],
+     "TT1": [
+      0.0,
+      0.0,
+      30.0,
+      20.0
+     ]
+    },
+    "size": [
+     100.0,
+     100.0
+    ],
+    "topDown": true,
+    "ortho": false
+   }
+  },
+  {
+   "name": "plan",
+   "input": {
+    "doc": {
+     "width": 100,
+     "height": 100,
+     "instances": [
+      {
+       "module": "TD1",
+       "type": "door",
+       "pixels": 900,
+       "bbox": [
+        0,
+        50,
+        30,
+        80
+       ]
+      },
+      {
+       "module": "TD1",
+       "type": "handle",
+       "pixels": 20,
+       "bbox": [
+        25,
+        60,
+        28,
+        70
+       ]
+      },
+      {
+       "module": "TT1",
+       "type": "door",
+       "pixels": 300,
+       "bbox": [
+        0,
+        0,
+        30,
+        20
+       ]
+      },
+      {
+       "module": "TD9",
+       "type": "door",
+       "pixels": 50
+      },
+      {
+       "type": "wall",
+       "pixels": 5000
+      }
+     ]
+    },
+    "camera": {
+     "view": {
+      "orthoHeight": 4000
+     }
+    }
+   },
+   "expected": {
+    "modules": [
+     "TD1",
+     "TD9",
+     "TT1"
+    ],
+    "parts": [
+     [
+      "TD1",
+      "door"
+     ],
+     [
+      "TD1",
+      "handle"
+     ],
+     [
+      "TD9",
+      "door"
+     ],
+     [
+      "TT1",
+      "door"
+     ]
+    ],
+    "boxes": {
+     "TD1": [
+      0.0,
+      50.0,
+      30.0,
+      80.0
+     ],
+     "TT1": [
+      0.0,
+      0.0,
+      30.0,
+      20.0
+     ]
+    },
+    "size": [
+     100.0,
+     100.0
+    ],
+    "topDown": true,
+    "ortho": true
+   }
+  },
+  {
+   "name": "no document",
+   "input": {
+    "doc": null
+   },
+   "expected": null
+  }
+ ]
+}

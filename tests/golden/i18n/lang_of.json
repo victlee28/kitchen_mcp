@@ -1,0 +1,41 @@
+{
+ "function": "i18n.lang_of",
+ "cases": [
+  {
+   "name": "values",
+   "input": {
+    "values": [
+     "vi",
+     "en",
+     "fr",
+     null,
+     ""
+    ]
+   },
+   "expected": {
+    "lang": [
+     "vi",
+     "en",
+     "vi",
+     "vi",
+     "vi"
+    ]
+   }
+  },
+  {
+   "name": "case matters",
+   "input": {
+    "values": [
+     "EN",
+     "Vi"
+    ]
+   },
+   "expected": {
+    "lang": [
+     "vi",
+     "vi"
+    ]
+   }
+  }
+ ]
+}

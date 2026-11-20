@@ -13,6 +13,7 @@ from collections import defaultdict
 from .geometry import Scene
 from .spec import HandleOverride, KitchenSpec, effective_handle, to_data
 from .errors import InvalidInput, require
+from .words import say
 
 
 def _dump(override: HandleOverride | None) -> dict[str, Any]:
@@ -68,7 +69,7 @@ def material_ops(spec: KitchenSpec, scene: Scene, part_ids: list[str], material:
             if not by_storey[k]:
                 del by_storey[k]
         changes["handleByStorey"] = by_storey or None
-        covered, scope = all_modules, "mọi tay nắm"
+        covered, scope = all_modules, say("scope.handles.all")
     else:
         storeys: list[str] = []
         for s in dict.fromkeys(storey_of[m] for m in sorted(all_modules)):
@@ -82,7 +83,8 @@ def material_ops(spec: KitchenSpec, scene: Scene, part_ids: list[str], material:
         single = sorted(chosen_modules - covered)
         for mid in single:
             ops.append({"op": "update", "id": mid, "changes": {"handle": {**_dump(module_of[mid].handle), "material": material}}})
-        scope = "tay nắm " + "; ".join(x for x in (f"tầng {', '.join(storeys)}" if storeys else "", f"module {', '.join(single)}" if single else "") if x)
+        scope = say("scope.handles", parts="; ".join(x for x in (say("scope.handles.storeys", storeys=", ".join(storeys)) if storeys else "",
+                                                           f"module {', '.join(single)}" if single else "") if x))
     for mid in sorted(covered):  # a module-level material would still win over the new storey / common material
         override = module_of[mid].handle
         if override is not None and override.material is not None:

@@ -1,0 +1,79 @@
+{
+ "function": "cabinet_types.of",
+ "cases": [
+  {
+   "name": "base",
+   "input": {
+    "type": "base"
+   },
+   "expected": {
+    "label": "Tủ dưới",
+    "storey": "base",
+    "builder": "",
+    "lets": [
+     "body"
+    ],
+    "steps": 7,
+    "frontless": false,
+    "ownDoor": false,
+    "frontStyle": "slab",
+    "plainType": "",
+    "mainRunOnly": false,
+    "exportType": "",
+    "prompt": "base cabinet"
+   }
+  },
+  {
+   "name": "sink",
+   "input": {
+    "type": "base-sink"
+   },
+   "expected": {
+    "label": "Tủ chậu",
+    "storey": "base",
+    "builder": "",
+    "lets": [
+     "body"
+    ],
+    "steps": 7,
+    "frontless": false,
+    "ownDoor": false,
+    "frontStyle": "slab",
+    "plainType": "base",
+    "mainRunOnly": false,
+    "exportType": "",
+    "prompt": "sink base cabinet"
+   }
+  },
+  {
+   "name": "glass upper",
+   "input": {
+    "type": "upper-glass"
+   },
+   "expected": {
+    "label": "Tủ trên cánh kính",
+    "storey": "upper",
+    "builder": "",
+    "lets": [],
+    "steps": 3,
+    "frontless": false,
+    "ownDoor": true,
+    "frontStyle": "glass",
+    "plainType": "",
+    "mainRunOnly": false,
+    "exportType": "",
+    "prompt": "glass wall cabinet"
+   }
+  },
+  {
+   "name": "unknown",
+   "input": {
+    "type": "boat"
+   },
+   "error": {
+    "kind": "validation",
+    "code": "unknown-cabinet-type"
+   }
+  }
+ ]
+}

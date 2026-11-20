@@ -1,0 +1,195 @@
+{
+ "function": "model_contract.to_anthropic",
+ "cases": [
+  {
+   "name": "tools, images, two tool results in one message",
+   "input": {
+    "request": {
+     "system": "Kitchen assistant.",
+     "messages": [
+      {
+       "role": "user",
+       "text": "Đổi màu tủ",
+       "images": [
+        {
+         "mime": "image/jpeg",
+         "data": "AAAA"
+        }
+       ]
+      },
+      {
+       "role": "assistant",
+       "text": "Calling",
+       "calls": [
+        {
+         "id": "c1",
+         "name": "apply",
+         "arguments": {
+          "op": "common"
+         }
+        },
+        {
+         "id": "c2",
+         "name": "look",
+         "arguments": {}
+        }
+       ]
+      },
+      {
+       "role": "tool",
+       "id": "c1",
+       "result": {
+        "ok": true
+       }
+      },
+      {
+       "role": "tool",
+       "id": "c2",
+       "result": "fine"
+      },
+      {
+       "role": "user",
+       "text": "Thanks"
+      }
+     ],
+     "tools": [
+      {
+       "name": "apply",
+       "description": "Apply an edit",
+       "parameters": {
+        "type": "object",
+        "properties": {
+         "op": {
+          "type": "string"
+         }
+        }
+       }
+      }
+     ],
+     "jsonOnly": true,
+     "maxTokens": 500,
+     "temperature": 0.2
+    },
+    "model": "claude-x"
+   },
+   "expected": {
+    "model": "claude-x",
+    "max_tokens": 500,
+    "temperature": 0.2,
+    "system": "Kitchen assistant.\n\nAnswer with ONE JSON object and nothing else.",
+    "messages": [
+     {
+      "role": "user",
+      "content": [
+       {
+        "type": "image",
+        "source": {
+         "type": "base64",
+         "media_type": "image/jpeg",
+         "data": "AAAA"
+        }
+       },
+       {
+        "type": "text",
+        "text": "Đổi màu tủ"
+       }
+      ]
+     },
+     {
+      "role": "assistant",
+      "content": [
+       {
+        "type": "text",
+        "text": "Calling"
+       },
+       {
+        "type": "tool_use",
+        "id": "c1",
+        "name": "apply",
+        "input": {
+         "op": "common"
+        }
+       },
+       {
+        "type": "tool_use",
+        "id": "c2",
+        "name": "look",
+        "input": {}
+       }
+      ]
+     },
+     {
+      "role": "user",
+      "content": [
+       {
+        "type": "tool_result",
+        "tool_use_id": "c1",
+        "content": "{\"ok\": true}"
+       },
+       {
+        "type": "tool_result",
+        "tool_use_id": "c2",
+        "content": "fine"
+       }
+      ]
+     },
+     {
+      "role": "user",
+      "content": [
+       {
+        "type": "text",
+        "text": "Thanks"
+       }
+      ]
+     }
+    ],
+    "tools": [
+     {
+      "name": "apply",
+      "description": "Apply an edit",
+      "input_schema": {
+       "type": "object",
+       "properties": {
+        "op": {
+         "type": "string"
+        }
+       }
+      }
+     }
+    ]
+   }
+  },
+  {
+   "name": "plain",
+   "input": {
+    "request": {
+     "system": "",
+     "messages": [
+      {
+       "role": "user",
+       "text": "hi"
+      }
+     ]
+    },
+    "model": "m"
+   },
+   "expected": {
+    "model": "m",
+    "max_tokens": 2000,
+    "temperature": 0.0,
+    "system": "",
+    "messages": [
+     {
+      "role": "user",
+      "content": [
+       {
+        "type": "text",
+        "text": "hi"
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

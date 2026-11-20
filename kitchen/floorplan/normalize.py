@@ -1,6 +1,7 @@
 """Audited floorplan document -> persistent room geometry (walls, openings, elements)."""
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 
 from ..numeric import round_half_away
@@ -18,7 +19,7 @@ from ..openings import types as opening_types
 
 
 # ---------------------------------------------------------------- normalize
-def normalize(data: dict[str, Any], room_id: str | None = None) -> dict[str, Any]:
+def normalize(data: dict[str, Any], room_id: str | None = None, kitchen_words: Sequence[str] | None = None) -> dict[str, Any]:
     """Validate a floorplan-audited document and return derived scene geometry (mm).
 
     The result never contains the source document (it is stored once, under ``ref``); everything in it is derived.
@@ -45,11 +46,11 @@ def normalize(data: dict[str, Any], room_id: str | None = None) -> dict[str, Any
     if dup:
         raise InvalidInput("Duplicate element ids: " + ", ".join(dup), code="floorplan-duplicate-ids", params={"ids": ", ".join(dup)})
 
-    rooms = [r for r in list_rooms(data) if r["kind"] == "room"]
+    rooms = [r for r in list_rooms(data, kitchen_words=kitchen_words) if r["kind"] == "room"]
     region: dict[str, Any] | None = None
     room_el: dict[str, Any] | None = None
     if room_id is not None and str(room_id).startswith("region:"):
-        region = parse_region(data, str(room_id))
+        region = parse_region(data, str(room_id), kitchen_words)
         bb = region["bbox"]
         raw_room = [(bb[0], bb[1]), (bb[2], bb[1]), (bb[2], bb[3]), (bb[0], bb[3])]
         room_label = "Kitchen area (derived from walls)" if region["seeds"] else "Area (given as a box)"
@@ -61,7 +62,7 @@ def normalize(data: dict[str, Any], room_id: str | None = None) -> dict[str, Any
             warnings.append({"code": "region-open-side", "message": f"no wall found on {', '.join(open_sides)}; those sides reach {REGION_MARGIN_MM:g} mm beyond the unit"})
     else:
         if not rooms:
-            cands = [r["id"] for r in list_rooms(data) if r["kind"] == "region"]
+            cands = [r["id"] for r in list_rooms(data, kitchen_words=kitchen_words) if r["kind"] == "region"]
             raise InvalidInput("No room outline (kind 'area' with tag 'room') in the floorplan" + (". To import the kitchen area pass one of: " + ", ".join(cands) if cands else ""),
                            code="floorplan-no-room")
         if room_id is None:

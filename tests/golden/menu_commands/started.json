@@ -1,0 +1,113 @@
+{
+ "function": "menu_commands.started",
+ "cases": [
+  {
+   "name": "taken",
+   "input": {
+    "record": {
+     "id": "20261119-101500-ab12",
+     "designId": "d1",
+     "text": "đổi màu tủ dưới",
+     "place": {
+      "kind": "module",
+      "id": "TD1"
+     },
+     "baseRev": 3,
+     "lang": "vi",
+     "createdAt": "2026-11-19T10:15:00Z",
+     "status": "pending"
+    },
+    "by": "worker",
+    "now": "t"
+   },
+   "expected": {
+    "id": "20261119-101500-ab12",
+    "designId": "d1",
+    "text": "đổi màu tủ dưới",
+    "place": {
+     "kind": "module",
+     "id": "TD1"
+    },
+    "baseRev": 3,
+    "lang": "vi",
+    "createdAt": "2026-11-19T10:15:00Z",
+    "status": "working",
+    "worker": "worker",
+    "startedAt": "t"
+   }
+  },
+  {
+   "name": "bad worker",
+   "input": {
+    "record": {
+     "id": "20261119-101500-ab12",
+     "designId": "d1",
+     "text": "đổi màu tủ dưới",
+     "place": {
+      "kind": "module",
+      "id": "TD1"
+     },
+     "baseRev": 3,
+     "lang": "vi",
+     "createdAt": "2026-11-19T10:15:00Z",
+     "status": "pending"
+    },
+    "by": "bob",
+    "now": "t"
+   },
+   "error": {
+    "kind": "validation",
+    "code": "command-bad-worker"
+   }
+  },
+  {
+   "name": "already working",
+   "input": {
+    "record": {
+     "id": "20261119-101500-ab12",
+     "designId": "d1",
+     "text": "đổi màu tủ dưới",
+     "place": {
+      "kind": "module",
+      "id": "TD1"
+     },
+     "baseRev": 3,
+     "lang": "vi",
+     "createdAt": "2026-11-19T10:15:00Z",
+     "status": "working",
+     "worker": "claude"
+    },
+    "by": "worker",
+    "now": "t"
+   },
+   "error": {
+    "kind": "validation",
+    "code": "command-taken"
+   }
+  },
+  {
+   "name": "closed",
+   "input": {
+    "record": {
+     "id": "20261119-101500-ab12",
+     "designId": "d1",
+     "text": "đổi màu tủ dưới",
+     "place": {
+      "kind": "module",
+      "id": "TD1"
+     },
+     "baseRev": 3,
+     "lang": "vi",
+     "createdAt": "2026-11-19T10:15:00Z",
+     "status": "done"
+    },
+    "by": "worker",
+    "now": "t"
+   },
+   "error": {
+    "kind": "validation",
+    "code": "command-closed"
+   }
+  }
+ ]
+}

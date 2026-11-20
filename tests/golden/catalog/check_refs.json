@@ -1,0 +1,104 @@
+{
+ "function": "catalog.check.check_refs",
+ "cases": [
+  {
+   "name": "a missing hinge and a present one",
+   "input": {
+    "items": [
+     {
+      "kind": "cabinet-type",
+      "id": "base",
+      "data": {
+       "hinge": "clip"
+      }
+     },
+     {
+      "kind": "cabinet-type",
+      "id": "tall",
+      "data": {
+       "hinge": "none"
+      }
+     },
+     {
+      "kind": "hinge",
+      "id": "clip",
+      "data": {}
+     }
+    ],
+    "kinds": {
+     "cabinet-type": {
+      "label": {
+       "vi": "Loại tủ",
+       "en": "Types"
+      },
+      "writers": [
+       "workshop"
+      ],
+      "refs": [
+       [
+        "hinge",
+        "hinge"
+       ]
+      ]
+     },
+     "hinge": {
+      "label": {
+       "vi": "Bản lề",
+       "en": "Hinges"
+      },
+      "writers": [
+       "workshop"
+      ]
+     }
+    }
+   },
+   "expected": {
+    "problems": [
+     {
+      "kind": "cabinet-type",
+      "id": "tall",
+      "path": "hinge",
+      "message": "hinge 'none' does not exist"
+     }
+    ]
+   }
+  },
+  {
+   "name": "only hinges checked",
+   "input": {
+    "items": [
+     {
+      "kind": "cabinet-type",
+      "id": "tall",
+      "data": {
+       "hinge": "none"
+      }
+     }
+    ],
+    "kinds": {
+     "cabinet-type": {
+      "label": {
+       "vi": "Loại tủ",
+       "en": "Types"
+      },
+      "writers": [
+       "workshop"
+      ],
+      "refs": [
+       [
+        "hinge",
+        "hinge"
+       ]
+      ]
+     }
+    },
+    "only": [
+     "hinge"
+    ]
+   },
+   "expected": {
+    "problems": []
+   }
+  }
+ ]
+}

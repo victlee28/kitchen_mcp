@@ -10,6 +10,7 @@ import numpy as np
 
 from .. import imaging, palette
 from .. import builtin
+from ..words import say
 from ..catalog import Catalog
 from ..config import Config
 from .runtime import Runtime
@@ -22,7 +23,7 @@ ZONE_COLORS = palette.ZONE_COLORS   # catalog kind palette, item zone
 
 
 def describe_position(mask: np.ndarray) -> dict[str, Any] | None:
-    """Vị trí vùng bằng chữ, tính từ mask: vùng ảnh (trái/giữa/phải × trên/giữa/dưới) + khung theo % kích thước ảnh."""
+    """Where a region is, in words, from its mask: the image zone (left/centre/right x upper/middle/lower) and its frame in % of the image."""
     b = imaging.bbox(mask)
     if b is None:
         return None
@@ -30,20 +31,21 @@ def describe_position(mask: np.ndarray) -> dict[str, Any] | None:
     x0, y0, x1, y1 = b
     pc = [round(100 * x0 / W), round(100 * y0 / H), round(100 * x1 / W), round(100 * y1 / H)]
     cx, cy = (x0 + x1) / 2 / W, (y0 + y1) / 2 / H
-    h_en, h_vi = ("left", "trái") if cx < 1 / 3 else (("right", "phải") if cx > 2 / 3 else ("center", "giữa"))
-    v_en, v_vi = ("upper", "trên") if cy < 1 / 3 else (("lower", "dưới") if cy > 2 / 3 else ("middle", "giữa"))
+    h = "left" if cx < 1 / 3 else ("right" if cx > 2 / 3 else "center")
+    v = "upper" if cy < 1 / 3 else ("lower" if cy > 2 / 3 else "middle")
+    hv, vv = say(f"image.where.{h}"), say(f"image.where.{v}")
     if (x1 - x0) > 0.75 * W:
-        h_en, h_vi = "across the full width", "chạy gần hết chiều ngang"
-        zone_en, zone_vi = f"{v_en} part of the image, {h_en}", f"phần {v_vi} ảnh, {h_vi}"
+        zone_en = f"{v} part of the image, across the full width"
+        zone_vi = say("image.where.part", v=vv, h=say("image.where.full-width"))
+    elif (h, v) == ("center", "middle"):
+        zone_en, zone_vi = "center of the image", say("image.where.center-of-image")
     else:
-        zone_en = "center of the image" if (h_en, v_en) == ("center", "middle") else f"{v_en}-{h_en} area of the image"
-        zone_vi = "giữa ảnh" if (h_vi, v_vi) == ("giữa", "giữa") else f"góc {v_vi} bên {h_vi}" if "giữa" not in (h_vi, v_vi) \
-            else f"vùng {v_vi} {h_vi}"
+        zone_en = f"{v}-{h} area of the image"
+        zone_vi = say("image.where.zone" if "center" == h or "middle" == v else "image.where.corner", v=vv, h=hv)
     span = f"x {pc[0]}–{pc[2]}%, y {pc[1]}–{pc[3]}%"
-    return {"frame": pc, "en": f"{zone_en} (about {span} of the image width/height)", "vi": f"{zone_vi} (khoảng {span} chiều ngang/dọc ảnh)"}
+    return {"frame": pc, "en": f"{zone_en} (about {span} of the image width/height)", "vi": say("image.where.about", zone=zone_vi, span=span)}
 
 
-MOLDING_EN = {"crown": "crown molding along the top of the cabinets", "base": "base molding at the bottom of the cabinets"}
 
 
 @dataclass

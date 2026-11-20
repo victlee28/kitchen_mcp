@@ -1,0 +1,47 @@
+{
+ "function": "model_contract.first_json",
+ "cases": [
+  {
+   "name": "in a fence",
+   "input": {
+    "text": "Here:\n```json\n{\"op\": \"none\", \"n\": [1, 2]}\n```"
+   },
+   "expected": {
+    "op": "none",
+    "n": [
+     1,
+     2
+    ]
+   }
+  },
+  {
+   "name": "alone",
+   "input": {
+    "text": "{\"a\": 1}"
+   },
+   "expected": {
+    "a": 1
+   }
+  },
+  {
+   "name": "prose",
+   "input": {
+    "text": "no json here"
+   },
+   "error": {
+    "kind": "validation",
+    "code": "model-bad-reply"
+   }
+  },
+  {
+   "name": "array",
+   "input": {
+    "text": "[1, 2]"
+   },
+   "error": {
+    "kind": "validation",
+    "code": "model-bad-reply"
+   }
+  }
+ ]
+}

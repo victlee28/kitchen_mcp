@@ -1,0 +1,73 @@
+{
+ "function": "menu_commands.clean_place",
+ "cases": [
+  {
+   "name": "everything known",
+   "input": {
+    "place": {
+     "kind": "part",
+     "part": "door",
+     "id": "TD1-door-1",
+     "module": "TD1",
+     "point": {
+      "x": 1234.567,
+      "z": -20.04
+     },
+     "modules": [
+      "TD1",
+      "TD2",
+      "bad id!"
+     ],
+     "surfaces": [
+      "wall_006#inside",
+      "wall#"
+     ],
+     "title": "  Cánh tủ  ",
+     "extra": 1
+    }
+   },
+   "expected": {
+    "kind": "part",
+    "part": "door",
+    "id": "TD1-door-1",
+    "module": "TD1",
+    "point": {
+     "x": 1234.6,
+     "z": -20.0
+    },
+    "modules": [
+     "TD1",
+     "TD2"
+    ],
+    "surfaces": [
+     "wall_006#inside"
+    ],
+    "title": "Cánh tủ"
+   }
+  },
+  {
+   "name": "junk",
+   "input": {
+    "place": {
+     "kind": "spaceship",
+     "point": {
+      "x": 1000000000.0,
+      "z": 0
+     },
+     "id": "a b"
+    }
+   },
+   "expected": {}
+  },
+  {
+   "name": "not an object",
+   "input": {
+    "place": [
+     1,
+     2
+    ]
+   },
+   "expected": {}
+  }
+ ]
+}

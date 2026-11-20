@@ -25,13 +25,13 @@ from .catalog import Catalog
 from .errors import InvalidInput, require
 from .jsonview import as_dict, as_list
 from .palette import SEGMENT_COLORS, module_color as _module_color
-from .spec import Handle, KitchenSpec, Module, effective_handle, to_data as spec_to_data
+from .spec import SCHEMA_TIER, Handle, KitchenSpec, Module, effective_handle, to_data as spec_to_data
 from .words import say
 from . import cabinet_types, defaults
 from .openings.types import get as opening_type_get
 
 ROT = {"back": 0.0, "right": -90.0, "left": 90.0, "corner": 0.0, "island": 180.0}
-TIER = {"base": "base", "upper": "wall", "loft": "top", "tall": "tall", "corner": "corner"}
+TIER = SCHEMA_TIER   # storey -> the three.js schema's tier name (kitchen/spec.py)
 MODULE_TYPE = {"base": "base_cabinet", "upper": "wall_cabinet", "loft": "wall_cabinet", "tall": "tall_pantry", "corner": "open_shelf"}
 SEMANTIC = {"carcass": "carcass", "plinth": "plinth", "door": "door", "glass-door": "glass_door", "drawer": "drawer", "side-panel": "panel",
             "shelf": "shelf", "countertop": "countertop", "fridge": "refrigerator", "sink": "sink", "faucet": "faucet", "cooktop": "cooktop",
@@ -245,22 +245,17 @@ def _materials(spec: KitchenSpec, catalog: Catalog) -> tuple[list[dict[str, Any]
     return out, ids
 
 
-ASSETS = [
-    {"id": "ASSET-PANEL", "category": "carcase", "geometryType": "panel", "defaultDimensions": _dims(600, 720, 18)},
-    {"id": "ASSET-DOOR-SLAB", "category": "door_front", "geometryType": "box", "defaultDimensions": _dims(400, 700, 18)},
-    {"id": "ASSET-DOOR-GLASS", "category": "door_front", "geometryType": "procedural", "defaultDimensions": _dims(400, 700, 18),
-     "parameters": {"frameWidth": 50, "glassThickness": 4}},
-    {"id": "ASSET-DRAWER-FRONT", "category": "drawer_front", "geometryType": "box", "defaultDimensions": _dims(600, 180, 18)},
-    {"id": "ASSET-SHELF", "category": "shelf", "geometryType": "panel", "defaultDimensions": _dims(560, 18, 300)},
-    {"id": "ASSET-PLINTH", "category": "plinth", "geometryType": "box", "defaultDimensions": _dims(600, 100, 480)},
-    {"id": "ASSET-COUNTERTOP", "category": "countertop", "geometryType": "extrusion", "defaultDimensions": _dims(1000, 60, 600)},
-    {"id": "ASSET-HANDLE-BAR", "category": "handle", "geometryType": "procedural", "defaultDimensions": _dims(12, 160, 30),
-     "parameters": {"profile": "bar"}},
-    {"id": "ASSET-HANDLE-KNOB", "category": "handle", "geometryType": "procedural", "defaultDimensions": _dims(30, 30, 25)},
-    {"id": "ASSET-SINK", "category": "sink", "geometryType": "box", "defaultDimensions": _dims(780, 200, 430)},
-    {"id": "ASSET-FAUCET", "category": "faucet", "geometryType": "procedural", "defaultDimensions": _dims(40, 300, 200)},
-    {"id": "ASSET-APPLIANCE-BOX", "category": "appliance", "geometryType": "box", "defaultDimensions": _dims(600, 850, 600)},
-]
+def assets_of(catalog: Catalog = builtin.CATALOG) -> list[dict[str, Any]]:
+    """The shared assets of the scene document (catalog kind ``asset``; defaultDimensions written as width / height / depth, mm)."""
+    out: list[dict[str, Any]] = []
+    for it in catalog.all("asset"):
+        d = it.data
+        w, h, dd = (float(v) for v in d["defaultDimensions"])
+        entry: dict[str, Any] = {"id": it.id, "category": d["category"], "geometryType": d["geometryType"], "defaultDimensions": _dims(w, h, dd)}
+        if d.get("parameters"):
+            entry["parameters"] = dict(d["parameters"])
+        out.append(entry)
+    return out
 
 
 # ------------------------------------------------------------------ chi tiết module
@@ -541,7 +536,7 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
     c = spec.common
     mats_list, mats = _materials(spec, catalog)
     qg, kv = regions.normalize(country or spec.country, spec.region, catalog)
-    sel = select(kb_rows if kb_rows is not None else default_rows(), qg, kv)
+    sel = select(kb_rows if kb_rows is not None else default_rows(), qg, kv, catalog)
     by_mod: defaultdict[str | None, list[Part]] = defaultdict(list)
     for p in scene.parts:
         by_mod[p.module].append(p)
@@ -684,7 +679,7 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
     # phào: mặt cắt -> assets (dùng chung), đường chạy -> decorations
     from . import moldings as _mol
     decorations: list[dict[str, Any]] = []
-    assets: list[dict[str, Any]] = list(ASSETS)
+    assets: list[dict[str, Any]] = assets_of(catalog)
     seen_prof: set[str] = set()
     for i, run in enumerate(_mol.compute_runs(spec)):
         mol, prof = run.molding, run.profile
@@ -695,7 +690,7 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
             assets.append({"id": aid, "category": "cornice" if mol.variant == "crown" else "molding", "geometryType": "extrusion",
                            "defaultDimensions": _dims(1000, prof.height, max(us) - min(us)),
                            "parameters": {"profileId": prof.id, "name": prof.name, "profile": [[round_half_away(u, 2), round_half_away(v, 2)] for u, v in prof.points],
-                                          "convention": "u: nhô ra phía phòng từ mặt trước tủ (âm = lùi vào); v: lên từ đường chạy; đa giác kín, ngược chiều kim đồng hồ"}})
+                                          "convention": "u: out into the room from the cabinet front (negative = set back); v: up from the run line; closed polygon, counter-clockwise"}})
         if mol.material:
             mid = f"MAT-MOLDING-{mol.id}"
             if all(m["id"] != mid for m in mats_list):
@@ -708,7 +703,7 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
             "name": say("name.molding.crown" if mol.variant == "crown" else "name.molding.base", walls=", ".join(run.wall)), "assetId": aid,
             "dimensions": _dims(run.length, prof.height, max(us) - min(us)), "transform": _tf((0, 0, 0)), "materialId": mid,
             "path": {"type": "polyline", "points": [_v(x, run.y, z) for x, z in run.points], "joints": "miter", "ends": "flush",
-                     "normalRule": "pháp tuyến phía phòng n = (t.z, 0, -t.x), t = hướng đi của đoạn"},
+                     "normalRule": "room-side normal n = (t.z, 0, -t.x), t = direction of the segment"},
             "sourceRef": mol.id, "semanticClass": "molding", "modules": [f"MOD-{m}" for m in dict.fromkeys(run.modules)]})
 
     # đèn
@@ -779,8 +774,8 @@ def export(spec: KitchenSpec, design_id: str = "design", rev: int = 1, kb_rows: 
                              "wallFrames": [{"wallId": "WALL-BACK", "origin": _v(0, 0, 0), "alongAxis": _v(-1, 0, 0), "frontAxis": _v(0, 0, 1), "rotationY": 0},
                                             {"wallId": "WALL-RIGHT", "origin": _v(0, 0, 0), "alongAxis": _v(0, 0, 1), "frontAxis": _v(-1, 0, 0), "rotationY": -90},
                                             {"wallId": "WALL-LEFT", "origin": _v(-lsau, 0, 0), "alongAxis": _v(0, 0, 1), "frontAxis": _v(1, 0, 0), "rotationY": 90}],
-                             "notes": "Gốc ở góc trong tường sau/tường phải. Anchor = góc dưới-sau-trái nhìn từ phía trước. Hệ cục bộ module: "
-                                      "x dọc bề rộng, y lên, z từ hậu ra trước. part/cánh/ngăn kéo theo hệ module; tay nắm theo hệ cánh."},
+                             "notes": "Origin at the inner corner of the back/right walls. Anchor = bottom-back-left corner seen from the front. Module local frame: "
+                                      "x along the width, y up, z from the back to the front. Parts, doors and drawers use the module frame; handles use the door frame."},
         "room": room, "lighting": lighting, "materials": _sampled(mats_list, spec.materialSamples or {}), "assets": assets, "modules": modules, "appliances": appliances,
         **({"runs": run_docs} if run_docs else {}),
         "accessories": accessories, "decorations": decorations, "cameras": cameras, "constraints": constraints,
@@ -805,9 +800,9 @@ def integrity(doc: dict[str, Any]) -> list[str]:
         if (obj := as_dict(o)) is not None:
             for k, v in obj.items():
                 if k in ("materialId", "carcaseMaterialId", "frontMaterialId", "defaultMaterialId") and v not in mats:
-                    errs.append(f"{path}.{k}={v} không có trong materials")
+                    errs.append(f"{path}.{k}={v} is not in materials")
                 if k == "assetId" and v not in assets:
-                    errs.append(f"{path}.{k}={v} không có trong assets")
+                    errs.append(f"{path}.{k}={v} is not in assets")
                 walk(v, f"{path}.{k}")
         elif (seq := as_list(o)) is not None:
             for i, v in enumerate(seq):
@@ -823,10 +818,10 @@ def integrity(doc: dict[str, Any]) -> list[str]:
     shelf_ids = {s["id"] for m in doc["modules"] for s in m["shelves"]}
     dup -= shelf_ids  # shelf trong shelves[] trỏ tới part cùng id, có chủ đích
     if dup:
-        errs.append(f"id trùng: {sorted(dup)[:10]}")
+        errs.append(f"duplicate ids: {sorted(dup)[:10]}")
     mod_ids = {m["id"] for m in doc["modules"]}
     for x in doc.get("appliances", []) + doc.get("accessories", []):
         for k in ("parentModuleId", "parentId"):
             if k in x and x[k] not in mod_ids:
-                errs.append(f"{x['id']}.{k}={x[k]} không phải module")
+                errs.append(f"{x['id']}.{k}={x[k]} is not a module")
     return errs

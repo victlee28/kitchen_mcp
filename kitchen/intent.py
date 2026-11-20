@@ -36,37 +36,37 @@ class KitchenTemplate(BaseModel):
     """Tham số mẫu để sinh thiết kế."""
     geometry_edit: str = Field("I", pattern=r"^[A-Za-z0-9_.:-]{1,64}$", description="Layout template (catalog kind layout-template): I, L, U or one the workshop / user added")
     backsplashHeight: Literal["standard", "to-upper", "to-ceiling"] = "standard"
-    backsplashHeightMm: float | None = Field(None, ge=50, le=3000, description="Chiều cao ốp (mm); có giá trị thì thay backsplashHeight")
-    wallTilePattern: str | None = Field(None, description="Kiểu xếp gạch ốp: herringbone, running-bond")
-    styleTags: list[str] = Field(default_factory=list, description="Phong cách không có hình học riêng: Scandinavian, Japandi, Farmhouse, Country, Mid-Century Modern, Luxury")
-    aiHints: list[str] = Field(default_factory=list, description="Cụm tiếng Anh về nội dung thiết kế (kính sọc, xương cá…) chỉ dùng cho prompt ảnh")
-    renderPreferences: list[str] = Field(default_factory=list, description="Cụm tiếng Anh về góc máy, ánh sáng, chất lượng ảnh (đọc bởi kitchen.realism)")
+    backsplashHeightMm: float | None = Field(None, ge=50, le=3000, description="Backsplash height (mm); when set it replaces backsplashHeight")
+    wallTilePattern: str | None = Field(None, description="Backsplash tile pattern: herringbone, running-bond")
+    styleTags: list[str] = Field(default_factory=list, description="Styles without their own geometry: Scandinavian, Japandi, Farmhouse, Country, Mid-Century Modern, Luxury")
+    aiHints: list[str] = Field(default_factory=list, description="English phrases about design content (reeded glass, herringbone…), used only in the image prompt")
+    renderPreferences: list[str] = Field(default_factory=list, description="English phrases about camera, light and image quality (read by kitchen.realism)")
     handleVariant: Literal["bar", "knob", "concealed", "none"] | None = None
     handleMaterial: str | None = None
-    doorStyle: dict[str, Literal["flat", "frame", "glass"]] = Field(default_factory=dict, description="base/upper/tall -> kiểu cánh")
-    promptInterpretation: list[dict] = Field(default_factory=list, description="Bảng diễn giải mô tả (term, canonical, scope, target, status, message)")
-    backWallLength: float = Field(3000, ge=600, le=12000, description="Chiều dài dãy tủ dọc tường sau (mm)")
-    rightWallLength: float | None = Field(None, ge=600, le=12000, description="Chiều dài dãy tường phải (mm), cho bếp chữ L")
-    leftWallLength: float | None = Field(None, ge=600, le=12000, description="Chiều dài dãy tường trái (mm), cho bếp chữ U")
-    baseDepth: float | None = Field(None, ge=300, le=900, description="Bỏ trống = lấy theo tiêu chuẩn của quốc gia/khu vực")
-    countertop: float | None = Field(None, ge=700, le=1100, description="Cao mặt bàn; bỏ trống = theo quốc gia/khu vực")
-    cabinetTop: float = Field(2200, ge=1500, le=3200, description="Cao độ đỉnh tủ trên (mm)")
+    doorStyle: dict[str, Literal["flat", "frame", "glass"]] = Field(default_factory=dict, description="base/upper/tall -> door style")
+    promptInterpretation: list[dict] = Field(default_factory=list, description="How the description was read (term, canonical, scope, target, status, message)")
+    backWallLength: float = Field(3000, ge=600, le=12000, description="Length of the run along the back wall (mm)")
+    rightWallLength: float | None = Field(None, ge=600, le=12000, description="Length of the right-wall run (mm), for an L kitchen")
+    leftWallLength: float | None = Field(None, ge=600, le=12000, description="Length of the left-wall run (mm), for a U kitchen")
+    baseDepth: float | None = Field(None, ge=300, le=900, description="Empty = from the standard of the country/region")
+    countertop: float | None = Field(None, ge=700, le=1100, description="Worktop height; empty = from the country/region")
+    cabinetTop: float = Field(2200, ge=1500, le=3200, description="Height of the wall cabinets' top (mm)")
     ceiling: float | None = Field(None, ge=2000, le=4000)
     fridge: bool = False
-    fridgeSide: Literal["left", "right"] | None = Field(None, description="Đầu dãy đặt tủ lạnh, nhìn từ phía trước (left / right); trống = theo mẫu")
+    fridgeSide: Literal["left", "right"] | None = Field(None, description="Run end for the fridge, seen from the front (left / right); empty = from the template")
     loft: bool = False
     island: bool = False
     peninsula: bool = False
     openShelf: bool = False
-    islandLength: float | None = Field(None, ge=600, le=6000, description="Chiều dài đảo / bán đảo (mm); trống = tự tính theo bếp")
+    islandLength: float | None = Field(None, ge=600, le=6000, description="Island / peninsula length (mm); empty = worked out from the kitchen")
     material: dict[str, str] = Field(default_factory=dict)
-    country: str | None = Field(None, description="Mã ISO alpha-2 nơi lắp đặt: VN, US, AU, CN, DE, GB...")
+    country: str | None = Field(None, description="ISO alpha-2 code of the install country: VN, US, AU, CN, DE, GB...")
     style: Literal["Modern", "Classic", "Neoclassical", "Transitional", "Industrial", "Minimalist"] = "Modern"
-    crownMolding: bool | None = Field(None, description="Phào nóc; bỏ trống = có nếu phong cách cổ điển/tân cổ điển")
-    baseMolding: bool | None = Field(None, description="Phào chân; bỏ trống = có nếu phong cách cổ điển/tân cổ điển")
+    crownMolding: bool | None = Field(None, description="Crown molding; empty = on for Classic/Neoclassical styles")
+    baseMolding: bool | None = Field(None, description="Base molding; empty = on for Classic/Neoclassical styles")
     crownMoldingProfile: str = "classic-crown-layered"
     baseMoldingProfile: str = "classic-base"
-    region: str | None = Field(None, description="SEA, EA, NA, EU, OC hoặc GLOBAL nếu chưa rõ quốc gia")
+    region: str | None = Field(None, description="SEA, EA, NA, EU, OC or GLOBAL when the country is unknown")
 
 
 def _mm(value: str, unit: str | None) -> float:
@@ -133,7 +133,8 @@ def parse_prompt(prompt: str, catalog: Catalog = builtin.CATALOG) -> tuple[Kitch
     qg, kv = regions.from_description(prompt, catalog)
     if qg or kv:
         data["country"], data["region"] = qg, kv
-        notes.append(said("note.standard-for", place=regions.COUNTRIES[qg][0] if qg else regions.REGIONS[kv or '']))
+        tables = regions.tables(catalog)
+        notes.append(said("note.standard-for", place=tables.countries[qg][0] if qg else tables.regions[kv or '']))
     try:
         color = KitchenTemplate.model_validate(data)
     except ValidationError as e:
@@ -178,7 +179,7 @@ def dimensions_by_region(rows: list[dict] | None, country: str | None, region: s
     from .rules_kb import select
     sel = select(rows if rows is not None else default_rows(), *regions.normalize(country, region, catalog), catalog)
     p = lambda t: (sel.get(t) or {}).get("params") or {}
-    src = lambda t: sel[t]["code"] if t in sel else "mặc định"
+    src = lambda t: sel[t]["code"] if t in sel else say("source.default")
     out, source = {}, {}
     md = p("countertop-height")
     allowed = md.get("countertop_allowed")
@@ -222,7 +223,7 @@ def from_template(color: KitchenTemplate, name: str = "", rows: list[dict] | Non
     from . import moldings as _mol
     rules = layout_solver.rules(catalog)
     kt, check_source = dimensions_by_region(rows, color.country, color.region, catalog)
-    co_dien = color.style in ("Classic", "Neoclassical", "Transitional")
+    co_dien = color.style in defaults.of(catalog).molding_styles      # catalog defaults.moldingStyles
     crown_molding = color.crownMolding if color.crownMolding is not None else co_dien
     base_molding = color.baseMolding if color.baseMolding is not None else co_dien
     offered = _mol.presets(catalog)
@@ -231,7 +232,7 @@ def from_template(color: KitchenTemplate, name: str = "", rows: list[dict] | Non
     upper_bottom = countertop + kt["upperGap"]
     ceiling = color.ceiling or max(color.cabinetTop + max(30, h_loft), 2400)
     top = min(color.cabinetTop, ceiling - h_loft) if h_loft else color.cabinetTop  # chừa chỗ cho phào nóc dưới trần
-    material = {"wallTile": "Đá ốp tường đồng bộ mặt bàn", **color.material}
+    material = {"wallTile": say("material.wall-tile-matching"), **color.material}
     handle = Handle.model_validate({k: v for k, v in (("variant", color.handleVariant), ("material", color.handleMaterial)) if v})
     c = Common(countertop=countertop, baseTop=countertop - new.get("countertopThickness", 60), plinthHeight=kt["plinthHeight"], baseDepth=color.baseDepth or kt["baseDepth"],
               upperDepth=kt["upperDepth"], cabinetTop=top, ceiling=ceiling, upperTierSplit=top if not color.loft else top - rules.loft_height,
@@ -465,11 +466,11 @@ def from_template(color: KitchenTemplate, name: str = "", rows: list[dict] | Non
         pick = next((m for m in ups if host and m.run == host.run and mid is not None and m.fromCorner <= mid < m.endAt), None) or (ups[-1] if ups else None)
         if pick:
             pick.type, pick.doors, pick.shelfCount, pick.name = "upper-open", [], 3, say("name.cabinet.open-shelf")
-            notes_built.append({"term": "kệ mở", "canonical": "openShelf", "scope": ["upper"], "target": pick.id, "status": "built",
-                                "message": f"Tủ trên {pick.id} (rộng {pick.width:g} mm) đổi thành kệ mở 3 tầng."})
+            notes_built.append({"term": say("term.open-shelf"), "canonical": "openShelf", "scope": ["upper"], "target": pick.id, "status": "built",
+                                "message": say("note.open-shelf-built", id=pick.id, width=f"{pick.width:g}")})
         else:
-            notes_built.append({"term": "kệ mở", "canonical": "openShelf", "scope": ["upper"], "target": "-", "status": "ambiguous",
-                                "message": "Không có tủ trên để đổi thành kệ mở."})
+            notes_built.append({"term": say("term.open-shelf"), "canonical": "openShelf", "scope": ["upper"], "target": "-", "status": "ambiguous",
+                                "message": say("note.open-shelf-none")})
     tier = {"base": "base", "upper": "upper", "loft": "upper", "tall": "tall"}
     for m in mods:  # kiểu cánh theo tầng (shaker / phẳng / kính)
         ds = color.doorStyle.get(tier.get(m.storey, ""))
@@ -486,7 +487,7 @@ def from_template(color: KitchenTemplate, name: str = "", rows: list[dict] | Non
                        moldings=_mol.default_moldings(crown_molding, base_molding, color.crownMoldingProfile, color.baseMoldingProfile),
                        moldingProfiles=_mol.embedded([p for p, on in ((color.crownMoldingProfile, crown_molding), (color.baseMoldingProfile, base_molding)) if on], [],
                                                      catalog),
-                       source="Sinh từ mẫu; kích thước theo: " + ", ".join(f"{k}={v}" for k, v in check_source.items()))
+                       source=say("source.template", sources=", ".join(f"{k}={v}" for k, v in check_source.items())))
     return KitchenSpec.model_validate(spec.model_dump(mode="json"))
 
 

@@ -1,0 +1,808 @@
+{
+ "function": "recognition.openings.photo",
+ "cases": [
+  {
+   "name": "a door on the clicked wall",
+   "input": {
+    "spec": {},
+    "floorplan": {
+     "$fixture": "tests/data/floorplan-building.json"
+    },
+    "roomId": "region:around=furniture_003",
+    "doc": {
+     "photoOpenings": [
+      {
+       "kind": "door",
+       "style": "swing",
+       "leaves": 2,
+       "edgesSeen": "hole",
+       "aspect": 1.625,
+       "axesRatio": [
+        0.503
+       ],
+       "hAxesRatio": [
+        0.818
+       ],
+       "confidence": 0.85
+      }
+     ]
+    },
+    "point": [
+     -70.0,
+     1500.0
+    ],
+    "selected": "wall_h05",
+    "country": "VN"
+   },
+   "expected": {
+    "operations": [
+     {
+      "op": "add-opening",
+      "opening": {
+       "kind": "door",
+       "openingType": "door-swing-2-transom",
+       "source": "ai",
+       "point": {
+        "x": -70.0,
+        "z": 1500.0
+       },
+       "width": 1650.0,
+       "height": 2700.0,
+       "unsure": [
+        "width",
+        "height"
+       ],
+       "axes": [
+        5.0
+       ],
+       "hAxes": [
+        2208.6
+       ]
+      }
+     }
+    ],
+    "notes": [
+     "opening-sized-from-photo: door-swing-2-transom 1650 x 2700 mm from the picture's proportions; check the sizes."
+    ],
+    "choices": [],
+    "choose": {
+     "type_id": "door-swing-2-transom",
+     "notes": [],
+     "choices": []
+    },
+    "match": {
+     "type_id": "door-swing-2-transom",
+     "score": 21.976,
+     "exact": true,
+     "seen": {
+      "kind": "door",
+      "style": "swing",
+      "leaves": 2,
+      "transom": true,
+      "transom_panes": null,
+      "axes_ratio": [
+       0.503
+      ],
+      "handles": null,
+      "fronts": null
+     },
+     "features": {
+      "kind": "door",
+      "style": "swing",
+      "leaves": 2,
+      "transom": true,
+      "transom_panes": 1,
+      "axes_ratio": [
+       0.5
+      ],
+      "handles": [
+       0,
+       1
+      ],
+      "fronts": null
+     }
+    },
+    "features": {
+     "kind": "door",
+     "style": "swing",
+     "leaves": 2,
+     "transom": true,
+     "transom_panes": null,
+     "axes_ratio": [
+      0.503
+     ],
+     "handles": null,
+     "fronts": null
+    }
+   }
+  },
+  {
+   "name": "a click on a drawn door turns it into the picture's",
+   "input": {
+    "spec": {},
+    "floorplan": {
+     "$fixture": "tests/data/floorplan-building.json"
+    },
+    "roomId": "region:around=furniture_003",
+    "doc": {
+     "photoOpenings": [
+      {
+       "kind": "door",
+       "style": "swing",
+       "leaves": 2,
+       "edgesSeen": "hole",
+       "aspect": 1.625,
+       "axesRatio": [
+        0.503
+       ],
+       "hAxesRatio": [
+        0.818
+       ],
+       "confidence": 0.85
+      }
+     ]
+    },
+    "point": [
+     665.0,
+     -70.0
+    ],
+    "selected": "opening_002",
+    "country": "VN"
+   },
+   "expected": {
+    "operations": [
+     {
+      "op": "update-opening",
+      "id": "opening_002",
+      "changes": {
+       "kind": "door",
+       "openingType": "door-swing-2-transom",
+       "width": 750.0,
+       "height": 2200.0,
+       "source": "ai",
+       "unsure": [
+        "width"
+       ],
+       "oversize": true,
+       "sill": 0.0,
+       "axes": [
+        2.3
+       ],
+       "hAxes": [
+        1799.6
+       ]
+      }
+     }
+    ],
+    "notes": [
+     "opening-replaced-from-photo: opening_002 becomes door-swing-2-transom 750 x 2200 mm (fitted to the selected opening: its place and width kept, its height from the picture's proportions; check it)."
+    ],
+    "choices": [],
+    "choose": {
+     "type_id": "door-swing-2-transom",
+     "notes": [],
+     "choices": []
+    },
+    "match": {
+     "type_id": "door-swing-2-transom",
+     "score": 21.976,
+     "exact": true,
+     "seen": {
+      "kind": "door",
+      "style": "swing",
+      "leaves": 2,
+      "transom": true,
+      "transom_panes": null,
+      "axes_ratio": [
+       0.503
+      ],
+      "handles": null,
+      "fronts": null
+     },
+     "features": {
+      "kind": "door",
+      "style": "swing",
+      "leaves": 2,
+      "transom": true,
+      "transom_panes": 1,
+      "axes_ratio": [
+       0.5
+      ],
+      "handles": [
+       0,
+       1
+      ],
+      "fronts": null
+     }
+    },
+    "features": {
+     "kind": "door",
+     "style": "swing",
+     "leaves": 2,
+     "transom": true,
+     "transom_panes": null,
+     "axes_ratio": [
+      0.503
+     ],
+     "handles": null,
+     "fronts": null
+    }
+   }
+  },
+  {
+   "name": "the user's note names the type",
+   "input": {
+    "spec": {},
+    "floorplan": {
+     "$fixture": "tests/data/floorplan-building.json"
+    },
+    "roomId": "region:around=furniture_003",
+    "doc": {
+     "photoOpenings": [
+      {
+       "kind": "door",
+       "style": "swing",
+       "leaves": 2,
+       "edgesSeen": "hole",
+       "aspect": 1.625,
+       "axesRatio": [
+        0.503
+       ],
+       "hAxesRatio": [
+        0.818
+       ],
+       "confidence": 0.85
+      }
+     ]
+    },
+    "point": [
+     -70.0,
+     1500.0
+    ],
+    "note": "cửa trượt 4 cánh",
+    "country": "VN"
+   },
+   "expected": {
+    "operations": [
+     {
+      "op": "add-opening",
+      "opening": {
+       "kind": "door",
+       "openingType": "door-sliding-4",
+       "source": "ai",
+       "point": {
+        "x": -70.0,
+        "z": 1500.0
+       },
+       "width": 1350.0,
+       "height": 2200.0,
+       "unsure": [
+        "width",
+        "height"
+       ],
+       "oversize": true
+      }
+     }
+    ],
+    "notes": [
+     "opening-note-wins: the picture looks like door-swing-2-transom; the note names door-sliding-4, so door-sliding-4 is used.",
+     "opening-axes-dropped: the dividers seen do not fit door-sliding-4.",
+     "opening-sized-from-photo: door-sliding-4 1350 x 2200 mm from the picture's proportions; check the sizes."
+    ],
+    "choices": [],
+    "choose": {
+     "type_id": "door-sliding-4",
+     "notes": [
+      "opening-note-wins: the picture looks like door-swing-2-transom; the note names door-sliding-4, so door-sliding-4 is used."
+     ],
+     "choices": []
+    },
+    "match": {
+     "type_id": "door-swing-2-transom",
+     "score": 21.976,
+     "exact": true,
+     "seen": {
+      "kind": "door",
+      "style": "swing",
+      "leaves": 2,
+      "transom": true,
+      "transom_panes": null,
+      "axes_ratio": [
+       0.503
+      ],
+      "handles": null,
+      "fronts": null
+     },
+     "features": {
+      "kind": "door",
+      "style": "swing",
+      "leaves": 2,
+      "transom": true,
+      "transom_panes": 1,
+      "axes_ratio": [
+       0.5
+      ],
+      "handles": [
+       0,
+       1
+      ],
+      "fronts": null
+     }
+    },
+    "features": {
+     "kind": "door",
+     "style": "swing",
+     "leaves": 2,
+     "transom": true,
+     "transom_panes": null,
+     "axes_ratio": [
+      0.503
+     ],
+     "handles": null,
+     "fronts": null
+    }
+   }
+  },
+  {
+   "name": "unsure: asked",
+   "input": {
+    "spec": {},
+    "floorplan": {
+     "$fixture": "tests/data/floorplan-building.json"
+    },
+    "roomId": "region:around=furniture_003",
+    "doc": {
+     "photoOpenings": [
+      {
+       "kind": "door",
+       "style": "swing",
+       "leaves": 2,
+       "edgesSeen": "hole",
+       "aspect": 1.625,
+       "axesRatio": [
+        0.503
+       ],
+       "hAxesRatio": [
+        0.818
+       ],
+       "confidence": 0.3
+      }
+     ]
+    },
+    "point": [
+     -70.0,
+     1500.0
+    ]
+   },
+   "expected": {
+    "operations": [],
+    "notes": [
+     "opening-type-asked: the recognizer is unsure of it."
+    ],
+    "choices": [
+     "door-swing-2-transom",
+     "door-swing-2",
+     "door-swing-2-unequal"
+    ],
+    "choose": {
+     "type_id": "door-swing-2-transom",
+     "notes": [
+      "opening-type-asked: the recognizer is unsure of it."
+     ],
+     "choices": [
+      "door-swing-2-transom",
+      "door-swing-2",
+      "door-swing-2-unequal"
+     ]
+    },
+    "match": {
+     "type_id": "door-swing-2-transom",
+     "score": 21.976,
+     "exact": true,
+     "seen": {
+      "kind": "door",
+      "style": "swing",
+      "leaves": 2,
+      "transom": true,
+      "transom_panes": null,
+      "axes_ratio": [
+       0.503
+      ],
+      "handles": null,
+      "fronts": null
+     },
+     "features": {
+      "kind": "door",
+      "style": "swing",
+      "leaves": 2,
+      "transom": true,
+      "transom_panes": 1,
+      "axes_ratio": [
+       0.5
+      ],
+      "handles": [
+       0,
+       1
+      ],
+      "fronts": null
+     }
+    },
+    "features": {
+     "kind": "door",
+     "style": "swing",
+     "leaves": 2,
+     "transom": true,
+     "transom_panes": null,
+     "axes_ratio": [
+      0.503
+     ],
+     "handles": null,
+     "fronts": null
+    }
+   }
+  },
+  {
+   "name": "picked",
+   "input": {
+    "spec": {},
+    "floorplan": {
+     "$fixture": "tests/data/floorplan-building.json"
+    },
+    "roomId": "region:around=furniture_003",
+    "doc": {
+     "photoOpenings": [
+      {
+       "kind": "door",
+       "style": "swing",
+       "leaves": 2,
+       "edgesSeen": "hole",
+       "aspect": 1.625,
+       "axesRatio": [
+        0.503
+       ],
+       "hAxesRatio": [
+        0.818
+       ],
+       "confidence": 0.3
+      }
+     ]
+    },
+    "point": [
+     -70.0,
+     1500.0
+    ],
+    "chosen": "door-swing-2"
+   },
+   "expected": {
+    "operations": [
+     {
+      "op": "add-opening",
+      "opening": {
+       "kind": "door",
+       "openingType": "door-swing-2",
+       "source": "ai",
+       "point": {
+        "x": -70.0,
+        "z": 1500.0
+       },
+       "width": 1350.0,
+       "height": 2200.0,
+       "unsure": [
+        "width",
+        "height"
+       ]
+      }
+     }
+    ],
+    "notes": [
+     "opening-type-chosen: door-swing-2, picked by the user.",
+     "opening-axes-dropped: the dividers seen do not fit door-swing-2.",
+     "opening-sized-from-photo: door-swing-2 1350 x 2200 mm from the picture's proportions; check the sizes."
+    ],
+    "choices": [],
+    "choose": {
+     "type_id": "door-swing-2",
+     "notes": [
+      "opening-type-chosen: door-swing-2, picked by the user."
+     ],
+     "choices": []
+    },
+    "match": {
+     "type_id": "door-swing-2-transom",
+     "score": 21.976,
+     "exact": true,
+     "seen": {
+      "kind": "door",
+      "style": "swing",
+      "leaves": 2,
+      "transom": true,
+      "transom_panes": null,
+      "axes_ratio": [
+       0.503
+      ],
+      "handles": null,
+      "fronts": null
+     },
+     "features": {
+      "kind": "door",
+      "style": "swing",
+      "leaves": 2,
+      "transom": true,
+      "transom_panes": 1,
+      "axes_ratio": [
+       0.5
+      ],
+      "handles": [
+       0,
+       1
+      ],
+      "fronts": null
+     }
+    },
+    "features": {
+     "kind": "door",
+     "style": "swing",
+     "leaves": 2,
+     "transom": true,
+     "transom_panes": null,
+     "axes_ratio": [
+      0.503
+     ],
+     "handles": null,
+     "fronts": null
+    }
+   }
+  },
+  {
+   "name": "two openings: the second noted",
+   "input": {
+    "spec": {},
+    "floorplan": {
+     "$fixture": "tests/data/floorplan-building.json"
+    },
+    "roomId": "region:around=furniture_003",
+    "doc": {
+     "photoOpenings": [
+      {
+       "kind": "door",
+       "style": "swing",
+       "leaves": 2,
+       "edgesSeen": "hole",
+       "aspect": 1.625,
+       "axesRatio": [
+        0.503
+       ],
+       "hAxesRatio": [
+        0.818
+       ],
+       "confidence": 0.85
+      },
+      {
+       "kind": "door",
+       "style": "sliding",
+       "leaves": 4,
+       "edgesSeen": "hole",
+       "aspect": 1.4,
+       "axesRatio": [
+        0.25,
+        0.5,
+        0.75
+       ],
+       "hAxesRatio": [
+        0.86
+       ],
+       "transomPanes": 3,
+       "confidence": 0.9,
+       "panels": [
+        {
+         "row": 0,
+         "operation": "sliding"
+        },
+        {
+         "row": 0,
+         "operation": "sliding",
+         "handle": true
+        },
+        {
+         "row": 0,
+         "operation": "sliding",
+         "handle": true
+        },
+        {
+         "row": 0,
+         "operation": "sliding"
+        },
+        {
+         "row": 1,
+         "operation": "fixed"
+        },
+        {
+         "row": 1,
+         "operation": "fixed"
+        },
+        {
+         "row": 1,
+         "operation": "fixed"
+        }
+       ]
+      }
+     ]
+    },
+    "point": [
+     -70.0,
+     1500.0
+    ]
+   },
+   "expected": {
+    "operations": [
+     {
+      "op": "add-opening",
+      "opening": {
+       "kind": "door",
+       "openingType": "door-swing-2-transom",
+       "source": "ai",
+       "point": {
+        "x": -70.0,
+        "z": 1500.0
+       },
+       "width": 1650.0,
+       "height": 2700.0,
+       "unsure": [
+        "width",
+        "height"
+       ],
+       "axes": [
+        5.0
+       ],
+       "hAxes": [
+        2208.6
+       ]
+      }
+     }
+    ],
+    "notes": [
+     "opening-not-placed: the picture shows 2 openings; only the first was placed at the point picked.",
+     "opening-sized-from-photo: door-swing-2-transom 1650 x 2700 mm from the picture's proportions; check the sizes."
+    ],
+    "choices": [],
+    "choose": {
+     "type_id": "door-swing-2-transom",
+     "notes": [],
+     "choices": []
+    },
+    "match": {
+     "type_id": "door-swing-2-transom",
+     "score": 21.976,
+     "exact": true,
+     "seen": {
+      "kind": "door",
+      "style": "swing",
+      "leaves": 2,
+      "transom": true,
+      "transom_panes": null,
+      "axes_ratio": [
+       0.503
+      ],
+      "handles": null,
+      "fronts": null
+     },
+     "features": {
+      "kind": "door",
+      "style": "swing",
+      "leaves": 2,
+      "transom": true,
+      "transom_panes": 1,
+      "axes_ratio": [
+       0.5
+      ],
+      "handles": [
+       0,
+       1
+      ],
+      "fronts": null
+     }
+    },
+    "features": {
+     "kind": "door",
+     "style": "swing",
+     "leaves": 2,
+     "transom": true,
+     "transom_panes": null,
+     "axes_ratio": [
+      0.503
+     ],
+     "handles": null,
+     "fronts": null
+    }
+   }
+  },
+  {
+   "name": "far from a wall",
+   "input": {
+    "spec": {},
+    "floorplan": {
+     "$fixture": "tests/data/floorplan-building.json"
+    },
+    "roomId": "region:around=furniture_003",
+    "doc": {
+     "photoOpenings": [
+      {
+       "kind": "door",
+       "style": "swing",
+       "leaves": 2,
+       "edgesSeen": "hole",
+       "aspect": 1.625,
+       "axesRatio": [
+        0.503
+       ],
+       "hAxesRatio": [
+        0.818
+       ],
+       "confidence": 0.85
+      }
+     ]
+    },
+    "point": [
+     50000.0,
+     50000.0
+    ]
+   },
+   "expected": {
+    "operations": [],
+    "notes": [
+     "opening-not-placed: no wall near the point picked; right-click a wall or select the opening to replace."
+    ],
+    "choices": [],
+    "choose": {
+     "type_id": "door-swing-2-transom",
+     "notes": [],
+     "choices": []
+    },
+    "match": {
+     "type_id": "door-swing-2-transom",
+     "score": 21.976,
+     "exact": true,
+     "seen": {
+      "kind": "door",
+      "style": "swing",
+      "leaves": 2,
+      "transom": true,
+      "transom_panes": null,
+      "axes_ratio": [
+       0.503
+      ],
+      "handles": null,
+      "fronts": null
+     },
+     "features": {
+      "kind": "door",
+      "style": "swing",
+      "leaves": 2,
+      "transom": true,
+      "transom_panes": 1,
+      "axes_ratio": [
+       0.5
+      ],
+      "handles": [
+       0,
+       1
+      ],
+      "fronts": null
+     }
+    },
+    "features": {
+     "kind": "door",
+     "style": "swing",
+     "leaves": 2,
+     "transom": true,
+     "transom_panes": null,
+     "axes_ratio": [
+      0.503
+     ],
+     "handles": null,
+     "fronts": null
+    }
+   }
+  }
+ ]
+}

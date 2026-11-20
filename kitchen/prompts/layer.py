@@ -5,22 +5,20 @@ from typing import Any
 
 from .. import builtin, lexicon, tv_system, vocab
 from ..catalog import Catalog
-from .photo import text, words
+from .photo import table, text, words
 from .seen import Seen, kitchen_modules, runs_seen, shown, worktop_seen
 from . import topdown
-from ..layers import ROLES
 from ..spec import KitchenSpec
+from ..words import say
 
 NEGATIVE_LAYER = words("negative-layer")   # catalog kind prompt-text (builtin); negative_prompt takes the merged catalog
 
-_STYLES = {"Modern": "modern", "Classic": "classic", "Neoclassical": "neoclassical", "Transitional": "transitional",
-               "Minimalist": "minimalist"}
 
 
 def global_prompt(spec: KitchenSpec, catalog: Catalog = builtin.CATALOG, seen: Seen | None = None) -> str:
     """The scene sentence of a picture: the room, the furniture units in it (TV unit, wine cabinet...), the kitchen's materials.
     ``seen``: what the picture of one view holds (``prompts.seen``) -- only what it shows is described; None: the whole design."""
-    style = _STYLES.get(spec.style or "", (spec.style or "modern").lower())
+    style = table("style-words", catalog).get(spec.style or "", (spec.style or "modern").lower())   # catalog kind prompt-text
     v = spec.common.material
     kitchen = kitchen_modules(spec)
     in_view = shown(spec, seen)
@@ -33,9 +31,9 @@ def global_prompt(spec: KitchenSpec, catalog: Catalog = builtin.CATALOG, seen: S
                                  en("upper") and f"wall cabinets {en('upper')}",
                                  worktop and en("countertop") and f"countertop {en('countertop')}") if x)
     wall_tile = v.get("wallTile", "")
-    if worktop and wall_tile and wall_tile != "Đá ốp tường đồng bộ mặt bàn" and vocab.to_english(wall_tile, catalog):
+    if worktop and wall_tile and wall_tile != say("material.wall-tile-matching") and vocab.to_english(wall_tile, catalog):
         mats = ", ".join(x for x in (mats, f"backsplash {vocab.to_english(wall_tile, catalog)}") if x)
-    extra = ", ".join(dict.fromkeys([*lexicon.tag_phrases(spec.styleTags), *(spec.aiHints or [])]))
+    extra = ", ".join(dict.fromkeys([*lexicon.tag_phrases(spec.styleTags, catalog), *(spec.aiHints or [])]))
     if seen is not None and seen.top_down:      # from above: each area named where it lies, not the eye-level look of a TV wall
         return topdown.scene(spec, seen, style, mats, extra, catalog)
     tv_seen = runs_seen(spec, seen, "tv")
@@ -73,15 +71,17 @@ def unit_text(spec: KitchenSpec, run: str, catalog: Catalog = builtin.CATALOG) -
     return text(f"unit-{r.unitLayout}", catalog) if r is not None and r.unitLayout else ""
 
 
-def layer_prompt(spec: KitchenSpec, layer: dict[str, Any], instruction: str = "", material: str | None = None) -> str:
-    role = ROLES.get(layer.get("type") or "", (None, "kitchen element"))[1]
+def layer_prompt(spec: KitchenSpec, layer: dict[str, Any], instruction: str = "", material: str | None = None,
+                 catalog: Catalog = builtin.CATALOG) -> str:
+    role = table("part-roles", catalog).get(layer.get("type") or "", "kitchen element")
     material_text = material or layer.get("material") or ""
-    en = vocab.to_english(material_text)
+    en = vocab.to_english(material_text, catalog)
     parts = [role, en and f"made of {en}", material_text and f"({material_text})", instruction.strip(),
              "keep exactly the same shape, edges, panel gaps and perspective", "consistent lighting with the surrounding scene"]
     return ", ".join(p for p in parts if p)
 
 
-def edit_task_prompt(spec: KitchenSpec, layer: dict[str, Any], instruction: str = "", material: str | None = None) -> str:
+def edit_task_prompt(spec: KitchenSpec, layer: dict[str, Any], instruction: str = "", material: str | None = None,
+                     catalog: Catalog = builtin.CATALOG) -> str:
     """``layer_prompt`` plus the realism tail every region edit carries."""
-    return layer_prompt(spec, layer, instruction, material) + ", photorealistic, matching scene lighting and grain, realistic texture, soft contact shadows"
+    return layer_prompt(spec, layer, instruction, material, catalog) + ", photorealistic, matching scene lighting and grain, realistic texture, soft contact shadows"

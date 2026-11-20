@@ -24,6 +24,15 @@ class TestGolden(unittest.TestCase):
             self.assertEqual(len(names), len(set(names)), f"{path.name}: duplicate case names")
             self.assertGreaterEqual(len(names), 2, f"{path.name}: a golden file needs at least a normal and an edge/error case")
 
+    def test_every_public_core_function_is_pinned(self):
+        """R19: a golden case runs every public function of the portable core, so a Rust port can be checked against it. The ones
+        still unpinned are listed in tests/golden_unpinned.json; THAT LIST MAY ONLY SHRINK (a new public core function needs a case)."""
+        import json
+        base = set(json.loads((Path(__file__).resolve().parent / "golden_unpinned.json").read_text(encoding="utf-8")))
+        now = g.unpinned_fresh()
+        self.assertFalse(sorted(now - base), "public core functions no golden case runs: add a case in tests/golden/ (golden_functions.py)")
+        self.assertFalse(sorted(base - now), "now pinned: remove them from tests/golden_unpinned.json")
+
 
 if __name__ == "__main__":
     unittest.main()

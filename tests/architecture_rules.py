@@ -144,3 +144,88 @@ def vietnamese_by_file() -> dict[str, int]:
     """``kitchen/<file>`` -> how many Vietnamese literals it holds (files with none left out)."""
     out = {str(p.relative_to(ROOT).as_posix()): vietnamese_texts(p) for p in sorted(KITCHEN.rglob("*.py"))}
     return {k: v for k, v in out.items() if v}
+
+
+# ---------------------------------------------------------------- the catalog reaches every call
+CATALOG_NAMES = ("catalog", "dc")     # names a function holds the catalog in (the merged one, or a design's snapshot ``dc``)
+
+
+def _catalog_slot(fn: ast.FunctionDef) -> int | None:
+    """Position of the ``catalog`` parameter (keyword-only: -1), None when the function takes none."""
+    pos = [a.arg for a in fn.args.posonlyargs + fn.args.args]
+    if "catalog" in pos:
+        return pos.index("catalog")
+    return -1 if any(a.arg == "catalog" for a in fn.args.kwonlyargs) else None
+
+
+def _module_name(path: Path) -> str:
+    rel = path.relative_to(KITCHEN).with_suffix("")
+    parts = [p for p in rel.parts if p != "__init__"]
+    return ".".join(parts)
+
+
+def _imports(tree: ast.Module, here: str) -> tuple[dict[str, str], dict[str, tuple[str, str]]]:
+    """Names bound by imports of kitchen modules: alias -> module, and alias -> (module, function)."""
+    modules: dict[str, str] = {}
+    funcs: dict[str, tuple[str, str]] = {}
+    for n in ast.walk(tree):
+        if isinstance(n, ast.ImportFrom) and n.level:
+            base = here.split(".")[: -n.level]
+            mod = ".".join([*base, *(n.module.split(".") if n.module else [])])
+            for a in n.names:
+                sub = f"{mod}.{a.name}" if mod else a.name
+                modules[a.asname or a.name] = sub          # "from . import geometry" (a module) ...
+                funcs[a.asname or a.name] = (mod, a.name)  # ... or "from .geometry import views_of" (a function)
+    return modules, funcs
+
+
+def catalog_dropped() -> list[str]:
+    """Calls made inside a function that holds a catalog (a ``catalog`` / ``dc`` parameter or local, or a method of a class that
+    reaches ``self.catalog()`` / ``env.design_catalog()``) to a kitchen function that takes
+    ``catalog``, without passing one: the callee then falls back to ``builtin.CATALOG`` and the workshop / user layers (or the design's
+    snapshot) are silently ignored. Passing ``builtin.CATALOG`` itself there is reported too. Each: ``file:line function -> callee``."""
+    trees = {p: ast.parse(p.read_text(encoding="utf-8")) for p in sorted(KITCHEN.rglob("*.py"))}
+    takes: dict[tuple[str, str], int] = {}          # (module, function) -> catalog slot
+    for p, t in trees.items():
+        for n in t.body:
+            if isinstance(n, ast.FunctionDef) and (slot := _catalog_slot(n)) is not None:
+                takes[(_module_name(p), n.name)] = slot
+    for p, t in trees.items():                      # a package re-exports what its __init__ imports: openings.infill_structures
+        if p.name == "__init__.py":
+            pkg = _module_name(p)
+            for alias, target in _imports(t, pkg + ".__init__")[1].items():
+                if target in takes:
+                    takes.setdefault((pkg, alias), takes[target])
+    out: list[str] = []
+    for p, t in trees.items():
+        here = _module_name(p)
+        modules, funcs = _imports(t, here + (".__init__" if p.name == "__init__.py" else ""))
+        held = {id(m) for c in ast.walk(t) if isinstance(c, ast.ClassDef)          # every method of a class that reaches a catalog
+                and any(isinstance(x, ast.Attribute) and x.attr in ("catalog", "design_catalog")
+                        or isinstance(x, ast.FunctionDef) and x.name == "catalog" for x in ast.walk(c))
+                for m in c.body if isinstance(m, ast.FunctionDef)}
+        for fn in ast.walk(t):
+            if not isinstance(fn, ast.FunctionDef):
+                continue
+            params = {a.arg for a in fn.args.posonlyargs + fn.args.args + fn.args.kwonlyargs}
+            stored = {x.id for x in ast.walk(fn) if isinstance(x, ast.Name) and isinstance(x.ctx, ast.Store)}
+            if not ((params | stored) & set(CATALOG_NAMES) or id(fn) in held):
+                continue
+            for c in ast.walk(fn):
+                if not isinstance(c, ast.Call):
+                    continue
+                target: tuple[str, str] | None = None
+                if isinstance(c.func, ast.Name):
+                    target = (here, c.func.id) if (here, c.func.id) in takes else funcs.get(c.func.id)
+                elif isinstance(c.func, ast.Attribute) and isinstance(c.func.value, ast.Name) and c.func.value.id in modules:
+                    target = (modules[c.func.value.id], c.func.attr)
+                if target is None or target not in takes:
+                    continue
+                slot = takes[target]
+                kw = next((k.value for k in c.keywords if k.arg == "catalog"), None)
+                arg = kw if kw is not None else (c.args[slot] if 0 <= slot < len(c.args) else None)
+                if any(isinstance(a, ast.Starred) for a in c.args) or any(k.arg is None for k in c.keywords):
+                    continue                        # *args / **kwargs: cannot tell
+                if arg is None or ast.unparse(arg) == "builtin.CATALOG":
+                    out.append(f"kitchen/{p.relative_to(KITCHEN).as_posix()}:{c.lineno} {fn.name} -> {target[0]}.{target[1]}")
+    return out

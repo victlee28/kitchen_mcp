@@ -14,10 +14,10 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
-from . import edit, geometry, handles, imaging, layers, vocab
+from . import edit, geometry, handles, imaging, layers, prompts, vocab
 from .spec import KitchenSpec
 from .errors import InvalidInput
-from .words import say
+from .words import said, say
 from . import builtin, cabinet_types
 from .catalog import Catalog
 
@@ -27,10 +27,6 @@ OPERATIONS = {op: {"name": say(f"name.operation.{op}"), "kind": kind, "descripti
               for op, kind in (("change-material", "edit"), ("replace-item", "geometry_edit"), ("remove-item", "geometry_edit"),
                                ("add-item", "geometry_edit"), ("change-style", "gen0"))}
 
-_HANDLE_EN = {"bar": "slim bar pull handles", "knob": "round knob handles", "concealed": "recessed finger-pull handles",
-           "none": "handleless push-to-open fronts (no handles)"}
-_DOOR_EN = {"flat": "flat slab doors", "frame": "shaker-style framed doors (recessed center panel)", "glass": "glass-front doors"}
-_DOOR_VI = {"flat": "cánh phẳng", "frame": "cánh khung (shaker)", "glass": "cánh kính"}
 
 
 def module_en(m, catalog: Catalog = builtin.CATALOG) -> str:
@@ -45,7 +41,7 @@ def type_label(type_id: str, catalog: Catalog = builtin.CATALOG) -> str:
     return t.label if t is not None and t.label else type_id
 
 
-def build_ops(spec: KitchenSpec, items: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]], str]:
+def build_ops(spec: KitchenSpec, items: list[dict[str, Any]], catalog: Catalog = builtin.CATALOG) -> tuple[list[dict[str, Any]], list[dict[str, Any]], str]:
     """items -> (ops thiết kế, mô tả từng việc, thao tác suy ra).
 
     Mỗi item một trong:
@@ -59,6 +55,7 @@ def build_ops(spec: KitchenSpec, items: list[dict[str, Any]]) -> tuple[list[dict
         raise InvalidInput("At least one geometry change is needed", code="no-geometry-change")
     ops, desc = [], []
     cur = spec
+    door_en, handle_en = prompts.table("door-style-edit", catalog), prompts.table("handle-edit", catalog)   # catalog kind prompt-text
     for i, it in enumerate(items, 1):
         if not isinstance(it, dict):
             raise InvalidInput(f"Change {i} is not valid", code="bad-geometry-change", params={"n": i})
@@ -67,36 +64,37 @@ def build_ops(spec: KitchenSpec, items: list[dict[str, Any]]) -> tuple[list[dict
         if k == "remove-module":
             m = cur.find(str(it.get("id")))
             op = {"op": "remove", "id": m.id, "closeGap": bool(it.get("closeGap", False))}
-            d = {"vi": f"xóa {m.id} ({m.name or type_label(m.type)})", "en": f"remove the {module_en(m)}", "operation": "remove-item"}
+            d = {"vi": said("geometry-edit.remove", id=m.id, name=m.name or type_label(m.type, catalog)), "en": f"remove the {module_en(m, catalog)}",
+                 "operation": "remove-item"}
         elif k == "add-module":
             mod = it.get("module") or {}
             op = {"op": "add", "module": mod, "afterModule": it.get("afterModule"), "closeGap": bool(it.get("closeGap", True))}
-            nxt = edit.apply_op(cur, op)
+            nxt = edit.apply_op(cur, op, catalog)
             before = {x.id for x in cur.module}
             m = next(x for x in nxt.module if x.id not in before)          # the new cabinet (its id is made by add when none is given)
             material_text = layers.material_slot(nxt, m.id, "door")[1]
-            face_en = vocab.to_english(material_text or "")
-            d = {"vi": f"thêm {m.id} ({type_label(m.type)})", "en": f"add a new {module_en(m)}" + (f" with {face_en} fronts" if face_en else ""),
+            face_en = vocab.to_english(material_text or "", catalog)
+            d = {"vi": said("geometry-edit.add", id=m.id, name=type_label(m.type, catalog)), "en": f"add a new {module_en(m, catalog)}" + (f" with {face_en} fronts" if face_en else ""),
                  "operation": "add-item"}
         elif k == "door-style":
             variant = it.get("variant")
-            if variant not in _DOOR_EN:
-                raise InvalidInput(f"Change {i}: the door style must be one of {', '.join(_DOOR_EN)}", code="bad-door-style", params={"n": i, "allowed": ', '.join(_DOOR_EN)})
+            if variant not in door_en:
+                raise InvalidInput(f"Change {i}: the door style must be one of {', '.join(door_en)}", code="bad-door-style", params={"n": i, "allowed": ', '.join(door_en)})
             mas = [m.id for m in cur.module if m.doors or m.frontSections] if it.get("id") in (None, "", "*") else [cur.find(it["id"]).id]
             sub = [{"op": "update", "id": id, "changes": {"doorStyle": variant}} for id in mas]
             op = sub[0] if len(sub) == 1 else {"op": "multi", "ops": sub}
-            place = "mọi module" if len(mas) > 1 else mas[0]
-            d = {"vi": f"đổi {place} sang {_DOOR_VI[variant]}", "en": f"change the cabinet doors to {_DOOR_EN[variant]}",
+            place = say("geometry-edit.every-module") if len(mas) > 1 else mas[0]
+            d = {"vi": said("geometry-edit.door-style", place=place, style=say(f"door-style.{variant}")), "en": f"change the cabinet doors to {door_en[variant]}",
                  "operation": "replace-item", "required": mas, "doorStyle": variant}
         elif k == "handle":
             variant = it.get("variant")
-            if variant not in _HANDLE_EN:
-                raise InvalidInput(f"Change {i}: the handle must be one of {', '.join(_HANDLE_EN)}", code="bad-handle-variant", params={"n": i, "allowed": ', '.join(_HANDLE_EN)})
+            if variant not in handle_en:
+                raise InvalidInput(f"Change {i}: the handle must be one of {', '.join(handle_en)}", code="bad-handle-variant", params={"n": i, "allowed": ', '.join(handle_en)})
             tn = {**cur.common.handle.model_dump(mode="json"), "variant": variant, **({"length": float(it["length"])} if it.get("length") else {})}
             common_changes, extra_ops = handles.clear_overrides(cur, ("variant", "length"))  # "all cabinets" must also reset overrides
             op = {"op": "common", "changes": {"handle": tn, **common_changes}}
-            d = {"vi": f"đổi tay nắm sang kiểu {variant}", "en": f"replace the handles with {_HANDLE_EN[variant]}"
-                 + (f" in {vocab.to_english(tn['material'])}" if vocab.to_english(tn.get("material") or "") and variant != "none" else ""),
+            d = {"vi": said("geometry-edit.handle", variant=variant), "en": f"replace the handles with {handle_en[variant]}"
+                 + (f" in {vocab.to_english(tn['material'], catalog)}" if vocab.to_english(tn.get("material") or "", catalog) and variant != "none" else ""),
                  "operation": "replace-item"}
         elif k == "op":
             op = it.get("op")
@@ -106,10 +104,10 @@ def build_ops(spec: KitchenSpec, items: list[dict[str, Any]]) -> tuple[list[dict
                  "operation": it.get("operation") or "replace-item"}
         else:
             raise InvalidInput(f"Change {i}: type must be remove-module | add-module | door-style | handle | op", code="bad-geometry-type", params={"n": i})
-        cur = edit.apply_op(cur, op)
+        cur = edit.apply_op(cur, op, catalog)
         ops.append(op)
         for extra in extra_ops:
-            cur = edit.apply_op(cur, extra)
+            cur = edit.apply_op(cur, extra, catalog)
             ops.append(extra)
         desc.append(d)
     kinds = {d["operation"] for d in desc}
@@ -117,10 +115,10 @@ def build_ops(spec: KitchenSpec, items: list[dict[str, Any]]) -> tuple[list[dict
     return ops, desc, tt
 
 
-def pin_cameras(spec: KitchenSpec, nxt: KitchenSpec) -> dict[str, Any] | None:
+def pin_cameras(spec: KitchenSpec, nxt: KitchenSpec, catalog: Catalog = builtin.CATALOG) -> dict[str, Any] | None:
     """Góc nhìn mặc định tính theo khung bao thiết kế: xóa/thêm tủ làm camera dịch. Ghim camera cũ vào thiết kế mới
     để ảnh trước/sau cùng khung hình (op trả về được ghi cùng rev khi chấp nhận)."""
-    old, new = geometry.views_of(spec), geometry.views_of(nxt)
+    old, new = geometry.views_of(spec, catalog), geometry.views_of(nxt, catalog)
     if {k: v.model_dump(mode="json") for k, v in old.items()} == {k: v.model_dump(mode="json") for k, v in new.items()}:
         return None
     return {"op": "set-views", "cameraViews": {k: v.model_dump(mode="json") for k, v in old.items()}}

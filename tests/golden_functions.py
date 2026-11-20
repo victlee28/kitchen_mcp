@@ -489,7 +489,7 @@ def _r3(v):
 
 def geometry_compile_spec(i):
     """Projection: the frame lengths, the part count per type and every part as [id, module, type, min, max] (mm, 0.001)."""
-    scene = geometry.compile_spec(_spec_after(i))
+    scene = geometry.compile_spec(_ctx(i))
     counts = {}
     for p in scene.parts:
         counts[p.type] = counts.get(p.type, 0) + 1
@@ -1589,3 +1589,565 @@ FUNCTIONS = {
     "openings.ops.update": openings_ops_update,
     "openings.ops.remove": openings_ops_remove,
 }
+
+
+# ---------------------------------------------------------------- 19/11/2026: the public core functions no case ran yet (R19)
+def _catalog_entries(raw):
+    from kitchen.catalog import Entry
+    return [Entry(e["kind"], e["id"], e["scope"], e.get("data", {}), e.get("version", 1), e.get("disabled", False)) for e in raw]
+
+
+def _catalog_json(cat):
+    return [{"kind": it.kind, "id": it.id, "source": it.source, "version": it.version, "data": dict(it.data)} for it in cat.items]
+
+
+def catalog_merge(i):
+    from kitchen import catalog as c
+    return {"items": _catalog_json(c.merge(_catalog_entries(i["entries"]), i.get("scopes"))),
+            "ranks": {s: c.layer_rank(s) for s in i.get("ranks", [])}, "userScope": c.user_scope(*i.get("user", []))}
+
+
+def catalog_check_scope_for(i):
+    from kitchen.catalog import scope_for
+    return {"scope": scope_for(i["role"], *([i["user"]] if "user" in i else []))}
+
+
+def catalog_check_check_write(i):
+    from kitchen.catalog import check_write, kind_info
+    check_write(kind_info(i["name"], i["kind"]), i["role"])
+    return {"allowed": True}
+
+
+def catalog_check_values_at(i):
+    from kitchen.catalog.check import values_at
+    return {"values": values_at(i["data"], i["path"])}
+
+
+def catalog_check_refs(i):
+    from kitchen.catalog import Catalog, Item, check_refs, kind_info
+    cat = Catalog.of([Item(x["kind"], x["id"], x.get("data", {})) for x in i["items"]])
+    kinds = {k: kind_info(k, v) for k, v in i["kinds"].items()}
+    return {"problems": [p.to_data() for p in check_refs(cat, kinds, i.get("only"))]}
+
+
+def catalog_kinds_kind_info(i):
+    from kitchen.catalog import kind_info
+    k = kind_info(i["name"], i["raw"])
+    return {"name": k.name, "label": dict(k.label), "writers": sorted(k.writers), "locked": k.locked, "refs": [list(r) for r in k.refs],
+            "usedBy": list(k.used_by), "schema": k.schema, "whole": k.whole, "closed": k.closed}
+
+
+def catalog_snapshot(i):
+    from kitchen.catalog import Catalog, Item, kind_info, used_items, with_snapshot
+    cat = Catalog.of([Item(x["kind"], x["id"], x.get("data", {})) for x in i["items"]])
+    kinds = {k: kind_info(k, v) for k, v in i["kinds"].items()}
+    used = used_items(i["spec"], cat, kinds)
+    later = Catalog.of([Item(x["kind"], x["id"], x.get("data", {})) for x in i["later"]])
+    return {"used": [[x.kind, x.id] for x in used], "rebuilt": _catalog_json(with_snapshot(later, used, i.get("whole", [])))}
+
+
+def menu_commands_picture_info(i):
+    from kitchen import menu_commands as mc
+    return mc.picture_info(b"x" * i["bytes"], i.get("mime"), i.get("name"))
+
+
+def menu_commands_clean_id(i):
+    from kitchen import menu_commands as mc
+    return {"id": mc.clean_id(i["id"])}
+
+
+def menu_commands_clean_place(i):
+    from kitchen import menu_commands as mc
+    return mc.clean_place(i["place"])
+
+
+def menu_commands_clean_choices(i):
+    from kitchen import menu_commands as mc
+    return {"choices": mc.clean_choices(i["choices"])}
+
+
+def menu_commands_new_record(i):
+    from kitchen import menu_commands as mc
+    return mc.new_record(i["id"], i["designId"], i.get("text"), i.get("place"), i.get("baseRev"), i.get("lang"), i["now"], i.get("answering"))
+
+
+def menu_commands_followed(i):
+    from kitchen import menu_commands as mc
+    return mc.followed(i["record"], i["followId"])
+
+
+def menu_commands_answered(i):
+    from kitchen import menu_commands as mc
+    return mc.answered(i["record"], i.get("status"), i.get("reply"), i.get("revision"), i["now"], i.get("choices"), i.get("fromRev"))
+
+
+def menu_commands_started(i):
+    from kitchen import menu_commands as mc
+    return mc.started(i["record"], i["by"], i["now"])
+
+
+def menu_commands_requeued(i):
+    from kitchen import menu_commands as mc
+    return mc.requeued(i["record"])
+
+
+def menu_commands_dropped(i):
+    from kitchen import menu_commands as mc
+    return mc.dropped(i["record"], i["now"])
+
+
+def menu_commands_matching(i):
+    from kitchen import menu_commands as mc
+    return {"records": mc.matching(i["records"], i.get("status"), i.get("designId"))}
+
+
+def _model_request(i):
+    from kitchen import model_contract as m
+    r = i["request"]
+    return m.ModelRequest(r.get("system", ""), tuple(r.get("messages", [])), tuple(m.ToolSpec(t["name"], t["description"], t["parameters"])
+                                                                                  for t in r.get("tools", [])),
+                          r.get("jsonOnly", False), r.get("maxTokens", 2000), r.get("temperature", 0.0), r.get("task", "chat"))
+
+
+def _model_reply(r):
+    return {"text": r.text, "calls": [{"id": c.id, "name": c.name, "arguments": dict(c.arguments)} for c in r.calls], "input": r.input_tokens,
+            "output": r.output_tokens, "stop": r.stop, "model": r.model, "message": r.as_message()}
+
+
+def model_contract_to_anthropic(i):
+    from kitchen import model_contract as m
+    return m.to_anthropic(_model_request(i), i["model"])
+
+
+def model_contract_to_openai(i):
+    from kitchen import model_contract as m
+    return m.to_openai(_model_request(i), i["model"])
+
+
+def model_contract_from_anthropic(i):
+    from kitchen import model_contract as m
+    return _model_reply(m.from_anthropic(i["data"]))
+
+
+def model_contract_from_openai(i):
+    from kitchen import model_contract as m
+    return _model_reply(m.from_openai(i["data"]))
+
+
+def model_contract_first_json(i):
+    from kitchen import model_contract as m
+    return m.first_json(i["text"])
+
+
+def model_contract_cost(i):
+    from kitchen import model_contract as m
+    return {"usd": m.cost(i["input"], i["output"], i.get("price"))}
+
+
+def numeric_polygon_centroid(i):
+    return {"centroid": list(numeric.polygon_centroid([tuple(p) for p in i["points"]]))}
+
+
+def i18n_lang_of(i):
+    from kitchen import i18n
+    return {"lang": [i18n.lang_of(v) for v in i["values"]]}
+
+
+def camera_plan_near_room(i):
+    return {"near": [camera_plan.near_room(tuple(p), [tuple(q) for q in i["room"]], i["reach"]) for p in i["points"]]}
+
+
+def roomctx_walled(i):
+    from kitchen import roomctx
+    spec = _ctx(i)
+    back, side = geometry.wall_length(spec)
+    ctx = roomctx.for_spec(spec, back, side)
+    if ctx is None:
+        return {"walled": None}
+    outline = [(float(q["x"]), float(q["z"])) for q in ctx.floorplan.get("outline", [])]
+    points = [tuple(p) for p in i["points"]] + ([numeric.polygon_centroid(outline)] if outline else [])   # the room's middle: open floor
+    return {"walled": [roomctx.walled(ctx, p[0], p[1], tuple(i.get("kinds", ("wall", "column")))) for p in points]}
+
+
+def threejs_export_material_look(i):
+    return {"looks": {t: threejs_export.material_look(t) for t in i["texts"]}}
+
+
+def threejs_export_wall_thickness_limit(i):
+    return {"limit": threejs_export.wall_thickness_limit(i["wall"])}
+
+
+def wall_surfaces_face_ids(i):
+    from types import SimpleNamespace as NS
+    from kitchen import wall_surfaces
+    fc = NS(wall=i["face"].get("wall"), structure=i["face"].get("structure"))
+    return {"id": wall_surfaces.face_part_id(i["part"], i["faceName"]),
+            "owners": [wall_surfaces.face_owner(NS(type=p["type"], module=p.get("module"), wall=p.get("wall")), fc) for p in i["parts"]]}
+
+
+def prompts_photo_lighting_names(i):
+    from kitchen.prompts import lighting_names
+    return {"names": lighting_names(lang=i.get("lang", "vi"))}
+
+
+def prompts_seen_where(i):
+    from kitchen.prompts.seen import where
+    return {"where": [where(tuple(b), tuple(i["size"])) for b in i["boxes"]]}
+
+
+def prompts_seen_from_instances(i):
+    from kitchen.prompts.seen import MIN_SHARE, from_instances
+    s = from_instances(i.get("doc"), i.get("minShare", MIN_SHARE), i.get("camera"))
+    return None if s is None else {"modules": sorted(s.modules), "parts": sorted([list(x) for x in s.parts]),
+                                   "boxes": {k: list(v) for k, v in sorted(s.boxes.items())}, "size": list(s.size),
+                                   "topDown": s.top_down, "ortho": s.ortho}
+
+
+def unit_system_asks(i):
+    from kitchen import unit_system
+    return {"asks": {t: unit_system.asks(t) for t in i["texts"]}, "units": sorted(unit_system.units())}
+
+
+def unit_system_layout(i):
+    from kitchen import unit_system
+    mods = unit_system.layout(i["unit"], i["length"], i["common"])
+    return {"modules": [dict(m) for m in mods], "runFields": unit_system.run_fields(i["unit"])}
+
+
+def unit_system_unit_of(i):
+    from kitchen import unit_system
+    spec = _ctx(i)
+    return {"units": {r.id: unit_system.unit_of(spec, r.id) for r in spec.runs}, "isUnit": {r.id: unit_system.is_unit_run(r) for r in spec.runs}}
+
+
+def run_join_plan_join(i):
+    from kitchen import run_join
+    spec = _ctx(i)
+    other = i.get("runB") or run_join.meeting_run(spec, i["runA"])
+    plan = run_join.plan_join(spec, i["runA"], other)
+    return {"runB": other, "plan": plan}
+
+
+def run_join_meeting_run(i):
+    from kitchen import run_join
+    return {"meets": run_join.meeting_run(_ctx(i), i["run"])}
+
+
+def cabinet_run_fit_levels(i):
+    spec = _ctx(i)
+    return {"modules": cabinet_run.fit_levels([dict(m) for m in i["modules"]], spec)}
+
+
+def cabinet_types_of(i):
+    t = cabinet_types.of(i["type"])
+    return {"label": cabinet_types.label_of(i["type"]), "storey": t.storey, "builder": t.builder, "lets": [k for k, _ in t.lets],
+            "steps": len(t.steps), "frontless": t.frontless, "ownDoor": t.own_door, "frontStyle": t.front_style, "plainType": t.plain_type,
+            "mainRunOnly": t.main_run_only, "exportType": t.export_type, "prompt": t.prompt}
+
+
+def cabinet_types_check(i):
+    spec = _spec(i)
+    m = spec.module[i.get("module", 0)]
+    values = {**geometry.module_values(m, spec.common), **i.get("values", {})}
+    return {"values": values, "problems": cabinet_types.check(cabinet_types.of(i.get("type", m.type)), values)}
+
+
+def auto_place_choices(i):
+    from kitchen import auto_place
+    out = {"rules": sorted(auto_place.rules()), "depths": [auto_place.depth_of([tuple(p) for p in o]) for o in i.get("outlines", [])]}
+    from dataclasses import asdict
+    out["furniture"] = [asdict(auto_place.furniture_choice(e, d)) for e, d in i.get("furniture", [])]
+    out["openings"] = [list(auto_place.opening_choice(k, p, w)) for k, p, w in i.get("openings", [])]
+    return out
+
+
+def edit_intent_surface_edit(i):
+    return edit_intent.surface_edit(i["text"], i["surfaces"])
+
+
+def edit_intent_opening_wish(i):
+    return {"wish": {t: edit_intent.opening_wish(t) for t in i["texts"]}}
+
+
+FUNCTIONS.update({
+    "catalog.merge": catalog_merge,
+    "catalog.check.scope_for": catalog_check_scope_for,
+    "catalog.check.check_write": catalog_check_check_write,
+    "catalog.check.values_at": catalog_check_values_at,
+    "catalog.check.check_refs": catalog_check_refs,
+    "catalog.kinds.kind_info": catalog_kinds_kind_info,
+    "catalog.snapshot": catalog_snapshot,
+    "menu_commands.picture_info": menu_commands_picture_info,
+    "menu_commands.clean_id": menu_commands_clean_id,
+    "menu_commands.clean_place": menu_commands_clean_place,
+    "menu_commands.clean_choices": menu_commands_clean_choices,
+    "menu_commands.new_record": menu_commands_new_record,
+    "menu_commands.followed": menu_commands_followed,
+    "menu_commands.answered": menu_commands_answered,
+    "menu_commands.started": menu_commands_started,
+    "menu_commands.requeued": menu_commands_requeued,
+    "menu_commands.dropped": menu_commands_dropped,
+    "menu_commands.matching": menu_commands_matching,
+    "model_contract.to_anthropic": model_contract_to_anthropic,
+    "model_contract.to_openai": model_contract_to_openai,
+    "model_contract.from_anthropic": model_contract_from_anthropic,
+    "model_contract.from_openai": model_contract_from_openai,
+    "model_contract.first_json": model_contract_first_json,
+    "model_contract.cost": model_contract_cost,
+    "numeric.polygon_centroid": numeric_polygon_centroid,
+    "i18n.lang_of": i18n_lang_of,
+    "camera_plan.near_room": camera_plan_near_room,
+    "roomctx.walled": roomctx_walled,
+    "threejs_export.material_look": threejs_export_material_look,
+    "threejs_export.wall_thickness_limit": threejs_export_wall_thickness_limit,
+    "wall_surfaces.face_ids": wall_surfaces_face_ids,
+    "prompts.photo.lighting_names": prompts_photo_lighting_names,
+    "prompts.seen.where": prompts_seen_where,
+    "prompts.seen.from_instances": prompts_seen_from_instances,
+    "unit_system.asks": unit_system_asks,
+    "unit_system.layout": unit_system_layout,
+    "unit_system.unit_of": unit_system_unit_of,
+    "run_join.plan_join": run_join_plan_join,
+    "run_join.meeting_run": run_join_meeting_run,
+    "cabinet_run.fit_levels": cabinet_run_fit_levels,
+    "cabinet_types.of": cabinet_types_of,
+    "cabinet_types.check": cabinet_types_check,
+    "auto_place.choices": auto_place_choices,
+    "edit_intent.surface_edit": edit_intent_surface_edit,
+    "edit_intent.opening_wish": edit_intent_opening_wish,
+    "edit.set_run_unit": _edit_op,
+    "edit.surface_material": _edit_op,
+    "edit.material_sample": _edit_op,
+})
+
+
+# ---------------------------------------------------------------- 19/11/2026, batch 2: room openings, openings in pictures, prompts by view
+def _plain_dc(v):
+    """A dataclass value (an opening, a seen opening, a correction) as JSON: fields by name, tuples as lists."""
+    import dataclasses
+    if dataclasses.is_dataclass(v) and not isinstance(v, type):
+        return {f.name: _plain_dc(getattr(v, f.name)) for f in dataclasses.fields(v)}
+    if isinstance(v, (list, tuple)):
+        return [_plain_dc(x) for x in v]
+    if isinstance(v, dict):
+        return {str(k): _plain_dc(x) for k, x in v.items()}
+    return v
+
+
+def _fp_axes(i):
+    from kitchen.openings import wall_axes
+    return wall_axes.from_floorplan(i["floorplan"]) if "floorplan" in i else _opening_axes(i)
+
+
+def _existing(i, axes):
+    import dataclasses
+    from kitchen import builtin
+    from kitchen.openings import normalize
+    out = []
+    for n, raw in enumerate(i.get("existing", []), 1):
+        o, _ = normalize({**raw, "wallAxis": {"id": axes[raw.get("axis", 0)].id}} if "axis" in raw or "wallAxis" not in raw else raw,
+                         "human", builtin.CATALOG, axes)
+        out.append(dataclasses.replace(o, id=raw.get("id", f"OP{n}"), source_element=raw.get("sourceElement")))
+    return out
+
+
+def openings_command_operation(i):
+    from kitchen import builtin
+    from kitchen.openings import command
+    axes = _fp_axes(i)
+    elements = i["floorplan"]["elements"] if i.get("elements") and "floorplan" in i else ()
+    op, what, facts = command.operation(i["wish"], tuple(i["point"]), axes, builtin.CATALOG, _existing(i, axes), i.get("selected"), elements)
+    return {"operation": op, "what": what, "facts": facts}
+
+
+def openings_command_parts(i):
+    """The small readers of a typed command: default width per kind, the window sill, a drawn sill, the type of an untyped hole, the
+    opening a hole stands for and the catalog item saved from an opening."""
+    from kitchen import builtin
+    from kitchen.openings import command, normalize
+    axes = _fp_axes(i)
+    cat = builtin.CATALOG
+    out = {"defaultWidth": {k: command.default_width(cat.data("opening-type", t), k) for k, t in i.get("types", {}).items()},
+           "windowSill": command.window_sill(cat), "drawnSill": [command.drawn_sill(e) for e in i.get("elements", [])],
+           "holeType": [list(command.hole_type(e, cat)) for e in i.get("elements", []) if e.get("kind") == "opening"]}
+    hole = command.hole_opening(tuple(i["point"]), axes, cat, i.get("selected"), i.get("floorplan", {}).get("elements", ())) if "point" in i else None
+    out["hole"] = None if hole is None else {"opening": hole[0].to_data(), "label": hole[1]}
+    if "save" in i:
+        o, _ = normalize({**i["save"], "wallAxis": {"id": axes[0].id}}, "human", cat, axes)
+        out["saved"] = command.saved_type(o, cat.data("opening-type", o.opening_type), i.get("name", "Saved"))
+    return out
+
+
+def openings_small(i):
+    """Leaf facing, the catalog types of a kind, the frames' corner distances, the axis nearest a point and a fingerprint's stretch."""
+    from kitchen import builtin
+    from kitchen.openings import facing, frames, wall_axes
+    from kitchen.openings.types import for_kind
+    axes = _fp_axes(i)
+    out = {"facing": [facing(s, axes[n] if n is not None else None) for s, n in i.get("facing", [])],
+           "forKind": {k: [t["id"] for t in for_kind(builtin.CATALOG, k)] for k in i.get("kinds", [])},
+           "sOfPoint": [frames.s_of_point(axes[n], tuple(p)) for n, p in i.get("sOfPoint", [])],
+           "fromInnerCorner": [frames.from_inner_corner(axes[n], axes, s, at) for n, s, at in i.get("fromInnerCorner", [])]}
+    near = [wall_axes.nearest(tuple(p), axes, r) for p, r in i.get("nearest", [])]
+    out["nearest"] = [None if x is None else [x[0].id, x[1]] for x in near]
+    out["movedAlong"] = []
+    for ref, n in i.get("movedAlong", []):
+        from kitchen.openings.contract import AxisRef
+        r = AxisRef(ref["id"], tuple(ref["start"]), tuple(ref["dir"]), ref["length"])
+        out["movedAlong"].append(wall_axes.moved_along(r, axes[n]))
+    return out
+
+
+def openings_meshes(i):
+    from kitchen import builtin
+    from kitchen.openings import meshes, normalize, wall_axes
+    axes = _fp_axes(i)
+    o, _ = normalize(i["opening"], "human", builtin.CATALOG, axes)
+    axis = wall_axes.find(o.wall_axis, axes)
+    ms = meshes.meshes(o, axis, builtin.CATALOG.data("opening-type", o.opening_type))
+    h = meshes.hole(o, axis)
+    out = {"meshes": [[m.id, m.type, len(m.vertices)] for m in ms], "leafTypes": [meshes.leaf_type(o, op) for op in ("swing", "fixed", "sliding")],
+           "hole": [round(h.e0, 3), round(h.e1, 3), round(h.y0, 3), round(h.y1, 3)]}
+    if "box" in i:
+        boxes = meshes.cut_box(tuple(i["box"][0]), tuple(i["box"][1]), h)
+        out["cutBox"] = None if boxes is None else [[list(map(lambda v: round(v, 3), lo)), list(map(lambda v: round(v, 3), hi))] for lo, hi in boxes]
+    if "polygon" in i:
+        pieces = meshes.cut_polygon([tuple(p) for p in i["polygon"]], i["y"][0], i["y"][1], h, i.get("near", 100.0))
+        out["cutPolygon"] = None if pieces is None else len(pieces)
+    return out
+
+
+def _photo(i):
+    from kitchen.recognition import openings as ro
+    found, rejected = ro.read_photo(i["doc"])
+    return found, rejected
+
+
+def recognition_openings_read(i):
+    from kitchen.recognition import openings as ro
+    found, rejected = ro.read(i["doc"])
+    photo, photo_rejected = ro.read_photo(i["doc"])
+    return {"found": _plain_dc(found), "rejected": rejected, "photo": _plain_dc(photo), "photoRejected": photo_rejected,
+            "flat": ro.flat_to_runs(i["flat"], i.get("lengths", {})) if "flat" in i else None}
+
+
+def recognition_openings_photo(i):
+    """A picture with no cabinets: its door / window placed at the click (photo_operations), plus the type choice and match on their own."""
+    from kitchen import builtin, openings as room_openings
+    from kitchen.recognition import openings as ro
+    found, _ = _photo(i)
+    spec = _ctx(i)
+    scene = geometry.compile_spec(spec)
+    data = to_data(spec)
+    axes = room_openings.wall_axes.for_spec(data, scene.lsau, scene.lphai)
+    existing = room_openings.effective(data, builtin.CATALOG, axes, spec.country)
+    fp = data.get("floorplan") or {}
+    ops, notes, choices = ro.photo_operations(found, tuple(i["point"]), axes, builtin.CATALOG, i.get("country"), existing, i.get("selected"),
+                                              fp.get("elements") or [], i.get("note", ""), i.get("chosen"))
+    first = found[0] if found else None
+    return {"operations": ops, "notes": notes, "choices": list(choices),
+            "choose": None if first is None else _plain_dc(ro.choose_type(first, builtin.CATALOG, i.get("note", ""), i.get("chosen"))),
+            "match": None if first is None else _plain_dc(ro.photo_match(first, builtin.CATALOG)),
+            "features": None if first is None else _plain_dc(ro.photo_features(first))}
+
+
+def recognition_openings_on_runs(i):
+    """Doors and windows seen with a recognised kitchen, placed on the runs the cabinets make (as service._recognised_openings)."""
+    from kitchen import builtin, openings as room_openings
+    from kitchen.recognition import openings as ro
+    doc = i["layout"]
+    found, rejected = ro.read(doc)
+    layout = build_layout(doc)
+    runs_in = [{"id": r.id, "length": r.length, "modules": list(r.modules)} for r in layout.runs]
+    spec = _spec_after(i)
+    plan = run_line.plan_runs(spec, run_line.back_wall_line(spec, runs_in), runs_in, list(layout.joints))
+    after = edit.apply_op(spec, plan["operation"])
+    scene = geometry.compile_spec(after)
+    data = to_data(after)
+    axes = room_openings.wall_axes.for_spec(data, scene.lsau, scene.lphai)
+    existing = room_openings.effective(data, builtin.CATALOG, axes, after.country)
+    ops, notes = ro.operations(found, plan.get("lines") or {}, axes, lambda x, z: (x, z), existing, builtin.CATALOG, i.get("country"))
+    return {"operations": ops, "notes": notes, "rejected": rejected, "types": [ro.opening_type(s, builtin.CATALOG) for s in found],
+            "features": [_plain_dc(ro.features_of(s)) for s in found]}
+
+
+def recognition_openings_holes(i):
+    """A picture's opening put into a hole of the drawing, onto a selected opening, or found under a click."""
+    from kitchen import builtin
+    from kitchen.recognition import openings as ro
+    found, _ = _photo(i)
+    axes = _fp_axes(i)
+    elements = i["floorplan"]["elements"]
+    out = {"elementAt": [None if (e := ro.element_at(tuple(p), elements)) is None else e["id"] for p in i.get("clicks", [])],
+           "elev": [list(ro.element_elev(e)) for e in elements]}
+    holes = []
+    for e in elements:
+        h = ro.element_hole(e, axes)
+        holes.append(None if h is None else [h[0].id, round(h[1], 3), round(h[2], 3)])
+        if h is not None and found:
+            holes.append(ro.photo_into_hole(found[0], h[0], h[1], h[2], builtin.CATALOG, ro.element_elev(e)))
+    out["holes"] = holes
+    existing = _existing(i, axes)
+    picked = ro.clicked_opening(tuple(i["point"]), axes, existing, i.get("selected")) if "point" in i else None
+    out["clicked"] = None if picked is None else picked.id
+    if picked is not None and found:
+        out["replacement"] = ro.photo_replacement(found[0], picked, builtin.CATALOG)
+    if found:
+        out["photoOpening"] = ro.photo_opening(found[0], tuple(i.get("point", (0.0, 0.0))), builtin.CATALOG, i.get("country"))
+    return out
+
+
+def recognition_opening_match(i):
+    from kitchen import builtin
+    from kitchen.recognition import opening_match as om
+    seen = om.seen_features(i["kind"], i["style"], i["leaves"], i.get("transom", False), i.get("axesRatio"), i.get("transomPanes"))
+    ranked = om.ranked(seen, builtin.CATALOG)
+    best = om.best(seen, builtin.CATALOG)
+    of_type = om.type_features(builtin.CATALOG.data("opening-type", i["against"])) if "against" in i else None
+    return {"seen": om.describe(seen), "ranked": [[m.type_id, m.score] for m in ranked][:5], "best": _plain_dc(best),
+            "note": om.note(best) if best is not None else None, "score": None if of_type is None else om.score(seen, of_type),
+            "typeFeatures": _plain_dc(of_type)}
+
+
+def recognition_opening_check(i):
+    from kitchen import builtin
+    from kitchen.prompts import photo as prompt_texts
+    from kitchen.recognition import opening_check as oc
+    found, _ = _photo(i)
+    s = found[0]
+    q = oc.question(prompt_texts.text("opening-check", builtin.CATALOG), s, i["type"], i["label"])
+    c = oc.parse(i.get("answer"))
+    return {"described": oc.describe(s, i["type"], i["label"]), "questionHasBuilt": oc.describe(s, i["type"], i["label"]) in q,
+            "correction": _plain_dc(c), "corrected": None if c is None else _plain_dc(oc.correct(s, c))}
+
+
+def prompts_by_view(i):
+    """The image prompt of one view: global_prompt with what the picture holds (eye level or from above), and the unit text of each run."""
+    from kitchen.prompts import Seen, layer as lp, topdown
+    spec = _ctx(i)
+    sv = i["seen"]
+    ids = [m.id for m in spec.module] if sv.get("modules") == "all" else sv.get("modules", [])
+    boxes = {m: tuple(sv["boxes"][m]) for m in sv.get("boxes", {})} if isinstance(sv.get("boxes"), dict) else \
+        {m: (100.0 * n, 100.0, 100.0 * n + 90.0, 300.0) for n, m in enumerate(ids)}
+    seen = Seen(frozenset(ids), frozenset((m, t) for m in ids for t in sv.get("parts", ["door", "countertop"])), boxes,
+                tuple(sv.get("size", (100.0 * max(1, len(ids)), 400.0))), sv.get("topDown", False), sv.get("ortho", False))
+    out = {"global": lp.global_prompt(spec, seen=seen), "units": {r.id: lp.unit_text(spec, r.id) for r in spec.runs}}
+    if seen.top_down:
+        out["areas"] = topdown.areas(spec, seen)
+        out["scene"] = topdown.scene(spec, seen, "modern", "white fronts", "")
+    return out
+
+
+FUNCTIONS.update({
+    "openings.command.operation": openings_command_operation,
+    "openings.command.parts": openings_command_parts,
+    "openings.small": openings_small,
+    "openings.meshes": openings_meshes,
+    "recognition.openings.read": recognition_openings_read,
+    "recognition.openings.photo": recognition_openings_photo,
+    "recognition.openings.on_runs": recognition_openings_on_runs,
+    "recognition.openings.holes": recognition_openings_holes,
+    "recognition.opening_match": recognition_opening_match,
+    "recognition.opening_check": recognition_opening_check,
+    "prompts.by_view": prompts_by_view,
+})

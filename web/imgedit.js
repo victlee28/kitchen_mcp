@@ -4,7 +4,7 @@ import { partIndex, shiftGroupId, ctrlIds, roomFaceIds, toggleIds, layerIdFor, p
 import { $, el } from './dom.js';
 import { api, createStatus } from './api-client.js';
 import { styleFromOptions, styleFromValue } from './assist-logic.js';
-import { modelChoices } from './menu-logic.js';
+import { DOOR_STYLES, HANDLE_VARIANTS, modelChoices } from './menu-logic.js';
 import './boot.js';
 import { PALETTES } from './palette-client.js';
 import { applianceName, tx } from './i18n.js';
@@ -83,7 +83,6 @@ async function selectLayer(id, alts) {
 }
 
 // An appliance layer (TB4-cooktop-1): another model can be picked here; once applied, the job form is filled with the model's description.
-const APPLIANCE_TYPES = ['cooktop', 'sink', 'faucet', 'hood', 'fridge', 'oven'];
 function swapBox() {
   let box = document.getElementById('applSwap');
   if (!box) { box = el('div', { id: 'applSwap', class: 'appl-swap' }); $('layerAlt').after(box); }
@@ -91,7 +90,7 @@ function swapBox() {
 }
 async function renderSwap(layer) {
   const box = swapBox(); box.replaceChildren();
-  const id = layer?.module; if (!layer || !APPLIANCE_TYPES.includes(layer.type) || !/^TB\d+$/.test(id || '')) return;
+  const id = layer?.module; if (!layer || !layer.appliance || !id) return;      // an appliance of the design (the server marks its parts)
   const r = await api(`/api/designs/${S.id}/template`, 'POST', { template: { kind: 'replace-appliance', id, prompt: '' } });
   const choices = modelChoices(r.models);
   const pick = el('select', {}, ...choices.map((c) => el('option', { value: c.id, disabled: !c.pickable }, c.label)));
@@ -328,10 +327,8 @@ function operationFor(kind) {  // chỉ gửi cấu hình chọn sẵn khi khớ
 }
 
 // ------------------------------------------------------------------ sửa hình (xóa / thêm / thay vật)
-const KIEU = {
-  'door-style': [['flat', tx('ui.canh-phang')], ['frame', tx('ui.canh-khung-shaker')], ['glass', tx('ui.canh-kinh')]],
-  'handle': [['bar', 'Tay thanh'], ['knob', tx('ui.num-tron')], ['concealed', tx('ui.tay-am-khoet')], ['none', tx('ui.khong-tay-nhan-mo')]],
-};
+// the choices of the picture's geometry edit: the same lists (and words) as the 3D menu's (menu-logic.js)
+const KIEU = { 'door-style': DOOR_STYLES, handle: HANDLE_VARIANTS };
 S.geometry_edit = [];
 function geometryForm() {
   const k = $('hType').value;

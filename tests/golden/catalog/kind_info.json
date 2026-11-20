@@ -1,0 +1,146 @@
+{
+ "function": "catalog.kinds.kind_info",
+ "cases": [
+  {
+   "name": "full entry",
+   "input": {
+    "name": "cabinet-type",
+    "raw": {
+     "label": {
+      "vi": "Loại tủ",
+      "en": "Types"
+     },
+     "writers": [
+      "workshop",
+      "user"
+     ],
+     "refs": [
+      [
+       "parts[].material",
+       "material"
+      ]
+     ],
+     "usedBy": [
+      "module[].type"
+     ],
+     "schema": "cabinet-type.schema.json",
+     "whole": true,
+     "closed": false
+    }
+   },
+   "expected": {
+    "name": "cabinet-type",
+    "label": {
+     "vi": "Loại tủ",
+     "en": "Types"
+    },
+    "writers": [
+     "user",
+     "workshop"
+    ],
+    "locked": false,
+    "refs": [
+     [
+      "parts[].material",
+      "material"
+     ]
+    ],
+    "usedBy": [
+     "module[].type"
+    ],
+    "schema": "cabinet-type.schema.json",
+    "whole": false,
+    "closed": false
+   }
+  },
+  {
+   "name": "locked",
+   "input": {
+    "name": "palette",
+    "raw": {
+     "label": {
+      "vi": "Bảng màu",
+      "en": "Palettes"
+     },
+     "locked": true
+    }
+   },
+   "expected": {
+    "name": "palette",
+    "label": {
+     "vi": "Bảng màu",
+     "en": "Palettes"
+    },
+    "writers": [],
+    "locked": true,
+    "refs": [],
+    "usedBy": [],
+    "schema": "palette.schema.json",
+    "whole": false,
+    "closed": false
+   }
+  },
+  {
+   "name": "malformed",
+   "input": {
+    "name": "x",
+    "raw": [
+     "not",
+     "an",
+     "object"
+    ]
+   },
+   "error": {
+    "kind": "validation",
+    "code": "catalog-kind-invalid"
+   }
+  },
+  {
+   "name": "refs not a list",
+   "input": {
+    "name": "x",
+    "raw": {
+     "refs": {
+      "a": "b"
+     }
+    }
+   },
+   "error": {
+    "kind": "validation",
+    "code": "catalog-kind-invalid"
+   }
+  },
+  {
+   "name": "unknown role",
+   "input": {
+    "name": "x",
+    "raw": {
+     "writers": [
+      "god"
+     ]
+    }
+   },
+   "error": {
+    "kind": "validation",
+    "code": "catalog-kind-invalid"
+   }
+  },
+  {
+   "name": "a bad ref pair",
+   "input": {
+    "name": "x",
+    "raw": {
+     "refs": [
+      [
+       "a"
+      ]
+     ]
+    }
+   },
+   "error": {
+    "kind": "validation",
+    "code": "catalog-kind-invalid"
+   }
+  }
+ ]
+}

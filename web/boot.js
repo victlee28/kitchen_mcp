@@ -4,6 +4,10 @@ import { loadLang } from './i18n.js';
 import './palette-client.js';
 import * as catalog from './catalog-client.js';
 import { setLimits } from './menu-logic.js';
+import { setMoldingStyles } from './design-logic.js';
 
 try { await loadLang(); } catch { /* no server wording: keys show as themselves */ }
-try { setLimits((await catalog.list('defaults', 'vi')).items[0]?.data?.menu); } catch { /* builtin limits */ }
+try {
+  const d = (await catalog.list('defaults', 'vi')).items[0]?.data;
+  setLimits(d?.menu); setMoldingStyles(d?.moldingStyles);
+} catch { /* builtin limits */ }

@@ -1,0 +1,69 @@
+{
+ "function": "wall_surfaces.face_ids",
+ "cases": [
+  {
+   "name": "a wall face",
+   "input": {
+    "part": "WALL-back",
+    "faceName": "inside",
+    "face": {
+     "wall": "back"
+    },
+    "parts": [
+     {
+      "type": "wall",
+      "wall": "back"
+     },
+     {
+      "type": "wall",
+      "wall": "right"
+     },
+     {
+      "type": "structure-wall",
+      "module": "STRUCT-col"
+     }
+    ]
+   },
+   "expected": {
+    "id": "WALL-back#inside",
+    "owners": [
+     true,
+     false,
+     false
+    ]
+   }
+  },
+  {
+   "name": "a structure face",
+   "input": {
+    "part": "STRUCT-col",
+    "faceName": "e2",
+    "face": {
+     "structure": "STRUCT-col"
+    },
+    "parts": [
+     {
+      "type": "structure-column",
+      "module": "STRUCT-col"
+     },
+     {
+      "type": "wall",
+      "wall": "back"
+     },
+     {
+      "type": "column",
+      "module": "STRUCT-col"
+     }
+    ]
+   },
+   "expected": {
+    "id": "STRUCT-col#e2",
+    "owners": [
+     true,
+     false,
+     false
+    ]
+   }
+  }
+ ]
+}

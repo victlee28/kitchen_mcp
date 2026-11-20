@@ -1,0 +1,295 @@
+{
+ "function": "run_join.plan_join",
+ "cases": [
+  {
+   "name": "square corner",
+   "input": {
+    "spec": {
+     "runs": [
+      {
+       "id": "R1",
+       "x": -4000,
+       "z": 0,
+       "yaw": 0
+      },
+      {
+       "id": "R2",
+       "x": -2200,
+       "z": 0,
+       "yaw": -90
+      }
+     ],
+     "floorplan": null,
+     "module": [
+      {
+       "id": "TR10",
+       "type": "base",
+       "wall": "island",
+       "run": "R1",
+       "fromCorner": 0,
+       "width": 900,
+       "y": 0,
+       "height": 840,
+       "depth": 600
+      },
+      {
+       "id": "TR11",
+       "type": "base",
+       "wall": "island",
+       "run": "R1",
+       "fromCorner": 900,
+       "width": 900,
+       "y": 0,
+       "height": 840,
+       "depth": 600
+      },
+      {
+       "id": "TR22",
+       "type": "base",
+       "wall": "island",
+       "run": "R2",
+       "fromCorner": 0,
+       "width": 900,
+       "y": 0,
+       "height": 840,
+       "depth": 600
+      },
+      {
+       "id": "TR23",
+       "type": "base",
+       "wall": "island",
+       "run": "R2",
+       "fromCorner": 900,
+       "width": 900,
+       "y": 0,
+       "height": 840,
+       "depth": 600
+      }
+     ]
+    },
+    "runA": "R1",
+    "runB": "R2"
+   },
+   "expected": {
+    "runB": "R2",
+    "plan": {
+     "operation": {
+      "op": "multi",
+      "ops": [
+       {
+        "op": "update",
+        "id": "TR22",
+        "changes": {
+         "fromCorner": 600.0,
+         "width": 300.0
+        }
+       }
+      ]
+     },
+     "angle": 90.0,
+     "owner": "R1",
+     "limits": {
+      "R1": {
+       "floor": 0.0
+      },
+      "R2": {
+       "floor": 600.0
+      }
+     },
+     "touched": [
+      "TR22"
+     ]
+    }
+   }
+  },
+  {
+   "name": "60 degrees, the other run found",
+   "input": {
+    "spec": {
+     "runs": [
+      {
+       "id": "R1",
+       "x": -4000,
+       "z": 0,
+       "yaw": 0
+      },
+      {
+       "id": "R2",
+       "x": -2200,
+       "z": 0,
+       "yaw": -120
+      }
+     ],
+     "floorplan": null,
+     "module": [
+      {
+       "id": "TR10",
+       "type": "base",
+       "wall": "island",
+       "run": "R1",
+       "fromCorner": 0,
+       "width": 900,
+       "y": 0,
+       "height": 840,
+       "depth": 600
+      },
+      {
+       "id": "TR11",
+       "type": "base",
+       "wall": "island",
+       "run": "R1",
+       "fromCorner": 900,
+       "width": 900,
+       "y": 0,
+       "height": 840,
+       "depth": 600
+      },
+      {
+       "id": "TR22",
+       "type": "base",
+       "wall": "island",
+       "run": "R2",
+       "fromCorner": 0,
+       "width": 900,
+       "y": 0,
+       "height": 840,
+       "depth": 600
+      },
+      {
+       "id": "TR23",
+       "type": "base",
+       "wall": "island",
+       "run": "R2",
+       "fromCorner": 900,
+       "width": 900,
+       "y": 0,
+       "height": 840,
+       "depth": 600
+      }
+     ]
+    },
+    "runA": "R1"
+   },
+   "expected": {
+    "runB": "R2",
+    "plan": {
+     "operation": {
+      "op": "multi",
+      "ops": [
+       {
+        "op": "update",
+        "id": "TR11",
+        "changes": {
+         "fromCorner": 900.0,
+         "width": 542.0
+        }
+       },
+       {
+        "op": "remove",
+        "id": "TR22",
+        "closeGap": false
+       },
+       {
+        "op": "update",
+        "id": "TR23",
+        "changes": {
+         "fromCorner": 1039.0,
+         "width": 761.0
+        }
+       }
+      ]
+     },
+     "angle": 60.0,
+     "owner": "R1",
+     "limits": {
+      "R1": {
+       "floor": 358.0
+      },
+      "R2": {
+       "floor": 1039.0
+      }
+     },
+     "touched": [
+      "TR11",
+      "TR22",
+      "TR23"
+     ]
+    }
+   }
+  },
+  {
+   "name": "unknown run",
+   "input": {
+    "spec": {
+     "runs": [
+      {
+       "id": "R1",
+       "x": -4000,
+       "z": 0,
+       "yaw": 0
+      },
+      {
+       "id": "R2",
+       "x": -2200,
+       "z": 0,
+       "yaw": -90
+      }
+     ],
+     "floorplan": null,
+     "module": [
+      {
+       "id": "TR10",
+       "type": "base",
+       "wall": "island",
+       "run": "R1",
+       "fromCorner": 0,
+       "width": 900,
+       "y": 0,
+       "height": 840,
+       "depth": 600
+      },
+      {
+       "id": "TR11",
+       "type": "base",
+       "wall": "island",
+       "run": "R1",
+       "fromCorner": 900,
+       "width": 900,
+       "y": 0,
+       "height": 840,
+       "depth": 600
+      },
+      {
+       "id": "TR22",
+       "type": "base",
+       "wall": "island",
+       "run": "R2",
+       "fromCorner": 0,
+       "width": 900,
+       "y": 0,
+       "height": 840,
+       "depth": 600
+      },
+      {
+       "id": "TR23",
+       "type": "base",
+       "wall": "island",
+       "run": "R2",
+       "fromCorner": 900,
+       "width": 900,
+       "y": 0,
+       "height": 840,
+       "depth": 600
+      }
+     ]
+    },
+    "runA": "R1",
+    "runB": "R9"
+   },
+   "error": {
+    "kind": "validation",
+    "code": "run-not-found"
+   }
+  }
+ ]
+}

@@ -116,14 +116,16 @@
   "group": "color",
   "word": "kem",
   "hex": "#eadfc8",
-  "en": "cream"
+  "en": "cream",
+  "weak": true
  },
  {
   "id": "color-be",
   "group": "color",
   "word": "be",
   "hex": "#d8c6a8",
-  "en": "beige"
+  "en": "beige",
+  "weak": true
  },
  {
   "id": "color-ghi",
@@ -158,7 +160,8 @@
   "group": "color",
   "word": "đen",
   "hex": "#2a2a2a",
-  "en": "black"
+  "en": "black",
+  "weak": true
  },
  {
   "id": "color-nau-dam",
@@ -186,7 +189,8 @@
   "group": "color",
   "word": "đỏ",
   "hex": "#a83232",
-  "en": "red"
+  "en": "red",
+  "weak": true
  },
  {
   "id": "color-hong",
@@ -256,14 +260,16 @@
   "group": "color",
   "word": "cam",
   "hex": "#d27a3a",
-  "en": "orange"
+  "en": "orange",
+  "weak": true
  },
  {
   "id": "color-tim",
   "group": "color",
   "word": "tím",
   "hex": "#6b4f7a",
-  "en": "purple"
+  "en": "purple",
+  "weak": true
  },
  {
   "id": "wood-oc-cho",

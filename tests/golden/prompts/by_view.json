@@ -1,0 +1,106 @@
+{
+ "function": "prompts.by_view",
+ "cases": [
+  {
+   "name": "eye level, every cabinet",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "seen": {
+     "modules": "all"
+    }
+   },
+   "expected": {
+    "global": "photorealistic interior photograph of a modern kitchen, base cabinets oak wood grain laminate, wall cabinets white matte finish, countertop white engineered quartz stone, backsplash white subway tile, realistic materials, sharp details, architectural photography",
+    "units": {
+     "R1": "",
+     "R2": ""
+    }
+   }
+  },
+  {
+   "name": "a wine unit seen",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "convertRows": true,
+    "ops": [
+     {
+      "op": "set-run-unit",
+      "id": "R1",
+      "unit": "wine"
+     }
+    ],
+    "seen": {
+     "modules": "all"
+    }
+   },
+   "expected": {
+    "global": "photorealistic interior photograph of a modern kitchen, a built-in wine cabinet wall: tall storage columns at both ends, low cabinets with doors along the floor with no stone top, an open niche above them for bottles and glasses, and glass-door display cabinets above showing rows of wine bottles on shelves, base cabinets oak wood grain laminate, wall cabinets white matte finish, countertop white engineered quartz stone, backsplash white subway tile, realistic materials, sharp details, architectural photography",
+    "units": {
+     "R1": "a built-in wine cabinet wall: tall storage columns at both ends, low cabinets with doors along the floor with no stone top, an open niche above them for bottles and glasses, and glass-door display cabinets above showing rows of wine bottles on shelves",
+     "R2": ""
+    }
+   }
+  },
+  {
+   "name": "from above",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "seen": {
+     "modules": "all",
+     "topDown": true
+    }
+   },
+   "expected": {
+    "global": "photorealistic top-down photograph of a modern kitchen seen from above, showing: a kitchen run against the wall, seen from above as a continuous stone countertop on the base cabinets with a tall fridge cabinet, in the left of the image; a kitchen run against the wall, seen from above as a continuous stone countertop on the base cabinets, in the right of the image; base cabinets oak wood grain laminate, wall cabinets white matte finish, countertop white engineered quartz stone, backsplash white subway tile, realistic materials, sharp details, architectural photography",
+    "units": {
+     "R1": "",
+     "R2": ""
+    },
+    "areas": [
+     "a kitchen run against the wall, seen from above as a continuous stone countertop on the base cabinets with a tall fridge cabinet, in the left of the image",
+     "a kitchen run against the wall, seen from above as a continuous stone countertop on the base cabinets, in the right of the image"
+    ],
+    "scene": "photorealistic top-down photograph of a modern kitchen seen from above, showing: a kitchen run against the wall, seen from above as a continuous stone countertop on the base cabinets with a tall fridge cabinet, in the left of the image; a kitchen run against the wall, seen from above as a continuous stone countertop on the base cabinets, in the right of the image; white fronts, realistic materials, sharp details, architectural photography"
+   }
+  },
+  {
+   "name": "the plan",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "convertRows": true,
+    "ops": [
+     {
+      "op": "set-run-tv",
+      "id": "R2",
+      "layout": "shelves"
+     }
+    ],
+    "seen": {
+     "modules": "all",
+     "topDown": true,
+     "ortho": true
+    }
+   },
+   "expected": {
+    "global": "photorealistic top-down photograph of a modern home interior seen from above, showing: a kitchen run against the wall, seen from above as a continuous stone countertop on the base cabinets with a tall fridge cabinet, in the left of the image; a low TV media console against the wall, seen from above as a narrow cabinet top with the thin edge of a flat TV on the wall behind it, in the right of the image; base cabinets oak wood grain laminate, wall cabinets white matte finish, countertop white engineered quartz stone, backsplash white subway tile, realistic materials, sharp details, architectural photography",
+    "units": {
+     "R1": "",
+     "R2": ""
+    },
+    "areas": [
+     "a kitchen run against the wall, seen from above as a continuous stone countertop on the base cabinets with a tall fridge cabinet, in the left of the image",
+     "a low TV media console against the wall, seen from above as a narrow cabinet top with the thin edge of a flat TV on the wall behind it, in the right of the image"
+    ],
+    "scene": "photorealistic top-down photograph of a modern home interior seen from above, showing: a kitchen run against the wall, seen from above as a continuous stone countertop on the base cabinets with a tall fridge cabinet, in the left of the image; a low TV media console against the wall, seen from above as a narrow cabinet top with the thin edge of a flat TV on the wall behind it, in the right of the image; white fronts, realistic materials, sharp details, architectural photography"
+   }
+  }
+ ]
+}

@@ -127,7 +127,7 @@ function field(schema, key, prop, value) {
 /** A cabinet type opens its own editor (steps table, 3D preview, checks); the other kinds the form built from their schema. */
 function typeEditor(item, copy = '') {
   const open = current === 'layout-template' ? openLayoutEditor : openTypeEditor;
-  open($('editor'), { item, copy, onError: (e) => say(errorText(e), 'warn'),
+  open($('editor'), { item, copy, schema: listing.schema, onError: (e) => say(errorText(e), 'warn'),
     onSaved: (id) => guard(async () => { say(t('catalog.saved', { kind: listing.label, id }), 'ok'); await showKind(current); }) });
 }
 

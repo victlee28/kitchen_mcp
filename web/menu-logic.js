@@ -6,7 +6,7 @@ export const DOOR_STYLES = [['flat', tx('ui.canh-phang')], ['frame', tx('ui.canh
 // Input limits (mm) of the menu: the workshop's catalog "defaults" (menu section), set by boot.js; these are the builtin values.
 export const LIMITS = { addWidthMin: 200, addWidthMax: 1200, overhangMax: 100, runShiftMax: 10000, stretchMax: 1500 };
 export function setLimits(menu) { for (const k of Object.keys(LIMITS)) if (Number.isFinite(menu?.[k])) LIMITS[k] = menu[k]; }
-export const HANDLE_VARIANTS = [['bar', 'Tay thanh'], ['knob', tx('ui.num')], ['concealed', tx('ui.tay-am')], ['none', tx('ui.khong-tay-nhan-mo')]];
+export const HANDLE_VARIANTS = [['bar', tx('ui.handle.bar')], ['knob', tx('ui.num')], ['concealed', tx('ui.tay-am')], ['none', tx('ui.khong-tay-nhan-mo')]];
 export const RUN_ACTIONS = ['runMove', 'runStretch', 'runRemove'];
 export const RUN_TURNS = [[0, tx('ui.khong-xoay')], [90, tx('ui.xoay-90-nguoc-chieu-kim-dong-ho')], [-90, tx('ui.xoay-90-theo-chieu-kim-dong-ho')], [180, tx('ui.quay-nguoc-lai-180')], [45, tx('ui.xoay-45-nguoc-chieu')], [-45, tx('ui.xoay-45-theo-chieu')]];
 
@@ -58,7 +58,6 @@ export function pickTarget(hits, moduleIds) {
   return null;
 }
 
-const IMAGE_APPLIANCES = ['cooktop', 'sink', 'faucet', 'hood', 'fridge', 'oven', 'tv', 'painting'];
 /** The menu target of a pixel of the layered image (an instance of the render's instances.json: {id, module, type}), as the 3D view's
  *  right click gives it: a floorplan element, a room opening the design placed (``opening``: a door or a glazed opening), an appliance, a door / drawer front /
  *  handle / worktop, the cabinet, or the floor. ``at``: what the server's pick says of the pixel: ``point`` (its place on the plan, mm,
@@ -75,7 +74,7 @@ export function imageTarget(inst, moduleIds = [], at = {}) {
   if (m.startsWith('STRUCT-')) return { kind: 'structure', id: m, ...structureKind, ...face, ...point };
   if (face.surface) return { kind: 'surface', id: face.surface, ...face, ...point };     // a face of a default wall
   if (type.startsWith('opening-') && m) return { kind: 'opening', id: m, ...point };    // a door or window the design placed (OP…)
-  if (IMAGE_APPLIANCES.includes(type) && /^TB\d+$/.test(m)) return { kind: 'appliance', id: m, applianceType: type, ...point };
+  if (inst.appliance && m) return { kind: 'appliance', id: m, applianceType: type, ...point };     // the server marks the design's appliances
   if (type === 'countertop') return { kind: 'part', part: 'countertop', id: 'back', ...point };
   if (!moduleIds.includes(m)) return null;
   if (['door', 'drawer', 'handle'].includes(type)) return { kind: 'part', part: type, id: m, ...point };

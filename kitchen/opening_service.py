@@ -72,5 +72,5 @@ class OpeningService:
         if axis is not None and axis.frame == "room":
             context = roomctx.for_spec(spec, scene.lsau, scene.lphai)
             axis = axis.in_kitchen(context.placement.to_kitchen) if context is not None else None
-        shaped = openings.shape(opening, axis, catalog.data("opening-type", opening.opening_type)) if axis is not None else None
+        shaped = openings.shape(opening, axis, openings.types.get(catalog, opening.opening_type)) if axis is not None else None
         return {"id": design_id, "rev": stored_revision, "opening": opening.to_data(), "shape": shaped, "notes": notes}

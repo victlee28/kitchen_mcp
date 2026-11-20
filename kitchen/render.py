@@ -110,7 +110,7 @@ class Camera:
         R = np.stack([self.r, -self.u, self.f])  # hàng: trục camera (x phải, y xuống, z tới) theo OpenCV
         out = {"width": self.w, "height": self.h, "fx": self.focal, "fy": self.focal, "cx": self.cx, "cy": self.cy,
                "R_world_to_cam": R.tolist(), "t": (-R @ self.p).tolist(), "position_m": self.p.tolist(),
-               "convention": "OpenCV: x phải, y xuống, z hướng nhìn; toạ độ thế giới tính bằng mét"}
+               "convention": "OpenCV: x right, y down, z along the view; world coordinates in metres"}
         if self.ortho:      # u = cx + fx * x_cam, v = cy + fy * y_cam (no division by z): fx = pixels per metre
             out["projection"] = "orthographic"
         return out
@@ -502,7 +502,7 @@ def render_view(scene: Scene, view: ViewAngle, out_dir: Path, width: int = 1280,
             p = all_parts[wall_part]
             instances.append({"value": v + 1, "id": face_part_id(p.id, fc.face), "module": p.module, "type": "wall-face", "pixels": n, "bbox": box,
                               "surface": fc.id, "parent": p.id, "parentType": p.type})
-    (out_dir / "instances.json").write_text(json.dumps({"encoding": "instance.png 16-bit: giá trị = value, 0 = nền",
+    (out_dir / "instances.json").write_text(json.dumps({"encoding": "instance.png 16-bit: pixel = value, 0 = background",
                                                         "width": width, "height": height, "instances": instances},
                                                        ensure_ascii=False, indent=1), encoding="utf-8")
 
@@ -521,7 +521,7 @@ def render_view(scene: Scene, view: ViewAngle, out_dir: Path, width: int = 1280,
     key = render_key(scene, view, width, height)
     manifest = {**(meta or {}), "view": out_dir.name, "renderKey": key, "sceneHash": scene_hash(scene)[:16],
                 "width": width, "height": height, "files": files + ["manifest.json"], "camera": "camera.json",
-                "instanceEncoding": "uint16 = chỉ số chi tiết + 1", "instanceFormat": INSTANCE_FORMAT}
+                "instanceEncoding": "uint16 = part index + 1", "instanceFormat": INSTANCE_FORMAT}
     (out_dir / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
     return {"dir": str(out_dir), "files": files + ["manifest.json"], "renderKey": key,
             "imageOverlay": round(float(hit.mean()), 3), "editableModule": visible}

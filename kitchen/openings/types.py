@@ -10,7 +10,6 @@ from ..catalog import Catalog
 from ..errors import InvalidInput
 from .contract import Hinge, Leaf
 
-DEFAULT_TYPE = {"door": "door-swing-1", "window": "window-swing-2", "passage": "passage"}
 MIN_H_BAY = 100.0                     # a horizontal axis needs this much room above and below it
 
 
@@ -21,16 +20,46 @@ def _current_form(data: Mapping[str, Any]) -> bool:
     return isinstance(data.get("leaves"), list)
 
 
+def kind_defaults(catalog: Catalog, kind: str) -> Mapping[str, Any]:
+    """What an opening of ``kind`` takes when its type leaves it out (catalog ``defaults.openingKinds``): ``type``, ``width``, ``maxWidth``,
+    ``handle``, ``photoHeight``."""
+    from ..defaults import of as defaults_of
+    return defaults_of(catalog).opening_kinds.get(kind) or defaults_of(catalog).opening_kinds.get("door") or {}
+
+
+def default_type(catalog: Catalog, kind: str) -> str:
+    """The type an opening of ``kind`` gets when none is named (``defaults.openingKinds.<kind>.type``)."""
+    return str(kind_defaults(catalog, kind).get("type") or "door-swing-1")
+
+
+def _complete(catalog: Catalog, data: Mapping[str, Any]) -> dict[str, Any]:
+    """The type's data with what it leaves out taken from the defaults of its kind: ``defaultWidth``, ``maxWidth``, ``handle``, and the
+    handle's part sizes (``handleParts``)."""
+    from ..defaults import of as defaults_of
+    k = kind_defaults(catalog, str(data.get("kind") or "door"))
+    out = dict(data)
+    for key, src in (("defaultWidth", "width"), ("maxWidth", "maxWidth"), ("handle", "handle")):
+        if key not in out and k.get(src) is not None:
+            out[key] = k[src]
+    out.setdefault("handleParts", dict(defaults_of(catalog).opening_handle_parts))
+    return out
+
+
 def get(catalog: Catalog, opening_type: str) -> Mapping[str, Any]:
-    """The type's data. A design saved with the first opening types (12/11/2026: ``leaves`` a count, ``frameWidth``) in its catalog
-    snapshot, or without the type at all, reads the built-in type of the same id instead."""
+    """The type's data, completed by the defaults of its kind (``_complete``). A design saved with the first opening types (12/11/2026:
+    ``leaves`` a count, ``frameWidth``) in its catalog snapshot, or without the type at all, reads the built-in type of the same id instead."""
+    table: dict[str, dict[str, Any]] = catalog.derived("opening-types.complete", lambda c: {})
+    if opening_type in table:
+        return dict(table[opening_type])          # a copy: a caller may add to it
     item = catalog.find("opening-type", opening_type)
     if item is not None and _current_form(item.data):
-        return item.data
+        table[opening_type] = _complete(catalog, item.data)
+        return dict(table[opening_type])
     from .. import builtin
     fallback = builtin.CATALOG.find("opening-type", LEGACY_IDS.get(opening_type, opening_type))
     if fallback is not None and _current_form(fallback.data):
-        return fallback.data
+        table[opening_type] = _complete(catalog, fallback.data)
+        return dict(table[opening_type])
     raise InvalidInput(f"Unknown opening type {opening_type!r}", code="opening-type-not-found", params={"id": opening_type})
 
 
@@ -115,5 +144,5 @@ def default_height(kind: str, catalog: Catalog | None = None) -> float:
     """Height of an opening the drawing leaves without one: the default height of the kind's default type (data:
     ``opening-type.defaultHeight``; the built-in catalog unless another is given)."""
     from .. import builtin
-    data = get(catalog or builtin.CATALOG, DEFAULT_TYPE.get(kind, "door-swing-1"))
+    data = get(catalog or builtin.CATALOG, default_type(catalog or builtin.CATALOG, kind))
     return num(data, "defaultHeight", 2200.0 if kind != "window" else 1200.0)

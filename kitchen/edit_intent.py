@@ -440,7 +440,7 @@ def _opening_type_named(f: str, catalog: Catalog) -> str | None:
     the longest name wins ("cửa đi hai cánh có ô thoáng" over "cửa đi hai cánh")."""
     best: tuple[int, str] | None = None
     near: tuple[float, int, str] | None = None
-    said_words = set(_tokens(f))
+    said_words = set(_tokens(f, catalog))
     for item in catalog.all("opening-type"):
         label = as_dict(item.data.get("label")) or {}
         aliases = [w for ws in (as_dict(item.data.get("aliases")) or {}).values() for w in (as_list(ws) or []) if isinstance(w, str)]
@@ -448,7 +448,7 @@ def _opening_type_named(f: str, catalog: Catalog) -> str | None:
         for name in names:
             if len(name) >= 4 and _has(f, name) and (best is None or len(name) > best[0]):
                 best = (len(name), item.id)
-            words_ = _tokens(name)
+            words_ = _tokens(name, catalog)
             hit = sum(1 for w in words_ if w in said_words)
             share = hit / len(words_) if words_ else 0.0
             if hit >= NEAR_MIN_WORDS and share >= NEAR_SHARE and (near is None or (share, -len(words_)) > (near[0], -near[1])):
@@ -460,13 +460,16 @@ def _opening_type_named(f: str, catalog: Catalog) -> str | None:
 
 NEAR_MIN_WORDS = 3          # a type named loosely: at least this many of its label's words in the sentence...
 NEAR_SHARE = 0.6            # ...and this share of them ("cửa đi hai cánh" -> "Cửa đi hai cánh đều")
-_DIGITS = {"1": "mot", "2": "hai", "3": "ba", "4": "bon"}
 
 
-def _tokens(f: str) -> list[str]:
-    """Words of folded text, single digits read as words ("2 cánh" = "hai cánh"), brackets and commas dropped."""
+def _tokens(f: str, catalog: Catalog = builtin.CATALOG) -> list[str]:
+    """Words of folded text, single digits read as words ("2 cánh" = "hai cánh": dictionary group ``edit-number``, the Vietnamese word of
+    each digit), brackets and commas dropped."""
+    digits: dict[str, str] = {}
+    for w, v in lexicon.phrases("edit-number", catalog):    # the first word of each digit (the Vietnamese one: the labels are worded so)
+        digits.setdefault(str(v), w)
     found: list[str] = re.findall(r"[a-z0-9]+", f)
-    return [_DIGITS.get(w) or w for w in found]
+    return [digits.get(w) or w for w in found]
 
 
 def opening_wish(text: str, catalog: Catalog = builtin.CATALOG) -> dict[str, Any] | None:

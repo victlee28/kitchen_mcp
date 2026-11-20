@@ -14,8 +14,8 @@ from collections.abc import Sequence
 from typing import Any
 
 from .geometry import Scene
-from .spec import KitchenSpec
-from . import defaults, handles
+from .spec import TIER_OF_STOREY, KitchenSpec
+from . import builtin, defaults, handles
 from .errors import InvalidInput, NotFound, require
 from .wall_surfaces import FaceRef, face_owner, face_part_id
 from .words import say
@@ -29,15 +29,14 @@ SEMANTIC = {"carcass": "cabinet_body", "side-panel": "cabinet_body", "shelf": "c
             "opening-frame": "room_opening", "opening-leaf": "room_opening", "opening-leaf-frame": "room_opening", "opening-glass": "room_opening", "opening-sweep": "room_opening",
             "opening-handle": "room_opening"}
 
-_PROMPT_ROLES = {  # part kind -> the words of the image prompt (English); the name shown to people is the ``part.<kind>`` key of data/i18n
-    "door": "cabinet door front", "glass-door": "glass cabinet door", "drawer": "drawer front", "carcass": "cabinet carcass side",
-    "side-panel": "cabinet side panel", "shelf": "open shelf", "plinth": "toe kick plinth", "countertop": "kitchen countertop",
-    "molding": "decorative molding", "wall": "wall", "floor": "floor", "fridge": "refrigerator", "sink": "kitchen sink",
-    "faucet": "kitchen faucet", "cooktop": "cooktop", "hood": "range hood", "oven": "built-in oven", "handle": "cabinet handle",
-    "opening-frame": "door or window frame and casing", "opening-leaf": "room door leaf", "opening-leaf-frame": "door leaf frame", "opening-glass": "window glass",
-    "opening-sweep": "floor in front of a door", "opening-handle": "door handle", "wall-face": "wall surface",
-}
-ROLES = {k: (say(f"part.{k}"), en) for k, en in _PROMPT_ROLES.items()}   # part kind -> (name shown to people, prompt words)
+def _roles() -> dict[str, tuple[str, str]]:
+    """Part kind -> (name shown to people: the ``part.<kind>`` key of data/i18n, prompt words: the builtin ``prompt-text`` table
+    ``part-roles``). The image-edit prompts read the words of the merged catalog (``prompts.table("part-roles", catalog)``)."""
+    from .prompts.photo import table
+    return {k: (say(f"part.{k}"), en) for k, en in table("part-roles").items()}
+
+
+ROLES = _roles()   # part kind -> (name shown to people, builtin prompt words); the kinds the layers name
 
 _MATERIALS = defaults.BUILTIN.materials   # finish names drawn where the design names none (data: the ``defaults`` item)
 _DEFAULTS = {k: _MATERIALS[k] for k in ("base", "upper", "carcass", "countertop", "wall", "floor", "plinth", "openingFrame", "openingLeaf",
@@ -107,23 +106,21 @@ def design_op(spec: KitchenSpec, layer: dict[str, Any], material: str, scene: Sc
     key = layer["materialLocked"]
     module, type = layer.get("module"), layer.get("type")
     if type in FRONT_SECTIONS and type != "glass-door" and module and module in {m.id for m in spec.module}:
-        return {"op": "update", "id": module, "changes": {"material": material}}, f"cả mặt trước module {module}"
+        return {"op": "update", "id": module, "changes": {"material": material}}, say("scope.module-front", module=module)
     kind, _, ref = key.partition(":")
     if kind == "common" and type in FRONT_SECTIONS and scene is not None:
         partial = _front_updates(spec, scene, layer, ref, material)
         if partial is not None:
             return partial
     if kind == "module":
-        return {"op": "update", "id": ref, "changes": {"material": material}}, f"cả mặt trước module {ref}"
+        return {"op": "update", "id": ref, "changes": {"material": material}}, say("scope.module-front", module=ref)
     if kind == "molding":
-        return {"op": "molding", "id": ref, "changes": {"material": material}}, f"toàn bộ phào {ref}"
+        return {"op": "molding", "id": ref, "changes": {"material": material}}, say("scope.molding", id=ref)
     if kind == "common":
         k: str = require(ref, "common layer")
         if k == "plinth":
             return None
-        what: str = {"countertop": "toàn bộ mặt đá", "wall": "toàn bộ tường", "floor": "toàn bộ sàn", "carcass": "thân mọi tủ",
-                   "base": "mặt trước mọi tủ dưới", "upper": "mặt trước mọi tủ trên", "tall": "mặt trước mọi tủ cao",
-                   "cornerShelf": "mọi kệ góc"}.get(k, k)
+        what: str = say(f"scope.common.{k}") if builtin.MESSAGES.has(f"scope.common.{k}") else k
         return {"op": "common", "changes": {"material": {**spec.common.material, k: material}}}, what
     return None
 
@@ -133,6 +130,7 @@ def catalogue(spec: KitchenSpec, scene: Scene, faces: Sequence[FaceRef] = ()) ->
     (``render.wall_faces``): each gets a part per wall part it lies on and a layer ``surface:<id>``."""
     out: list[dict[str, Any]] = []
     storey_of = {m.id: m.storey for m in spec.module}
+    appliance_ids = {a.id for a in spec.appliances}
     from . import runs
     system_of: dict[str, str] = runs.systems(spec)
     run_system = runs.run_systems(spec)
@@ -141,7 +139,8 @@ def catalogue(spec: KitchenSpec, scene: Scene, faces: Sequence[FaceRef] = ()) ->
         vt = ROLES.get(p.type, (p.type, p.type))
         out.append({"id": p.id, "variant": "part", "module": p.module, "type": p.type, "semanticClass": SEMANTIC.get(p.type, "structure" if p.type.startswith("structure-") else "custom"),
                     "name": say("name.layer.part", part=vt[0], module=p.module) if p.module else say("name.layer.part-alone", part=vt[0]), "material": name, "materialLocked": key,
-                    "storey": storey_of.get(p.module or ""), "parent": getattr(p, "parent", None),
+                    "storey": storey_of.get(p.module or ""), "tier": TIER_OF_STOREY.get(storey_of.get(p.module or "") or ""),
+                    "appliance": (p.module or "") in appliance_ids, "parent": getattr(p, "parent", None),
                     "cabinetSystemId": system_of.get(p.module or "") or run_system.get(getattr(p, "run", None) or ""),
                     "selectable": True, "allowAppearanceChange": not p.type.startswith("structure-"),
                     "allowGeometryChange": False, "allowPositionChange": False})
@@ -199,7 +198,7 @@ def catalogue(spec: KitchenSpec, scene: Scene, faces: Sequence[FaceRef] = ()) ->
 
 
 TIER_NAME = {t: say(f"tier.{t}") for t in ("base", "upper", "tall", "corner")}
-TIER_OF = {"base": "base", "upper": "upper", "loft": "upper", "tall": "tall", "corner": "corner"}  # storey -> material tier (loft shares upper)
+TIER_OF = TIER_OF_STOREY  # storey -> material tier (loft shares upper): one table, kitchen/spec.py
 
 
 def _tier_groups(parts: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -259,7 +258,7 @@ def _front_updates(spec: KitchenSpec, scene: Scene, layer: dict[str, Any], slot:
         return None
     mods = sorted(touched)
     ops = [{"op": "update", "id": m, "changes": {"material": material}, "closeGap": False} for m in mods]
-    return (ops[0] if len(ops) == 1 else {"op": "multi", "ops": ops}), f"mặt trước {len(mods)} module ({', '.join(mods)}); các module này có vật liệu riêng"
+    return (ops[0] if len(ops) == 1 else {"op": "multi", "ops": ops}), say("scope.fronts-own", n=len(mods), modules=", ".join(mods))
 
 
 def changed_parts(old: KitchenSpec, new: KitchenSpec, scene: Scene) -> list[str]:

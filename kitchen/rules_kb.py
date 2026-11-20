@@ -18,7 +18,6 @@ from .catalog import Catalog
 from .jsonview import as_dict, as_list
 from .spec import KitchenSpec, Appliance
 
-TOPICS = tuple(builtin.CATALOG.ids("rule-topic"))   # the topics checked here (catalog kind rule-topic: names there)
 
 
 def select(rows: list[dict[str, Any]], country: str | None, region: str | None, catalog: Catalog = builtin.CATALOG) -> dict[str, dict[str, Any]]:

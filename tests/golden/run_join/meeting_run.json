@@ -1,0 +1,121 @@
+{
+ "function": "run_join.meeting_run",
+ "cases": [
+  {
+   "name": "two runs",
+   "input": {
+    "spec": {
+     "runs": [
+      {
+       "id": "R1",
+       "x": -4000,
+       "z": 0,
+       "yaw": 0
+      },
+      {
+       "id": "R2",
+       "x": -2200,
+       "z": 0,
+       "yaw": -90
+      }
+     ],
+     "floorplan": null,
+     "module": [
+      {
+       "id": "TR10",
+       "type": "base",
+       "wall": "island",
+       "run": "R1",
+       "fromCorner": 0,
+       "width": 900,
+       "y": 0,
+       "height": 840,
+       "depth": 600
+      },
+      {
+       "id": "TR11",
+       "type": "base",
+       "wall": "island",
+       "run": "R1",
+       "fromCorner": 900,
+       "width": 900,
+       "y": 0,
+       "height": 840,
+       "depth": 600
+      },
+      {
+       "id": "TR22",
+       "type": "base",
+       "wall": "island",
+       "run": "R2",
+       "fromCorner": 0,
+       "width": 900,
+       "y": 0,
+       "height": 840,
+       "depth": 600
+      },
+      {
+       "id": "TR23",
+       "type": "base",
+       "wall": "island",
+       "run": "R2",
+       "fromCorner": 900,
+       "width": 900,
+       "y": 0,
+       "height": 840,
+       "depth": 600
+      }
+     ]
+    },
+    "run": "R1"
+   },
+   "expected": {
+    "meets": "R2"
+   }
+  },
+  {
+   "name": "one run",
+   "input": {
+    "spec": {
+     "runs": [
+      {
+       "id": "R1",
+       "x": -4000,
+       "z": 0,
+       "yaw": 0
+      }
+     ],
+     "floorplan": null,
+     "module": [
+      {
+       "id": "TR10",
+       "type": "base",
+       "wall": "island",
+       "run": "R1",
+       "fromCorner": 0,
+       "width": 900,
+       "y": 0,
+       "height": 840,
+       "depth": 600
+      },
+      {
+       "id": "TR11",
+       "type": "base",
+       "wall": "island",
+       "run": "R1",
+       "fromCorner": 900,
+       "width": 900,
+       "y": 0,
+       "height": 840,
+       "depth": 600
+      }
+     ]
+    },
+    "run": "R1"
+   },
+   "expected": {
+    "meets": null
+   }
+  }
+ ]
+}

@@ -10,7 +10,7 @@ import math
 from dataclasses import dataclass
 
 from .numeric import round_half_away
-from .spec import Appliance, KitchenSpec, Module
+from .spec import TIER_OF_STOREY, Appliance, KitchenSpec, Module
 
 Point = tuple[float, float]
 EPS = 1e-9
@@ -343,7 +343,6 @@ def strip_extent(poly: list[Point], frame: RunFrame, d_max: float) -> tuple[floa
 
 SYSTEM_TOUCH = 50.0          # mm: runs whose cabinets come this close belong to the same system
 NO_RUN_SYSTEM = "design"     # cabinets standing in no run (old revisions by walls): one system, the whole design
-TIER_OF_STOREY = {"base": "base", "upper": "upper", "loft": "upper", "tall": "tall", "corner": "corner"}   # loft shares the upper tier
 
 
 def system_id(raw: str) -> str:

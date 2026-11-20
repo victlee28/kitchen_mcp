@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from ..jsonview import as_dict
 from ..palette import STRUCTURE_COLORS, STRUCTURE_FALLBACK
 from .constants import DEFAULT_WALL_HEIGHT
 
@@ -23,11 +24,10 @@ def default_height(rec: dict[str, Any]) -> float:
     if kind == "stair":
         return STAIR_RISE
     if kind == "furniture":
-        if "vách tv" in label:
-            return 2400.0
-        if "rượu" in label:
-            return 2100.0
-        return 900.0
+        from ..defaults import BUILTIN
+        heights = BUILTIN.furniture_heights
+        words = as_dict(heights.get("words")) or {}
+        return float(next((h for w, h in words.items() if str(w).lower() in label), heights.get("default", 900)))
     return 0.0
 
 

@@ -113,6 +113,75 @@
    "kitchenMinDepth": 500,
    "unitMinDepth": 250,
    "shallowUnit": "low"
+  },
+  "openingKinds": {
+   "door": {
+    "type": "door-swing-1",
+    "width": 900,
+    "maxWidth": 2400,
+    "handle": {
+     "kind": "lever",
+     "height": 1000,
+     "inset": 70
+    },
+    "photoHeight": [
+     1800,
+     3200
+    ],
+    "sliding": "door-sliding-2",
+    "folding": "door-folding-4"
+   },
+   "window": {
+    "type": "window-swing-2",
+    "width": 1200,
+    "maxWidth": 3600,
+    "handle": {
+     "kind": "lever",
+     "inset": 60
+    },
+    "photoHeight": [
+     300,
+     2400
+    ],
+    "sliding": "window-sliding-2"
+   },
+   "passage": {
+    "type": "passage",
+    "width": 900,
+    "maxWidth": 2400,
+    "handle": {
+     "kind": "none"
+    },
+    "photoHeight": [
+     1800,
+     3200
+    ]
+   }
+  },
+  "openingHandleParts": {
+   "lever": {
+    "rose": 55,
+    "length": 130,
+    "thick": 20,
+    "reach": 60
+   },
+   "pull": {
+    "length": 300,
+    "thick": 25,
+    "reach": 45
+   }
+  },
+  "moldingStyles": [
+   "Classic",
+   "Neoclassical",
+   "Transitional"
+  ],
+  "furnitureHeights": {
+   "default": 900,
+   "words": {
+    "vách tv": 2400,
+    "rượu": 2100
+   }
   }
  }
 ]

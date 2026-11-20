@@ -31,8 +31,10 @@ export function moldingsOp(spec, ui) {
   return { op: 'set-moldings', moldings, style: ui.style };
 }
 
-export const CLASSIC_STYLES = ['Classic', 'Neoclassical', 'Transitional'];
-export const styleHasMoldings = (style) => CLASSIC_STYLES.includes(style);
+// styles that get crown and base moldings when the design does not say: catalog defaults.moldingStyles (set by boot.js)
+export const MOLDING_STYLES = [];
+export function setMoldingStyles(list) { if (Array.isArray(list)) MOLDING_STYLES.splice(0, MOLDING_STYLES.length, ...list.map(String)); }
+export const styleHasMoldings = (style) => MOLDING_STYLES.includes(style);
 
 /** URLs and file names of the AI export of one design revision. */
 export function aiExportUrls(id, rev, light) {

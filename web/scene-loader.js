@@ -19,7 +19,7 @@ export function makeCamera(THREE, c, aspect) {
 export function buildKitchen(doc, THREE, opts = {}) {
   const s = SCALE[doc.units || 'mm'];
   if (doc.coordinateSystem?.positionAnchor && doc.coordinateSystem.positionAnchor !== 'bottom_back_left') {
-    console.warn('[scene-loader] chỉ hỗ trợ đầy đủ positionAnchor=bottom_back_left');
+    console.warn('[scene-loader] only positionAnchor=bottom_back_left is fully supported');
   }
   const mats = new Map();
   for (const m of doc.materials || []) mats.set(m.id, makeMaterial(m, THREE));

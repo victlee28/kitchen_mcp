@@ -10,12 +10,13 @@ import numpy as np
 
 from .. import appliance_models, view_sync, edit, geometry, geometry_edit, imaging, layers, prompts, render, vocab
 from ..errors import InvalidInput
+from ..words import say
 from ..jsonview import as_dict, as_list
 if TYPE_CHECKING:
     from .jobs import ImageJobs
 from .request import JobRequest, NewJob, Task, TaskInput
 from .base_images import BaseImages
-from .common import Component, JobEnv, GROW_PX, MAX_TASKS, ZONE_COLORS, MOLDING_EN, describe_position
+from .common import Component, JobEnv, GROW_PX, MAX_TASKS, ZONE_COLORS, describe_position
 
 class RequestBuilder(Component):
     def __init__(self, env: JobEnv, base: BaseImages, owner: "ImageJobs") -> None:
@@ -62,7 +63,8 @@ class RequestBuilder(Component):
         if kind == "geometry_edit":
             self._prepare_geometry(jdir, d, spec, man, did, view, geometry_items, instruction, reference, req)
         elif kind == "edit":
-            cat = layers.catalogue(spec, scene, render.wall_faces(spec, scene=scene))
+            dc = self.env.design_catalog(did, rev)        # the catalog the revision is built with: the faces the render split out
+            cat = layers.catalogue(spec, scene, render.wall_faces(spec, dc, scene))
             cur = spec
             inst, meta = imaging.load_instances(d)
             present = set(int(v) for v in np.unique(inst))  # pyright: ignore[reportUnknownMemberType] (numpy stubs)
@@ -78,7 +80,7 @@ class RequestBuilder(Component):
                 if mode == "design":
                     if not t["material"]:
                         raise InvalidInput(f"Task {i} ({t['targetLayer']}): design mode needs a material", code="task-no-material", params={"n": i, "layer": t["targetLayer"]})
-                    op = layers.design_op(cur, layers.resolve(layers.catalogue(cur, scene, render.wall_faces(cur, scene=scene)), t["targetLayer"])[0], t["material"], scene)
+                    op = layers.design_op(cur, layers.resolve(layers.catalogue(cur, scene, render.wall_faces(cur, dc, scene)), t["targetLayer"])[0], t["material"], scene)
                     if op is None:
                         raise InvalidInput(f"Task {i}: {layer['name']!r} cannot be changed in the design yet; use quick mode", code="layer-not-editable",
                                    params={"n": i, "name": layer["name"]})
@@ -88,7 +90,7 @@ class RequestBuilder(Component):
                     selected = list(ids)
                     ids = layers.changed_parts(cur, nxt, scene)
                     if set(ids) != set(selected):  # the spec can only express a wider or different scope: say so instead of hiding it
-                        rec["scopeNote"] = f"Thiết kế đổi {len(ids)} chi tiết, vùng chọn có {len(selected)}"
+                        rec["scopeNote"] = say("image.scope-note", parts=len(ids), selected=len(selected))
                     if not ids:
                         raise InvalidInput(f"Task {i}: the new material is the current one", code="same-material", params={"n": i})
                     rec["pendingOp"] = op[0]
@@ -108,21 +110,22 @@ class RequestBuilder(Component):
                 union |= tmask
                 imaging.save_mask(tmask, jdir / f"target_{i}.png")
                 imaging.save_mask(imaging.grow(tmask, GROW_PX), jdir / f"mask_{i}.png")
-                lay_new = layers.resolve(layers.catalogue(cur, scene, render.wall_faces(cur, scene=scene)), t["targetLayer"])[0]
+                lay_new = layers.resolve(layers.catalogue(cur, scene, render.wall_faces(cur, dc, scene)), t["targetLayer"])[0]
                 material_text = t["material"] or lay_new.get("material") or ""
                 type = lay_new.get("type") or ""
-                role_en = layers.ROLES.get(type, (None, "kitchen element"))[1]
+                role_en = prompts.table("part-roles", self.env.catalog()).get(type, "kitchen element")      # catalog kind prompt-text
                 if type == "molding":
                     variant = {m.id: m.variant for m in cur.moldings}.get(lay_new.get("module") or "")
-                    role_en = MOLDING_EN.get(variant or "", role_en)
+                    role_en = prompts.table("molding-text", self.env.catalog()).get(variant or "", role_en)
                 rec["targetParts"] = ids
                 rec["maskPixels"] = int(tmask.sum())
                 rec["name"] = lay_new.get("name")
-                rec["prompt"] = prompts.edit_task_prompt(cur, lay_new, " ".join(x for x in (t["instruction"], instruction) if x), t["material"])
+                rec["prompt"] = prompts.edit_task_prompt(cur, lay_new, " ".join(x for x in (t["instruction"], instruction) if x), t["material"],
+                                                         self.env.catalog())
                 rec["roleEn"] = role_en
                 rec["position"] = describe_position(tmask)
                 rec["remaining"] = self._others(cat, visible, ids, type)
-                rec["typeEn"] = layers.ROLES.get(type, (None, "element"))[1]
+                rec["typeEn"] = prompts.table("part-roles", self.env.catalog()).get(type, "element")
                 rec["materialText"] = " ".join(x for x in (vocab.to_english(material_text, self.env.catalog()), material_text and f"({material_text})") if x)
                 touched = self._appliances_in(d, imaging.grow(tmask, GROW_PX), cur)      # plan A5: the AI must know the appliances it redraws
                 if touched:
@@ -204,11 +207,11 @@ class RequestBuilder(Component):
         """Áp thao tác hình học lên bản sao thiết kế, render lại ĐÚNG camera cũ, so cũ/mới ra vùng thay đổi.
         Nét/depth gửi model là của thiết kế MỚI; ảnh 'hình mẫu' (màu phẳng + nét) cho model nhận chỉ dẫn."""
         W, H = man["width"], man["height"]
-        ops, desc, tt = geometry_edit.build_ops(spec, items or [])
+        ops, desc, tt = geometry_edit.build_ops(spec, items or [], self.env.catalog())
         nxt = spec
         for op in ops:
             nxt = edit.apply_op(nxt, op, self.env.catalog())
-        pin = geometry_edit.pin_cameras(spec, nxt)
+        pin = geometry_edit.pin_cameras(spec, nxt, self.env.design_catalog(did, int(req["baseRevision"])))
         if pin:
             nxt = edit.apply_op(nxt, pin, self.env.catalog())
             ops.append(pin)

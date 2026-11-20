@@ -3153,5 +3153,96 @@
    ]
   },
   "value": "fit-size"
+ },
+ {
+  "id": "opening.label-window",
+  "group": "regex",
+  "patterns": {
+   "vi": [
+    "\\bcua\\s+so\\b"
+   ],
+   "en": [
+    "\\bwindow\\b"
+   ]
+  },
+  "message": "Nhãn lỗ cửa trên mặt bằng là cửa sổ (chữ đã bỏ dấu)"
+ },
+ {
+  "id": "opening.label-sliding",
+  "group": "regex",
+  "patterns": {
+   "vi": [
+    "\\btruot\\b"
+   ],
+   "en": [
+    "\\bsliding\\b"
+   ]
+  },
+  "message": "Nhãn lỗ cửa trên mặt bằng: cửa trượt (chữ đã bỏ dấu)"
+ },
+ {
+  "id": "opening.label-folding",
+  "group": "regex",
+  "patterns": {
+   "vi": [
+    "\\bxep\\b"
+   ],
+   "en": [
+    "\\bfolding\\b"
+   ]
+  },
+  "message": "Nhãn lỗ cửa trên mặt bằng: cửa xếp (chữ đã bỏ dấu)"
+ },
+ {
+  "id": "edit.number-1",
+  "group": "edit-number",
+  "aliases": {
+   "vi": [
+    "một"
+   ],
+   "en": [
+    "one"
+   ]
+  },
+  "value": "1"
+ },
+ {
+  "id": "edit.number-2",
+  "group": "edit-number",
+  "aliases": {
+   "vi": [
+    "hai"
+   ],
+   "en": [
+    "two"
+   ]
+  },
+  "value": "2"
+ },
+ {
+  "id": "edit.number-3",
+  "group": "edit-number",
+  "aliases": {
+   "vi": [
+    "ba"
+   ],
+   "en": [
+    "three"
+   ]
+  },
+  "value": "3"
+ },
+ {
+  "id": "edit.number-4",
+  "group": "edit-number",
+  "aliases": {
+   "vi": [
+    "bốn"
+   ],
+   "en": [
+    "four"
+   ]
+  },
+  "value": "4"
  }
 ]

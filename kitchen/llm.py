@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import logging
 
-from . import model_contract as mc
+from . import model_contract as mc, prompts
 from .intent import KitchenTemplate
 from .model_gateway import ModelGateway
 from .spec import KitchenSpec
@@ -31,7 +31,7 @@ def parse_prompt_llm(prompt: str, models: ModelGateway) -> tuple[KitchenTemplate
     if skipped:
         return None, skipped
     schema = json.dumps(KitchenTemplate.model_json_schema(), ensure_ascii=False)
-    req = mc.ModelRequest(system="Trích tham số thiết kế tủ bếp từ mô tả. Chỉ trả JSON đúng schema sau, đơn vị mm, trường không rõ thì bỏ qua:\n" + schema,
+    req = mc.ModelRequest(system=prompts.text("llm-template") + "\n" + schema,
                           messages=({"role": "user", "text": prompt},), json_only=True, task="prompt")
     try:
         reply = models.ask(req)
@@ -50,10 +50,7 @@ def edit_operation_llm(text: str, spec: KitchenSpec, models: ModelGateway) -> tu
     if skipped:
         return None, skipped
     modules = [{"id": m.id, "type": m.type, "run": m.run, "fromCorner": m.fromCorner, "width": m.width, "storey": m.storey} for m in spec.module]
-    system = ("Chuyển câu lệnh sửa tủ bếp thành MỘT thao tác JSON. Chỉ dùng: "
-              '{"op":"add","module":{"type","width"},"afterModule":id} | {"op":"remove","id"} | {"op":"update","id","changes":{...}} | '
-              '{"op":"common","changes":{...}} | {"op":"multi","ops":[...]}. Đơn vị mm. Không rõ thì trả {"op":"none"}.\nModule: '
-              + json.dumps(modules, ensure_ascii=False))
+    system = prompts.text("llm-edit") + "\nModule: " + json.dumps(modules, ensure_ascii=False)
     req = mc.ModelRequest(system=system, messages=({"role": "user", "text": text},), json_only=True, task="edit")
     try:
         reply = models.ask(req)

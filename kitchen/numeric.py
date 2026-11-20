@@ -36,9 +36,13 @@ def near(a: float, b: float, eps: float = EPS_MM) -> bool:
 
 
 def polygon_centroid(points: list[tuple[float, float]]) -> tuple[float, float]:
-    """The area centroid of a simple polygon ``[(x, z), ...]``; the mean of its corners when it has no area (a line, a point)."""
+    """The area centroid of a simple polygon ``[(x, z), ...]``; the mean of its corners when it has no area (a line, a point). No points:
+    ``InvalidInput`` (``empty-polygon``)."""
     a = cx = cz = 0.0
     n = len(points)
+    if n == 0:
+        from .errors import InvalidInput
+        raise InvalidInput("A polygon needs at least one point", code="empty-polygon")
     for i in range(n):
         (x0, z0), (x1, z1) = points[i], points[(i + 1) % n]
         c = x0 * z1 - x1 * z0

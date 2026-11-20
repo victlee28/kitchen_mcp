@@ -1,0 +1,89 @@
+{
+ "function": "edit_intent.opening_wish",
+ "cases": [
+  {
+   "name": "sentences",
+   "input": {
+    "texts": [
+     "lưu vào database",
+     "lưu cửa này thành mẫu tên Cửa nhôm",
+     "thêm cửa sổ rộng 1200",
+     "thay cửa này bằng cửa trượt 2 cánh",
+     "xóa cửa này",
+     "đổi màu tủ dưới",
+     "cửa đi 900 cao 2100"
+    ]
+   },
+   "expected": {
+    "wish": {
+     "lưu vào database": {
+      "action": "save",
+      "name": null,
+      "what": null
+     },
+     "lưu cửa này thành mẫu tên Cửa nhôm": {
+      "action": "save",
+      "name": "Cửa nhôm",
+      "what": null
+     },
+     "thêm cửa sổ rộng 1200": {
+      "action": "make",
+      "kind": "window",
+      "type": null,
+      "width": 1200.0
+     },
+     "thay cửa này bằng cửa trượt 2 cánh": {
+      "action": "replace",
+      "kind": "door",
+      "type": "door-sliding-2"
+     },
+     "xóa cửa này": {
+      "action": "remove",
+      "kind": "door",
+      "type": null
+     },
+     "đổi màu tủ dưới": null,
+     "cửa đi 900 cao 2100": {
+      "action": "make",
+      "kind": "door",
+      "type": null,
+      "height": 2100.0
+     }
+    }
+   }
+  },
+  {
+   "name": "sizes kept or fitted, not openings",
+   "input": {
+    "texts": [
+     "tạo cửa đi rộng 2000 giữ nguyên khổ",
+     "tạo cửa đi rộng 2000 dùng khổ của mẫu",
+     "đổi màu cửa tủ sang trắng",
+     "thêm tủ dưới",
+     ""
+    ]
+   },
+   "expected": {
+    "wish": {
+     "tạo cửa đi rộng 2000 giữ nguyên khổ": {
+      "action": "make",
+      "kind": "door",
+      "type": null,
+      "size": "keep",
+      "width": 2000.0
+     },
+     "tạo cửa đi rộng 2000 dùng khổ của mẫu": {
+      "action": "make",
+      "kind": "door",
+      "type": null,
+      "size": "fit",
+      "width": 2000.0
+     },
+     "đổi màu cửa tủ sang trắng": null,
+     "thêm tủ dưới": null,
+     "": null
+    }
+   }
+  }
+ ]
+}

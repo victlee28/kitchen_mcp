@@ -1,0 +1,60 @@
+{
+ "function": "roomctx.walled",
+ "cases": [
+  {
+   "name": "building plan",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "floorplan": {
+     "$fixture": "tests/data/floorplan-building.json"
+    },
+    "points": [
+     [
+      0,
+      0
+     ],
+     [
+      -1000,
+      2000
+     ],
+     [
+      100000,
+      100000
+     ],
+     [
+      -200,
+      300
+     ]
+    ]
+   },
+   "expected": {
+    "walled": [
+     true,
+     true,
+     true,
+     true,
+     false
+    ]
+   }
+  },
+  {
+   "name": "no floorplan",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "points": [
+     [
+      0,
+      0
+     ]
+    ]
+   },
+   "expected": {
+    "walled": null
+   }
+  }
+ ]
+}

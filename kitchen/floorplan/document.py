@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+from collections.abc import Sequence
 from typing import Any, cast
 
 from ..errors import InvalidInput
@@ -70,7 +71,6 @@ def document_hash(data: dict[str, Any]) -> str:
     return hashlib.sha256(json.dumps(data, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")).hexdigest()
 
 
-KITCHEN_WORDS = ("kitchen", "bếp", "bep")
 REGION_COVER = 0.2          # a wall bounds a side of the region when it covers this share of the seed's width
 REGION_MARGIN_MM = 600.0    # how far an open side (no wall found) reaches beyond the seed
 
@@ -89,8 +89,14 @@ def element_bbox(e: dict[str, Any]) -> list[float] | None:
     return [min(p[0] for p in pts), min(p[1] for p in pts), max(p[0] for p in pts), max(p[1] for p in pts)]
 
 
-def is_kitchen_unit(e: dict[str, Any]) -> bool:
+def is_kitchen_unit(e: dict[str, Any], kitchen_words: Sequence[str] | None = None) -> bool:
+    """A piece of furniture whose tag or label holds one of ``kitchen_words`` (folded; catalog ``defaults.autoPlace.kitchenWords``)."""
     if e.get("kind") != "furniture":
         return False
-    text = f"{field_value(e, 'tag') or ''} {field_value(e, 'label') or ''}".lower()
-    return any(w in text for w in KITCHEN_WORDS)
+    from ..lexicon import fold
+    if kitchen_words is None:
+        from ..defaults import BUILTIN
+        from ..jsonview import as_list
+        kitchen_words = [str(w) for w in as_list(BUILTIN.auto_place.get("kitchenWords")) or []]
+    text = fold(f"{field_value(e, 'tag') or ''} {field_value(e, 'label') or ''}")
+    return any(fold(w) in text for w in kitchen_words)

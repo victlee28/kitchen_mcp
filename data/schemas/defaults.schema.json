@@ -649,6 +649,407 @@
      }
     }
    }
+  },
+  "openingKinds": {
+   "type": "object",
+   "additionalProperties": false,
+   "x-label": {
+    "vi": "Mặc định theo loại cửa",
+    "en": "Defaults by opening kind"
+   },
+   "properties": {
+    "door": {
+     "type": "object",
+     "additionalProperties": false,
+     "properties": {
+      "type": {
+       "type": "string",
+       "minLength": 1,
+       "x-label": {
+        "vi": "Mẫu mặc định",
+        "en": "Default type"
+       }
+      },
+      "width": {
+       "type": "number",
+       "exclusiveMinimum": 0,
+       "maximum": 12000,
+       "x-label": {
+        "vi": "Rộng khi mẫu không ghi (mm)",
+        "en": "Width when the type gives none (mm)"
+       }
+      },
+      "maxWidth": {
+       "type": "number",
+       "exclusiveMinimum": 0,
+       "maximum": 12000,
+       "x-label": {
+        "vi": "Rộng tối đa khi mẫu không ghi (mm)",
+        "en": "Widest when the type gives none (mm)"
+       }
+      },
+      "handle": {
+       "type": "object",
+       "additionalProperties": false,
+       "properties": {
+        "kind": {
+         "type": "string",
+         "enum": [
+          "lever",
+          "pull",
+          "none"
+         ]
+        },
+        "height": {
+         "type": "number",
+         "minimum": 0,
+         "maximum": 3000
+        },
+        "inset": {
+         "type": "number",
+         "minimum": 0,
+         "maximum": 500
+        }
+       },
+       "x-label": {
+        "vi": "Tay nắm khi mẫu không ghi",
+        "en": "Handle when the type gives none"
+       }
+      },
+      "photoHeight": {
+       "type": "array",
+       "items": {
+        "type": "number",
+        "minimum": 0
+       },
+       "minItems": 2,
+       "maxItems": 2,
+       "x-label": {
+        "vi": "Cao lấy từ ảnh hợp lý (mm, từ–đến)",
+        "en": "Plausible height from a picture (mm, from–to)"
+       }
+      },
+      "sliding": {
+       "type": "string",
+       "minLength": 1,
+       "x-label": {
+        "vi": "Mẫu khi nhãn nói cửa trượt",
+        "en": "Type when the label says sliding"
+       }
+      },
+      "folding": {
+       "type": "string",
+       "minLength": 1,
+       "x-label": {
+        "vi": "Mẫu khi nhãn nói cửa xếp",
+        "en": "Type when the label says folding"
+       }
+      }
+     },
+     "x-label": {
+      "vi": "Cửa đi",
+      "en": "Doors"
+     }
+    },
+    "window": {
+     "type": "object",
+     "additionalProperties": false,
+     "properties": {
+      "type": {
+       "type": "string",
+       "minLength": 1,
+       "x-label": {
+        "vi": "Mẫu mặc định",
+        "en": "Default type"
+       }
+      },
+      "width": {
+       "type": "number",
+       "exclusiveMinimum": 0,
+       "maximum": 12000,
+       "x-label": {
+        "vi": "Rộng khi mẫu không ghi (mm)",
+        "en": "Width when the type gives none (mm)"
+       }
+      },
+      "maxWidth": {
+       "type": "number",
+       "exclusiveMinimum": 0,
+       "maximum": 12000,
+       "x-label": {
+        "vi": "Rộng tối đa khi mẫu không ghi (mm)",
+        "en": "Widest when the type gives none (mm)"
+       }
+      },
+      "handle": {
+       "type": "object",
+       "additionalProperties": false,
+       "properties": {
+        "kind": {
+         "type": "string",
+         "enum": [
+          "lever",
+          "pull",
+          "none"
+         ]
+        },
+        "height": {
+         "type": "number",
+         "minimum": 0,
+         "maximum": 3000
+        },
+        "inset": {
+         "type": "number",
+         "minimum": 0,
+         "maximum": 500
+        }
+       },
+       "x-label": {
+        "vi": "Tay nắm khi mẫu không ghi",
+        "en": "Handle when the type gives none"
+       }
+      },
+      "photoHeight": {
+       "type": "array",
+       "items": {
+        "type": "number",
+        "minimum": 0
+       },
+       "minItems": 2,
+       "maxItems": 2,
+       "x-label": {
+        "vi": "Cao lấy từ ảnh hợp lý (mm, từ–đến)",
+        "en": "Plausible height from a picture (mm, from–to)"
+       }
+      },
+      "sliding": {
+       "type": "string",
+       "minLength": 1,
+       "x-label": {
+        "vi": "Mẫu khi nhãn nói cửa trượt",
+        "en": "Type when the label says sliding"
+       }
+      },
+      "folding": {
+       "type": "string",
+       "minLength": 1,
+       "x-label": {
+        "vi": "Mẫu khi nhãn nói cửa xếp",
+        "en": "Type when the label says folding"
+       }
+      }
+     },
+     "x-label": {
+      "vi": "Cửa sổ",
+      "en": "Windows"
+     }
+    },
+    "passage": {
+     "type": "object",
+     "additionalProperties": false,
+     "properties": {
+      "type": {
+       "type": "string",
+       "minLength": 1,
+       "x-label": {
+        "vi": "Mẫu mặc định",
+        "en": "Default type"
+       }
+      },
+      "width": {
+       "type": "number",
+       "exclusiveMinimum": 0,
+       "maximum": 12000,
+       "x-label": {
+        "vi": "Rộng khi mẫu không ghi (mm)",
+        "en": "Width when the type gives none (mm)"
+       }
+      },
+      "maxWidth": {
+       "type": "number",
+       "exclusiveMinimum": 0,
+       "maximum": 12000,
+       "x-label": {
+        "vi": "Rộng tối đa khi mẫu không ghi (mm)",
+        "en": "Widest when the type gives none (mm)"
+       }
+      },
+      "handle": {
+       "type": "object",
+       "additionalProperties": false,
+       "properties": {
+        "kind": {
+         "type": "string",
+         "enum": [
+          "lever",
+          "pull",
+          "none"
+         ]
+        },
+        "height": {
+         "type": "number",
+         "minimum": 0,
+         "maximum": 3000
+        },
+        "inset": {
+         "type": "number",
+         "minimum": 0,
+         "maximum": 500
+        }
+       },
+       "x-label": {
+        "vi": "Tay nắm khi mẫu không ghi",
+        "en": "Handle when the type gives none"
+       }
+      },
+      "photoHeight": {
+       "type": "array",
+       "items": {
+        "type": "number",
+        "minimum": 0
+       },
+       "minItems": 2,
+       "maxItems": 2,
+       "x-label": {
+        "vi": "Cao lấy từ ảnh hợp lý (mm, từ–đến)",
+        "en": "Plausible height from a picture (mm, from–to)"
+       }
+      },
+      "sliding": {
+       "type": "string",
+       "minLength": 1,
+       "x-label": {
+        "vi": "Mẫu khi nhãn nói cửa trượt",
+        "en": "Type when the label says sliding"
+       }
+      },
+      "folding": {
+       "type": "string",
+       "minLength": 1,
+       "x-label": {
+        "vi": "Mẫu khi nhãn nói cửa xếp",
+        "en": "Type when the label says folding"
+       }
+      }
+     },
+     "x-label": {
+      "vi": "Lỗ thông",
+      "en": "Passages"
+     }
+    }
+   }
+  },
+  "openingHandleParts": {
+   "type": "object",
+   "additionalProperties": false,
+   "x-label": {
+    "vi": "Kích thước tay nắm cửa (mm)",
+    "en": "Door handle sizes (mm)"
+   },
+   "properties": {
+    "lever": {
+     "type": "object",
+     "additionalProperties": false,
+     "properties": {
+      "rose": {
+       "type": "number",
+       "exclusiveMinimum": 0,
+       "maximum": 1000
+      },
+      "length": {
+       "type": "number",
+       "exclusiveMinimum": 0,
+       "maximum": 1000
+      },
+      "thick": {
+       "type": "number",
+       "exclusiveMinimum": 0,
+       "maximum": 1000
+      },
+      "reach": {
+       "type": "number",
+       "exclusiveMinimum": 0,
+       "maximum": 1000
+      }
+     },
+     "x-label": {
+      "vi": "Tay gạt",
+      "en": "Lever"
+     }
+    },
+    "pull": {
+     "type": "object",
+     "additionalProperties": false,
+     "properties": {
+      "length": {
+       "type": "number",
+       "exclusiveMinimum": 0,
+       "maximum": 1000
+      },
+      "thick": {
+       "type": "number",
+       "exclusiveMinimum": 0,
+       "maximum": 1000
+      },
+      "reach": {
+       "type": "number",
+       "exclusiveMinimum": 0,
+       "maximum": 1000
+      }
+     },
+     "x-label": {
+      "vi": "Tay kéo",
+      "en": "Pull bar"
+     }
+    }
+   }
+  },
+  "moldingStyles": {
+   "type": "array",
+   "items": {
+    "type": "string",
+    "enum": [
+     "Modern",
+     "Classic",
+     "Neoclassical",
+     "Transitional",
+     "Industrial",
+     "Minimalist"
+    ]
+   },
+   "x-label": {
+    "vi": "Phong cách có phào nóc và phào chân khi thiết kế không nêu",
+    "en": "Styles with crown and base moldings when the design does not say"
+   }
+  },
+  "furnitureHeights": {
+   "type": "object",
+   "additionalProperties": false,
+   "properties": {
+    "default": {
+     "type": "number",
+     "exclusiveMinimum": 0,
+     "x-label": {
+      "vi": "Cao mặc định (mm)",
+      "en": "Default height (mm)"
+     }
+    },
+    "words": {
+     "type": "object",
+     "additionalProperties": {
+      "type": "number",
+      "exclusiveMinimum": 0
+     },
+     "x-label": {
+      "vi": "Từ trong nhãn -> chiều cao (mm)",
+      "en": "Word in the label -> height (mm)"
+     }
+    }
+   },
+   "x-label": {
+    "vi": "Chiều cao đồ nội thất trên mặt bằng khi bản vẽ không ghi",
+    "en": "Height of floor-plan furniture the drawing does not give"
+   }
   }
  }
 }

@@ -1,0 +1,152 @@
+{
+ "function": "edit.set_run_unit",
+ "cases": [
+  {
+   "name": "wine unit",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "convertRows": true,
+    "op": {
+     "op": "set-run-unit",
+     "id": "R1",
+     "unit": "wine"
+    }
+   },
+   "expected": {
+    "diff": {
+     "modules": {
+      "added": [],
+      "removed": [],
+      "changed": {}
+     },
+     "other": [
+      {
+       "path": "runs[R1].purpose",
+       "old": null,
+       "new": "unit"
+      },
+      {
+       "path": "runs[R1].unitLayout",
+       "old": null,
+       "new": "wine"
+      }
+     ],
+     "truncated": false
+    },
+    "runs": [
+     {
+      "id": "R1",
+      "x": -1920.0,
+      "z": 0.0,
+      "yaw": 0.0,
+      "purpose": "unit",
+      "unitLayout": "wine",
+      "anchor": "end"
+     },
+     {
+      "id": "R2",
+      "x": -0.0,
+      "z": 0.0,
+      "yaw": -90.0
+     }
+    ]
+   }
+  },
+  {
+   "name": "back to kitchen",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "convertRows": true,
+    "ops": [
+     {
+      "op": "set-run-unit",
+      "id": "R1",
+      "unit": "low"
+     }
+    ],
+    "op": {
+     "op": "set-run-unit",
+     "id": "R1",
+     "unit": null
+    }
+   },
+   "expected": {
+    "diff": {
+     "modules": {
+      "added": [],
+      "removed": [],
+      "changed": {}
+     },
+     "other": [
+      {
+       "path": "runs[R1].purpose",
+       "old": "unit",
+       "new": null
+      },
+      {
+       "path": "runs[R1].unitLayout",
+       "old": "low",
+       "new": null
+      }
+     ],
+     "truncated": false
+    },
+    "runs": [
+     {
+      "id": "R1",
+      "x": -1920.0,
+      "z": 0.0,
+      "yaw": 0.0,
+      "anchor": "end"
+     },
+     {
+      "id": "R2",
+      "x": -0.0,
+      "z": 0.0,
+      "yaw": -90.0
+     }
+    ]
+   }
+  },
+  {
+   "name": "unknown unit",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "convertRows": true,
+    "op": {
+     "op": "set-run-unit",
+     "id": "R1",
+     "unit": "boat"
+    }
+   },
+   "error": {
+    "kind": "validation",
+    "code": "bad-unit-layout"
+   }
+  },
+  {
+   "name": "unknown run",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "convertRows": true,
+    "op": {
+     "op": "set-run-unit",
+     "id": "R9",
+     "unit": "wine"
+    }
+   },
+   "error": {
+    "kind": "not-found",
+    "code": "run-not-found"
+   }
+  }
+ ]
+}

@@ -43,6 +43,13 @@
     "vi": "Cụm tiếng Anh cho prompt (để trống: không dịch)",
     "en": "English phrase for prompts (empty: not translated)"
    }
+  },
+  "weak": {
+   "type": "boolean",
+   "x-label": {
+    "vi": "Từ yếu (dạng không dấu trùng từ thường: chỉ nhận khi viết có dấu)",
+    "en": "Weak word (its unaccented form is a common word: matched only with its accents)"
+   }
   }
  },
  "if": {

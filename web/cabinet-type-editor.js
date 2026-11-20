@@ -8,8 +8,6 @@ import { t } from './i18n.js';
 import { STEP_KINDS, PART_TYPES, FRONT_KINDS, SPECIALS, rowsOf, partsOf, letsText, letsOf } from './cabinet-type-logic.js';
 
 const VARIABLES = 'fromCorner endAt width height depth y top fs0 fs1 b0 b1 p0 p1 endPanel blindCorner niche shelfCount sections doors doorThickness doorGap plinthHeight';
-const STOREYS = ['base', 'upper', 'loft', 'tall', 'corner'];
-const FRONT_STYLES = ['slab', 'shaker', 'glass'];
 
 let colours = null;
 async function partColours() {
@@ -92,7 +90,10 @@ function stepTable(parts) {
  * Open the editor in `container`. item: the catalog item to edit ({id, data}) or to copy from (`copy` = the new id), null for a new type.
  * onSaved(id) is called after a save.
  */
-export function openTypeEditor(container, { item, copy = '', onSaved, onError }) {
+export function openTypeEditor(container, { item, copy = '', schema = {}, onSaved, onError }) {
+  // the choices of the selects are the kind's schema (data/schemas/cabinet-type.schema.json): one list, the server's
+  const STOREYS = schema.properties?.storey?.enum || ['base'];
+  const FRONT_STYLES = schema.properties?.frontStyle?.enum || ['slab'];
   const data = structuredClone(item?.data || { storey: 'base', label: { vi: '' }, parts: [] });
   const isNew = !item || !!copy;
   const id = input(copy || item?.id || '', 24, 'base-…');

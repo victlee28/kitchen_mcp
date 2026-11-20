@@ -1,0 +1,76 @@
+{
+ "function": "catalog.check.check_write",
+ "cases": [
+  {
+   "name": "a writer",
+   "input": {
+    "name": "material",
+    "kind": {
+     "label": {
+      "vi": "Vật liệu",
+      "en": "Materials"
+     },
+     "writers": [
+      "workshop",
+      "user"
+     ],
+     "usedBy": [
+      "common.material.*"
+     ]
+    },
+    "role": "user"
+   },
+   "expected": {
+    "allowed": true
+   }
+  },
+  {
+   "name": "not a writer",
+   "input": {
+    "name": "material",
+    "kind": {
+     "label": {
+      "vi": "Vật liệu",
+      "en": "Materials"
+     },
+     "writers": [
+      "workshop"
+     ],
+     "usedBy": [
+      "common.material.*"
+     ]
+    },
+    "role": "user"
+   },
+   "error": {
+    "kind": "validation",
+    "code": "catalog-not-allowed"
+   }
+  },
+  {
+   "name": "locked",
+   "input": {
+    "name": "palette",
+    "kind": {
+     "label": {
+      "vi": "Vật liệu",
+      "en": "Materials"
+     },
+     "writers": [
+      "workshop",
+      "user"
+     ],
+     "usedBy": [
+      "common.material.*"
+     ],
+     "locked": true
+    },
+    "role": "workshop"
+   },
+   "error": {
+    "kind": "validation",
+    "code": "catalog-not-allowed"
+   }
+  }
+ ]
+}

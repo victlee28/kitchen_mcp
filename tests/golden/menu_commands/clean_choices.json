@@ -1,0 +1,51 @@
+{
+ "function": "menu_commands.clean_choices",
+ "cases": [
+  {
+   "name": "trim, dedupe, cap",
+   "input": {
+    "choices": [
+     " A ",
+     "A",
+     "",
+     3,
+     "B",
+     "C",
+     "D",
+     "E",
+     "F",
+     "G"
+    ]
+   },
+   "expected": {
+    "choices": [
+     "A",
+     "B",
+     "C"
+    ]
+   }
+  },
+  {
+   "name": "too long cut",
+   "input": {
+    "choices": [
+     "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    ]
+   },
+   "expected": {
+    "choices": [
+     "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    ]
+   }
+  },
+  {
+   "name": "none",
+   "input": {
+    "choices": null
+   },
+   "expected": {
+    "choices": []
+   }
+  }
+ ]
+}

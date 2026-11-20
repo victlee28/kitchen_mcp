@@ -88,7 +88,45 @@
   "writers": [
    "workshop"
   ],
-  "closed": true
+  "closed": true,
+  "refs": [
+   [
+    "openingKinds.door.type",
+    "opening-type"
+   ],
+   [
+    "openingKinds.door.sliding",
+    "opening-type"
+   ],
+   [
+    "openingKinds.door.folding",
+    "opening-type"
+   ],
+   [
+    "openingKinds.window.type",
+    "opening-type"
+   ],
+   [
+    "openingKinds.window.sliding",
+    "opening-type"
+   ],
+   [
+    "openingKinds.window.folding",
+    "opening-type"
+   ],
+   [
+    "openingKinds.passage.type",
+    "opening-type"
+   ],
+   [
+    "openingKinds.passage.sliding",
+    "opening-type"
+   ],
+   [
+    "openingKinds.passage.folding",
+    "opening-type"
+   ]
+  ]
  },
  "region": {
   "label": {
@@ -319,5 +357,15 @@
    "common.hinge",
    "module[].hinge"
   ]
+ },
+ "asset": {
+  "label": {
+   "vi": "Mẫu hình dùng chung trong file 3D",
+   "en": "Shared 3D assets"
+  },
+  "writers": [
+   "workshop"
+  ],
+  "closed": true
  }
 }

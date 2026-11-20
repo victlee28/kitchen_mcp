@@ -74,7 +74,7 @@ def apply(conn) -> dict:
         new_url = url
         if (url or "").startswith("https://example.com"):
             new_url = k["source_url"]
-            meta.setdefault("sourceNote", "Link example.com cũ là placeholder, đã bỏ")
+            meta.setdefault("sourceNote", "The old example.com link was a placeholder and was removed")
             changed = True
         if changed:
             conn.execute("UPDATE knowledge SET metadata_json=?, region=?, country=?, source_url=? WHERE id=?",

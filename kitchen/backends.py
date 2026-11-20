@@ -23,6 +23,7 @@ from . import builtin
 from .catalog import Catalog
 from .config import Config
 from .i18n import pick
+from .words import say
 
 class BackendError(ValueError):
     def __init__(self, code: str, msg: str):
@@ -56,7 +57,7 @@ def _read_env_file(path: str) -> dict:
     out = {}
     p = Path(path).expanduser()
     if not p.is_file():
-        raise BackendError("unsupported", f"GEMINI_ENV_FILE trỏ tới file không tồn tại: {p}")
+        raise BackendError("unsupported", say("backend.gemini.env-missing", path=p))
     for line in p.read_text(encoding="utf-8").splitlines():
         line = line.strip()
         if line and not line.startswith("#") and "=" in line:
@@ -70,7 +71,7 @@ def gemini_config(config: Config) -> dict:
     f = _read_env_file(config.gemini_env_file) if config.gemini_env_file else {}
     key = config.gemini_api_key or f.get("GEMINI_API_KEY", "")
     if not key:
-        raise BackendError("unsupported", "Chưa có GEMINI_API_KEY (đặt trong .env hoặc trỏ GEMINI_ENV_FILE tới .env của mcp-image)")
+        raise BackendError("unsupported", say("backend.gemini.no-key"))
     return {"key": key, "model": config.gemini_model or f.get("GEMINI_IMAGE_MODEL") or "gemini-3-pro-image",
             "base": config.gemini_base_url, "timeout": config.gemini_timeout, "imageSize": config.gemini_image_size}
 
@@ -110,12 +111,12 @@ class Gemini:
         except urllib.error.HTTPError as e:
             msg = e.read()[:600].decode("utf-8", "replace")
             if e.code in (429, 503):
-                raise BackendError("overloaded", f"Gemini bận/hết hạn mức ({e.code}): {msg}")
-            raise BackendError("generation-failed", f"Gemini trả {e.code}: {msg}")
+                raise BackendError("overloaded", say("backend.gemini.busy", code=e.code, msg=msg))
+            raise BackendError("generation-failed", say("backend.gemini.http", code=e.code, msg=msg))
         except TimeoutError:
-            raise BackendError("timeout", f"Gemini quá {self.cfg['timeout']:.0f}s chưa trả")
+            raise BackendError("timeout", say("backend.gemini.timeout", seconds=f"{self.cfg['timeout']:.0f}"))
         except (urllib.error.URLError, ConnectionError) as e:
-            raise BackendError("overloaded", f"Không kết nối được Gemini: {getattr(e, 'reason', e)}")
+            raise BackendError("overloaded", say("backend.gemini.unreachable", reason=getattr(e, 'reason', e)))
         cands = data.get("candidates") or []
         for c in cands:
             for part in (c.get("content") or {}).get("parts") or []:
@@ -126,7 +127,7 @@ class Gemini:
                             "mime": inline.get("mimeType") or inline.get("mime_type")}
         reason = (cands[0].get("finishReason") if cands else None) or (data.get("promptFeedback") or {}).get("blockReason")
         text_out = " ".join(p.get("text", "") for c in cands for p in (c.get("content") or {}).get("parts") or [])[:300]
-        raise BackendError("generation-failed", f"Gemini không trả ảnh (lý do: {reason or 'không rõ'}) {text_out}".strip())
+        raise BackendError("generation-failed", say("backend.gemini.no-image", reason=reason or say("backend.gemini.unknown-reason"), text=text_out).strip())
 
 
 # ------------------------------------------------------------------ OpenAI images

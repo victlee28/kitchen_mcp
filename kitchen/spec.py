@@ -22,6 +22,8 @@ from .words import say
 
 WALLS = ("back", "right", "left")
 STOREYS = ("base", "upper", "loft", "tall", "corner")
+TIER_OF_STOREY = {"base": "base", "upper": "upper", "loft": "upper", "tall": "tall", "corner": "corner"}   # tier a storey belongs to (a loft shares the upper's)
+SCHEMA_TIER = {"base": "base", "upper": "wall", "loft": "top", "tall": "tall", "corner": "corner"}       # the three.js schema's name of each storey
 FACINGS = ("-z", "+z", "-x", "+x")       # direction the doors of a free-standing run look (scene axes); the default "-z" faces the back wall
 ORIENT_OF_FACING = {"-z": "island", "+z": "back", "-x": "right", "+x": "left"}   # which wall's frame has the same orientation
 
@@ -55,7 +57,7 @@ class Common(_Base):
     upperDepth: float = Field(default=320, gt=0)
     doorThickness: float = Field(default=18, gt=0)
     doorGap: float = Field(default=3, ge=0)
-    backThickness: float = Field(default=9, gt=0, description="Độ dày tấm hậu (mm)")
+    backThickness: float = Field(default=9, gt=0, description="Back panel thickness (mm)")
     material: dict[str, str] = Field(default_factory=dict, description="base, upper, tall, cornerShelf, carcass, countertop, wallTile, floor, wall")
     handle: "Handle" = Field(default_factory=lambda: Handle())
     hinge: str | None = Field(default=None, description="The catalog hinge (kind ``hinge``) of every cabinet door; None: the workshop default (defaults.hinge.item)")
@@ -73,8 +75,8 @@ class Common(_Base):
 
 class Handle(_Base):
     variant: Literal["bar", "knob", "concealed", "none"] = "bar"  # tay thanh, núm, âm (khoét), không tay (nhấn mở)
-    length: float = Field(default=160, ge=0, description="Chiều dài tay thanh (mm)")
-    material: str = "Nhôm đen mờ"
+    length: float = Field(default=160, ge=0, description="Bar handle length (mm)")
+    material: str = say("material.handle-default")
     item: str | None = Field(default=None, description="The catalog handle (kind ``handle``) these settings came from, if any")
 
 
@@ -89,10 +91,10 @@ class HandleOverride(_Base):
 class WallOpening(_Base):
     """Legacy room-wall opening shape; retained only as unvalidated extra data."""
     type: Literal["window", "entrance"] = "window"
-    fromCorner: float = Field(ge=0, description="Khoảng cách từ góc dọc theo tường (mm)")
+    fromCorner: float = Field(ge=0, description="Distance from the corner along the wall (mm)")
     width: float = Field(gt=0)
     height: float = Field(gt=0)
-    sillHeight: float = Field(default=0, ge=0, description="Cao độ đáy lỗ mở (bậu cửa sổ), cửa đi = 0")
+    sillHeight: float = Field(default=0, ge=0, description="Height of the opening's bottom (window sill); 0 for a door")
 
 
 class OpeningAxis(_Base):
@@ -164,13 +166,13 @@ class Level(_Base):
 
 class Wall(_Base):
     id: Literal["back", "right", "left"]
-    length: float = Field(gt=0, description="Chiều dài tường (mm)")
-    thickness: float = Field(default=100, gt=0, description="Độ dày tường (mm)")
+    length: float = Field(gt=0, description="Wall length (mm)")
+    thickness: float = Field(default=100, gt=0, description="Wall thickness (mm)")
 
 
 class Room(_Base):
     wall: list[Wall] = Field(default_factory=list)
-    walkway: float | None = Field(default=None, description="Khoảng trống phía trước dãy tủ tới vật cản đối diện (mm)")
+    walkway: float | None = Field(default=None, description="Clear space in front of the run up to the opposite obstacle (mm)")
 
     def length(self, id: str) -> float | None:
         return next((t.length for t in self.wall if t.id == id), None)
@@ -190,7 +192,8 @@ class Run(_Base):
                                                   "wall tile or kitchen rule. Unset: kitchen cabinets")
     unitLayout: str | None = Field(default=None, pattern=r"^[A-Za-z0-9_.-]+$", max_length=64,
                                    description="purpose unit only: the unit-layout it was made with (catalog kind unit-layout)")
-    tvLayout: Literal["columns", "shelves", "full"] | None = Field(default=None, description="TV unit only: the layout it was made with (tv_system.STYLES)")
+    tvLayout: str | None = Field(default=None, pattern=r"^[A-Za-z0-9_.-]+$", max_length=64,
+                                 description="TV unit only: the layout it was made with (catalog kind tv-layout: columns, shelves, full, the workshop's own)")
     system: str | None = Field(default=None, pattern=r"^[A-Za-z0-9_.-]+$", max_length=80,
                                description="Cabinet system the run belongs to: the id of the floorplan element (elements[].id, e.g. furniture_003) it was made "
                                            "against. Unset: the system is worked out from which runs touch (runs.systems)")
@@ -264,19 +267,19 @@ class Module(_Base):
     height: float = Field(gt=0)
     depth: float = Field(gt=0)
     doors: list[float] = Field(default_factory=list)
-    blindCorner: float = Field(default=0, ge=0, description="Phần góc khuất không có cánh, tính từ phía góc (mm)")
-    endPanel: float = Field(default=0, ge=0, description="Tấm hông hoàn thiện ở đầu xa góc (mm)")
+    blindCorner: float = Field(default=0, ge=0, description="Blind part at the corner without a door, measured from the corner side (mm)")
+    endPanel: float = Field(default=0, ge=0, description="Finished end panel at the end away from the corner (mm)")
     blindSide: Literal["start", "end"] = Field(default="start", description="Which end of the cabinet the blind corner is at: start = the low-fromCorner end (the corner of a wall row), end = the other one (a run that ENDS in a corner). The end panel is at the opposite end")
     frontSections: list[FrontSection] = Field(default_factory=list)
-    niche: float | None = Field(default=None, description="Tủ cao: chiều cao hốc thiết bị tính từ sàn (mm)")
+    niche: float | None = Field(default=None, description="Tall cabinet: height of the appliance niche above the floor (mm)")
     backLength: float | None = None   # corner-shelf: length of the leg along the back wall
     rightLength: float | None = None  # corner-shelf: length of the leg along the right wall
     turnsInto: str | None = Field(default=None, description="corner-shelf standing in explicit runs: id of the run its SECOND leg lies in. The first leg is the cabinet's own place (run, fromCorner, width) at the END of its run; the second, rightLength long, lies at the START of this run, the two runs meeting in a square inside corner")
     shelfCount: int = 3
     hingeSides: list[Literal["left", "right", "upper", "base"]] = Field(default_factory=list,
-        description="Bản lề từng cánh theo thứ tự từ trái sang (nhìn từ trước); trống = tự suy")
-    doorStyle: Literal["flat", "frame", "glass"] | None = Field(default=None, description="Cánh phẳng (slab), cánh khung (shaker) hoặc kính")
-    material: str | None = Field(default=None, description="Vật liệu mặt trước riêng của module (ghi đè chung.vatLieu theo tầng)")
+        description="Hinge side of each door, left to right seen from the front; empty = inferred")
+    doorStyle: Literal["flat", "frame", "glass"] | None = Field(default=None, description="Flat (slab), framed (shaker) or glass door")
+    material: str | None = Field(default=None, description="The module's own front material (overrides the storey's common material)")
     handle: HandleOverride | None = Field(default=None, description="Handle settings of this module only; overrides the storey and common handle")
     hinge: str | None = Field(default=None, description="The catalog hinge (kind ``hinge``) of this cabinet's doors; None: the common one")
     backPanel: BackPanel | None = Field(default=None, description="TV units: the panel on the wall behind the TV, carried by one console cabinet")
@@ -322,7 +325,7 @@ class Module(_Base):
         elif self.wall == "corner":
             raise ValueError(f"{self.id}: only corner-shelf may be placed at wall='corner'")
         elif self.width <= 0:
-            raise ValueError(f"{self.id}: rong phải > 0")
+            raise ValueError(f"{self.id}: width must be > 0")
         return self
 
     @property
@@ -341,9 +344,9 @@ class Appliance(_Base):
     type: Literal["fridge", "sink", "faucet", "cooktop", "hood", "oven", "light", "tv", "painting", "other"] = "other"
     dimensions: str | None = None
     position: str | None = None
-    module: str | None = Field(default=None, description="Module chứa thiết bị")
+    module: str | None = Field(default=None, description="Module that holds the appliance")
     wall: Literal["back", "right", "left"] | None = None
-    center: float | None = Field(default=None, description="Tâm thiết bị, khoảng cách từ góc dọc theo tường (mm); tivi (type tv): tính từ đầu tủ chứa nó, nên đi theo tủ")
+    center: float | None = Field(default=None, description="Appliance centre, distance from the corner along the wall (mm); a TV (type tv) is measured from the start of its cabinet, so it moves with the cabinet")
     model: str | None = Field(default=None, description="Model id (catalog kind appliance, data/items/appliance.json); none = read from name and dimensions")
     energy: Literal["gas", "induction", "electric", "mixed"] | None = None
     size: dict[str, float] | None = Field(default=None, description="Body size {w, d, h} in mm")
@@ -378,21 +381,21 @@ class MoldingProfile(_Base):
         if len(pts) > 1 and pts[0] == pts[-1]:
             pts = pts[:-1]
         if len(pts) < 3:
-            raise ValueError(f"profile {self.id}: cần ít nhất 3 điểm")
+            raise ValueError(f"profile {self.id}: needs at least 3 points")
         area = sum(pts[i][0] * pts[(i + 1) % len(pts)][1] - pts[(i + 1) % len(pts)][0] * pts[i][1] for i in range(len(pts))) / 2
         if abs(area) < 1:
-            raise ValueError(f"profile {self.id}: diện tích mặt cắt gần 0")
+            raise ValueError(f"profile {self.id}: the profile area is almost 0")
         n = len(pts)
         for i in range(n):
             for j in range(i + 2, n):
                 if i == 0 and j == n - 1:
                     continue
                 if _seg_cross(pts[i], pts[(i + 1) % n], pts[j], pts[(j + 1) % n]):
-                    raise ValueError(f"profile {self.id}: mặt cắt tự cắt (cạnh {i} và {j})")
+                    raise ValueError(f"profile {self.id}: the profile crosses itself (edges {i} and {j})")
         if area < 0:
             pts = pts[::-1]
         if min(v for _, v in pts) < -0.5:
-            raise ValueError(f"profile {self.id}: v phải ≥ 0 (tính từ đường chạy lên)")
+            raise ValueError(f"profile {self.id}: v must be ≥ 0 (measured up from the run line)")
         self.points = pts
         return self
 
@@ -408,14 +411,14 @@ class MoldingProfile(_Base):
 class Molding(_Base):
     """Phào theo QUY TẮC: đường chạy được tính lại từ module mỗi lần dựng (thêm/bớt tủ thì phào tự theo)."""
     id: str = Field(pattern=r"^[A-Za-z0-9_.:-]+$")
-    variant: Literal["crown", "base"] = Field(description="crown = phào nóc theo đỉnh tủ; base = phào chân theo sàn")
+    variant: Literal["crown", "base"] = Field(description="crown = cornice along the cabinet tops; base = plinth molding along the floor")
     profile: str
-    wall: list[str] = Field(default_factory=list, description="Trống = mọi tường / dãy có tủ; else wall names (back, right, left) and ids of explicit runs")
-    joinGap: float = Field(default=50, ge=0, description="Khe giữa hai tủ ≤ giá trị này thì phào chạy liền qua")
-    openEnd: Literal["return-to-wall", "flat-cut"] = Field(default="return-to-wall", description="Đầu hở: quay về tường hoặc cắt phẳng")
-    material: str | None = Field(default=None, description="Trống = vật liệu cánh của tầng tủ tương ứng")
+    wall: list[str] = Field(default_factory=list, description="Empty = every wall / run with cabinets; else wall names (back, right, left) and ids of explicit runs")
+    joinGap: float = Field(default=50, ge=0, description="The molding runs through a gap between two cabinets up to this size")
+    openEnd: Literal["return-to-wall", "flat-cut"] = Field(default="return-to-wall", description="Open end: return to the wall or cut flat")
+    material: str | None = Field(default=None, description="Empty = the door material of the matching storey")
     enabled: bool = True
-    ignoreCeiling: bool = Field(default=False, description="Người dùng chọn 'để nguyên' khi phào vượt trần")
+    ignoreCeiling: bool = Field(default=False, description="The user chose to keep it when the molding goes past the ceiling")
 
 
 class ViewAngle(_Base):
@@ -433,8 +436,8 @@ class KitchenSpec(_Base):
     name: str = say("name.design")
     style: Literal["Modern", "Classic", "Neoclassical", "Transitional", "Industrial", "Minimalist"] = "Modern"
     unit: Literal["mm"] = "mm"
-    country: str | None = Field(default=None, description="Mã ISO alpha-2 nơi lắp đặt (VN, US, AU...) — quyết định tiêu chuẩn ưu tiên khi kiểm tra")
-    region: str | None = Field(default=None, description="Mã khu vực (SEA, EA, NA, EU, OC, GLOBAL) nếu chưa rõ quốc gia")
+    country: str | None = Field(default=None, description="ISO alpha-2 code of the install country (VN, US, AU...): decides which standard wins when checking")
+    region: str | None = Field(default=None, description="Region code (SEA, EA, NA, EU, OC, GLOBAL) when the country is unknown")
     source: str | None = None
     origin: str | None = None
     styleTags: list[str] | None = Field(default=None, description="Style names with no geometry of their own (Scandinavian, Japandi, Farmhouse, Country, Mid-Century Modern, Luxury)")
@@ -452,7 +455,7 @@ class KitchenSpec(_Base):
     module: list[Module] = Field(default_factory=list)
     appliances: list[Appliance] = Field(default_factory=list)
     cameraViews: dict[str, ViewAngle] = Field(default_factory=dict)
-    moldingProfiles: list[MoldingProfile] = Field(default_factory=list, description="Mặt cắt riêng; preset có sẵn ở kitchen/moldings.py")
+    moldingProfiles: list[MoldingProfile] = Field(default_factory=list, description="Custom profiles; presets live in kitchen/moldings.py")
     moldings: list[Molding] = Field(default_factory=list)
     idCounters: dict[str, int] = Field(default_factory=dict, description="Highest number handed out per id prefix (TD, TT, TC…); ids are never reused after a module is removed")
     runs: list[Run] = Field(default_factory=list, description="Explicit runs (any angle) that modules with wall='island' and run=<id> stand in")
@@ -461,20 +464,20 @@ class KitchenSpec(_Base):
     def _unique_ids(self):
         run_ids = [r.id for r in self.runs]
         if len(run_ids) != len(set(run_ids)):
-            raise ValueError("Trùng mã dãy (run)")
+            raise ValueError("Duplicate run ids")
         for m in self.module:
             if m.run and m.run not in run_ids:
-                raise ValueError(f"{m.id}: dãy '{m.run}' không có trong runs")
+                raise ValueError(f"{m.id}: run '{m.run}' is not in runs")
         seen: set[str] = set()
         for m in self.module:
             if m.id in seen:
-                raise ValueError(f"Trùng mã module: {m.id}")
+                raise ValueError(f"Duplicate module id: {m.id}")
             seen.add(m.id)
         mol = [x.id for x in self.moldings]
         if len(mol) != len(set(mol)):
-            raise ValueError("Trùng mã phào")
+            raise ValueError("Duplicate molding ids")
         if set(mol) & seen:
-            raise ValueError("Mã phào trùng mã module")
+            raise ValueError("A molding id equals a module id")
         opening_ids = [x.id for x in self.openings]
         if len(opening_ids) != len(set(opening_ids)):
             raise ValueError("Duplicate opening id")

@@ -231,9 +231,12 @@ def _leaf_parts(opening: Opening, type_data: Mapping[str, Any], leaves: list[Lea
     return out
 
 
-LEVER = {"rose": 55.0, "length": 130.0, "thick": 20.0, "reach": 60.0}       # mm: the rose on the leaf, the lever, how far it stands off
-PULL = {"length": 300.0, "thick": 25.0, "reach": 45.0}                     # a vertical pull bar (sliding / folding leaves)
-HANDLE_DEFAULT = {"door": {"kind": "lever", "height": 1000.0, "inset": 70.0}, "window": {"kind": "lever", "inset": 60.0}}
+
+
+def _builtin_parts() -> Mapping[str, Any]:
+    """The builtin lever / pull sizes, for type data read straight from a catalog (not through ``types.get``)."""
+    from ..defaults import BUILTIN
+    return BUILTIN.opening_handle_parts
 
 
 def _handles(opening: Opening, type_data: Mapping[str, Any], leaves: list[LeafShape]) -> list[HandleBox]:
@@ -241,7 +244,11 @@ def _handles(opening: Opening, type_data: Mapping[str, Any], leaves: list[LeafSh
     from the hinge; a vertical pull bar on a sliding / folding leaf, at the edge away from the jamb; a lever in the middle of the bottom rail
     of a top-hung leaf. ``handle`` of the opening type: ``kind`` lever | pull | none, ``height`` above the floor (none: the middle of the
     leaf), ``inset`` from the leaf edge, ``leaves`` the only leaves (by index) that get one. A fixed leaf and a passage have none."""
-    spec = {**HANDLE_DEFAULT.get(opening.kind, {"kind": "none"}), **(obj(type_data.get("handle")) or {})}
+    spec = dict(obj(type_data.get("handle")) or {"kind": "none"})     # ``types.get`` fills it from ``defaults.openingKinds`` when the type has none
+    parts = obj(type_data.get("handleParts")) or _builtin_parts()      # lever / pull sizes (``defaults.openingHandleParts``)
+    lever, pull = obj(parts.get("lever")) or {}, obj(parts.get("pull")) or {}
+    LEVER = {k: num(lever, k) for k in ("rose", "length", "thick", "reach")}          # noqa: N806 — the sizes, under the names below
+    PULL = {k: num(pull, k) for k in ("length", "thick", "reach")}                    # noqa: N806
     kind = spec.get("kind")
     if kind not in ("lever", "pull") or opening.kind == "passage":
         return []

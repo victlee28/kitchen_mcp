@@ -198,6 +198,10 @@ class ImageJobs:
     def layers(self, did: str, view: str, rev: int | None = None, all_layers: bool = False) -> dict[str, Any]:
         return self.base.layers(did, view, rev, all_layers)
 
+    def views(self, did: str, rev: int | None = None) -> dict[str, Any]:
+        """The camera views of a stored revision, built with the catalog the revision is built with (cached with the revision)."""
+        return self.base.built(did, rev).views
+
     def mask_png(self, did: str, view: str, layer_id: str, rev: int | None = None) -> bytes:
         return self.base.mask_png(did, view, layer_id, rev)
 

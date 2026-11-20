@@ -8,7 +8,14 @@ import { letsText, letsOf } from './cabinet-type-logic.js';
 import { STEP_DOS, WALLS, FIELDS, dropIndex, insertStep, itemLabel, itemsOf, moveTo, newItem, rowsOf, stepsOf, topView, withItems } from './layout-template-logic.js';
 
 const NAMES = 'back right left g upperDepth fridge lr islandLength aisle';
-const COLOURS = { base: '#c9a777', tall: '#8b6b45', upper: '#d9d2c3', loft: '#e8e3d8', corner: '#b8c4a8' };
+let COLOURS = {};                    // storey -> colour: the palette "storey" of the catalog (loaded when the editor opens)
+let FALLBACK_COLOUR = '#cccccc';
+async function storeyColours() {
+  try {
+    const p = (await catalog.list('palette', lang())).items.find((it) => it.id === 'storey')?.data || {};
+    COLOURS = p.colors || {}; FALLBACK_COLOUR = p.fallback || FALLBACK_COLOUR;
+  } catch { COLOURS = {}; }
+}
 const SVG = 'http://www.w3.org/2000/svg';
 
 const input = (value, size = 14, placeholder = '') => el('input', { value: value ?? '', size, placeholder });
@@ -21,7 +28,7 @@ function svgOf(sample) {
   svg.setAttribute('style', 'background:#f4f1eb;border:1px solid #ccc;border-radius:4px');
   for (const r of view.rects) {
     const rect = document.createElementNS(SVG, 'rect');
-    for (const [k, v] of Object.entries({ x: r.x, y: r.y, width: r.w, height: r.h, fill: COLOURS[r.storey] || '#ccc', stroke: '#555', 'stroke-width': 0.4 })) rect.setAttribute(k, v);
+    for (const [k, v] of Object.entries({ x: r.x, y: r.y, width: r.w, height: r.h, fill: COLOURS[r.storey] || FALLBACK_COLOUR, stroke: '#555', 'stroke-width': 0.4 })) rect.setAttribute(k, v);
     svg.append(rect);
   }
   const counts = {};
@@ -115,6 +122,7 @@ function stepTable(steps, onChange, cabinetTypes) {
 
 /** Open the editor in `container`. item: the catalog item to edit, or to copy from (`copy` = the new id); null for a new template. */
 export async function openLayoutEditor(container, { item, copy = '', onSaved, onError }) {
+  await storeyColours();
   const data = structuredClone(item?.data || { label: { vi: '' }, walls: ['back'], steps: [] });
   const isNew = !item || !!copy;
   const id = input(copy || item?.id || '', 24, 'I-…'); id.disabled = !isNew;

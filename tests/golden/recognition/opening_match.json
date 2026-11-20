@@ -1,0 +1,302 @@
+{
+ "function": "recognition.opening_match",
+ "cases": [
+  {
+   "name": "a two-leaf door with a transom",
+   "input": {
+    "kind": "door",
+    "style": "swing",
+    "leaves": 2,
+    "transom": true,
+    "axesRatio": [
+     0.5
+    ],
+    "against": "door-swing-2-transom"
+   },
+   "expected": {
+    "seen": "door, swing, 2 leaves, transom",
+    "ranked": [
+     [
+      "door-swing-2-transom",
+      22.0
+     ],
+     [
+      "door-swing-2",
+      14.0
+     ],
+     [
+      "door-swing-1-transom",
+      12.0
+     ],
+     [
+      "door-swing-2-unequal",
+      12.0
+     ],
+     [
+      "door-swing-1",
+      4.0
+     ]
+    ],
+    "best": {
+     "type_id": "door-swing-2-transom",
+     "score": 22.0,
+     "exact": true,
+     "seen": {
+      "kind": "door",
+      "style": "swing",
+      "leaves": 2,
+      "transom": true,
+      "transom_panes": null,
+      "axes_ratio": [
+       0.5
+      ],
+      "handles": null,
+      "fronts": null
+     },
+     "features": {
+      "kind": "door",
+      "style": "swing",
+      "leaves": 2,
+      "transom": true,
+      "transom_panes": 1,
+      "axes_ratio": [
+       0.5
+      ],
+      "handles": [
+       0,
+       1
+      ],
+      "fronts": null
+     }
+    },
+    "note": [],
+    "score": 22.0,
+    "typeFeatures": {
+     "kind": "door",
+     "style": "swing",
+     "leaves": 2,
+     "transom": true,
+     "transom_panes": 1,
+     "axes_ratio": [
+      0.5
+     ],
+     "handles": [
+      0,
+      1
+     ],
+     "fronts": null
+    }
+   }
+  },
+  {
+   "name": "four sliding panels",
+   "input": {
+    "kind": "door",
+    "style": "sliding",
+    "leaves": 4,
+    "transom": true,
+    "transomPanes": 3,
+    "against": "door-swing-1"
+   },
+   "expected": {
+    "seen": "door, sliding, 4 leaves, transom of 3 panes",
+    "ranked": [
+     [
+      "door-sliding-4-transom",
+      22.0
+     ],
+     [
+      "door-sliding-4",
+      10.0
+     ],
+     [
+      "door-sliding-2",
+      0.0
+     ],
+     [
+      "door-folding-4",
+      0.0
+     ],
+     [
+      "door-swing-2-transom",
+      -2.0
+     ]
+    ],
+    "best": {
+     "type_id": "door-sliding-4-transom",
+     "score": 22.0,
+     "exact": true,
+     "seen": {
+      "kind": "door",
+      "style": "sliding",
+      "leaves": 4,
+      "transom": true,
+      "transom_panes": 3,
+      "axes_ratio": null,
+      "handles": null,
+      "fronts": null
+     },
+     "features": {
+      "kind": "door",
+      "style": "sliding",
+      "leaves": 4,
+      "transom": true,
+      "transom_panes": 3,
+      "axes_ratio": [
+       0.25,
+       0.5,
+       0.75
+      ],
+      "handles": [
+       1,
+       2
+      ],
+      "fronts": [
+       1,
+       2
+      ]
+     }
+    },
+    "note": [],
+    "score": -12.0,
+    "typeFeatures": {
+     "kind": "door",
+     "style": "swing",
+     "leaves": 1,
+     "transom": false,
+     "transom_panes": 0,
+     "axes_ratio": [],
+     "handles": [
+      0
+     ],
+     "fronts": null
+    }
+   }
+  },
+  {
+   "name": "a window",
+   "input": {
+    "kind": "window",
+    "style": "swing",
+    "leaves": 2,
+    "against": "door-swing-1"
+   },
+   "expected": {
+    "seen": "window, swing, 2 leaves",
+    "ranked": [
+     [
+      "window-swing-2",
+      20.0
+     ],
+     [
+      "window-swing-2-top",
+      12.0
+     ],
+     [
+      "window-sliding-2",
+      10.0
+     ],
+     [
+      "window-top-hung",
+      2.0
+     ],
+     [
+      "window-fixed",
+      0.0
+     ]
+    ],
+    "best": {
+     "type_id": "window-swing-2",
+     "score": 20.0,
+     "exact": true,
+     "seen": {
+      "kind": "window",
+      "style": "swing",
+      "leaves": 2,
+      "transom": false,
+      "transom_panes": null,
+      "axes_ratio": null,
+      "handles": null,
+      "fronts": null
+     },
+     "features": {
+      "kind": "window",
+      "style": "swing",
+      "leaves": 2,
+      "transom": false,
+      "transom_panes": 0,
+      "axes_ratio": [
+       0.5
+      ],
+      "handles": [
+       0,
+       1
+      ],
+      "fronts": null
+     }
+    },
+    "note": [],
+    "score": null,
+    "typeFeatures": {
+     "kind": "door",
+     "style": "swing",
+     "leaves": 1,
+     "transom": false,
+     "transom_panes": 0,
+     "axes_ratio": [],
+     "handles": [
+      0
+     ],
+     "fronts": null
+    }
+   }
+  },
+  {
+   "name": "nothing like it",
+   "input": {
+    "kind": "passage",
+    "style": "rolling",
+    "leaves": 9
+   },
+   "expected": {
+    "seen": "passage, rolling, 9 leaves",
+    "ranked": [
+     [
+      "passage",
+      -14.0
+     ]
+    ],
+    "best": {
+     "type_id": "passage",
+     "score": -14.0,
+     "exact": false,
+     "seen": {
+      "kind": "passage",
+      "style": "rolling",
+      "leaves": 9,
+      "transom": false,
+      "transom_panes": null,
+      "axes_ratio": null,
+      "handles": null,
+      "fronts": null
+     },
+     "features": {
+      "kind": "passage",
+      "style": "none",
+      "leaves": 0,
+      "transom": false,
+      "transom_panes": 0,
+      "axes_ratio": [],
+      "handles": [],
+      "fronts": null
+     }
+    },
+    "note": [
+     "opening-type-closest: the picture shows passage, rolling, 9 leaves; no catalog type has that, passage is the closest (passage, none, 0 leaves, no handles). Adjust it, then save it as a type of its own (right-click: save to the catalog)."
+    ],
+    "score": null,
+    "typeFeatures": null
+   }
+  }
+ ]
+}

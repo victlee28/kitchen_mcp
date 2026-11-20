@@ -1,0 +1,661 @@
+{
+ "function": "recognition.opening_check",
+ "cases": [
+  {
+   "name": "a match",
+   "input": {
+    "doc": {
+     "photoOpenings": [
+      {
+       "kind": "door",
+       "style": "sliding",
+       "leaves": 4,
+       "edgesSeen": "hole",
+       "aspect": 1.4,
+       "axesRatio": [
+        0.25,
+        0.5,
+        0.75
+       ],
+       "hAxesRatio": [
+        0.86
+       ],
+       "transomPanes": 3,
+       "confidence": 0.9,
+       "panels": [
+        {
+         "row": 0,
+         "operation": "sliding"
+        },
+        {
+         "row": 0,
+         "operation": "sliding",
+         "handle": true
+        },
+        {
+         "row": 0,
+         "operation": "sliding",
+         "handle": true
+        },
+        {
+         "row": 0,
+         "operation": "sliding"
+        },
+        {
+         "row": 1,
+         "operation": "fixed"
+        },
+        {
+         "row": 1,
+         "operation": "fixed"
+        },
+        {
+         "row": 1,
+         "operation": "fixed"
+        }
+       ]
+      }
+     ]
+    },
+    "type": "door-sliding-4-transom",
+    "label": "Sliding door, 4 leaves, transom",
+    "answer": {
+     "same": true
+    }
+   },
+   "expected": {
+    "described": "Sliding door, 4 leaves, transom (door-sliding-4-transom): door, sliding, 4 leaves, transom of 3 panes, handles on leaves 2,3; vertical dividers at [0.25, 0.5, 0.75] of the width from the left; horizontal dividers at [0.86] of the height from the sill.",
+    "questionHasBuilt": true,
+    "correction": {
+     "same": true,
+     "style": null,
+     "leaves": null,
+     "transom_panes": null,
+     "handles": null,
+     "fronts": null,
+     "axes_ratio": null,
+     "h_axes_ratio": null,
+     "notes": []
+    },
+    "corrected": {
+     "kind": "door",
+     "style": "sliding",
+     "leaves": 4,
+     "edges_seen": "hole",
+     "aspect": 1.4,
+     "axes_ratio": [
+      0.25,
+      0.5,
+      0.75
+     ],
+     "h_axes_ratio": [
+      0.86
+     ],
+     "confidence": 0.9,
+     "note": "",
+     "transom_panes": 3,
+     "panels": [
+      {
+       "row": 0,
+       "operation": "sliding",
+       "handle": false,
+       "front": false
+      },
+      {
+       "row": 0,
+       "operation": "sliding",
+       "handle": true,
+       "front": false
+      },
+      {
+       "row": 0,
+       "operation": "sliding",
+       "handle": true,
+       "front": false
+      },
+      {
+       "row": 0,
+       "operation": "sliding",
+       "handle": false,
+       "front": false
+      },
+      {
+       "row": 1,
+       "operation": "fixed",
+       "handle": false,
+       "front": false
+      },
+      {
+       "row": 1,
+       "operation": "fixed",
+       "handle": false,
+       "front": false
+      },
+      {
+       "row": 1,
+       "operation": "fixed",
+       "handle": false,
+       "front": false
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "corrections, bad ones dropped",
+   "input": {
+    "doc": {
+     "photoOpenings": [
+      {
+       "kind": "door",
+       "style": "sliding",
+       "leaves": 4,
+       "edgesSeen": "hole",
+       "aspect": 1.4,
+       "axesRatio": [
+        0.25,
+        0.5,
+        0.75
+       ],
+       "hAxesRatio": [
+        0.86
+       ],
+       "transomPanes": 3,
+       "confidence": 0.9,
+       "panels": [
+        {
+         "row": 0,
+         "operation": "sliding"
+        },
+        {
+         "row": 0,
+         "operation": "sliding",
+         "handle": true
+        },
+        {
+         "row": 0,
+         "operation": "sliding",
+         "handle": true
+        },
+        {
+         "row": 0,
+         "operation": "sliding"
+        },
+        {
+         "row": 1,
+         "operation": "fixed"
+        },
+        {
+         "row": 1,
+         "operation": "fixed"
+        },
+        {
+         "row": 1,
+         "operation": "fixed"
+        }
+       ]
+      }
+     ]
+    },
+    "type": "door-sliding-4-transom",
+    "label": "x",
+    "answer": {
+     "same": false,
+     "corrections": {
+      "style": "rolling",
+      "leaves": 40,
+      "transomPanes": 0,
+      "handles": [
+       1,
+       "x"
+      ],
+      "axesRatio": [
+       0.5,
+       1.4
+      ],
+      "hAxesRatio": [
+       0.8
+      ]
+     },
+     "notes": [
+      "n",
+      3
+     ]
+    }
+   },
+   "expected": {
+    "described": "x (door-sliding-4-transom): door, sliding, 4 leaves, transom of 3 panes, handles on leaves 2,3; vertical dividers at [0.25, 0.5, 0.75] of the width from the left; horizontal dividers at [0.86] of the height from the sill.",
+    "questionHasBuilt": true,
+    "correction": {
+     "same": false,
+     "style": null,
+     "leaves": null,
+     "transom_panes": null,
+     "handles": null,
+     "fronts": null,
+     "axes_ratio": null,
+     "h_axes_ratio": [
+      0.8
+     ],
+     "notes": [
+      "n"
+     ]
+    },
+    "corrected": {
+     "kind": "door",
+     "style": "sliding",
+     "leaves": 4,
+     "edges_seen": "hole",
+     "aspect": 1.4,
+     "axes_ratio": [
+      0.25,
+      0.5,
+      0.75
+     ],
+     "h_axes_ratio": [
+      0.8
+     ],
+     "confidence": 0.9,
+     "note": "",
+     "transom_panes": 3,
+     "panels": [
+      {
+       "row": 0,
+       "operation": "sliding",
+       "handle": false,
+       "front": false
+      },
+      {
+       "row": 0,
+       "operation": "sliding",
+       "handle": true,
+       "front": false
+      },
+      {
+       "row": 0,
+       "operation": "sliding",
+       "handle": true,
+       "front": false
+      },
+      {
+       "row": 0,
+       "operation": "sliding",
+       "handle": false,
+       "front": false
+      },
+      {
+       "row": 1,
+       "operation": "fixed",
+       "handle": false,
+       "front": false
+      },
+      {
+       "row": 1,
+       "operation": "fixed",
+       "handle": false,
+       "front": false
+      },
+      {
+       "row": 1,
+       "operation": "fixed",
+       "handle": false,
+       "front": false
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "handles rewrite the main row",
+   "input": {
+    "doc": {
+     "photoOpenings": [
+      {
+       "kind": "door",
+       "style": "sliding",
+       "leaves": 4,
+       "edgesSeen": "hole",
+       "aspect": 1.4,
+       "axesRatio": [
+        0.25,
+        0.5,
+        0.75
+       ],
+       "hAxesRatio": [
+        0.86
+       ],
+       "transomPanes": 3,
+       "confidence": 0.9,
+       "panels": [
+        {
+         "row": 0,
+         "operation": "sliding"
+        },
+        {
+         "row": 0,
+         "operation": "sliding",
+         "handle": true
+        },
+        {
+         "row": 0,
+         "operation": "sliding",
+         "handle": true
+        },
+        {
+         "row": 0,
+         "operation": "sliding"
+        },
+        {
+         "row": 1,
+         "operation": "fixed"
+        },
+        {
+         "row": 1,
+         "operation": "fixed"
+        },
+        {
+         "row": 1,
+         "operation": "fixed"
+        }
+       ]
+      }
+     ]
+    },
+    "type": "door-sliding-4-transom",
+    "label": "x",
+    "answer": {
+     "same": false,
+     "corrections": {
+      "handles": [
+       0,
+       3
+      ]
+     }
+    }
+   },
+   "expected": {
+    "described": "x (door-sliding-4-transom): door, sliding, 4 leaves, transom of 3 panes, handles on leaves 2,3; vertical dividers at [0.25, 0.5, 0.75] of the width from the left; horizontal dividers at [0.86] of the height from the sill.",
+    "questionHasBuilt": true,
+    "correction": {
+     "same": false,
+     "style": null,
+     "leaves": null,
+     "transom_panes": null,
+     "handles": [
+      0,
+      3
+     ],
+     "fronts": null,
+     "axes_ratio": null,
+     "h_axes_ratio": null,
+     "notes": []
+    },
+    "corrected": {
+     "kind": "door",
+     "style": "sliding",
+     "leaves": 4,
+     "edges_seen": "hole",
+     "aspect": 1.4,
+     "axes_ratio": [
+      0.25,
+      0.5,
+      0.75
+     ],
+     "h_axes_ratio": [
+      0.86
+     ],
+     "confidence": 0.9,
+     "note": "",
+     "transom_panes": 3,
+     "panels": [
+      {
+       "row": 0,
+       "operation": "sliding",
+       "handle": true,
+       "front": false
+      },
+      {
+       "row": 0,
+       "operation": "sliding",
+       "handle": false,
+       "front": false
+      },
+      {
+       "row": 0,
+       "operation": "sliding",
+       "handle": false,
+       "front": false
+      },
+      {
+       "row": 0,
+       "operation": "sliding",
+       "handle": true,
+       "front": false
+      },
+      {
+       "row": 1,
+       "operation": "fixed",
+       "handle": false,
+       "front": false
+      },
+      {
+       "row": 1,
+       "operation": "fixed",
+       "handle": false,
+       "front": false
+      },
+      {
+       "row": 1,
+       "operation": "fixed",
+       "handle": false,
+       "front": false
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "fewer leaves",
+   "input": {
+    "doc": {
+     "photoOpenings": [
+      {
+       "kind": "door",
+       "style": "sliding",
+       "leaves": 4,
+       "edgesSeen": "hole",
+       "aspect": 1.4,
+       "axesRatio": [
+        0.25,
+        0.5,
+        0.75
+       ],
+       "hAxesRatio": [
+        0.86
+       ],
+       "transomPanes": 3,
+       "confidence": 0.9,
+       "panels": [
+        {
+         "row": 0,
+         "operation": "sliding"
+        },
+        {
+         "row": 0,
+         "operation": "sliding",
+         "handle": true
+        },
+        {
+         "row": 0,
+         "operation": "sliding",
+         "handle": true
+        },
+        {
+         "row": 0,
+         "operation": "sliding"
+        },
+        {
+         "row": 1,
+         "operation": "fixed"
+        },
+        {
+         "row": 1,
+         "operation": "fixed"
+        },
+        {
+         "row": 1,
+         "operation": "fixed"
+        }
+       ]
+      }
+     ]
+    },
+    "type": "door-sliding-4-transom",
+    "label": "x",
+    "answer": {
+     "same": false,
+     "corrections": {
+      "leaves": 2,
+      "axesRatio": [
+       0.5
+      ]
+     }
+    }
+   },
+   "expected": {
+    "described": "x (door-sliding-4-transom): door, sliding, 4 leaves, transom of 3 panes, handles on leaves 2,3; vertical dividers at [0.25, 0.5, 0.75] of the width from the left; horizontal dividers at [0.86] of the height from the sill.",
+    "questionHasBuilt": true,
+    "correction": {
+     "same": false,
+     "style": null,
+     "leaves": 2,
+     "transom_panes": null,
+     "handles": null,
+     "fronts": null,
+     "axes_ratio": [
+      0.5
+     ],
+     "h_axes_ratio": null,
+     "notes": []
+    },
+    "corrected": {
+     "kind": "door",
+     "style": "sliding",
+     "leaves": 2,
+     "edges_seen": "hole",
+     "aspect": 1.4,
+     "axes_ratio": [
+      0.5
+     ],
+     "h_axes_ratio": [
+      0.86
+     ],
+     "confidence": 0.9,
+     "note": "",
+     "transom_panes": 3,
+     "panels": [
+      {
+       "row": 0,
+       "operation": "sliding",
+       "handle": false,
+       "front": false
+      },
+      {
+       "row": 0,
+       "operation": "sliding",
+       "handle": false,
+       "front": false
+      },
+      {
+       "row": 1,
+       "operation": "fixed",
+       "handle": false,
+       "front": false
+      },
+      {
+       "row": 1,
+       "operation": "fixed",
+       "handle": false,
+       "front": false
+      },
+      {
+       "row": 1,
+       "operation": "fixed",
+       "handle": false,
+       "front": false
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "not an answer",
+   "input": {
+    "doc": {
+     "photoOpenings": [
+      {
+       "kind": "door",
+       "style": "sliding",
+       "leaves": 4,
+       "edgesSeen": "hole",
+       "aspect": 1.4,
+       "axesRatio": [
+        0.25,
+        0.5,
+        0.75
+       ],
+       "hAxesRatio": [
+        0.86
+       ],
+       "transomPanes": 3,
+       "confidence": 0.9,
+       "panels": [
+        {
+         "row": 0,
+         "operation": "sliding"
+        },
+        {
+         "row": 0,
+         "operation": "sliding",
+         "handle": true
+        },
+        {
+         "row": 0,
+         "operation": "sliding",
+         "handle": true
+        },
+        {
+         "row": 0,
+         "operation": "sliding"
+        },
+        {
+         "row": 1,
+         "operation": "fixed"
+        },
+        {
+         "row": 1,
+         "operation": "fixed"
+        },
+        {
+         "row": 1,
+         "operation": "fixed"
+        }
+       ]
+      }
+     ]
+    },
+    "type": "door-sliding-4-transom",
+    "label": "x",
+    "answer": {
+     "same": "yes"
+    }
+   },
+   "expected": {
+    "described": "x (door-sliding-4-transom): door, sliding, 4 leaves, transom of 3 panes, handles on leaves 2,3; vertical dividers at [0.25, 0.5, 0.75] of the width from the left; horizontal dividers at [0.86] of the height from the sill.",
+    "questionHasBuilt": true,
+    "correction": null,
+    "corrected": null
+   }
+  }
+ ]
+}

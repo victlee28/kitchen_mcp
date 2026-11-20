@@ -25,7 +25,7 @@ def read(path: Path, mode: str = "RGB") -> np.ndarray:
 def load_instances(render_dir: Path) -> tuple[npt.NDArray[np.int32], dict[str, Any]]:
     d = Path(render_dir)
     if not (d / "instance.png").exists():
-        raise FileNotFoundError(f"Chưa có instance.png trong {d.name}; hãy render lại góc nhìn này")
+        raise FileNotFoundError(f"No instance.png in {d.name}; render this view again")
     with Image.open(d / "instance.png") as im:
         inst = np.array(im).astype(np.int32)
     meta = json.loads((d / "instances.json").read_text(encoding="utf-8"))
@@ -165,7 +165,7 @@ def edge_alignment(img: np.ndarray, lines: np.ndarray) -> dict[str, Any]:
     """Ảnh AI có giữ đúng hình học không: tỷ lệ pixel nét (lines.png) có cạnh trong ảnh, so với vùng cách nét 6-10 px.
     Ảnh khớp: tyLeTrenNet cao hơn hẳn tyLeNgoaiNet. Ảnh bị lệch/vẽ lại: hai số gần nhau."""
     if img.shape[:2] != lines.shape[:2]:
-        return {"khop": None, "note": "khác kích thước"}
+        return {"khop": None, "note": "different sizes"}
     edge = np.array(Image.fromarray((_grad(img) > 14).astype(np.uint8) * 255).filter(ImageFilter.MaxFilter(5))) > 0
     on = lines < 128
     far = grow(on, 10) & ~grow(on, 6)
@@ -189,7 +189,7 @@ def check(ref: np.ndarray, raw: np.ndarray, comp: np.ndarray, target: np.ndarray
     far = ~grow(edit_region, 8)
     d_raw = np.abs(raw.astype(np.int16) - ref.astype(np.int16)).mean(-1)
     rep["rawImage"] = {"changesOutsideEditZone": round(float(d_raw[far].mean()), 2) if far.any() else 0.0,
-                     "note": "chỉ để chẩn đoán model; ảnh cuối luôn lấy pixel gốc ngoài mask"}
+                     "note": "for diagnosing the model only; the final image always keeps the original pixels outside the mask"}
     if lines is not None:
         band = grow(target, 3) & ~shrink(target, 3)
         ln = (lines < 128) & band

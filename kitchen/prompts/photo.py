@@ -33,6 +33,12 @@ def text(id: str, catalog: Catalog = builtin.CATALOG) -> str:
     return str(item.data.get("text", "")) if item else ""
 
 
+def table(id: str, catalog: Catalog = builtin.CATALOG) -> dict[str, str]:
+    """A key -> phrase table of the catalog kind ``prompt-text`` (``part-roles``, ``handle-text``, ``storey-text``...)."""
+    item = catalog.find("prompt-text", id) or builtin.CATALOG.find("prompt-text", id)
+    return {str(k): str(v) for k, v in (as_dict(item.data.get("table")) or {}).items()} if item else {}
+
+
 def words(id: str, catalog: Catalog = builtin.CATALOG) -> list[str]:
     """A list of phrases of the catalog kind ``prompt-text`` (``negative-photo``, ``negative-layer``)."""
     item = catalog.find("prompt-text", id) or builtin.CATALOG.find("prompt-text", id)
@@ -66,29 +72,34 @@ def _material_name(spec: KitchenSpec, modules: list[Any] | None = None) -> list[
             *(h.material or "" for h in (spec.common.handleByStorey or {}).values()), *(m.handle.material or "" for m in mods if m.handle)]
 
 
-def _materials(spec: KitchenSpec | None, extra: list[str] | None = None, modules: list[Any] | None = None) -> list[str]:
+def _materials(spec: KitchenSpec | None, extra: list[str] | None = None, modules: list[Any] | None = None,
+               catalog: Catalog = builtin.CATALOG) -> list[str]:
     """Mô tả bề mặt theo tên vật liệu (của cả thiết kế nếu có spec, cộng thêm extra), mỗi loại một câu ngắn, không lặp.
     ``modules``: only the cabinets one picture shows."""
     names = " ".join([*(_material_name(spec, modules) if spec is not None else []), *(extra or [])]).lower()
     t = vocab.norm(names)  # bỏ dấu, chữ thường
+    cues = {k: v.split("|") for k, v in table("surface-words", catalog).items()}
+
+    def said(cue: str) -> bool:
+        return any(vocab.has(t, k) for k in cues.get(cue, []))
     out: list[str] = []
-    if any(vocab.has(t, k) for k in ("vân gỗ", "gỗ", "sồi", "óc chó", "tần bì", "xoan đào", "teak", "veneer")):
+    if said("wood"):
         out.append("wood surfaces show natural, non-repeating grain running consistently along each panel, with true-to-scale "
                    "grain size and subtle variation between boards")
-    if any(vocab.has(t, k) for k in ("laminate", "melamine")):
+    if said("laminate"):
         out.append("laminate and melamine panels have a fine low-sheen texture with soft, broad reflections")
-    if any(vocab.has(t, k) for k in ("bóng", "bóng gương", "acrylic")):
+    if said("gloss"):
         out.append("high-gloss fronts reflect the room softly and accurately, reflections follow the panel planes without warping")
-    if any(vocab.has(t, k) for k in ("mờ", "sơn")):
+    if said("matte"):
         out.append("matte painted fronts have an even satin finish with no plastic shine")
-    if any(vocab.has(t, k) for k in ("đá", "thạch anh", "granite", "marble", "vân đá", "vân mây")):
+    if said("stone"):
         out.append("the stone countertop has a crisp eased edge, realistic veining that continues across the front edge, and "
                    "a light polished reflection of the wall cabinets")
-    if any(vocab.has(t, k) for k in ("inox", "nhôm", "đồng", "kim loại")):
+    if said("metal"):
         out.append("metal handles and appliances show brushed metal with directional micro-scratches and soft specular highlights")
-    if any(vocab.has(t, k) for k in ("kính",)):
+    if said("glass"):
         out.append("glass doors and the cooktop show faint reflections and slight transparency, not opaque flat color")
-    if any(vocab.has(t, k) for k in ("gạch",)):
+    if said("tile"):
         out.append("tiles have thin recessed grout lines and slightly varying glaze reflections")
     return out
 
@@ -131,7 +142,7 @@ def full(spec: KitchenSpec, light: str = "daylight", catalog: Catalog = builtin.
     else:
         camera = text("photo-camera", catalog)
     light_text = "Lighting: " + "; ".join(_lights(spec, light, catalog, seen)) + "."
-    mats = _materials(spec, None, shown(spec, seen) if seen is not None else None)
+    mats = _materials(spec, None, shown(spec, seen) if seen is not None else None, catalog)
     material_text = ("Materials: " + "; ".join(mats) + ".") if mats else ""
     contact = "Physically plausible detail: " + "; ".join(_contact(spec, seen)) + "."
     post = text("photo-post", catalog)
@@ -139,10 +150,10 @@ def full(spec: KitchenSpec, light: str = "daylight", catalog: Catalog = builtin.
     return " ".join(x for x in (camera, light_text, material_text, contact, preferences, post) if x)
 
 
-def local(spec: KitchenSpec | None, extra_materials: list[str] | None = None) -> str:
+def local(spec: KitchenSpec | None, extra_materials: list[str] | None = None, catalog: Catalog = builtin.CATALOG) -> str:
     """Đoạn yêu cầu ảnh thật cho SỬA VÙNG: phần mới phải hoà vào ảnh gốc như được chụp cùng lúc.
     Đổi vật liệu: spec=None, extra = vật liệu mới của các việc (chỉ mô tả bề mặt vùng sửa). Sửa hình: spec = thiết kế mới."""
-    mats = _materials(spec, extra_materials)
+    mats = _materials(spec, extra_materials, None, catalog)
     return ("Make the edited area photographically consistent with image 1, as if captured in the same shot: same light direction, "
             "color temperature, exposure, contrast, sharpness, depth of field and sensor grain; correct perspective-matched "
             "texture scale; reflections and highlights that agree with the light sources visible in image 1; soft contact and "

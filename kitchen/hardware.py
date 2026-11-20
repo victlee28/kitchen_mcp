@@ -11,9 +11,9 @@ from collections import defaultdict
 from typing import Any
 
 from .numeric import round_int
-from .spec import Module, Handle
+from .spec import SCHEMA_TIER, Module, Handle
 
-TIER = {"base": "base", "upper": "wall", "loft": "top", "tall": "tall", "corner": "corner"}
+TIER = SCHEMA_TIER   # storey -> the three.js schema's tier name (kitchen/spec.py)
 _OPEN = {"left": "Left", "right": "Right", "upper": "Top", "base": "Bottom"}
 
 

@@ -46,7 +46,7 @@ class TestLayout(unittest.TestCase):
         full = tv.layout(3980, COMMON, "full")
         self.assertEqual(sorted({m["type"] for m in full}), ["base", "tall", "upper"])
         self.assertEqual(sum(m["width"] for m in full if m["y"] == 0), 3980.0)        # closed from end to end at floor level
-        for style in tv.STYLES:
+        for style in tv.layouts():
             for length in (3980, 3170, 2450, 1600):
                 widths = [m["width"] for m in tv.layout(length, COMMON, style)]
                 self.assertTrue(all(w % 10 == 0 for w in widths), (style, length, widths))

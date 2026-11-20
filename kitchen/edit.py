@@ -209,25 +209,28 @@ def set_run_system(spec: KitchenSpec, id: str, system: Any) -> KitchenSpec:
     return from_data(KitchenSpec, to_data(s))
 
 
-def set_run_tv(spec: KitchenSpec, id: str, layout: Any) -> KitchenSpec:
-    """Make a run a TV unit (``purpose: "tv"`` with its layout, ``tv_system.STYLES``) or, with None, a kitchen run again."""
+def set_run_tv(spec: KitchenSpec, id: str, layout: Any, catalog: Catalog = builtin.CATALOG) -> KitchenSpec:
+    """Make a run a TV unit (``purpose: "tv"`` with its layout, one of the catalog's ``tv-layout`` items) or, with None, a kitchen run again."""
     s = _clone(spec)
     run = _run(s, id)
-    if layout is not None and layout not in tv_system.STYLES:
-        raise InvalidInput(f"layout must be one of {', '.join(tv_system.STYLES)} or null", code="bad-tv-layout", params={"allowed": ', '.join(tv_system.STYLES)})
+    known = list(tv_system.layouts(catalog))
+    if layout is not None and layout not in known:
+        raise InvalidInput(f"layout must be one of {', '.join(known)} or null", code="bad-tv-layout", params={"allowed": ', '.join(known)})
     data = {k: v for k, v in to_data(run).items() if k not in ("purpose", "tvLayout", "unitLayout")}
     if layout is not None:
-        data.update(tv_system.run_fields(layout))
+        data.update(tv_system.run_fields(layout, catalog))
     s.runs = [from_data(Run, data) if r.id == id else r for r in s.runs]
     return from_data(KitchenSpec, to_data(s))
 
 
-def set_run_unit(spec: KitchenSpec, id: str, unit: Any) -> KitchenSpec:
+def set_run_unit(spec: KitchenSpec, id: str, unit: Any, catalog: Catalog = builtin.CATALOG) -> KitchenSpec:
     """Make a run a furniture unit (``purpose: "unit"`` with its ``unitLayout``, catalog kind unit-layout) or, with None, a kitchen run again."""
+    from .unit_system import units
     s = _clone(spec)
     run = _run(s, id)
-    if unit is not None and not (isinstance(unit, str) and unit):
-        raise InvalidInput("unit must be a unit-layout id or null", code="bad-unit-layout")
+    known = sorted(units(catalog))
+    if unit is not None and not (isinstance(unit, str) and unit in known):
+        raise InvalidInput(f"unit must be one of {', '.join(known)} or null", code="bad-unit-layout", params={"allowed": ', '.join(known)})
     data = {k: v for k, v in to_data(run).items() if k not in ("purpose", "tvLayout", "unitLayout")}
     if unit is not None:
         data.update({"purpose": "unit", "unitLayout": unit})
@@ -604,9 +607,9 @@ def _apply_op(spec: KitchenSpec, op: dict[str, Any], catalog: Catalog = builtin.
     if kind == "set-run-system":
         return set_run_system(spec, op["id"], op.get("system"))
     if kind == "set-run-tv":
-        return set_run_tv(spec, str(op.get("id") or ""), op.get("layout"))
+        return set_run_tv(spec, str(op.get("id") or ""), op.get("layout"), catalog)
     if kind == "set-run-unit":
-        return set_run_unit(spec, str(op.get("id") or ""), op.get("unit"))
+        return set_run_unit(spec, str(op.get("id") or ""), op.get("unit"), catalog)
     if kind == "update-appliance":
         return update_appliance(spec, str(op.get("id") or ""), op.get("model"), op.get("changes") or {}, catalog)
     if kind == "replace-element":

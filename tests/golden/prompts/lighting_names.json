@@ -1,0 +1,31 @@
+{
+ "function": "prompts.photo.lighting_names",
+ "cases": [
+  {
+   "name": "vi",
+   "input": {
+    "lang": "vi"
+   },
+   "expected": {
+    "names": {
+     "daylight": "Ban ngày, sáng tự nhiên",
+     "late-afternoon": "Nắng chiều ấm",
+     "dim-evening": "Buổi tối, đèn ấm"
+    }
+   }
+  },
+  {
+   "name": "en",
+   "input": {
+    "lang": "en"
+   },
+   "expected": {
+    "names": {
+     "daylight": "Daylight, natural light",
+     "late-afternoon": "Warm late-afternoon sun",
+     "dim-evening": "Evening, warm lamps"
+    }
+   }
+  }
+ ]
+}

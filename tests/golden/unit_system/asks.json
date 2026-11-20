@@ -1,0 +1,49 @@
+{
+ "function": "unit_system.asks",
+ "cases": [
+  {
+   "name": "sentences",
+   "input": {
+    "texts": [
+     "tạo hệ tủ rượu",
+     "thay bằng hệ tủ thấp",
+     "tủ rượu thấp",
+     "tủ bếp",
+     ""
+    ]
+   },
+   "expected": {
+    "asks": {
+     "tạo hệ tủ rượu": "wine",
+     "thay bằng hệ tủ thấp": "low",
+     "tủ rượu thấp": "wine",
+     "tủ bếp": null,
+     "": null
+    },
+    "units": [
+     "low",
+     "wine"
+    ]
+   }
+  },
+  {
+   "name": "without accents",
+   "input": {
+    "texts": [
+     "tao he tu ruou",
+     "TỦ RƯỢU"
+    ]
+   },
+   "expected": {
+    "asks": {
+     "tao he tu ruou": "wine",
+     "TỦ RƯỢU": "wine"
+    },
+    "units": [
+     "low",
+     "wine"
+    ]
+   }
+  }
+ ]
+}

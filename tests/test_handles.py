@@ -238,10 +238,10 @@ class TestSelectionJs(unittest.TestCase):
         script = r"""
 const m = await import(process.argv[1]);
 const L = [
- {id:'D1',variant:'part',type:'door',storey:'base'},{id:'H1',variant:'part',type:'handle',storey:'base',parent:'D1'},
- {id:'D2',variant:'part',type:'drawer',storey:'base'},{id:'H2',variant:'part',type:'handle',storey:'base',parent:'D2'},
- {id:'U1',variant:'part',type:'glass-door',storey:'loft'},{id:'UH',variant:'part',type:'handle',storey:'loft',parent:'U1'},
- {id:'N1',variant:'part',type:'door',storey:'base'},
+ {id:'D1',variant:'part',type:'door',storey:'base',tier:'base'},{id:'H1',variant:'part',type:'handle',storey:'base',tier:'base',parent:'D1'},
+ {id:'D2',variant:'part',type:'drawer',storey:'base',tier:'base'},{id:'H2',variant:'part',type:'handle',storey:'base',tier:'base',parent:'D2'},
+ {id:'U1',variant:'part',type:'glass-door',storey:'loft',tier:'upper'},{id:'UH',variant:'part',type:'handle',storey:'loft',tier:'upper',parent:'U1'},
+ {id:'N1',variant:'part',type:'door',storey:'base',tier:'base'},
  {id:'grp',variant:'group',type:'handle',component:['H1','H2']}];
 const P = m.partIndex(L); const out = {};
 out.shift = [m.shiftGroupId(P.get('H1')), m.shiftGroupId(P.get('U1')), m.shiftGroupId(P.get('UH')), m.shiftGroupId(P.get('D2'))];

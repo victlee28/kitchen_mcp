@@ -1,0 +1,74 @@
+{
+ "function": "catalog.check.values_at",
+ "cases": [
+  {
+   "name": "a list walk",
+   "input": {
+    "data": {
+     "parts": [
+      {
+       "material": "a"
+      },
+      {
+       "material": "b"
+      },
+      {
+       "x": 1
+      }
+     ]
+    },
+    "path": "parts[].material"
+   },
+   "expected": {
+    "values": [
+     "a",
+     "b"
+    ]
+   }
+  },
+  {
+   "name": "plain path",
+   "input": {
+    "data": {
+     "a": {
+      "b": 3
+     }
+    },
+    "path": "a.b"
+   },
+   "expected": {
+    "values": [
+     3
+    ]
+   }
+  },
+  {
+   "name": "missing",
+   "input": {
+    "data": {
+     "a": 1
+    },
+    "path": "a.b.c"
+   },
+   "expected": {
+    "values": []
+   }
+  },
+  {
+   "name": "empty path",
+   "input": {
+    "data": {
+     "a": 1
+    },
+    "path": ""
+   },
+   "expected": {
+    "values": [
+     {
+      "a": 1
+     }
+    ]
+   }
+  }
+ ]
+}

@@ -23,9 +23,8 @@ from .catalog import Catalog
 from .jsonview import as_dict, as_list
 from .lexicon import fold
 from .openings.normalize import width_range
+from .openings.types import get as opening_type
 
-FALLBACK: dict[str, Any] = {"cabinetTags": ["cabinet"], "kitchenTags": ["cabinet_kitchen_set"], "tvTags": [], "unitTags": {}, "kitchenWords": ["kitchen"],
-            "kitchenMinDepth": 500, "unitMinDepth": 250, "shallowUnit": "low"}
 
 
 @dataclass(frozen=True)
@@ -38,7 +37,7 @@ class Choice:
 
 def rules(catalog: Catalog = builtin.CATALOG) -> dict[str, Any]:
     """The auto-place words and sizes of the catalog (``defaults.autoPlace``), with the builtin values for what it leaves out."""
-    return {**FALLBACK, **defaults_mod.of(catalog).auto_place}
+    return dict(defaults_mod.of(catalog).auto_place)      # the item's fields over the builtin item's (``defaults._build``)
 
 
 def _words(value: Any) -> list[str]:
@@ -109,7 +108,7 @@ def opening_choice(kind: str, preferred: str, width: float, catalog: Catalog = b
     two or four leaves), plain types before their variants (a transom), the one whose default width is nearest the hole winning: a 3920 mm
     sliding door gets four leaves, a 900 mm door one. ``size`` is "keep" when no type fits (``preferred`` kept at the drawn width)."""
     def fits(type_id: str) -> bool:
-        low, high = width_range(catalog.data("opening-type", type_id), kind)
+        low, high = width_range(opening_type(catalog, type_id), kind)
         return low <= width <= high
 
     def key(it: Any) -> tuple[bool, float, str]:

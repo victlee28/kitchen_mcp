@@ -156,7 +156,9 @@ class BaseImages(Component):
         floor = hit is None or hit.get("type") == "floor"
         if not hit:
             return {"part": None, "layers": [], "point": point, "floor": floor}
-        cat = self.built(did, r).catalogue
+        b = self.built(did, r)
+        cat = b.catalogue
+        hit = {**hit, "appliance": (hit.get("module") or "") in {a.id for a in b.spec.appliances}}    # an appliance of the design: its menu
         groups = [g["id"] for g in cat if g["id"] == hit["id"] or hit["id"] in (g.get("component") or [])]
         groups.sort(key=lambda g: not g.startswith("surface:"))      # a wall face: its own layer first
         return {"part": hit, "layers": groups, "point": point, "floor": floor}
@@ -192,7 +194,7 @@ class BaseImages(Component):
         im.save(d / "beauty.png")
         k = imaging.edge_alignment(np.array(im), imaging.read(d / "lines.png", "L"))
         info = {"designId": did, "rev": r, "view": view, "renderKey": man["renderKey"], "size": [W, H], "lineMatch": k,
-                "source": "three.js (trình duyệt)"}
+                "source": "three.js (browser)"}
         (d / "beauty.json").write_text(json.dumps(info, ensure_ascii=False, indent=2), encoding="utf-8")
         return {**info, "dir": str(d)}
 

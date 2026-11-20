@@ -23,7 +23,6 @@ from . import lexicon
 SIDE = defaults.BUILTIN.side                  # mm: cabinet side panel; a hole must fit between the two (catalog kind defaults)
 WORKTOP_EDGE = defaults.BUILTIN.worktop_edge  # mm: worktop left in front of and behind a hole
 HOOD_SIDE = defaults.BUILTIN.hood_side        # mm: an integrated hood needs this much room each side inside its cabinet
-TYPES = ("cooktop", "sink", "faucet", "hood", "fridge", "oven", "tv", "painting")
 WALL_HUNG = ("tv", "painting")                # flat things hung on the wall: one may take the other's place (same spot, other type)
 
 

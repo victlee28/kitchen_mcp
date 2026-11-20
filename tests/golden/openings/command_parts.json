@@ -1,0 +1,1382 @@
+{
+ "function": "openings.command.parts",
+ "cases": [
+  {
+   "name": "a tagged hole and a saved type",
+   "input": {
+    "floorplan": {
+     "outline": [
+      {
+       "x": 0.0,
+       "z": 0.0
+      },
+      {
+       "x": 1800.0,
+       "z": 0.0
+      },
+      {
+       "x": 3600.0,
+       "z": 0.0
+      },
+      {
+       "x": 3600.0,
+       "z": 3000.0
+      },
+      {
+       "x": 0.0,
+       "z": 3000.0
+      }
+     ],
+     "walls": [
+      {
+       "id": "WALL-FP-1",
+       "edge": 0,
+       "thickness": 100.0,
+       "thicknessSource": "measured",
+       "sourceElement": "wall_001",
+       "height": 3000,
+       "start": {
+        "x": 0.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "end": {
+        "x": 1800.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "interiorNormal": {
+        "x": 0.0,
+        "y": 0,
+        "z": 1.0
+       },
+       "openings": []
+      },
+      {
+       "id": "WALL-FP-2",
+       "edge": 1,
+       "thickness": 100.0,
+       "thicknessSource": "measured",
+       "sourceElement": "wall_002",
+       "height": 3000,
+       "start": {
+        "x": 1800.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "end": {
+        "x": 3600.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "interiorNormal": {
+        "x": 0.0,
+        "y": 0,
+        "z": 1.0
+       },
+       "openings": []
+      },
+      {
+       "id": "WALL-FP-3",
+       "edge": 2,
+       "thickness": 200.0,
+       "thicknessSource": "measured",
+       "sourceElement": "wall_003",
+       "height": 3000,
+       "start": {
+        "x": 3600.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "end": {
+        "x": 3600.0,
+        "y": 0,
+        "z": 3000.0
+       },
+       "interiorNormal": {
+        "x": -1.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "openings": []
+      },
+      {
+       "id": "WALL-FP-4",
+       "edge": 3,
+       "thickness": 100.0,
+       "thicknessSource": "measured",
+       "sourceElement": "wall_004",
+       "height": 3000,
+       "start": {
+        "x": 3600.0,
+        "y": 0,
+        "z": 3000.0
+       },
+       "end": {
+        "x": 0.0,
+        "y": 0,
+        "z": 3000.0
+       },
+       "interiorNormal": {
+        "x": 0.0,
+        "y": 0,
+        "z": -1.0
+       },
+       "openings": []
+      },
+      {
+       "id": "WALL-FP-5",
+       "edge": 4,
+       "thickness": 100.0,
+       "thicknessSource": "measured",
+       "sourceElement": "wall_005",
+       "height": 3000,
+       "start": {
+        "x": 0.0,
+        "y": 0,
+        "z": 3000.0
+       },
+       "end": {
+        "x": 0.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "interiorNormal": {
+        "x": 1.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "openings": []
+      }
+     ],
+     "elements": [
+      {
+       "id": "wall_001",
+       "kind": "wall",
+       "tag": "wall",
+       "outline": [
+        {
+         "x": -100.0,
+         "z": -100.0
+        },
+        {
+         "x": 1000.0,
+         "z": -100.0
+        },
+        {
+         "x": 1000.0,
+         "z": 0.0
+        },
+        {
+         "x": -100.0,
+         "z": 0.0
+        }
+       ]
+      },
+      {
+       "id": "wall_002",
+       "kind": "wall",
+       "tag": "wall",
+       "outline": [
+        {
+         "x": 1900.0,
+         "z": -100.0
+        },
+        {
+         "x": 3800.0,
+         "z": -100.0
+        },
+        {
+         "x": 3800.0,
+         "z": 0.0
+        },
+        {
+         "x": 1900.0,
+         "z": 0.0
+        }
+       ]
+      },
+      {
+       "id": "wall_n1",
+       "kind": "wall",
+       "tag": "wall",
+       "outline": [
+        {
+         "x": 6600.0,
+         "z": 0.0
+        },
+        {
+         "x": 6800.0,
+         "z": 0.0
+        },
+        {
+         "x": 6800.0,
+         "z": 1500.0
+        },
+        {
+         "x": 6600.0,
+         "z": 1500.0
+        }
+       ]
+      },
+      {
+       "id": "wall_n2",
+       "kind": "wall",
+       "tag": "wall",
+       "outline": [
+        {
+         "x": 6600.0,
+         "z": 2700.0
+        },
+        {
+         "x": 6800.0,
+         "z": 2700.0
+        },
+        {
+         "x": 6800.0,
+         "z": 4000.0
+        },
+        {
+         "x": 6600.0,
+         "z": 4000.0
+        }
+       ]
+      },
+      {
+       "id": "opening_n1",
+       "kind": "opening",
+       "outline": [
+        {
+         "x": 6600.0,
+         "z": 1500.0
+        },
+        {
+         "x": 6800.0,
+         "z": 1500.0
+        },
+        {
+         "x": 6800.0,
+         "z": 2700.0
+        },
+        {
+         "x": 6600.0,
+         "z": 2700.0
+        }
+       ],
+       "tag": "door",
+       "label": "Cửa trượt sau",
+       "elev": {
+        "base": 0.0,
+        "height": 2400.0
+       }
+      }
+     ],
+     "binding": null
+    },
+    "point": [
+     6650.0,
+     2000.0
+    ],
+    "types": {
+     "door": "door-swing-1",
+     "window": "window-swing-2",
+     "passage": "passage"
+    },
+    "elements": [
+     {
+      "id": "wall_001",
+      "kind": "wall",
+      "tag": "wall",
+      "outline": [
+       {
+        "x": -100.0,
+        "z": -100.0
+       },
+       {
+        "x": 1000.0,
+        "z": -100.0
+       },
+       {
+        "x": 1000.0,
+        "z": 0.0
+       },
+       {
+        "x": -100.0,
+        "z": 0.0
+       }
+      ]
+     },
+     {
+      "id": "wall_002",
+      "kind": "wall",
+      "tag": "wall",
+      "outline": [
+       {
+        "x": 1900.0,
+        "z": -100.0
+       },
+       {
+        "x": 3800.0,
+        "z": -100.0
+       },
+       {
+        "x": 3800.0,
+        "z": 0.0
+       },
+       {
+        "x": 1900.0,
+        "z": 0.0
+       }
+      ]
+     },
+     {
+      "id": "wall_n1",
+      "kind": "wall",
+      "tag": "wall",
+      "outline": [
+       {
+        "x": 6600.0,
+        "z": 0.0
+       },
+       {
+        "x": 6800.0,
+        "z": 0.0
+       },
+       {
+        "x": 6800.0,
+        "z": 1500.0
+       },
+       {
+        "x": 6600.0,
+        "z": 1500.0
+       }
+      ]
+     },
+     {
+      "id": "wall_n2",
+      "kind": "wall",
+      "tag": "wall",
+      "outline": [
+       {
+        "x": 6600.0,
+        "z": 2700.0
+       },
+       {
+        "x": 6800.0,
+        "z": 2700.0
+       },
+       {
+        "x": 6800.0,
+        "z": 4000.0
+       },
+       {
+        "x": 6600.0,
+        "z": 4000.0
+       }
+      ]
+     },
+     {
+      "id": "opening_n1",
+      "kind": "opening",
+      "outline": [
+       {
+        "x": 6600.0,
+        "z": 1500.0
+       },
+       {
+        "x": 6800.0,
+        "z": 1500.0
+       },
+       {
+        "x": 6800.0,
+        "z": 2700.0
+       },
+       {
+        "x": 6600.0,
+        "z": 2700.0
+       }
+      ],
+      "tag": "door",
+      "label": "Cửa trượt sau",
+      "elev": {
+       "base": 0.0,
+       "height": 2400.0
+      }
+     },
+     {
+      "id": "o2",
+      "kind": "opening",
+      "tag": "window",
+      "elev": {
+       "base": 0.0
+      }
+     },
+     {
+      "id": "o3",
+      "kind": "opening",
+      "elev": {
+       "base": 950
+      }
+     }
+    ],
+    "save": {
+     "kind": "door",
+     "openingType": "door-swing-2-transom",
+     "center": 2600.0,
+     "width": 1600.0,
+     "height": 2700.0
+    },
+    "name": "Cửa nhôm đen"
+   },
+   "expected": {
+    "defaultWidth": {
+     "door": 900.0,
+     "window": 1200.0,
+     "passage": 900.0
+    },
+    "windowSill": 900.0,
+    "drawnSill": [
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     950.0
+    ],
+    "holeType": [
+     [
+      "door",
+      "door-sliding-2"
+     ],
+     [
+      "window",
+      "window-swing-2"
+     ],
+     [
+      "door",
+      "door-swing-1"
+     ]
+    ],
+    "hole": {
+     "opening": {
+      "id": "",
+      "kind": "door",
+      "openingType": "door-sliding-2",
+      "wallAxis": {
+       "id": "WA-wall_n1",
+       "start": [
+        6700.0,
+        0.0
+       ],
+       "dir": [
+        0.0,
+        1.0
+       ],
+       "length": 4000.0
+      },
+      "center": 2100.0,
+      "width": 1200.0,
+      "axes": null,
+      "hAxes": null,
+      "leaves": [
+       {
+        "cols": [
+         0,
+         1
+        ],
+        "rows": [
+         0,
+         1
+        ],
+        "operation": "sliding",
+        "hinge": null,
+        "side": null,
+        "active": true
+       },
+       {
+        "cols": [
+         1,
+         2
+        ],
+        "rows": [
+         0,
+         1
+        ],
+        "operation": "sliding",
+        "hinge": null,
+        "side": null,
+        "active": false
+       }
+      ],
+      "sill": 0.0,
+      "height": 2400.0,
+      "clearWidth": 570.0,
+      "source": "human",
+      "unsure": [],
+      "sourceElement": null,
+      "removed": false
+     },
+     "label": "Cửa trượt sau"
+    },
+    "saved": {
+     "kind": "door",
+     "operation": "swing",
+     "axesRatio": [
+      0.5
+     ],
+     "hAxesFromSill": [
+      2200
+     ],
+     "leaves": [
+      {
+       "cols": [
+        0,
+        1
+       ],
+       "rows": [
+        0,
+        1
+       ],
+       "operation": "swing",
+       "hinge": {
+        "axis": "v",
+        "index": 0
+       },
+       "opens": "in",
+       "active": true
+      },
+      {
+       "cols": [
+        1,
+        2
+       ],
+       "rows": [
+        0,
+        1
+       ],
+       "operation": "swing",
+       "hinge": {
+        "axis": "v",
+        "index": -1
+       },
+       "opens": "in",
+       "active": false
+      },
+      {
+       "cols": [
+        0,
+        2
+       ],
+       "rows": [
+        1,
+        2
+       ],
+       "operation": "fixed",
+       "hinge": null,
+       "opens": null,
+       "active": false
+      }
+     ],
+     "frameFace": 30,
+     "frameDepth": null,
+     "casing": {
+      "width": 50,
+      "thickness": 10
+     },
+     "threshold": 0,
+     "stop": 5,
+     "transom": 40,
+     "leafThickness": 40,
+     "gap": 3,
+     "minLeaf": 200,
+     "openingAngle": 90,
+     "minWidth": 900,
+     "maxWidth": 2400,
+     "defaultWidth": 1600.0,
+     "defaultHeight": 2700.0,
+     "defaultSill": 0.0,
+     "sizes": {
+      "VN": {
+       "widths": [
+        1200
+       ]
+      }
+     },
+     "handle": {
+      "kind": "lever",
+      "height": 1000,
+      "inset": 70
+     },
+     "label": {
+      "vi": "Cửa nhôm đen",
+      "en": "Cửa nhôm đen"
+     },
+     "prompt": "double-leaf hinged door with a fixed glass transom above"
+    }
+   }
+  },
+  {
+   "name": "a window drawn with its sill",
+   "input": {
+    "floorplan": {
+     "outline": [
+      {
+       "x": 0.0,
+       "z": 0.0
+      },
+      {
+       "x": 1800.0,
+       "z": 0.0
+      },
+      {
+       "x": 3600.0,
+       "z": 0.0
+      },
+      {
+       "x": 3600.0,
+       "z": 3000.0
+      },
+      {
+       "x": 0.0,
+       "z": 3000.0
+      }
+     ],
+     "walls": [
+      {
+       "id": "WALL-FP-1",
+       "edge": 0,
+       "thickness": 100.0,
+       "thicknessSource": "measured",
+       "sourceElement": "wall_001",
+       "height": 3000,
+       "start": {
+        "x": 0.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "end": {
+        "x": 1800.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "interiorNormal": {
+        "x": 0.0,
+        "y": 0,
+        "z": 1.0
+       },
+       "openings": []
+      },
+      {
+       "id": "WALL-FP-2",
+       "edge": 1,
+       "thickness": 100.0,
+       "thicknessSource": "measured",
+       "sourceElement": "wall_002",
+       "height": 3000,
+       "start": {
+        "x": 1800.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "end": {
+        "x": 3600.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "interiorNormal": {
+        "x": 0.0,
+        "y": 0,
+        "z": 1.0
+       },
+       "openings": []
+      },
+      {
+       "id": "WALL-FP-3",
+       "edge": 2,
+       "thickness": 200.0,
+       "thicknessSource": "measured",
+       "sourceElement": "wall_003",
+       "height": 3000,
+       "start": {
+        "x": 3600.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "end": {
+        "x": 3600.0,
+        "y": 0,
+        "z": 3000.0
+       },
+       "interiorNormal": {
+        "x": -1.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "openings": []
+      },
+      {
+       "id": "WALL-FP-4",
+       "edge": 3,
+       "thickness": 100.0,
+       "thicknessSource": "measured",
+       "sourceElement": "wall_004",
+       "height": 3000,
+       "start": {
+        "x": 3600.0,
+        "y": 0,
+        "z": 3000.0
+       },
+       "end": {
+        "x": 0.0,
+        "y": 0,
+        "z": 3000.0
+       },
+       "interiorNormal": {
+        "x": 0.0,
+        "y": 0,
+        "z": -1.0
+       },
+       "openings": []
+      },
+      {
+       "id": "WALL-FP-5",
+       "edge": 4,
+       "thickness": 100.0,
+       "thicknessSource": "measured",
+       "sourceElement": "wall_005",
+       "height": 3000,
+       "start": {
+        "x": 0.0,
+        "y": 0,
+        "z": 3000.0
+       },
+       "end": {
+        "x": 0.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "interiorNormal": {
+        "x": 1.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "openings": []
+      }
+     ],
+     "elements": [
+      {
+       "id": "wall_001",
+       "kind": "wall",
+       "tag": "wall",
+       "outline": [
+        {
+         "x": -100.0,
+         "z": -100.0
+        },
+        {
+         "x": 1000.0,
+         "z": -100.0
+        },
+        {
+         "x": 1000.0,
+         "z": 0.0
+        },
+        {
+         "x": -100.0,
+         "z": 0.0
+        }
+       ]
+      },
+      {
+       "id": "wall_002",
+       "kind": "wall",
+       "tag": "wall",
+       "outline": [
+        {
+         "x": 1900.0,
+         "z": -100.0
+        },
+        {
+         "x": 3800.0,
+         "z": -100.0
+        },
+        {
+         "x": 3800.0,
+         "z": 0.0
+        },
+        {
+         "x": 1900.0,
+         "z": 0.0
+        }
+       ]
+      },
+      {
+       "id": "wall_n1",
+       "kind": "wall",
+       "tag": "wall",
+       "outline": [
+        {
+         "x": 6600.0,
+         "z": 0.0
+        },
+        {
+         "x": 6800.0,
+         "z": 0.0
+        },
+        {
+         "x": 6800.0,
+         "z": 1500.0
+        },
+        {
+         "x": 6600.0,
+         "z": 1500.0
+        }
+       ]
+      },
+      {
+       "id": "wall_n2",
+       "kind": "wall",
+       "tag": "wall",
+       "outline": [
+        {
+         "x": 6600.0,
+         "z": 2700.0
+        },
+        {
+         "x": 6800.0,
+         "z": 2700.0
+        },
+        {
+         "x": 6800.0,
+         "z": 4000.0
+        },
+        {
+         "x": 6600.0,
+         "z": 4000.0
+        }
+       ]
+      },
+      {
+       "id": "opening_n1",
+       "kind": "opening",
+       "outline": [
+        {
+         "x": 6600.0,
+         "z": 1500.0
+        },
+        {
+         "x": 6800.0,
+         "z": 1500.0
+        },
+        {
+         "x": 6800.0,
+         "z": 2700.0
+        },
+        {
+         "x": 6600.0,
+         "z": 2700.0
+        }
+       ],
+       "tag": "window",
+       "elev": {
+        "base": 1000.0,
+        "height": 1200.0
+       }
+      }
+     ],
+     "binding": null
+    },
+    "point": [
+     6650.0,
+     2000.0
+    ],
+    "selected": "opening_n1",
+    "elements": [
+     {
+      "id": "wall_001",
+      "kind": "wall",
+      "tag": "wall",
+      "outline": [
+       {
+        "x": -100.0,
+        "z": -100.0
+       },
+       {
+        "x": 1000.0,
+        "z": -100.0
+       },
+       {
+        "x": 1000.0,
+        "z": 0.0
+       },
+       {
+        "x": -100.0,
+        "z": 0.0
+       }
+      ]
+     },
+     {
+      "id": "wall_002",
+      "kind": "wall",
+      "tag": "wall",
+      "outline": [
+       {
+        "x": 1900.0,
+        "z": -100.0
+       },
+       {
+        "x": 3800.0,
+        "z": -100.0
+       },
+       {
+        "x": 3800.0,
+        "z": 0.0
+       },
+       {
+        "x": 1900.0,
+        "z": 0.0
+       }
+      ]
+     },
+     {
+      "id": "wall_n1",
+      "kind": "wall",
+      "tag": "wall",
+      "outline": [
+       {
+        "x": 6600.0,
+        "z": 0.0
+       },
+       {
+        "x": 6800.0,
+        "z": 0.0
+       },
+       {
+        "x": 6800.0,
+        "z": 1500.0
+       },
+       {
+        "x": 6600.0,
+        "z": 1500.0
+       }
+      ]
+     },
+     {
+      "id": "wall_n2",
+      "kind": "wall",
+      "tag": "wall",
+      "outline": [
+       {
+        "x": 6600.0,
+        "z": 2700.0
+       },
+       {
+        "x": 6800.0,
+        "z": 2700.0
+       },
+       {
+        "x": 6800.0,
+        "z": 4000.0
+       },
+       {
+        "x": 6600.0,
+        "z": 4000.0
+       }
+      ]
+     },
+     {
+      "id": "opening_n1",
+      "kind": "opening",
+      "outline": [
+       {
+        "x": 6600.0,
+        "z": 1500.0
+       },
+       {
+        "x": 6800.0,
+        "z": 1500.0
+       },
+       {
+        "x": 6800.0,
+        "z": 2700.0
+       },
+       {
+        "x": 6600.0,
+        "z": 2700.0
+       }
+      ],
+      "tag": "window",
+      "elev": {
+       "base": 1000.0,
+       "height": 1200.0
+      }
+     }
+    ]
+   },
+   "expected": {
+    "defaultWidth": {},
+    "windowSill": 900.0,
+    "drawnSill": [
+     null,
+     null,
+     null,
+     null,
+     1000.0
+    ],
+    "holeType": [
+     [
+      "window",
+      "window-swing-2"
+     ]
+    ],
+    "hole": {
+     "opening": {
+      "id": "",
+      "kind": "window",
+      "openingType": "window-swing-2",
+      "wallAxis": {
+       "id": "WA-wall_n1",
+       "start": [
+        6700.0,
+        0.0
+       ],
+       "dir": [
+        0.0,
+        1.0
+       ],
+       "length": 4000.0
+      },
+      "center": 2100.0,
+      "width": 1200.0,
+      "axes": null,
+      "hAxes": null,
+      "leaves": [
+       {
+        "cols": [
+         0,
+         1
+        ],
+        "rows": [
+         0,
+         1
+        ],
+        "operation": "swing",
+        "hinge": {
+         "axis": "v",
+         "index": 0
+        },
+        "side": "-",
+        "active": true
+       },
+       {
+        "cols": [
+         1,
+         2
+        ],
+        "rows": [
+         0,
+         1
+        ],
+        "operation": "swing",
+        "hinge": {
+         "axis": "v",
+         "index": 2
+        },
+        "side": "-",
+        "active": false
+       }
+      ],
+      "sill": 1000.0,
+      "height": 1200.0,
+      "clearWidth": null,
+      "source": "human",
+      "unsure": [],
+      "sourceElement": null,
+      "removed": false
+     },
+     "label": null
+    }
+   }
+  },
+  {
+   "name": "no hole there",
+   "input": {
+    "floorplan": {
+     "outline": [
+      {
+       "x": 0.0,
+       "z": 0.0
+      },
+      {
+       "x": 1800.0,
+       "z": 0.0
+      },
+      {
+       "x": 3600.0,
+       "z": 0.0
+      },
+      {
+       "x": 3600.0,
+       "z": 3000.0
+      },
+      {
+       "x": 0.0,
+       "z": 3000.0
+      }
+     ],
+     "walls": [
+      {
+       "id": "WALL-FP-1",
+       "edge": 0,
+       "thickness": 100.0,
+       "thicknessSource": "measured",
+       "sourceElement": "wall_001",
+       "height": 3000,
+       "start": {
+        "x": 0.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "end": {
+        "x": 1800.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "interiorNormal": {
+        "x": 0.0,
+        "y": 0,
+        "z": 1.0
+       },
+       "openings": []
+      },
+      {
+       "id": "WALL-FP-2",
+       "edge": 1,
+       "thickness": 100.0,
+       "thicknessSource": "measured",
+       "sourceElement": "wall_002",
+       "height": 3000,
+       "start": {
+        "x": 1800.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "end": {
+        "x": 3600.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "interiorNormal": {
+        "x": 0.0,
+        "y": 0,
+        "z": 1.0
+       },
+       "openings": []
+      },
+      {
+       "id": "WALL-FP-3",
+       "edge": 2,
+       "thickness": 200.0,
+       "thicknessSource": "measured",
+       "sourceElement": "wall_003",
+       "height": 3000,
+       "start": {
+        "x": 3600.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "end": {
+        "x": 3600.0,
+        "y": 0,
+        "z": 3000.0
+       },
+       "interiorNormal": {
+        "x": -1.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "openings": []
+      },
+      {
+       "id": "WALL-FP-4",
+       "edge": 3,
+       "thickness": 100.0,
+       "thicknessSource": "measured",
+       "sourceElement": "wall_004",
+       "height": 3000,
+       "start": {
+        "x": 3600.0,
+        "y": 0,
+        "z": 3000.0
+       },
+       "end": {
+        "x": 0.0,
+        "y": 0,
+        "z": 3000.0
+       },
+       "interiorNormal": {
+        "x": 0.0,
+        "y": 0,
+        "z": -1.0
+       },
+       "openings": []
+      },
+      {
+       "id": "WALL-FP-5",
+       "edge": 4,
+       "thickness": 100.0,
+       "thicknessSource": "measured",
+       "sourceElement": "wall_005",
+       "height": 3000,
+       "start": {
+        "x": 0.0,
+        "y": 0,
+        "z": 3000.0
+       },
+       "end": {
+        "x": 0.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "interiorNormal": {
+        "x": 1.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "openings": []
+      }
+     ],
+     "elements": [
+      {
+       "id": "wall_001",
+       "kind": "wall",
+       "tag": "wall",
+       "outline": [
+        {
+         "x": -100.0,
+         "z": -100.0
+        },
+        {
+         "x": 1000.0,
+         "z": -100.0
+        },
+        {
+         "x": 1000.0,
+         "z": 0.0
+        },
+        {
+         "x": -100.0,
+         "z": 0.0
+        }
+       ]
+      },
+      {
+       "id": "wall_002",
+       "kind": "wall",
+       "tag": "wall",
+       "outline": [
+        {
+         "x": 1900.0,
+         "z": -100.0
+        },
+        {
+         "x": 3800.0,
+         "z": -100.0
+        },
+        {
+         "x": 3800.0,
+         "z": 0.0
+        },
+        {
+         "x": 1900.0,
+         "z": 0.0
+        }
+       ]
+      },
+      {
+       "id": "wall_n1",
+       "kind": "wall",
+       "tag": "wall",
+       "outline": [
+        {
+         "x": 6600.0,
+         "z": 0.0
+        },
+        {
+         "x": 6800.0,
+         "z": 0.0
+        },
+        {
+         "x": 6800.0,
+         "z": 1500.0
+        },
+        {
+         "x": 6600.0,
+         "z": 1500.0
+        }
+       ]
+      },
+      {
+       "id": "wall_n2",
+       "kind": "wall",
+       "tag": "wall",
+       "outline": [
+        {
+         "x": 6600.0,
+         "z": 2700.0
+        },
+        {
+         "x": 6800.0,
+         "z": 2700.0
+        },
+        {
+         "x": 6800.0,
+         "z": 4000.0
+        },
+        {
+         "x": 6600.0,
+         "z": 4000.0
+        }
+       ]
+      },
+      {
+       "id": "opening_n1",
+       "kind": "opening",
+       "outline": [
+        {
+         "x": 6600.0,
+         "z": 1500.0
+        },
+        {
+         "x": 6800.0,
+         "z": 1500.0
+        },
+        {
+         "x": 6800.0,
+         "z": 2700.0
+        },
+        {
+         "x": 6600.0,
+         "z": 2700.0
+        }
+       ]
+      }
+     ],
+     "binding": null
+    },
+    "point": [
+     2500.0,
+     0.0
+    ]
+   },
+   "expected": {
+    "defaultWidth": {},
+    "windowSill": 900.0,
+    "drawnSill": [],
+    "holeType": [],
+    "hole": null
+   }
+  }
+ ]
+}

@@ -13,12 +13,12 @@ from .instruction import gemini_text, gemini_text_edit, gemini_text_geometry, ge
 from .layer import NEGATIVE_LAYER, edit_task_prompt, global_prompt, layer_prompt
 from .recognition import SCHEMA as RECOGNITION_SCHEMA, recognition_text
 from .seen import Seen, from_instances as seen_in
-from .photo import LIGHTING, LIGHTING_VI, NEGATIVE_PHOTO, full, lighting, lighting_names, local, text, words
+from .photo import LIGHTING, LIGHTING_VI, NEGATIVE_PHOTO, full, lighting, lighting_names, local, table, text, words
 from .. import builtin
 from ..catalog import Catalog
 
 __all__ = ["gemini_text", "gemini_text_edit", "gemini_text_geometry", "gemini_text_multi", "style_note", "NEGATIVE_LAYER", "edit_task_prompt",
-           "global_prompt", "layer_prompt", "RECOGNITION_SCHEMA", "recognition_text", "LIGHTING", "LIGHTING_VI", "NEGATIVE_PHOTO", "full", "local",
+           "global_prompt", "layer_prompt", "RECOGNITION_SCHEMA", "recognition_text", "LIGHTING", "LIGHTING_VI", "NEGATIVE_PHOTO", "full", "table", "local",
            "negative_prompt", "lighting", "lighting_names", "text", "words",
            "Seen", "seen_in"]
 

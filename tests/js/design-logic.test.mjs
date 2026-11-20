@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { FIELDS, moduleOrder, moduleLabel, formChanges, moldingsOp, styleHasMoldings, aiExportUrls } from '../../web/design-logic.js';
+import { FIELDS, moduleOrder, moduleLabel, formChanges, moldingsOp, styleHasMoldings, setMoldingStyles, aiExportUrls } from '../../web/design-logic.js';
 
 test('module list order: by run, then height, then place along the run', () => {
   const mods = [{ id: 'I', run: 'R10', y: 0 }, { id: 'U', run: 'R1', y: 1450, fromCorner: 0 }, { id: 'B2', run: 'R1', y: 0, fromCorner: 600 },
@@ -33,6 +33,7 @@ test('molding payload keeps the old record fields, only for ticked variants, and
   const both = moldingsOp({}, { ...ui, base: true }).moldings;
   assert.deepEqual(both.map((m) => m.id), ['crown-molding', 'base-molding']);
   assert.deepEqual(moldingsOp({}, { ...ui, crown: false }).moldings, []);
+  setMoldingStyles(['Classic', 'Neoclassical', 'Transitional']);       // catalog defaults.moldingStyles
   assert.equal(styleHasMoldings('Neoclassical'), true); assert.equal(styleHasMoldings('Modern'), false);
 });
 

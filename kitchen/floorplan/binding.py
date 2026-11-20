@@ -8,6 +8,7 @@ from typing import Any, TypedDict
 from ..numeric import round_half_away
 from ..placement import Placement
 from ..errors import InvalidInput
+from ..words import say
 
 from .back import RoomEdge, detect_element_backs, outline_xy, room_edges
 from .constants import TOL
@@ -149,5 +150,5 @@ def apply_binding(doc: dict[str, Any], fp: dict[str, Any], binding: dict[str, An
         wf["rotationY"] = wrap(wf.get("rotationY", 0) + t["yaw"])
     if cs:
         cs["origin"] = "room_corner"
-        cs["notes"] = (cs.get("notes", "") + f" Đã đặt vào phòng của mặt bằng: gốc là góc phải của tường sau bếp, xoay {t['yaw']:.1f} độ.").strip()
+        cs["notes"] = (cs.get("notes", "") + " " + say("floorplan.placed-note", yaw=f"{t['yaw']:.1f}")).strip()
     return doc

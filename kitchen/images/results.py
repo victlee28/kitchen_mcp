@@ -11,6 +11,7 @@ from PIL import Image
 
 from .. import edit, geometry, imaging, layers, render, view_sync
 from ..errors import InvalidInput
+from ..words import say
 from ..errors import KitchenError
 from .base_images import BaseImages
 from .common import Component, JobEnv, FEATHER_PX
@@ -51,7 +52,7 @@ class Results(Component):
             if lp.exists():
                 rep["lineMatch"] = imaging.edge_alignment(raw, imaging.read(lp, "L"))
                 if rep["lineMatch"].get("khop") is False:
-                    rep["warning"] = "Ảnh AI có vẻ lệch hình học so với bản vẽ: mask các lần sửa sau có thể không khớp"
+                    rep["warning"] = say("image.warn.off-drawing")
             (jdir / "report.json").write_text(json.dumps(rep, ensure_ascii=False, indent=2), encoding="utf-8")
             return self.store.update_job(jid, "needs-review", {**extra, "report": rep}, error=rep.get("warning"))
         ref = imaging.read(jdir / "reference.png", "RGB")
@@ -82,9 +83,9 @@ class Results(Component):
                "targetLayer": job["target"], "maskPixels": int(union.sum()), "preserveMode": "strict", **overall, "task": per}
         unchanged: list[int] = [int(p["task"]) for p in per if not p["insideMask"]["changed"]]
         if unchanged and len(unchanged) == len(per):
-            rep["warning"] = "Vùng đích gần như không đổi — model có thể đã bỏ qua mask/prompt"
+            rep["warning"] = say("image.warn.unchanged")
         elif unchanged:
-            rep["warning"] = f"Việc {', '.join(map(str, unchanged))} gần như không đổi; các việc khác đã đổi"
+            rep["warning"] = say("image.warn.some-unchanged", tasks=', '.join(map(str, unchanged)))
         ok = bool(rep["outsideMask"]["setPreserve"]) and len(unchanged) < len(per)
         status = "needs-review" if ok else "error:check-failed"
         (jdir / "report.json").write_text(json.dumps(rep, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -110,17 +111,18 @@ class Results(Component):
             scope: list[str] = []
             skip: list[str] = []
             spec, latest = self.store.get(job["design_id"])
-            scene = geometry.compile_spec(spec, self.env.design_catalog(job["design_id"], latest))
+            dc = self.env.design_catalog(job["design_id"], latest)
+            scene = geometry.compile_spec(spec, dc)
             cur = spec
             for i, t in enumerate(tasks, 1):
                 op, pv = t.get("pendingOp"), t.get("scope")
                 if op is None:
                     if not t.get("material"):
-                        skip.append(f"việc {i}: không nêu vật liệu")
+                        skip.append(say("image.skip.no-material", n=i))
                         continue
-                    r = layers.design_op(cur, layers.resolve(layers.catalogue(cur, scene, render.wall_faces(cur, scene=scene)), t["targetLayer"])[0], t["material"], scene)
+                    r = layers.design_op(cur, layers.resolve(layers.catalogue(cur, scene, render.wall_faces(cur, dc, scene)), t["targetLayer"])[0], t["material"], scene)
                     if r is None:
-                        skip.append(f"việc {i}: layer chưa sửa được trong thiết kế")
+                        skip.append(say("image.skip.not-editable", n=i))
                         continue
                     op, pv = r
                 cur = edit.apply_op(cur, op, self.env.catalog())

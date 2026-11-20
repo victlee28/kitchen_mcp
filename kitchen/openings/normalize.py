@@ -25,19 +25,19 @@ from ..defaults import of as defaults_of
 from ..errors import InvalidInput
 from .contract import HINGED, KINDS, OPERATIONS, SIDES, SOURCES, AxisRef, Hinge, Leaf, Opening
 from .frames import inner_corner_s
-from .types import DEFAULT_TYPE, casing_width, get, grid, num, template_leaves
+from .types import casing_width, default_type, get, grid, num, template_leaves
 from .wall_axes import Segment, WallAxis, find, matches, moved_along, nearest, segments_of
 
-MAX_WIDTH = {"door": 2400.0, "passage": 2400.0, "window": 3600.0}     # a type's widest when its data gives no ``maxWidth``
 ABSOLUTE_MAX_WIDTH = 12000.0                                           # no opening is wider, whatever the user keeps
 
 
 def width_range(type_data: Mapping[str, Any], kind: str) -> tuple[float, float]:
-    """``(min, max)`` hole width of an opening type: its ``minWidth`` / ``maxWidth``, else (0, the kind's ``MAX_WIDTH``)."""
+    """``(min, max)`` hole width of an opening type: its ``minWidth`` / ``maxWidth`` (``types.get`` fills ``maxWidth`` from
+    ``defaults.openingKinds.<kind>.maxWidth`` when the type leaves it out), else (0, ``ABSOLUTE_MAX_WIDTH``)."""
     low = type_data.get("minWidth")
     high = type_data.get("maxWidth")
     return (float(low) if isinstance(low, (int, float)) else 0.0,
-            float(high) if isinstance(high, (int, float)) else MAX_WIDTH.get(kind, 2400.0))
+            float(high) if isinstance(high, (int, float)) else ABSOLUTE_MAX_WIDTH)
 MAX_HEIGHT = 3000.0
 LOW_CONFIDENCE = 0.5
 LEGACY_TYPES = {"window-casement-2": "window-swing-2"}
@@ -280,9 +280,9 @@ def normalize(raw: Mapping[str, Any], source: str, catalog: Catalog, axes: Seque
             raise _bad("Only a floorplan opening can be removed by a record", "opening-bad-removal")
         axis_data = _obj(data.get("wallAxis"))
         axis_id = str(axis_data.get("id") or "") if axis_data is not None else str(data.get("wallAxis") or "")
-        return Opening(oid, kind, str(data.get("openingType") or DEFAULT_TYPE[kind]), AxisRef(axis_id), 0.0, 0.0, None, None, (), 0.0, 0.0,
+        return Opening(oid, kind, str(data.get("openingType") or default_type(catalog, kind)), AxisRef(axis_id), 0.0, 0.0, None, None, (), 0.0, 0.0,
                        None, source, (), source_element, True), notes
-    opening_type = str(data.get("openingType") or DEFAULT_TYPE[kind])
+    opening_type = str(data.get("openingType") or default_type(catalog, kind))
     type_data = get(catalog, opening_type)
     if type_data.get("kind") != kind:
         raise _bad(f"Opening type {opening_type!r} is not a {kind}", "opening-type-kind-mismatch", id=opening_type)
@@ -327,7 +327,8 @@ def normalize(raw: Mapping[str, Any], source: str, catalog: Catalog, axes: Seque
     else:
         width_value = _number(data, "width")
         if width_value is None or width_value <= 0:
-            raise _bad(f"width must be greater than 0 and no more than {MAX_WIDTH[kind]:g} mm", "opening-bad-width", max=MAX_WIDTH[kind])
+            widest = width_range(type_data, kind)[1]
+            raise _bad(f"width must be greater than 0 and no more than {widest:g} mm", "opening-bad-width", max=widest)
         width = width_value
         edge: Any = data.get("fromEdge")
         center_value = _number(data, "center")

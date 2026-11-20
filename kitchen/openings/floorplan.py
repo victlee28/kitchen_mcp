@@ -129,7 +129,7 @@ def raw_from_floorplan(fp: Mapping[str, Any], axes: Sequence[WallAxis], catalog:
         if isinstance(elev.get("height"), (int, float)):
             raw.update(height=float(elev["height"]), sill=sill)
         else:
-            raw.update(height=default_height(kind), sill=sill)
+            raw.update(height=default_height(kind, catalog), sill=sill)
             unsure += ["height", "sill"] if kind == "window" else ["height"]
         raw["unsure"] = unsure
         out.append((raw, notes))

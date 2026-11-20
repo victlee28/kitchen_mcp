@@ -12,10 +12,9 @@ from .. import builtin
 from ..numeric import round_half_away
 from ..catalog import Catalog
 from ..spec import KitchenSpec
-from .photo import text
+from .photo import table, text
 from .seen import Box, Seen, where
 
-KITCHEN_FEATURES = (("base-sink", "a sink"), ("base-cooktop", "a cooktop"), ("tall-fridge", "a tall fridge cabinet"), ("tall", "tall cabinets"))
 STRUCTURE_TEXT = {"structure-stair": "topdown-stair"}       # floorplan structures named in the scene (catalog kind prompt-text)
 
 
@@ -24,7 +23,7 @@ def _union(boxes: list[Box]) -> Box:
 
 
 def _kitchen(types: set[str], catalog: Catalog) -> str:
-    feats = list(dict.fromkeys(name for t, name in KITCHEN_FEATURES if t in types))
+    feats = list(dict.fromkeys(name for t, name in table("topdown-features", catalog).items() if t in types))   # catalog kind prompt-text
     base = text("topdown-kitchen", catalog)
     return base + (" with " + ", ".join(feats[:-1]) + (" and " if len(feats) > 1 else "") + feats[-1] if feats else "")
 

@@ -36,6 +36,11 @@ class Defaults:
     hinge_edge: float = 100.0         # top and bottom hinge from the door's edge (mm)
     hinge_counts: tuple[tuple[float, int], ...] = ((900.0, 2), (1600.0, 3), (2000.0, 4), (2600.0, 5))   # (door up to mm, hinges)
     auto_place: Mapping[str, Any] = field(default_factory=lambda: {})   # the words and sizes of "Auto place" (``auto_place``)
+    opening_kinds: Mapping[str, Mapping[str, Any]] = field(default_factory=lambda: {})   # door / window / passage: default type, width,
+    #   widest, handle, plausible height from a picture (``openingKinds``): what an opening type that leaves them out takes
+    opening_handle_parts: Mapping[str, Mapping[str, float]] = field(default_factory=lambda: {})   # lever / pull sizes (mm)
+    molding_styles: tuple[str, ...] = ()        # styles that get crown and base moldings when the design does not say (``moldingStyles``)
+    furniture_heights: Mapping[str, Any] = field(default_factory=lambda: {})   # floor-plan furniture with no height: ``default`` and ``words`` (label word -> mm)
 
 
 def _number(v: Any) -> float | None:
@@ -65,6 +70,12 @@ def _hinge(data: Mapping[str, Any], fallback: Mapping[str, Any]) -> tuple[str, f
     return str(h.get("item") or "clip-110-soft"), float(edge if edge is not None else 100), counts or ((900.0, 2), (1600.0, 3), (2000.0, 4), (2600.0, 5))
 
 
+def _merged(data: Mapping[str, Any], fallback: Mapping[str, Any], key: str) -> dict[str, dict[str, Any]]:
+    """A section of named groups (``openingKinds``: door / window / passage): each group's fields from the builtin item, then the item's own."""
+    base, own = as_dict(fallback.get(key)) or {}, as_dict(data.get(key)) or {}
+    return {str(k): {**(as_dict(base.get(k)) or {}), **(as_dict(own.get(k)) or {})} for k in dict.fromkeys([*base, *own])}
+
+
 def _build(catalog: Catalog) -> Defaults:
     fallback = builtin.CATALOG.data("defaults", ID)
     item = catalog.find("defaults", ID)
@@ -73,7 +84,10 @@ def _build(catalog: Catalog) -> Defaults:
     return Defaults(float(run["moduleWidth"]), float(run["minWidth"]), float(run["maxRun"]), float(run["cornerMaxWidth"]),
                     float(stretch["min"]), float(stretch["max"]), float(hole["side"]), float(hole["worktopEdge"]), float(hole["hoodSide"]), _section(data, fallback, "newDesign"), _section(data, fallback, "menu"),
                     _section(data, fallback, "openings"), _names(data, fallback, "materials"), *_hinge(data, fallback),
-                    {**(as_dict(fallback.get("autoPlace")) or {}), **(as_dict(data.get("autoPlace")) or {})})
+                    {**(as_dict(fallback.get("autoPlace")) or {}), **(as_dict(data.get("autoPlace")) or {})},
+                    _merged(data, fallback, "openingKinds"), _merged(data, fallback, "openingHandleParts"),
+                    tuple(str(s) for s in as_list(data.get("moldingStyles") if "moldingStyles" in data else fallback.get("moldingStyles")) or []),
+                    {**(as_dict(fallback.get("furnitureHeights")) or {}), **(as_dict(data.get("furnitureHeights")) or {})})
 
 
 def of(catalog: Catalog = builtin.CATALOG) -> Defaults:

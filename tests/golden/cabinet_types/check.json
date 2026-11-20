@@ -1,0 +1,149 @@
+{
+ "function": "cabinet_types.check",
+ "cases": [
+  {
+   "name": "the first cabinet of the fixture",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    }
+   },
+   "expected": {
+    "values": {
+     "fromCorner": 0.0,
+     "endAt": 670.0,
+     "width": 670.0,
+     "height": 2610.0,
+     "depth": 640.0,
+     "y": 0.0,
+     "top": 2610.0,
+     "fs0": 0.0,
+     "fs1": 670.0,
+     "b0": 0.0,
+     "b1": 0.0,
+     "p0": 670.0,
+     "p1": 670.0,
+     "endPanel": 0.0,
+     "blindCorner": 0.0,
+     "niche": 1630.0,
+     "shelfCount": 3.0,
+     "sections": 0.0,
+     "doors": 2.0,
+     "doorThickness": 18.0,
+     "doorGap": 3.0,
+     "plinthHeight": 110.0
+    },
+    "problems": [
+     {
+      "code": "fronts-short",
+      "where": "",
+      "percent": 37.0
+     }
+    ]
+   }
+  },
+  {
+   "name": "a glass upper type on it",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "type": "upper-glass"
+   },
+   "expected": {
+    "values": {
+     "fromCorner": 0.0,
+     "endAt": 670.0,
+     "width": 670.0,
+     "height": 2610.0,
+     "depth": 640.0,
+     "y": 0.0,
+     "top": 2610.0,
+     "fs0": 0.0,
+     "fs1": 670.0,
+     "b0": 0.0,
+     "b1": 0.0,
+     "p0": 670.0,
+     "p1": 670.0,
+     "endPanel": 0.0,
+     "blindCorner": 0.0,
+     "niche": 1630.0,
+     "shelfCount": 3.0,
+     "sections": 0.0,
+     "doors": 2.0,
+     "doorThickness": 18.0,
+     "doorGap": 3.0,
+     "plinthHeight": 110.0
+    },
+    "problems": []
+   }
+  },
+  {
+   "name": "no size",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "values": {
+     "width": 0,
+     "height": 0,
+     "depth": 0,
+     "endAt": 0
+    }
+   },
+   "expected": {
+    "values": {
+     "fromCorner": 0.0,
+     "endAt": 0,
+     "width": 0,
+     "height": 0,
+     "depth": 0,
+     "y": 0.0,
+     "top": 2610.0,
+     "fs0": 0.0,
+     "fs1": 670.0,
+     "b0": 0.0,
+     "b1": 0.0,
+     "p0": 670.0,
+     "p1": 670.0,
+     "endPanel": 0.0,
+     "blindCorner": 0.0,
+     "niche": 1630.0,
+     "shelfCount": 3.0,
+     "sections": 0.0,
+     "doors": 2.0,
+     "doorThickness": 18.0,
+     "doorGap": 3.0,
+     "plinthHeight": 110.0
+    },
+    "problems": [
+     {
+      "code": "box-empty",
+      "where": "parts[0]",
+      "part": "side-panel"
+     },
+     {
+      "code": "box-empty",
+      "where": "parts[1]",
+      "part": "side-panel"
+     },
+     {
+      "code": "box-empty",
+      "where": "parts[2]",
+      "part": "carcass"
+     },
+     {
+      "code": "box-empty",
+      "where": "parts[3]",
+      "part": "carcass"
+     },
+     {
+      "code": "fronts-short",
+      "where": "",
+      "percent": 0.0
+     }
+    ]
+   }
+  }
+ ]
+}

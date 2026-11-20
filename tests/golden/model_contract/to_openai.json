@@ -1,0 +1,185 @@
+{
+ "function": "model_contract.to_openai",
+ "cases": [
+  {
+   "name": "tools, images, json mode",
+   "input": {
+    "request": {
+     "system": "Kitchen assistant.",
+     "messages": [
+      {
+       "role": "user",
+       "text": "Đổi màu tủ",
+       "images": [
+        {
+         "mime": "image/jpeg",
+         "data": "AAAA"
+        }
+       ]
+      },
+      {
+       "role": "assistant",
+       "text": "Calling",
+       "calls": [
+        {
+         "id": "c1",
+         "name": "apply",
+         "arguments": {
+          "op": "common"
+         }
+        },
+        {
+         "id": "c2",
+         "name": "look",
+         "arguments": {}
+        }
+       ]
+      },
+      {
+       "role": "tool",
+       "id": "c1",
+       "result": {
+        "ok": true
+       }
+      },
+      {
+       "role": "tool",
+       "id": "c2",
+       "result": "fine"
+      },
+      {
+       "role": "user",
+       "text": "Thanks"
+      }
+     ],
+     "tools": [
+      {
+       "name": "apply",
+       "description": "Apply an edit",
+       "parameters": {
+        "type": "object",
+        "properties": {
+         "op": {
+          "type": "string"
+         }
+        }
+       }
+      }
+     ],
+     "jsonOnly": true,
+     "maxTokens": 500,
+     "temperature": 0.2
+    },
+    "model": "gpt-x"
+   },
+   "expected": {
+    "model": "gpt-x",
+    "temperature": 0.2,
+    "max_tokens": 500,
+    "messages": [
+     {
+      "role": "system",
+      "content": "Kitchen assistant."
+     },
+     {
+      "role": "user",
+      "content": [
+       {
+        "type": "text",
+        "text": "Đổi màu tủ"
+       },
+       {
+        "type": "image_url",
+        "image_url": {
+         "url": "data:image/jpeg;base64,AAAA"
+        }
+       }
+      ]
+     },
+     {
+      "role": "assistant",
+      "content": "Calling",
+      "tool_calls": [
+       {
+        "id": "c1",
+        "type": "function",
+        "function": {
+         "name": "apply",
+         "arguments": "{\"op\": \"common\"}"
+        }
+       },
+       {
+        "id": "c2",
+        "type": "function",
+        "function": {
+         "name": "look",
+         "arguments": "{}"
+        }
+       }
+      ]
+     },
+     {
+      "role": "tool",
+      "tool_call_id": "c1",
+      "content": "{\"ok\": true}"
+     },
+     {
+      "role": "tool",
+      "tool_call_id": "c2",
+      "content": "fine"
+     },
+     {
+      "role": "user",
+      "content": "Thanks"
+     }
+    ],
+    "tools": [
+     {
+      "type": "function",
+      "function": {
+       "name": "apply",
+       "description": "Apply an edit",
+       "parameters": {
+        "type": "object",
+        "properties": {
+         "op": {
+          "type": "string"
+         }
+        }
+       }
+      }
+     }
+    ],
+    "response_format": {
+     "type": "json_object"
+    }
+   }
+  },
+  {
+   "name": "plain",
+   "input": {
+    "request": {
+     "system": "",
+     "messages": [
+      {
+       "role": "user",
+       "text": "hi"
+      }
+     ]
+    },
+    "model": "m"
+   },
+   "expected": {
+    "model": "m",
+    "temperature": 0.0,
+    "max_tokens": 2000,
+    "messages": [
+     {
+      "role": "user",
+      "content": "hi"
+     }
+    ]
+   }
+  }
+ ]
+}

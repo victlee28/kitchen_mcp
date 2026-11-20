@@ -51,11 +51,7 @@ def tables(catalog: Catalog = builtin.CATALOG) -> Tables:
     return catalog.derived("regions.tables", _build)
 
 
-_BUILTIN = tables()
-REGIONS = _BUILTIN.regions                    # the builtin tables (the functions take the merged catalog)
-COUNTRIES = _BUILTIN.countries
-SOURCE_RANK = _BUILTIN.source_rank
-SEVERITY_BY_SOURCE = _BUILTIN.severity
+# No module-level copies of the tables: every caller passes its catalog (the workshop's countries, regions and source ranks count).
 
 
 def normalize(country: str | None = None, region: str | None = None, catalog: Catalog = builtin.CATALOG) -> tuple[str | None, str | None]:

@@ -13,6 +13,7 @@ from PIL import Image
 from .. import backends, imaging, vocab
 from ..backends import BackendError
 from ..errors import InvalidInput
+from ..words import say
 from .packages import Packages
 from .results import Results
 from .request import JobRequest, size_of
@@ -40,8 +41,7 @@ class Runners(Component):
                 for i, t in enumerate(req.get("tasks", []), 1):
                     rgb = vocab.color(t.get("material") or "", catalog) or vocab.color(t.get("instruction") or "", catalog)
                     if not rgb:
-                        raise BackendError("unsupported", f"Việc {i} ({t['targetLayer']}): không suy được màu từ vật liệu/yêu cầu; "
-                                                           "ghi rõ màu (vd 'xanh rêu') hoặc dùng backend AI")
+                        raise BackendError("unsupported", say("image.recolor.no-colour", n=i, layer=t['targetLayer']))
                     img = imaging.recolor(img, imaging.read(jdir / f"target_{i}.png", "L") > 127, vocab.hex_rgb(rgb))
                     used.append(rgb)
                 Image.fromarray(img).save(jdir / "raw.png")

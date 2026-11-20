@@ -1,0 +1,50 @@
+{
+ "function": "unit_system.unit_of",
+ "cases": [
+  {
+   "name": "after set-run-unit",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "convertRows": true,
+    "ops": [
+     {
+      "op": "set-run-unit",
+      "id": "R1",
+      "unit": "wine"
+     }
+    ]
+   },
+   "expected": {
+    "units": {
+     "R1": "wine",
+     "R2": null
+    },
+    "isUnit": {
+     "R1": true,
+     "R2": false
+    }
+   }
+  },
+  {
+   "name": "plain",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "convertRows": true
+   },
+   "expected": {
+    "units": {
+     "R1": null,
+     "R2": null
+    },
+    "isUnit": {
+     "R1": false,
+     "R2": false
+    }
+   }
+  }
+ ]
+}

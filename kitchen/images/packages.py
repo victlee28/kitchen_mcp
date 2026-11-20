@@ -46,7 +46,7 @@ class Packages(Component):
             described: list[dict[str, Any]] = list(req.get("description") or [])
             where: dict[str, Any] = t.get("position") or {}
             text = prompts.gemini_text_geometry(str(req.get("operation") or t.get("operation") or "replace-item"), [str(x["en"]) for x in described],
-                                             where.get("en"), str(t.get("instruction") or ""), self._local_real(job))
+                                             where.get("en"), str(t.get("instruction") or ""), self._local_real(job), self.env.catalog())
             return text, [("marked-base-image", jdir / "reference_marked.png"), ("mask", jdir / "mask.png"),
                           ("new-geometry", jdir / "new_geometry.png")]
         tasks: list[dict[str, Any]] = [dict(x) for x in as_list(req.get("tasks")) or []]
@@ -77,10 +77,10 @@ class Packages(Component):
             except (KitchenError, ValueError, KeyError):  # the edit does not apply: describe the surface from the original design
                 pass
         if op:
-            return prompts.local(spec)
+            return prompts.local(spec, None, self.env.catalog())
         all_tasks: list[dict[str, Any]] = job["request"].get("tasks") or []
         mats: list[str] = [str(t["material"]) for t in all_tasks if t.get("material")]
-        return prompts.local(None, mats)
+        return prompts.local(None, mats, self.env.catalog())
 
     def export_request(self, jid: str) -> Path:
         """Xuất request gửi AI, đã LỌC bỏ thông tin hệ thống AI không dùng (renderKey, id chi tiết, số pixel, prompt kiểu tag…).
@@ -164,7 +164,7 @@ class Packages(Component):
             image[f.stem] = "data:image/png;base64," + base64.b64encode(f.read_bytes()).decode()
         res = {k: v for k, v in job["result"].items() if k != "dir"}
         out = {"schema": "kitchen-ai-edit-request-full/1.0",
-               "note": "Bản đầy đủ để kiểm tra — KHÔNG gửi AI (gửi request.json / gemini-request.json).",
+               "note": "Full copy for checking: do NOT send it to the AI (send request.json / gemini-request.json).",
                "job": {k: job[k] for k in ("id", "status", "kind", "mode", "backend", "design_id", "rev", "view", "render_key",
                                            "target", "created_at", "updated_at", "error")},
                "request": job["request"], "result": res, "image": image,

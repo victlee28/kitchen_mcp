@@ -6,6 +6,10 @@ from __future__ import annotations
 
 from typing import Any
 
+from .. import builtin
+from ..catalog import Catalog
+from .photo import table
+
 
 def gemini_text(kind: str, prompt: str, instruction: str, style_prompt: str, role: str = "", realism: str = "") -> str:
     """Chỉ dẫn dạng câu cho Gemini (model hiểu ngôn ngữ tự nhiên tốt hơn danh sách tag)."""
@@ -49,18 +53,16 @@ def gemini_text_edit(regions: list[dict[str, Any]], instruction: str = "", reali
               "Return the full image at the same size and framing.")
 
 
-_SHAPE_DIRECTION = {
-    "remove-item": ("Where an object is removed, image 3 shows what is behind it (wall, floor, the side of the neighbouring cabinet, "
-                "the countertop end, the plinth): paint those surfaces with the same materials, colors and lighting as the matching "
-                "surfaces elsewhere in image 1, so nothing of the removed object remains."),
-    "add-item": ("Paint the new object(s) shown in image 3 with realistic materials that match the existing cabinets of image 1 "
-                 "(same finish, color and hardware style unless stated)."),
-    "replace-item": ("Keep the materials, colors and finish that image 1 has in this region; change only the shape / style so it "
-                 "matches image 3."),
-}
 
 
-def gemini_text_geometry(operation: str, changes: list[str], where: str | None, instruction: str = "", realism: str = "") -> str:
+def _shape_direction(operation: str, catalog: Catalog) -> str:
+    """What to do where shapes change (catalog kind ``prompt-text``, table ``shape-direction``: remove-item / add-item / replace-item)."""
+    t = table("shape-direction", catalog)
+    return t.get(operation) or t.get("replace-item", "")
+
+
+def gemini_text_geometry(operation: str, changes: list[str], where: str | None, instruction: str = "", realism: str = "",
+                         catalog: Catalog = builtin.CATALOG) -> str:
     """Sửa hình: ảnh 1 có viền, ảnh 2 mask, ảnh 3 hình mẫu thiết kế mới (màu phẳng + nét) cùng camera."""
     return ("You are given three images of the same kitchen from the same camera. IMAGE 1 is the photo to edit; the area to "
             "change is surrounded by a thin RED outline with the label 1. IMAGE 2 is the mask: white = exactly the region inside "
@@ -69,7 +71,7 @@ def gemini_text_geometry(operation: str, changes: list[str], where: str | None, 
             "shapes, edges and positions.\n"
             "Changes:\n" + "\n".join(f"- {c}" for c in changes) + "\n"
             + (f"The region is in the {where}.\n" if where else "")
-            + _SHAPE_DIRECTION.get(operation, _SHAPE_DIRECTION["replace-item"]) + "\n"
+            + _shape_direction(operation, catalog) + "\n"
             + (f"{instruction}\n" if instruction else "")
             + (f"{realism}\n" if realism else "")
             + "Image 3 is only a shape guide: do NOT copy its flat colors or black lines — the result must look like the photograph "

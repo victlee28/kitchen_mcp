@@ -1,6 +1,7 @@
 // Select, inspect, hide and isolate the elements that an imported floorplan adds to the scene (room.structures).
 // The viewer owns the camera and the click; this module owns what is selected and shown.
-const KIND_LABEL = { wall: 'Walls', column: 'Columns', opening: 'Doors / windows', furniture: 'Furniture', shaft: 'Shafts', stair: 'Stairs', area: 'Areas' };
+import { tOr, tx } from './i18n.js';
+const kindLabel = (k) => tOr(`ui.structure.kind.${k}`, k);   // data/i18n; a kind with no wording shows its id
 const EMPTY = { entries: new Map() };
 
 export function createStructureSelector({ THREE, els, onSelect, onChange }) {
@@ -57,7 +58,7 @@ export function createStructureSelector({ THREE, els, onSelect, onChange }) {
       const n = [...entries.values()].filter((e) => e.record.kind === k).length;
       const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = !hiddenKinds.has(k);
       cb.addEventListener('change', () => { cb.checked ? hiddenKinds.delete(k) : hiddenKinds.add(k); if (selected && !isShown(selected)) selected = null; refresh(); });
-      const lab = document.createElement('label'); lab.className = 'kind'; lab.append(cb, ` ${KIND_LABEL[k] || k} (${n})`);
+      const lab = document.createElement('label'); lab.className = 'kind'; lab.append(cb, ` ${kindLabel(k)} (${n})`);
       return lab;
     }));
     const items = [...entries.values()].map((e) => e.record).sort((a, b) => a.kind.localeCompare(b.kind) || String(a.label || a.sourceElement).localeCompare(String(b.label || b.sourceElement)));
@@ -74,7 +75,7 @@ export function createStructureSelector({ THREE, els, onSelect, onChange }) {
       els.detail.replaceChildren(...describe(rec).map(([k, v]) => { const li = document.createElement('li'); li.textContent = `${k}: ${v}`; return li; }));
     }
     els.actions.hidden = !rec;
-    els.hide.textContent = rec && hiddenIds.has(rec.id) ? 'Show' : 'Hide';
+    els.hide.textContent = rec && hiddenIds.has(rec.id) ? tx('ui.structure.show') : tx('ui.structure.hide');
     els.showAll.hidden = !(hiddenIds.size || hiddenKinds.size);
   }
 

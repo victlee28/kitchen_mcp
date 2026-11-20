@@ -1,0 +1,150 @@
+{
+ "function": "edit.surface_material",
+ "cases": [
+  {
+   "name": "paint two faces",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "op": {
+     "op": "surface-material",
+     "surfaces": [
+      "back#inside",
+      "right#inside"
+     ],
+     "material": "Sơn trắng"
+    }
+   },
+   "expected": {
+    "diff": {
+     "modules": {
+      "added": [],
+      "removed": [],
+      "changed": {}
+     },
+     "other": [
+      {
+       "path": "surfaceMaterials",
+       "old": null,
+       "new": {
+        "back#inside": "Sơn trắng",
+        "right#inside": "Sơn trắng"
+       }
+      }
+     ],
+     "truncated": false
+    },
+    "runs": [
+     {
+      "id": "R1",
+      "x": -1920.0,
+      "z": 0.0,
+      "yaw": 0.0,
+      "anchor": "end"
+     },
+     {
+      "id": "R2",
+      "x": -0.0,
+      "z": 0.0,
+      "yaw": -90.0
+     }
+    ]
+   }
+  },
+  {
+   "name": "clear",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "ops": [
+     {
+      "op": "surface-material",
+      "surfaces": [
+       "back#inside"
+      ],
+      "material": "Sơn trắng"
+     }
+    ],
+    "op": {
+     "op": "surface-material",
+     "surfaces": [
+      "back#inside"
+     ],
+     "material": null
+    }
+   },
+   "expected": {
+    "diff": {
+     "modules": {
+      "added": [],
+      "removed": [],
+      "changed": {}
+     },
+     "other": [
+      {
+       "path": "surfaceMaterials",
+       "old": {
+        "back#inside": "Sơn trắng"
+       },
+       "new": null
+      }
+     ],
+     "truncated": false
+    },
+    "runs": [
+     {
+      "id": "R1",
+      "x": -1920.0,
+      "z": 0.0,
+      "yaw": 0.0,
+      "anchor": "end"
+     },
+     {
+      "id": "R2",
+      "x": -0.0,
+      "z": 0.0,
+      "yaw": -90.0
+     }
+    ]
+   }
+  },
+  {
+   "name": "no surfaces",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "op": {
+     "op": "surface-material",
+     "surfaces": [],
+     "material": "x"
+    }
+   },
+   "error": {
+    "kind": "validation",
+    "code": "bad-surfaces"
+   }
+  },
+  {
+   "name": "bad id",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "op": {
+     "op": "surface-material",
+     "surfaces": [
+      "back"
+     ],
+     "material": "x"
+    }
+   },
+   "error": {
+    "kind": "validation",
+    "code": "bad-surfaces"
+   }
+  }
+ ]
+}

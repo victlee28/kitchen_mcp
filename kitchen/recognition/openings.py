@@ -23,7 +23,7 @@ from ..jsonview import as_dict, as_list
 from ..numeric import round_half_away
 from ..openings import normalize
 from ..openings.contract import KINDS, Opening
-from ..openings.types import casing_width, get, num
+from ..openings.types import casing_width, get, kind_defaults, num
 from ..openings.normalize import width_range
 from ..openings.wall_axes import WallAxis, nearest, opening_pieces
 from . import opening_match
@@ -394,7 +394,7 @@ def photo_opening(seen: PhotoOpening, point: Pt, catalog: Catalog, country: str 
     low, high = width_range(data, seen.kind)
     if not low <= width <= high:                 # the drawing's hole is the authority; the user sees "check the width" in the preview
         raw["oversize"] = True
-        raw["unsure"] = [*raw["unsure"], "width"]
+        raw["unsure"] = list(dict.fromkeys([*raw["unsure"], "width"]))      # width is already unsure here: listed once
     if seen.axes_ratio:
         raw["axes"] = [_r((r - 0.5) * width) for r in seen.axes_ratio]
     if seen.h_axes_ratio:
@@ -504,14 +504,13 @@ def element_at(point: Pt, elements: Sequence[Mapping[str, Any]]) -> Mapping[str,
     return None
 
 
-PHOTO_HEIGHT_MM = {"door": (1800.0, 3200.0), "passage": (1800.0, 3200.0), "window": (300.0, 2400.0)}   # a height from a picture is kept in these
 
 
 def photo_into_hole(seen: PhotoOpening, axis: WallAxis, center: float, width: float, catalog: Catalog,
                     drawn: tuple[float | None, float | None] = (None, None), type_id: str | None = None) -> dict[str, Any]:
     """The ``add-opening`` record that puts the opening of a picture into a hole of the drawing (a selected floorplan opening element):
     the hole's place and width; its height and sill those the drawing gives (``drawn``: the element's ``elev`` height and base), else
-    the hole's width times the picture's proportions (the type's default when that falls outside ``PHOTO_HEIGHT_MM``), marked unsure; a door on the floor, a window at the type's sill. The
+    the hole's width times the picture's proportions (the type's default when that falls outside ``defaults.openingKinds.<kind>.photoHeight``), marked unsure; a door on the floor, a window at the type's sill. The
     dividers sit at the picture's proportions of the hole."""
     kind_type = type_id or photo_match(seen, catalog).type_id
     data = get(catalog, kind_type)
@@ -520,7 +519,7 @@ def photo_into_hole(seen: PhotoOpening, axis: WallAxis, center: float, width: fl
     if drawn_height:
         height = drawn_height
     else:                                        # the hole's width and the picture's proportions; the type's default when that is implausible
-        low, high = PHOTO_HEIGHT_MM.get(seen.kind, PHOTO_HEIGHT_MM["door"])
+        low, high = (float(v) for v in kind_defaults(catalog, seen.kind).get("photoHeight") or (0.0, 1e9))
         from_picture = float(round_half_away(width * seen.aspect / HEIGHT_STEP, 0)) * HEIGHT_STEP
         height = from_picture if low <= from_picture <= high else num(data, "defaultHeight", 2200.0 if seen.kind != "window" else 1200.0)
     if seen.kind != "window":

@@ -1,0 +1,43 @@
+{
+ "function": "model_contract.cost",
+ "cases": [
+  {
+   "name": "priced",
+   "input": {
+    "input": 1000000,
+    "output": 500000,
+    "price": {
+     "inputPerMTok": 3,
+     "outputPerMTok": 15
+    }
+   },
+   "expected": {
+    "usd": 10.5
+   }
+  },
+  {
+   "name": "no price",
+   "input": {
+    "input": 10,
+    "output": 10,
+    "price": null
+   },
+   "expected": {
+    "usd": null
+   }
+  },
+  {
+   "name": "half a price",
+   "input": {
+    "input": 10,
+    "output": 10,
+    "price": {
+     "inputPerMTok": 3
+    }
+   },
+   "expected": {
+    "usd": null
+   }
+  }
+ ]
+}

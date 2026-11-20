@@ -1,0 +1,77 @@
+{
+ "function": "prompts.seen.where",
+ "cases": [
+  {
+   "name": "boxes",
+   "input": {
+    "size": [
+     1000,
+     600
+    ],
+    "boxes": [
+     [
+      0,
+      0,
+      200,
+      150
+     ],
+     [
+      400,
+      250,
+      600,
+      350
+     ],
+     [
+      800,
+      450,
+      1000,
+      600
+     ],
+     [
+      0,
+      0,
+      1000,
+      600
+     ],
+     [
+      10,
+      400,
+      990,
+      590
+     ]
+    ]
+   },
+   "expected": {
+    "where": [
+     "in the top left of the image",
+     "in the middle of the image",
+     "in the bottom right of the image",
+     "in the middle of the image",
+     "in the bottom of the image"
+    ]
+   }
+  },
+  {
+   "name": "a picture with no size",
+   "input": {
+    "size": [
+     0,
+     0
+    ],
+    "boxes": [
+     [
+      0,
+      0,
+      10,
+      10
+     ]
+    ]
+   },
+   "expected": {
+    "where": [
+     "in the bottom right of the image"
+    ]
+   }
+  }
+ ]
+}

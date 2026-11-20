@@ -1,0 +1,90 @@
+{
+ "function": "edit_intent.surface_edit",
+ "cases": [
+  {
+   "name": "paint white",
+   "input": {
+    "text": "sơn trắng",
+    "surfaces": [
+     "back#inside"
+    ]
+   },
+   "expected": {
+    "status": "ok",
+    "operation": {
+     "op": "surface-material",
+     "surfaces": [
+      "back#inside"
+     ],
+     "material": "Trắng"
+    },
+    "summary": [
+     "Vật liệu 1 mặt tường đã chọn: Trắng"
+    ],
+    "targets": []
+   }
+  },
+  {
+   "name": "tiles",
+   "input": {
+    "text": "ốp gạch thẻ xanh",
+    "surfaces": [
+     "back#inside",
+     "right#inside"
+    ]
+   },
+   "expected": {
+    "status": "ok",
+    "operation": {
+     "op": "surface-material",
+     "surfaces": [
+      "back#inside",
+      "right#inside"
+     ],
+     "material": "Gạch thẻ xanh"
+    },
+    "summary": [
+     "Vật liệu 2 mặt tường đã chọn: Gạch thẻ xanh"
+    ],
+    "targets": []
+   }
+  },
+  {
+   "name": "a colour alone",
+   "input": {
+    "text": "màu xanh rêu",
+    "surfaces": [
+     "back#inside"
+    ]
+   },
+   "expected": {
+    "status": "ok",
+    "operation": {
+     "op": "surface-material",
+     "surfaces": [
+      "back#inside"
+     ],
+     "material": "Xanh rêu"
+    },
+    "summary": [
+     "Vật liệu 1 mặt tường đã chọn: Xanh rêu"
+    ],
+    "targets": []
+   }
+  },
+  {
+   "name": "nothing usable",
+   "input": {
+    "text": "làm gì đó",
+    "surfaces": [
+     "back#inside"
+    ]
+   },
+   "expected": {
+    "status": "clarify",
+    "question": "Gán vật liệu gì cho 1 mặt tường đã chọn? (ví dụ: sơn trắng, ốp gạch thẻ xanh)",
+    "choices": []
+   }
+  }
+ ]
+}

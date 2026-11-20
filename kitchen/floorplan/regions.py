@@ -1,6 +1,7 @@
 """Finding the kitchen region of a building plan: candidates, rooms, ``region:`` specs."""
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any, TypedDict
 
 from ..errors import InvalidInput
@@ -88,7 +89,7 @@ def derive_region(data: dict[str, Any], seeds: list[str]) -> dict[str, Any]:
     return {"bbox": [out[0], out[1], out[2], out[3]], "seeds": list(seeds), "sides": sides, "unit": unit}
 
 
-def _kitchen_candidates(data: dict[str, Any]) -> list[KitchenCandidate]:
+def _kitchen_candidates(data: dict[str, Any], kitchen_words: Sequence[str] | None = None) -> list[KitchenCandidate]:
     """Kitchen units that sit in no listed room, grouped by the region the walls give them."""
     rooms = {r["id"]: r for r in list_rooms(data, regions=False)}
     room_polys: dict[Any, list[tuple[float, float]]] = {}
@@ -100,7 +101,7 @@ def _kitchen_candidates(data: dict[str, Any]) -> list[KitchenCandidate]:
                 pass
     groups: list[KitchenCandidate] = []
     for e in elements_of(data):
-        if not is_kitchen_unit(e) or not (bb := element_bbox(e)):
+        if not is_kitchen_unit(e, kitchen_words) or not (bb := element_bbox(e)):
             continue
         c = ((bb[0] + bb[2]) / 2, (bb[1] + bb[3]) / 2)
         if any(point_in_poly(c, poly) for poly in room_polys.values()):
@@ -119,8 +120,9 @@ def _kitchen_candidates(data: dict[str, Any]) -> list[KitchenCandidate]:
     return groups
 
 
-def list_rooms(data: dict[str, Any], regions: bool = True) -> list[dict[str, Any]]:
-    """Every element tagged as a room, then (kind 'region') areas the walls enclose around kitchen units that no room covers."""
+def list_rooms(data: dict[str, Any], regions: bool = True, kitchen_words: Sequence[str] | None = None) -> list[dict[str, Any]]:
+    """Every element tagged as a room, then (kind 'region') areas the walls enclose around kitchen units that no room covers
+    (``kitchen_words``: what names a kitchen unit, catalog ``defaults.autoPlace.kitchenWords``; None: the builtin words)."""
     out: list[dict[str, Any]] = []
     for e in elements_of(data):
         if e.get("kind") != "area" or field_value(e, "tag") != "room":
@@ -129,17 +131,17 @@ def list_rooms(data: dict[str, Any], regions: bool = True) -> list[dict[str, Any
         out.append({"id": e.get("id"), "kind": "room", "label": field_value(e, "label"), "labelStatus": element_field(e, "label").get("status"),
                     "bbox": g.get("bbox"), "points": len(g.get("outline") or [])})
     if regions and isinstance(data.get("elements"), list) and data.get("unit") in UNIT_MM:
-        for g in _kitchen_candidates(data):
+        for g in _kitchen_candidates(data, kitchen_words):
             out.append({"id": "region:around=" + ",".join(g["seeds"]), "kind": "region", "label": "Kitchen area around " + ", ".join(g["labels"]),
                         "labelStatus": "derived", "bbox": g["bbox"], "points": 4, "seeds": g["seeds"], "openSides": g["open"]})
     return out
 
 
-def parse_region(data: dict[str, Any], spec: str) -> dict[str, Any]:
+def parse_region(data: dict[str, Any], spec: str, kitchen_words: Sequence[str] | None = None) -> dict[str, Any]:
     """'region:kitchen' | 'region:around=id,id' | 'region:bbox=x0,y0,x1,y1' (file units) -> {"bbox", "seeds"|None, "sides"|None}."""
     body = spec[len("region:"):]
     if body == "kitchen":
-        cands = _kitchen_candidates(data)
+        cands = _kitchen_candidates(data, kitchen_words)
         if len(cands) != 1:
             raise InvalidInput("region:kitchen needs exactly one kitchen area; found " + (", ".join("region:around=" + ",".join(g["seeds"]) for g in cands) or "none"),
                            code="floorplan-kitchen-area", params={"found": ", ".join("region:around=" + ",".join(g["seeds"]) for g in cands) or "-"})

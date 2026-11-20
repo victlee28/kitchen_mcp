@@ -9,9 +9,10 @@ import time
 import unicodedata
 import uuid
 from contextlib import contextmanager
-from typing import Callable
+from typing import Any, Callable
 from pathlib import Path
-from . import errors, knowledge_seed, migrations, regions
+from . import builtin, errors, knowledge_seed, migrations, regions
+from .catalog import Catalog
 from .spec import KitchenSpec, dump_spec
 from .errors import InvalidInput, NotFound
 SCHEMA = migrations.BASELINE   # frozen baseline; changes go in kitchen/migrations.py
@@ -52,14 +53,16 @@ class Store:
             finally:
                 conn.close()
 
-    def knowledge(self, query: str='', kinds: list[str] | None=None, country: str | None=None, region: str | None=None, region_only: bool=False, **legacy) -> list[dict]:
-        """Search and rank knowledge entries by query and jurisdiction."""
+    def knowledge(self, query: str='', kinds: list[str] | None=None, country: str | None=None, region: str | None=None, region_only: bool=False,
+                  catalog: Catalog=builtin.CATALOG, **legacy) -> list[dict]:
+        """Search and rank knowledge entries by query and jurisdiction. ``catalog``: the merged catalog (countries, regions, source ranks)."""
         country = legacy.pop('country', country)
         region = legacy.pop('region', region)
         region_only = legacy.pop('region_only', region_only)
         if legacy:
             raise TypeError(f"Unexpected options: {', '.join(legacy)}")
-        country_code, region_code = regions.normalize(country, region)
+        tables = regions.tables(catalog)
+        country_code, region_code = regions.normalize(country, region, catalog)
         conditions, parameters = (['active=1'], [])
         terms = [term for term in re.split('\\s+', query.strip()) if len(term) >= 2]
         if terms:
@@ -84,7 +87,7 @@ class Store:
             row['_d'] = priority_score
             row['priority'] = regions.priority_label(priority_score) if country_code or region_code else None
             results.append(row)
-        source_rank = regions.SOURCE_RANK
+        source_rank = tables.source_rank
         results.sort(key=lambda row: (-row['_d'], -row['_kw'], -source_rank.get(row['metadata'].get('sourceType', 'unknown'), 0), row['id']))
         for row in results:
             row.pop('_kw')
@@ -93,17 +96,19 @@ class Store:
                 row.pop('priority')
         return results
 
-    def upsert_knowledge(self, kind: str, code: str, title: str, content: str, source_url: str='', metadata: dict | None=None, region: str='GLOBAL', country: str='', **legacy) -> dict:
+    def upsert_knowledge(self, kind: str, code: str, title: str, content: str, source_url: str='', metadata: dict | None=None, region: str='GLOBAL', country: str='',
+                         catalog: Catalog=builtin.CATALOG, **legacy) -> dict:
         region = legacy.pop('region', region)
         country = legacy.pop('country', country)
         if legacy:
             raise TypeError(f"Unexpected options: {', '.join(legacy)}")
         region_code = (region or 'GLOBAL').upper()
-        if region_code not in regions.REGIONS:
-            raise InvalidInput(f"region must be one of: {', '.join(regions.REGIONS)}", code="bad-region", params={"code": region_code, "allowed": ', '.join(regions.REGIONS)})
+        known = regions.tables(catalog).regions
+        if region_code not in known:
+            raise InvalidInput(f"region must be one of: {', '.join(known)}", code="bad-region", params={"code": region_code, "allowed": ', '.join(known)})
         country_codes = [value.strip().upper() for value in (country or '').split(',') if value.strip()]
         for country_code in country_codes:
-            regions.normalize(country_code)
+            regions.normalize(country_code, None, catalog)
         country_code = ','.join(country_codes)
         metadata_json = json.dumps(metadata or {}, ensure_ascii=False)
         with self._conn() as connection:

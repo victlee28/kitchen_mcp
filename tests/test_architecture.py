@@ -92,6 +92,35 @@ class TestPortableCore(unittest.TestCase):
             rules.KITCHEN = old
         self.assertEqual(got, {"R1-import", "R1-kitchen-import", "R1-call", "R6-pydantic", "R14-broad-except", "R14-untyped-raise", "R16-module-state"})
 
+    def test_the_catalog_reaches_every_call(self):
+        """A function that holds a catalog passes it on: otherwise the callee falls back to the builtin one and the workshop / user
+        layers (or the design's snapshot) are ignored without a sign (four such calls were found by hand on 19/11/2026)."""
+        bad = rules.catalog_dropped()
+        self.assertFalse(bad, "Pass the catalog (or the design's ``dc``) on, not builtin.CATALOG and not nothing:\n" + "\n".join(bad))
+
+    def test_the_catalog_checker_catches_what_it_claims_to(self):
+        import shutil
+        import tempfile
+        old = rules.KITCHEN
+        d = Path(tempfile.mkdtemp())
+        try:
+            (d / "pkg").mkdir()
+            (d / "lib.py").write_text("def f(spec, catalog=None):\n    pass\ndef g(spec, *, catalog=None):\n    pass\n", encoding="utf-8")
+            (d / "pkg" / "__init__.py").write_text("from .inner import h\n", encoding="utf-8")
+            (d / "pkg" / "inner.py").write_text("def h(x, catalog=None):\n    pass\n", encoding="utf-8")
+            (d / "use.py").write_text(
+                "from . import builtin, lib, pkg\nfrom .lib import g\n"
+                "def ok(spec, catalog):\n    lib.f(spec, catalog)\n    g(spec, catalog=catalog)\n    pkg.h(1, catalog)\n"
+                "def no_catalog_here(spec):\n    lib.f(spec)\n"
+                "def dropped(spec, catalog):\n    lib.f(spec)\n    g(spec)\n    pkg.h(1)\n    lib.f(spec, builtin.CATALOG)\n"
+                "class Svc:\n    def catalog(self):\n        pass\n    def method(self, spec):\n        lib.f(spec)\n", encoding="utf-8")
+            rules.KITCHEN = d
+            got = sorted(x.split(" ", 1)[1] for x in rules.catalog_dropped())
+        finally:
+            rules.KITCHEN = old
+            shutil.rmtree(d, ignore_errors=True)
+        self.assertEqual(got, sorted(["dropped -> lib.f", "dropped -> lib.g", "dropped -> pkg.h", "dropped -> lib.f", "method -> lib.f"]))
+
 
 if __name__ == "__main__":
     unittest.main()

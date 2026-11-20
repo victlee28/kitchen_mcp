@@ -1,0 +1,129 @@
+[
+ {
+  "id": "ASSET-PANEL",
+  "category": "carcase",
+  "geometryType": "panel",
+  "defaultDimensions": [
+   600,
+   720,
+   18
+  ]
+ },
+ {
+  "id": "ASSET-DOOR-SLAB",
+  "category": "door_front",
+  "geometryType": "box",
+  "defaultDimensions": [
+   400,
+   700,
+   18
+  ]
+ },
+ {
+  "id": "ASSET-DOOR-GLASS",
+  "category": "door_front",
+  "geometryType": "procedural",
+  "defaultDimensions": [
+   400,
+   700,
+   18
+  ],
+  "parameters": {
+   "frameWidth": 50,
+   "glassThickness": 4
+  }
+ },
+ {
+  "id": "ASSET-DRAWER-FRONT",
+  "category": "drawer_front",
+  "geometryType": "box",
+  "defaultDimensions": [
+   600,
+   180,
+   18
+  ]
+ },
+ {
+  "id": "ASSET-SHELF",
+  "category": "shelf",
+  "geometryType": "panel",
+  "defaultDimensions": [
+   560,
+   18,
+   300
+  ]
+ },
+ {
+  "id": "ASSET-PLINTH",
+  "category": "plinth",
+  "geometryType": "box",
+  "defaultDimensions": [
+   600,
+   100,
+   480
+  ]
+ },
+ {
+  "id": "ASSET-COUNTERTOP",
+  "category": "countertop",
+  "geometryType": "extrusion",
+  "defaultDimensions": [
+   1000,
+   60,
+   600
+  ]
+ },
+ {
+  "id": "ASSET-HANDLE-BAR",
+  "category": "handle",
+  "geometryType": "procedural",
+  "defaultDimensions": [
+   12,
+   160,
+   30
+  ],
+  "parameters": {
+   "profile": "bar"
+  }
+ },
+ {
+  "id": "ASSET-HANDLE-KNOB",
+  "category": "handle",
+  "geometryType": "procedural",
+  "defaultDimensions": [
+   30,
+   30,
+   25
+  ]
+ },
+ {
+  "id": "ASSET-SINK",
+  "category": "sink",
+  "geometryType": "box",
+  "defaultDimensions": [
+   780,
+   200,
+   430
+  ]
+ },
+ {
+  "id": "ASSET-FAUCET",
+  "category": "faucet",
+  "geometryType": "procedural",
+  "defaultDimensions": [
+   40,
+   300,
+   200
+  ]
+ },
+ {
+  "id": "ASSET-APPLIANCE-BOX",
+  "category": "appliance",
+  "geometryType": "box",
+  "defaultDimensions": [
+   600,
+   850,
+   600
+  ]
+ }
+]

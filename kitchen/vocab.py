@@ -43,6 +43,11 @@ def _tables(catalog: Catalog) -> dict[str, list[Row]]:
     return out
 
 
+def weak_words(catalog: Catalog = builtin.CATALOG) -> frozenset[str]:
+    """Colour words whose unaccented form is a common word (``weak`` in catalog kind ``material-word``: "đỏ", "cam", "be"...)."""
+    return catalog.derived("vocab.weak", lambda c: frozenset(str(it.data["word"]) for it in c.all("material-word") if it.data.get("weak")))
+
+
 def colors(catalog: Catalog = builtin.CATALOG) -> list[Row]:
     return catalog.derived("vocab.tables", _tables)["color"]
 

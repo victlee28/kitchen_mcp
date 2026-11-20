@@ -1,0 +1,36 @@
+{
+ "function": "threejs_export.wall_thickness_limit",
+ "cases": [
+  {
+   "name": "measured",
+   "input": {
+    "wall": {
+     "thickness": 200
+    }
+   },
+   "expected": {
+    "limit": 250.0
+   }
+  },
+  {
+   "name": "none",
+   "input": {
+    "wall": {}
+   },
+   "expected": {
+    "limit": 150.0
+   }
+  },
+  {
+   "name": "thin",
+   "input": {
+    "wall": {
+     "thickness": 50
+    }
+   },
+   "expected": {
+    "limit": 100.0
+   }
+  }
+ ]
+}

@@ -1,0 +1,169 @@
+{
+ "function": "unit_system.layout",
+ "cases": [
+  {
+   "name": "wine 1800",
+   "input": {
+    "unit": "wine",
+    "length": 1800,
+    "common": {
+     "countertop": 850,
+     "cabinetTop": 2200,
+     "plinthHeight": 100,
+     "baseDepth": 600,
+     "upperDepth": 350,
+     "ceiling": 2700
+    }
+   },
+   "expected": {
+    "modules": [
+     {
+      "type": "tall",
+      "s": 0.0,
+      "width": 450.0,
+      "y": 0.0,
+      "height": 2200.0,
+      "depth": 400.0,
+      "name": "Cột tủ rượu",
+      "doors": [
+       450.0
+      ]
+     },
+     {
+      "type": "tall",
+      "s": 1350.0,
+      "width": 450.0,
+      "y": 0.0,
+      "height": 2200.0,
+      "depth": 400.0,
+      "name": "Cột tủ rượu",
+      "doors": [
+       450.0
+      ]
+     },
+     {
+      "type": "base",
+      "s": 450.0,
+      "width": 900.0,
+      "y": 0.0,
+      "height": 840.0,
+      "depth": 400.0,
+      "name": "Tủ rượu dưới",
+      "doors": [
+       450.0,
+       450.0
+      ]
+     },
+     {
+      "type": "upper-open",
+      "s": 450.0,
+      "width": 900.0,
+      "y": 1000.0,
+      "height": 300.0,
+      "depth": 300.0,
+      "name": "Hốc để chai rượu",
+      "shelfCount": 1
+     },
+     {
+      "type": "upper-glass",
+      "s": 450.0,
+      "width": 900.0,
+      "y": 1350.0,
+      "height": 850.0,
+      "depth": 300.0,
+      "name": "Tủ kính bày rượu",
+      "doors": [
+       450.0,
+       450.0
+      ]
+     }
+    ],
+    "runFields": {
+     "purpose": "unit",
+     "unitLayout": "wine"
+    }
+   }
+  },
+  {
+   "name": "low 2400",
+   "input": {
+    "unit": "low",
+    "length": 2400,
+    "common": {
+     "countertop": 850,
+     "cabinetTop": 2200,
+     "plinthHeight": 100,
+     "baseDepth": 600,
+     "upperDepth": 350,
+     "ceiling": 2700
+    }
+   },
+   "expected": {
+    "modules": [
+     {
+      "type": "base",
+      "s": 0.0,
+      "width": 800.0,
+      "y": 0.0,
+      "height": 840.0,
+      "depth": 560.0,
+      "name": "Tủ thấp",
+      "doors": [
+       400.0,
+       400.0
+      ]
+     },
+     {
+      "type": "base",
+      "s": 800.0,
+      "width": 800.0,
+      "y": 0.0,
+      "height": 840.0,
+      "depth": 560.0,
+      "name": "Tủ thấp",
+      "doors": [
+       400.0,
+       400.0
+      ]
+     },
+     {
+      "type": "base",
+      "s": 1600.0,
+      "width": 800.0,
+      "y": 0.0,
+      "height": 840.0,
+      "depth": 560.0,
+      "name": "Tủ thấp",
+      "doors": [
+       400.0,
+       400.0
+      ]
+     }
+    ],
+    "runFields": {
+     "purpose": "unit",
+     "unitLayout": "low"
+    }
+   }
+  },
+  {
+   "name": "unknown",
+   "input": {
+    "unit": "boat",
+    "length": 1000,
+    "common": {
+     "countertop": 850,
+     "cabinetTop": 2200,
+     "plinthHeight": 100,
+     "baseDepth": 600,
+     "upperDepth": 350,
+     "ceiling": 2700
+    }
+   },
+   "error": {
+    "kind": "validation",
+    "code": "unknown-unit-layout"
+   }
+  }
+ ]
+}

@@ -62,13 +62,13 @@ test('group menu: actions fit the role; one operation for every module, modules 
 
 test('image tab: Shift on a part uses its system group when the catalogue has one, the design-wide group otherwise', () => {
   const layers = [{ id: 'tier:base:door' }, { id: 'sys:furniture_003:tier:base:door' }, { id: 'sys:furniture_017:tier:base:door' }, { id: 'sys:furniture_003:tier:base:front' }, { id: 'tier:base:handle' }];
-  assert.equal(shiftGroupId({ storey: 'base', type: 'door', cabinetSystemId: 'furniture_003' }, layers), 'sys:furniture_003:tier:base:front', 'doors and drawer fronts together');
-  assert.equal(shiftGroupId({ storey: 'base', type: 'drawer', cabinetSystemId: 'furniture_003' }, layers), 'sys:furniture_003:tier:base:front');
-  assert.equal(shiftGroupId({ storey: 'base', type: 'glass-door', cabinetSystemId: 'furniture_017' }, layers), 'sys:furniture_017:tier:base:door', 'no fronts group (no drawers): the doors one');
-  assert.equal(shiftGroupId({ storey: 'base', type: 'carcass', cabinetSystemId: 'furniture_003' }, layers), 'sys:furniture_003:tier:base:front', '"all" was dropped as equal to "front"');
-  assert.equal(shiftGroupId({ storey: 'base', type: 'handle', cabinetSystemId: 'furniture_003' }, layers), null, 'never the design-wide handles of another system');
-  assert.equal(shiftGroupId({ storey: 'base', type: 'handle', cabinetSystemId: 'auto-R1' }, layers), 'tier:base:handle', 'one system: the design-wide group');
-  assert.equal(shiftGroupId({ storey: 'loft', type: 'door' }), 'tier:upper:front');
+  assert.equal(shiftGroupId({ storey: 'base', tier: 'base', type: 'door', cabinetSystemId: 'furniture_003' }, layers), 'sys:furniture_003:tier:base:front', 'doors and drawer fronts together');
+  assert.equal(shiftGroupId({ storey: 'base', tier: 'base', type: 'drawer', cabinetSystemId: 'furniture_003' }, layers), 'sys:furniture_003:tier:base:front');
+  assert.equal(shiftGroupId({ storey: 'base', tier: 'base', type: 'glass-door', cabinetSystemId: 'furniture_017' }, layers), 'sys:furniture_017:tier:base:door', 'no fronts group (no drawers): the doors one');
+  assert.equal(shiftGroupId({ storey: 'base', tier: 'base', type: 'carcass', cabinetSystemId: 'furniture_003' }, layers), 'sys:furniture_003:tier:base:front', '"all" was dropped as equal to "front"');
+  assert.equal(shiftGroupId({ storey: 'base', tier: 'base', type: 'handle', cabinetSystemId: 'furniture_003' }, layers), null, 'never the design-wide handles of another system');
+  assert.equal(shiftGroupId({ storey: 'base', tier: 'base', type: 'handle', cabinetSystemId: 'auto-R1' }, layers), 'tier:base:handle', 'one system: the design-wide group');
+  assert.equal(shiftGroupId({ storey: 'loft', tier: 'upper', type: 'door' }), 'tier:upper:front');
 });
 
 test('replacing a whole system: a sentence lays it out again, none restyles it', () => {

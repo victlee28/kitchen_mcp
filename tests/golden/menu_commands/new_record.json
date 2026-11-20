@@ -1,0 +1,175 @@
+{
+ "function": "menu_commands.new_record",
+ "cases": [
+  {
+   "name": "a command",
+   "input": {
+    "id": "20261119-101500-ab12",
+    "designId": "d1",
+    "text": "  đổi màu tủ dưới ",
+    "place": {
+     "kind": "module",
+     "id": "TD1"
+    },
+    "baseRev": 3,
+    "lang": "en",
+    "now": "2026-11-19T10:15:00Z"
+   },
+   "expected": {
+    "id": "20261119-101500-ab12",
+    "designId": "d1",
+    "text": "đổi màu tủ dưới",
+    "place": {
+     "kind": "module",
+     "id": "TD1"
+    },
+    "baseRev": 3,
+    "lang": "en",
+    "createdAt": "2026-11-19T10:15:00Z",
+    "status": "pending"
+   }
+  },
+  {
+   "name": "a reply takes the answered command's place",
+   "input": {
+    "id": "20261119-101600-cd34",
+    "designId": "d1",
+    "text": "màu xanh",
+    "place": {},
+    "baseRev": 4,
+    "lang": "xx",
+    "now": "2026-11-19T10:16:00Z",
+    "answering": {
+     "id": "20261119-101500-ab12",
+     "designId": "d1",
+     "text": "đổi màu tủ dưới",
+     "place": {
+      "kind": "module",
+      "id": "TD1"
+     },
+     "baseRev": 3,
+     "lang": "vi",
+     "createdAt": "2026-11-19T10:15:00Z",
+     "status": "question",
+     "reply": "Màu gì?",
+     "attachment": {
+      "name": "a.png"
+     }
+    }
+   },
+   "expected": {
+    "id": "20261119-101600-cd34",
+    "designId": "d1",
+    "text": "màu xanh",
+    "place": {
+     "kind": "module",
+     "id": "TD1"
+    },
+    "baseRev": 4,
+    "lang": "vi",
+    "createdAt": "2026-11-19T10:16:00Z",
+    "status": "pending",
+    "replyTo": "20261119-101500-ab12",
+    "context": {
+     "text": "đổi màu tủ dưới",
+     "reply": "Màu gì?",
+     "status": "question"
+    },
+    "attachment": {
+     "name": "a.png"
+    }
+   }
+  },
+  {
+   "name": "empty",
+   "input": {
+    "id": "20261119-101500-ab12",
+    "designId": "d1",
+    "text": "  ",
+    "now": "t"
+   },
+   "error": {
+    "kind": "validation",
+    "code": "command-empty"
+   }
+  },
+  {
+   "name": "too long",
+   "input": {
+    "id": "20261119-101500-ab12",
+    "designId": "d1",
+    "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "now": "t"
+   },
+   "error": {
+    "kind": "validation",
+    "code": "command-too-long"
+   }
+  },
+  {
+   "name": "bad id",
+   "input": {
+    "id": "x",
+    "designId": "d1",
+    "text": "a",
+    "now": "t"
+   },
+   "error": {
+    "kind": "validation",
+    "code": "command-bad-id"
+   }
+  },
+  {
+   "name": "reply to another design",
+   "input": {
+    "id": "20261119-101600-cd34",
+    "designId": "d2",
+    "text": "a",
+    "now": "t",
+    "answering": {
+     "id": "20261119-101500-ab12",
+     "designId": "d1",
+     "text": "đổi màu tủ dưới",
+     "place": {
+      "kind": "module",
+      "id": "TD1"
+     },
+     "baseRev": 3,
+     "lang": "vi",
+     "createdAt": "2026-11-19T10:15:00Z",
+     "status": "done"
+    }
+   },
+   "error": {
+    "kind": "validation",
+    "code": "command-reply-design"
+   }
+  },
+  {
+   "name": "reply to an open command",
+   "input": {
+    "id": "20261119-101600-cd34",
+    "designId": "d1",
+    "text": "a",
+    "now": "t",
+    "answering": {
+     "id": "20261119-101500-ab12",
+     "designId": "d1",
+     "text": "đổi màu tủ dưới",
+     "place": {
+      "kind": "module",
+      "id": "TD1"
+     },
+     "baseRev": 3,
+     "lang": "vi",
+     "createdAt": "2026-11-19T10:15:00Z",
+     "status": "pending"
+    }
+   },
+   "error": {
+    "kind": "validation",
+    "code": "command-reply-open"
+   }
+  }
+ ]
+}

@@ -1,0 +1,119 @@
+{
+ "function": "model_contract.from_openai",
+ "cases": [
+  {
+   "name": "a tool call with bad arguments",
+   "input": {
+    "data": {
+     "model": "gpt-x",
+     "usage": {
+      "prompt_tokens": 7,
+      "completion_tokens": 3
+     },
+     "choices": [
+      {
+       "finish_reason": "tool_calls",
+       "message": {
+        "content": null,
+        "tool_calls": [
+         {
+          "id": "a",
+          "function": {
+           "name": "f",
+           "arguments": "{\"x\": 2}"
+          }
+         },
+         {
+          "id": "b",
+          "function": {
+           "name": "g",
+           "arguments": "{bad"
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "expected": {
+    "text": "",
+    "calls": [
+     {
+      "id": "a",
+      "name": "f",
+      "arguments": {
+       "x": 2
+      }
+     },
+     {
+      "id": "b",
+      "name": "g",
+      "arguments": {}
+     }
+    ],
+    "input": 7,
+    "output": 3,
+    "stop": "tool",
+    "model": "gpt-x",
+    "message": {
+     "role": "assistant",
+     "text": "",
+     "calls": [
+      {
+       "id": "a",
+       "name": "f",
+       "arguments": {
+        "x": 2
+       }
+      },
+      {
+       "id": "b",
+       "name": "g",
+       "arguments": {}
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "text",
+   "input": {
+    "data": {
+     "choices": [
+      {
+       "finish_reason": "length",
+       "message": {
+        "content": "hi"
+       }
+      }
+     ]
+    }
+   },
+   "expected": {
+    "text": "hi",
+    "calls": [],
+    "input": 0,
+    "output": 0,
+    "stop": "length",
+    "model": "",
+    "message": {
+     "role": "assistant",
+     "text": "hi"
+    }
+   }
+  },
+  {
+   "name": "no choices",
+   "input": {
+    "data": {
+     "choices": []
+    }
+   },
+   "error": {
+    "kind": "validation",
+    "code": "model-bad-reply"
+   }
+  }
+ ]
+}

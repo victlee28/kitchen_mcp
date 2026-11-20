@@ -724,12 +724,17 @@ class KitchenService:
     def list_floorplan_rooms(self, data: dict[str, Any]) -> list[dict]:
         """List the rooms of an audited floorplan without importing anything."""
         from .floorplan import list_rooms
-        return list_rooms(data)
+        return list_rooms(data, kitchen_words=self._kitchen_words())
+
+    def _kitchen_words(self) -> list[str]:
+        """What names a kitchen unit on a floorplan (catalog ``defaults.autoPlace.kitchenWords``)."""
+        from . import auto_place
+        return [str(w) for w in auto_place.rules(self.catalog()).get("kitchenWords") or []]
 
     def import_floorplan(self, data: dict[str, Any], name: str | None=None, room_id: str | None=None) -> dict:
         """Validate an audited floorplan, keep its source once (by hash), and create a room-only design for one room."""
         from .floorplan import normalize
-        fp = normalize(data, room_id)
+        fp = normalize(data, room_id, self._kitchen_words())
         self.store.put_floorplan(fp['ref'], data)
         base_name = name or str(data.get('planId') or 'Floorplan design')
         spec = KitchenSpec(name=base_name, source='Imported audited floorplan', common=Common(ceiling=fp['height']), room=None, floorplan=fp)
@@ -795,7 +800,7 @@ class KitchenService:
             if hole is None or not pts:
                 skip(eid, 'no-wall')
                 continue
-            kind, preferred = opening_cmd.hole_type(e)
+            kind, preferred = opening_cmd.hole_type(e, catalog)
             type_id, size = auto.opening_choice(kind, preferred, float(numeric.round_half_away(hole[2], 0)), catalog)
             wish = {'action': 'make', 'kind': kind, 'type': type_id, **({'size': size} if size else {})}
             try:
@@ -1243,9 +1248,8 @@ class KitchenService:
         summary.append(words.said('summary.host-widens', id=h.id, old=h.width, new=need))
         return [{'op': 'update', 'id': h.id, 'changes': {'width': need, 'doors': [need / 2, need / 2] if need >= 600 else [need]}, 'closeGap': True}]
 
-    @staticmethod
-    def _structure_kind(spec: KitchenSpec, structure_id: str) -> str | None:
-        scene = geometry.compile_spec(spec)
+    def _structure_kind(self, spec: KitchenSpec, structure_id: str) -> str | None:
+        scene = geometry.compile_spec(spec, self.catalog())
         ctx = roomctx.for_spec(spec, scene.lsau, scene.lphai)
         if ctx is None:
             return None
@@ -1302,7 +1306,7 @@ class KitchenService:
                             changes['material'] = {**spec.common.material, **changes['material']}
                         after = [{'op': 'common', 'changes': changes}]
                 laid.append(cabinet_run.fit_depth(modules, round(p.depth)))
-            fields = tv_system.run_fields(tv_system.style_of(prompt)) if tv else unit_system.run_fields(unit) if unit is not None else None
+            fields = tv_system.run_fields(tv_system.style_of(prompt), self.catalog()) if tv else unit_system.run_fields(unit) if unit is not None else None
             plan = cabinet_run.plan_replace(spec, element, placed, laid, after, run_fields=fields)
             notes = [n for n in (described[1] if described else []) if words.key_of(n) != intent.NO_LENGTH]
             return {**plan, 'element': element, 'summary': [*plan['summary'], *notes]}
@@ -1494,7 +1498,7 @@ class KitchenService:
             if tv:
                 style = tv_system.style_of(prompt)
                 plan = run_line.plan_on_line(spec, line, tv_system.layout(run_line.run_frame(line)['length'], to_data(spec)['common'], style,
-                                                                          tv_system.wants_panel(prompt), self.catalog()), run_fields=tv_system.run_fields(style))
+                                                                          tv_system.wants_panel(prompt), self.catalog()), run_fields=tv_system.run_fields(style, self.catalog()))
             elif unit is not None:
                 plan = run_line.plan_on_line(spec, line, unit_system.layout(unit, run_line.run_frame(line)['length'], to_data(spec)['common'], self.catalog()),
                                              run_fields=unit_system.run_fields(unit))
@@ -1953,7 +1957,7 @@ class KitchenService:
         region_only = legacy.pop('region_only', region_only)
         if legacy:
             raise TypeError(f"Unexpected options: {', '.join(legacy)}")
-        return self.store.knowledge(query, kinds, country, region, region_only)
+        return self.store.knowledge(query, kinds, country, region, region_only, self.catalog())
 
     def molding_profiles(self, design_id: str | None=None) -> dict:
         """Return built-in molding profiles plus profiles defined by a design."""

@@ -54,3 +54,51 @@ def check(path: Path) -> list[str]:
         else:
             problems += [f"{label}: {d}" for d in differences(got, case["expected"], tol)]
     return problems
+
+
+def public_core_functions() -> list[tuple[str, str]]:
+    """(module, function) for every public top-level function of the portable core (``architecture_rules.CORE_ALL``)."""
+    import ast
+    import architecture_rules as rules
+    out: list[tuple[str, str]] = []
+    for m in rules.CORE_ALL:
+        tree = ast.parse(rules.module_path(m).read_text(encoding="utf-8"))
+        out += [(m, n.name) for n in tree.body if isinstance(n, ast.FunctionDef) and not n.name.startswith("_")]
+    return out
+
+
+def unpinned() -> set[str]:
+    """``module.function`` of the public core functions that no golden case runs (directly or through the function a case calls):
+    their behaviour is not pinned for the Rust port (rule R19). Measured by tracing the calls made while every case runs."""
+    import architecture_rules as rules
+    root = str(rules.KITCHEN.resolve())
+    called: set[tuple[str, str]] = set()
+
+    def trace(frame, event, _arg):
+        if event == "call" and frame.f_code.co_filename.startswith(root):
+            called.add((str(Path(frame.f_code.co_filename).resolve()), frame.f_code.co_name))
+
+    old = sys.getprofile()
+    sys.setprofile(trace)
+    try:
+        for path in files():
+            doc = load(path)
+            for case in doc["cases"]:
+                run_case(doc["function"], case)
+    finally:
+        sys.setprofile(old)
+    return {f"{m}.{f}" for m, f in public_core_functions() if (str(rules.module_path(m).resolve()), f) not in called}
+
+
+def unpinned_fresh() -> set[str]:
+    """``unpinned`` measured in a new interpreter: memo caches (``Catalog.derived``, cached lookups) warmed by earlier tests would hide calls."""
+    import subprocess
+    out = subprocess.run([sys.executable, str(Path(__file__).resolve()), "--unpinned"], capture_output=True, text=True, timeout=600,
+                         cwd=str(Path(__file__).resolve().parent.parent))
+    if out.returncode != 0:
+        raise RuntimeError(out.stderr[-2000:])
+    return set(json.loads(out.stdout.strip().splitlines()[-1]))
+
+
+if __name__ == "__main__" and "--unpinned" in sys.argv:
+    print(json.dumps(sorted(unpinned())))

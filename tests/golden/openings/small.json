@@ -1,0 +1,443 @@
+{
+ "function": "openings.small",
+ "cases": [
+  {
+   "name": "facing, kinds, frames, nearest, stretch",
+   "input": {
+    "floorplan": {
+     "outline": [
+      {
+       "x": 0.0,
+       "z": 0.0
+      },
+      {
+       "x": 1800.0,
+       "z": 0.0
+      },
+      {
+       "x": 3600.0,
+       "z": 0.0
+      },
+      {
+       "x": 3600.0,
+       "z": 3000.0
+      },
+      {
+       "x": 0.0,
+       "z": 3000.0
+      }
+     ],
+     "walls": [
+      {
+       "id": "WALL-FP-1",
+       "edge": 0,
+       "thickness": 100.0,
+       "thicknessSource": "measured",
+       "sourceElement": "wall_001",
+       "height": 3000,
+       "start": {
+        "x": 0.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "end": {
+        "x": 1800.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "interiorNormal": {
+        "x": 0.0,
+        "y": 0,
+        "z": 1.0
+       },
+       "openings": []
+      },
+      {
+       "id": "WALL-FP-2",
+       "edge": 1,
+       "thickness": 100.0,
+       "thicknessSource": "measured",
+       "sourceElement": "wall_002",
+       "height": 3000,
+       "start": {
+        "x": 1800.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "end": {
+        "x": 3600.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "interiorNormal": {
+        "x": 0.0,
+        "y": 0,
+        "z": 1.0
+       },
+       "openings": []
+      },
+      {
+       "id": "WALL-FP-3",
+       "edge": 2,
+       "thickness": 200.0,
+       "thicknessSource": "measured",
+       "sourceElement": "wall_003",
+       "height": 3000,
+       "start": {
+        "x": 3600.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "end": {
+        "x": 3600.0,
+        "y": 0,
+        "z": 3000.0
+       },
+       "interiorNormal": {
+        "x": -1.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "openings": []
+      },
+      {
+       "id": "WALL-FP-4",
+       "edge": 3,
+       "thickness": 100.0,
+       "thicknessSource": "measured",
+       "sourceElement": "wall_004",
+       "height": 3000,
+       "start": {
+        "x": 3600.0,
+        "y": 0,
+        "z": 3000.0
+       },
+       "end": {
+        "x": 0.0,
+        "y": 0,
+        "z": 3000.0
+       },
+       "interiorNormal": {
+        "x": 0.0,
+        "y": 0,
+        "z": -1.0
+       },
+       "openings": []
+      },
+      {
+       "id": "WALL-FP-5",
+       "edge": 4,
+       "thickness": 100.0,
+       "thicknessSource": "measured",
+       "sourceElement": "wall_005",
+       "height": 3000,
+       "start": {
+        "x": 0.0,
+        "y": 0,
+        "z": 3000.0
+       },
+       "end": {
+        "x": 0.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "interiorNormal": {
+        "x": 1.0,
+        "y": 0,
+        "z": 0.0
+       },
+       "openings": []
+      }
+     ],
+     "elements": [
+      {
+       "id": "wall_001",
+       "kind": "wall",
+       "tag": "wall",
+       "outline": [
+        {
+         "x": -100.0,
+         "z": -100.0
+        },
+        {
+         "x": 1000.0,
+         "z": -100.0
+        },
+        {
+         "x": 1000.0,
+         "z": 0.0
+        },
+        {
+         "x": -100.0,
+         "z": 0.0
+        }
+       ]
+      },
+      {
+       "id": "wall_002",
+       "kind": "wall",
+       "tag": "wall",
+       "outline": [
+        {
+         "x": 1900.0,
+         "z": -100.0
+        },
+        {
+         "x": 3800.0,
+         "z": -100.0
+        },
+        {
+         "x": 3800.0,
+         "z": 0.0
+        },
+        {
+         "x": 1900.0,
+         "z": 0.0
+        }
+       ]
+      }
+     ],
+     "binding": null
+    },
+    "facing": [
+     [
+      "+",
+      0
+     ],
+     [
+      "-",
+      0
+     ],
+     [
+      "+",
+      2
+     ],
+     [
+      "in",
+      0
+     ],
+     [
+      null,
+      0
+     ],
+     [
+      "+",
+      null
+     ]
+    ],
+    "kinds": [
+     "door",
+     "window",
+     "passage",
+     "boat"
+    ],
+    "sOfPoint": [
+     [
+      0,
+      [
+       1000.0,
+       0.0
+      ]
+     ],
+     [
+      2,
+      [
+       3600.0,
+       1500.0
+      ]
+     ]
+    ],
+    "fromInnerCorner": [
+     [
+      0,
+      1000.0,
+      "start"
+     ],
+     [
+      0,
+      1000.0,
+      "end"
+     ]
+    ],
+    "nearest": [
+     [
+      [
+       2500.0,
+       50.0
+      ],
+      900.0
+     ],
+     [
+      [
+       2500.0,
+       1500.0
+      ],
+      900.0
+     ],
+     [
+      [
+       2500.0,
+       1500.0
+      ],
+      10000.0
+     ]
+    ],
+    "movedAlong": [
+     [
+      {
+       "id": "WA-x",
+       "start": [
+        0.0,
+        0.0
+       ],
+       "dir": [
+        1.0,
+        0.0
+       ],
+       "length": 3000.0
+      },
+      0
+     ],
+     [
+      {
+       "id": "WA-x",
+       "start": [
+        500.0,
+        0.0
+       ],
+       "dir": [
+        1.0,
+        0.0
+       ],
+       "length": 3000.0
+      },
+      0
+     ],
+     [
+      {
+       "id": "WA-x",
+       "start": [
+        0.0,
+        0.0
+       ],
+       "dir": [
+        0.0,
+        1.0
+       ],
+       "length": 3000.0
+      },
+      0
+     ]
+    ]
+   },
+   "expected": {
+    "facing": [
+     "in",
+     "out",
+     "out",
+     null,
+     null,
+     null
+    ],
+    "forKind": {
+     "door": [
+      "door-swing-1",
+      "door-swing-1-transom",
+      "door-swing-2",
+      "door-swing-2-transom",
+      "door-swing-2-unequal",
+      "door-sliding-2",
+      "door-sliding-4",
+      "door-sliding-4-transom",
+      "door-folding-4"
+     ],
+     "window": [
+      "window-fixed",
+      "window-swing-2",
+      "window-swing-2-top",
+      "window-top-hung",
+      "window-sliding-2"
+     ],
+     "passage": [
+      "passage"
+     ],
+     "boat": []
+    },
+    "sOfPoint": [
+     1050.0,
+     3650.0
+    ],
+    "fromInnerCorner": [
+     1050.0,
+     2650.0
+    ],
+    "nearest": [
+     [
+      "WA-wall_001",
+      2550.0
+     ],
+     null,
+     [
+      "WA-wall_003",
+      1550.0
+     ]
+    ],
+    "movedAlong": [
+     null,
+     null,
+     null
+    ]
+   }
+  },
+  {
+   "name": "no floorplan: the default room's axes",
+   "input": {
+    "room": {
+     "back": 3600,
+     "side": 3000
+    },
+    "facing": [
+     [
+      "+",
+      0
+     ]
+    ],
+    "nearest": [
+     [
+      [
+       -1800.0,
+       10.0
+      ],
+      900.0
+     ]
+    ],
+    "kinds": [
+     "window"
+    ]
+   },
+   "expected": {
+    "facing": [
+     "out"
+    ],
+    "forKind": {
+     "window": [
+      "window-fixed",
+      "window-swing-2",
+      "window-swing-2-top",
+      "window-top-hung",
+      "window-sliding-2"
+     ]
+    },
+    "sOfPoint": [],
+    "fromInnerCorner": [],
+    "nearest": [
+     [
+      "back",
+      1850.0
+     ]
+    ],
+    "movedAlong": []
+   }
+  }
+ ]
+}

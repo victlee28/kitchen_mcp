@@ -1,0 +1,204 @@
+{
+ "function": "catalog.snapshot",
+ "cases": [
+  {
+   "name": "the design's items replace the later ones",
+   "input": {
+    "items": [
+     {
+      "kind": "material",
+      "id": "oak",
+      "data": {
+       "name": "Oak",
+       "look": "warm"
+      }
+     },
+     {
+      "kind": "look",
+      "id": "warm",
+      "data": {
+       "rgb": "#a05"
+      }
+     },
+     {
+      "kind": "material",
+      "id": "ash",
+      "data": {
+       "name": "Ash"
+      }
+     }
+    ],
+    "kinds": {
+     "material": {
+      "label": {
+       "vi": "Vật liệu",
+       "en": "Materials"
+      },
+      "writers": [
+       "user"
+      ],
+      "usedBy": [
+       "common.material.base"
+      ],
+      "refs": [
+       [
+        "look",
+        "look"
+       ]
+      ]
+     },
+     "look": {
+      "label": {
+       "vi": "Vẻ",
+       "en": "Looks"
+      },
+      "writers": [
+       "user"
+      ]
+     }
+    },
+    "spec": {
+     "common": {
+      "material": {
+       "base": "oak",
+       "upper": "ash"
+      }
+     }
+    },
+    "later": [
+     {
+      "kind": "material",
+      "id": "oak",
+      "data": {
+       "name": "Oak v2",
+       "look": "warm"
+      }
+     },
+     {
+      "kind": "look",
+      "id": "warm",
+      "data": {
+       "rgb": "#fff"
+      }
+     },
+     {
+      "kind": "material",
+      "id": "pine",
+      "data": {
+       "name": "Pine"
+      }
+     }
+    ]
+   },
+   "expected": {
+    "used": [
+     [
+      "material",
+      "oak"
+     ],
+     [
+      "look",
+      "warm"
+     ]
+    ],
+    "rebuilt": [
+     {
+      "kind": "material",
+      "id": "oak",
+      "source": "snapshot",
+      "version": 1,
+      "data": {
+       "name": "Oak",
+       "look": "warm"
+      }
+     },
+     {
+      "kind": "look",
+      "id": "warm",
+      "source": "snapshot",
+      "version": 1,
+      "data": {
+       "rgb": "#a05"
+      }
+     },
+     {
+      "kind": "material",
+      "id": "pine",
+      "source": "builtin",
+      "version": 1,
+      "data": {
+       "name": "Pine"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "name": "a whole kind is replaced",
+   "input": {
+    "items": [
+     {
+      "kind": "look",
+      "id": "warm",
+      "data": {
+       "rgb": "#a05"
+      }
+     }
+    ],
+    "kinds": {
+     "look": {
+      "label": {
+       "vi": "Vẻ",
+       "en": "Looks"
+      },
+      "writers": [
+       "user"
+      ],
+      "usedBy": [
+       "look"
+      ]
+     }
+    },
+    "spec": {
+     "look": "warm"
+    },
+    "later": [
+     {
+      "kind": "look",
+      "id": "warm",
+      "data": {
+       "rgb": "#fff"
+      }
+     },
+     {
+      "kind": "look",
+      "id": "cold",
+      "data": {}
+     }
+    ],
+    "whole": [
+     "look"
+    ]
+   },
+   "expected": {
+    "used": [
+     [
+      "look",
+      "warm"
+     ]
+    ],
+    "rebuilt": [
+     {
+      "kind": "look",
+      "id": "warm",
+      "source": "snapshot",
+      "version": 1,
+      "data": {
+       "rgb": "#a05"
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

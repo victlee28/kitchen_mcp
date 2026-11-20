@@ -1,0 +1,91 @@
+{
+ "function": "edit.material_sample",
+ "cases": [
+  {
+   "name": "with colour",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "op": {
+     "op": "material-sample",
+     "name": "Đá marble trắng vân xám",
+     "sample": "smp-0123456789abcdef",
+     "color": "#EEEEEE"
+    }
+   },
+   "expected": {
+    "diff": {
+     "modules": {
+      "added": [],
+      "removed": [],
+      "changed": {}
+     },
+     "other": [
+      {
+       "path": "materialSamples",
+       "old": null,
+       "new": {
+        "Đá marble trắng vân xám": {
+         "sample": "smp-0123456789abcdef",
+         "color": "#eeeeee"
+        }
+       }
+      }
+     ],
+     "truncated": false
+    },
+    "runs": [
+     {
+      "id": "R1",
+      "x": -1920.0,
+      "z": 0.0,
+      "yaw": 0.0,
+      "anchor": "end"
+     },
+     {
+      "id": "R2",
+      "x": -0.0,
+      "z": 0.0,
+      "yaw": -90.0
+     }
+    ]
+   }
+  },
+  {
+   "name": "bad colour",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "op": {
+     "op": "material-sample",
+     "name": "x",
+     "sample": "smp-0123456789abcdef",
+     "color": "red"
+    }
+   },
+   "error": {
+    "kind": "validation",
+    "code": "bad-color"
+   }
+  },
+  {
+   "name": "no name",
+   "input": {
+    "spec": {
+     "$fixture": "fixtures/l-shaped-kitchen.json"
+    },
+    "op": {
+     "op": "material-sample",
+     "name": "",
+     "sample": "smp-0123456789abcdef"
+    }
+   },
+   "error": {
+    "kind": "validation",
+    "code": "bad-material"
+   }
+  }
+ ]
+}

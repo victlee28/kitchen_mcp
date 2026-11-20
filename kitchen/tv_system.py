@@ -29,7 +29,6 @@ CONSOLE_MAX_MM = 1200.0       # widest console cabinet; a longer stretch is spli
 TV_CENTER_MM = 1100.0         # height of the middle of the screen (seated eye level)
 # the sizes of each layout (columns from 2400 mm, shelf heights, the "full" wall cabinets...) are the layout's data (catalog kind tv-layout)
 PANEL_THICKNESS_MM = 18.0
-STYLES = ("columns", "shelves", "full")
 TV_DEPTH_MM = 30.0
 
 
@@ -88,9 +87,9 @@ def wants_panel(text: str | None) -> bool:
     return not lexicon.pattern("tv.no-panel").search(_plain(str(text or "")))
 
 
-def run_fields(style: str) -> dict[str, Any]:
-    """What a TV unit's run carries besides its place."""
-    return {"purpose": PURPOSE, "tvLayout": style if style in STYLES else "columns"}
+def run_fields(style: str, catalog: Catalog = builtin.CATALOG) -> dict[str, Any]:
+    """What a TV unit's run carries besides its place; a layout the catalog does not have (kind ``tv-layout``) becomes ``columns``."""
+    return {"purpose": PURPOSE, "tvLayout": style if style in layouts(catalog) else "columns"}
 
 
 def front_of(common: dict[str, Any]) -> str:

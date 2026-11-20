@@ -1,0 +1,170 @@
+{
+ "function": "catalog.merge",
+ "cases": [
+  {
+   "name": "user over workshop over builtin; a disabled entry hides the item",
+   "input": {
+    "entries": [
+     {
+      "kind": "material",
+      "id": "oak",
+      "scope": "builtin",
+      "data": {
+       "name": "Oak",
+       "rgb": "#a0522d"
+      }
+     },
+     {
+      "kind": "material",
+      "id": "oak",
+      "scope": "workshop",
+      "data": {
+       "name": "Oak (workshop)"
+      }
+     },
+     {
+      "kind": "material",
+      "id": "oak",
+      "scope": "user:default",
+      "data": {
+       "name": "Oak (mine)"
+      }
+     },
+     {
+      "kind": "material",
+      "id": "ash",
+      "scope": "builtin",
+      "data": {
+       "name": "Ash"
+      }
+     },
+     {
+      "kind": "material",
+      "id": "ash",
+      "scope": "workshop",
+      "data": {},
+      "disabled": true
+     },
+     {
+      "kind": "style",
+      "id": "modern",
+      "scope": "builtin",
+      "data": {
+       "label": "Modern"
+      }
+     }
+    ],
+    "ranks": [
+     "builtin",
+     "workshop",
+     "user:default",
+     "user:bob",
+     "other"
+    ],
+    "user": [
+     "bob"
+    ]
+   },
+   "expected": {
+    "items": [
+     {
+      "kind": "material",
+      "id": "oak",
+      "source": "user:default",
+      "version": 1,
+      "data": {
+       "name": "Oak (mine)"
+      }
+     },
+     {
+      "kind": "style",
+      "id": "modern",
+      "source": "builtin",
+      "version": 1,
+      "data": {
+       "label": "Modern"
+      }
+     }
+    ],
+    "ranks": {
+     "builtin": 0,
+     "workshop": 1,
+     "user:default": 2,
+     "user:bob": 2,
+     "other": -1
+    },
+    "userScope": "user:bob"
+   }
+  },
+  {
+   "name": "only the builtin and workshop layers",
+   "input": {
+    "entries": [
+     {
+      "kind": "material",
+      "id": "oak",
+      "scope": "builtin",
+      "data": {
+       "name": "Oak"
+      }
+     },
+     {
+      "kind": "material",
+      "id": "oak",
+      "scope": "user:default",
+      "data": {
+       "name": "Oak (mine)"
+      }
+     },
+     {
+      "kind": "material",
+      "id": "teak",
+      "scope": "workshop",
+      "data": {
+       "name": "Teak"
+      }
+     }
+    ],
+    "scopes": [
+     "builtin",
+     "workshop"
+    ]
+   },
+   "expected": {
+    "items": [
+     {
+      "kind": "material",
+      "id": "oak",
+      "source": "builtin",
+      "version": 1,
+      "data": {
+       "name": "Oak"
+      }
+     },
+     {
+      "kind": "material",
+      "id": "teak",
+      "source": "workshop",
+      "version": 1,
+      "data": {
+       "name": "Teak"
+      }
+     }
+    ],
+    "ranks": {},
+    "userScope": "user:default"
+   }
+  },
+  {
+   "name": "nothing",
+   "input": {
+    "entries": []
+   },
+   "expected": {
+    "items": [],
+    "ranks": {},
+    "userScope": "user:default"
+   }
+  }
+ ]
+}

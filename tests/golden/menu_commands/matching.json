@@ -1,0 +1,170 @@
+{
+ "function": "menu_commands.matching",
+ "cases": [
+  {
+   "name": "by status and design, oldest first",
+   "input": {
+    "records": [
+     {
+      "id": "20261119-101700-0003",
+      "designId": "d1",
+      "text": "đổi màu tủ dưới",
+      "place": {
+       "kind": "module",
+       "id": "TD1"
+      },
+      "baseRev": 3,
+      "lang": "vi",
+      "createdAt": "2026-11-19T10:15:00Z",
+      "status": "pending"
+     },
+     {
+      "id": "20261119-101500-0001",
+      "designId": "d1",
+      "text": "đổi màu tủ dưới",
+      "place": {
+       "kind": "module",
+       "id": "TD1"
+      },
+      "baseRev": 3,
+      "lang": "vi",
+      "createdAt": "2026-11-19T10:15:00Z",
+      "status": "pending"
+     },
+     {
+      "id": "20261119-101600-0002",
+      "designId": "d2",
+      "text": "đổi màu tủ dưới",
+      "place": {
+       "kind": "module",
+       "id": "TD1"
+      },
+      "baseRev": 3,
+      "lang": "vi",
+      "createdAt": "2026-11-19T10:15:00Z",
+      "status": "pending"
+     },
+     {
+      "id": "20261119-101400-0000",
+      "designId": "d1",
+      "text": "đổi màu tủ dưới",
+      "place": {
+       "kind": "module",
+       "id": "TD1"
+      },
+      "baseRev": 3,
+      "lang": "vi",
+      "createdAt": "2026-11-19T10:15:00Z",
+      "status": "done"
+     }
+    ],
+    "status": "pending",
+    "designId": "d1"
+   },
+   "expected": {
+    "records": [
+     {
+      "id": "20261119-101500-0001",
+      "designId": "d1",
+      "text": "đổi màu tủ dưới",
+      "place": {
+       "kind": "module",
+       "id": "TD1"
+      },
+      "baseRev": 3,
+      "lang": "vi",
+      "createdAt": "2026-11-19T10:15:00Z",
+      "status": "pending"
+     },
+     {
+      "id": "20261119-101700-0003",
+      "designId": "d1",
+      "text": "đổi màu tủ dưới",
+      "place": {
+       "kind": "module",
+       "id": "TD1"
+      },
+      "baseRev": 3,
+      "lang": "vi",
+      "createdAt": "2026-11-19T10:15:00Z",
+      "status": "pending"
+     }
+    ]
+   }
+  },
+  {
+   "name": "everything",
+   "input": {
+    "records": [
+     {
+      "id": "b",
+      "designId": "d1",
+      "text": "đổi màu tủ dưới",
+      "place": {
+       "kind": "module",
+       "id": "TD1"
+      },
+      "baseRev": 3,
+      "lang": "vi",
+      "createdAt": "2026-11-19T10:15:00Z",
+      "status": "pending"
+     },
+     {
+      "id": "a",
+      "designId": "d1",
+      "text": "đổi màu tủ dưới",
+      "place": {
+       "kind": "module",
+       "id": "TD1"
+      },
+      "baseRev": 3,
+      "lang": "vi",
+      "createdAt": "2026-11-19T10:15:00Z",
+      "status": "pending"
+     }
+    ]
+   },
+   "expected": {
+    "records": [
+     {
+      "id": "a",
+      "designId": "d1",
+      "text": "đổi màu tủ dưới",
+      "place": {
+       "kind": "module",
+       "id": "TD1"
+      },
+      "baseRev": 3,
+      "lang": "vi",
+      "createdAt": "2026-11-19T10:15:00Z",
+      "status": "pending"
+     },
+     {
+      "id": "b",
+      "designId": "d1",
+      "text": "đổi màu tủ dưới",
+      "place": {
+       "kind": "module",
+       "id": "TD1"
+      },
+      "baseRev": 3,
+      "lang": "vi",
+      "createdAt": "2026-11-19T10:15:00Z",
+      "status": "pending"
+     }
+    ]
+   }
+  },
+  {
+   "name": "bad status",
+   "input": {
+    "records": [],
+    "status": "nope"
+   },
+   "error": {
+    "kind": "validation",
+    "code": "command-bad-status"
+   }
+  }
+ ]
+}

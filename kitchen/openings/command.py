@@ -25,16 +25,14 @@ from ..jsonview import as_dict
 from ..numeric import round_half_away
 from .contract import Opening
 from .normalize import normalize, width_range
-from .types import DEFAULT_TYPE, get, num
+from .types import default_type, get, num
 from .wall_axes import WallAxis, nearest
 
 Pt = tuple[float, float]
 REACH_MM = 900.0               # a click farther than this from every wall axis is on no wall
-FALLBACK_WIDTH = {"door": 900.0, "window": 1200.0, "passage": 900.0}
-
-
 def default_width(type_data: Mapping[str, Any], kind: str) -> float:
-    return num(type_data, "defaultWidth", FALLBACK_WIDTH.get(kind, 900.0))
+    """The type's ``defaultWidth`` (``types.get`` fills it from ``defaults.openingKinds`` when the type leaves it out)."""
+    return num(type_data, "defaultWidth", 900.0 if kind != "window" else 1200.0)
 
 
 class SizeQuestion(InvalidInput):
@@ -94,7 +92,7 @@ def operation(wish: Mapping[str, Any], point: Pt, axes: Sequence[WallAxis], cata
         facts.update({k: changes[k] for k in ("width", "height", "sill") if k in changes})
         return {"op": "update-opening", "id": oid, "changes": changes}, "edited", facts
     if target is not None:
-        type_id = str(named or (target.opening_type if target.kind == kind else DEFAULT_TYPE.get(kind, "door-swing-1")))
+        type_id = str(named or (target.opening_type if target.kind == kind else default_type(catalog, kind)))
         data = get(catalog, type_id)
         kind = str(data.get("kind") or kind)
         height = float(height_asked) if height_asked else (target.height if target.kind == kind else num(data, "defaultHeight", 2200.0))
@@ -107,7 +105,7 @@ def operation(wish: Mapping[str, Any], point: Pt, axes: Sequence[WallAxis], cata
             float(sill_asked) if sill_asked is not None else target.sill if target.kind == "window" else window_sill(catalog))
         return ({"op": "update-opening", "id": target.source_element or target.id, "changes": changes}, "replaced",
                 {"id": target.id, "type": type_id, "width": width, "height": height, "sill": changes["sill"]})
-    type_id = str(named or DEFAULT_TYPE.get(kind, "door-swing-1"))
+    type_id = str(named or default_type(catalog, kind))
     data = get(catalog, type_id)
     kind = str(data.get("kind") or kind)
     height = float(height_asked) if height_asked else num(data, "defaultHeight", 2200.0 if kind != "window" else 1200.0)
@@ -166,20 +164,20 @@ def saved_type(opening: Opening, type_data: Mapping[str, Any], name: str) -> dic
     return data
 
 
-def hole_type(element: Mapping[str, Any]) -> tuple[str, str]:
-    """(kind, type id) of a floorplan opening element drawn without a type: its tag (door / window), a sliding or folding door when its
-    label says so ("Cửa trượt", "sliding"), else the kind's default type."""
-    from ..lexicon import fold
+def hole_type(element: Mapping[str, Any], catalog: Catalog) -> tuple[str, str]:
+    """(kind, type id) of a floorplan opening element drawn without a type: its tag (door / window), else its label (lexicon
+    ``opening.label-window``); the kind's sliding / folding type (``defaults.openingKinds.<kind>.sliding`` / ``folding``) when its label
+    says so (lexicon ``opening.label-sliding`` / ``opening.label-folding``: "Cửa trượt", "sliding"), else the kind's default type."""
+    from ..lexicon import fold, pattern
+    from .types import kind_defaults
     tag = str(element.get("tag") or "")
     label = fold(str(element.get("label") or ""))
-    kind = tag if tag in ("door", "window") else ("window" if "cua so" in label or "window" in label else "door")
-    if kind == "door" and ("truot" in label or "sliding" in label):
-        return kind, "door-sliding-2"
-    if kind == "door" and ("xep" in label or "folding" in label):
-        return kind, "door-folding-4"
-    if kind == "window" and ("truot" in label or "sliding" in label):
-        return kind, "window-sliding-2"
-    return kind, DEFAULT_TYPE.get(kind, "door-swing-1")
+    kind = tag if tag in ("door", "window") else ("window" if pattern("opening.label-window", catalog).search(label) else "door")
+    k = kind_defaults(catalog, kind)
+    for how in ("sliding", "folding"):
+        if k.get(how) and pattern(f"opening.label-{how}", catalog).search(label):
+            return kind, str(k[how])
+    return kind, default_type(catalog, kind)
 
 
 def hole_opening(point: Pt | None, axes: Sequence[WallAxis], catalog: Catalog, selected: str | None = None,
@@ -194,7 +192,7 @@ def hole_opening(point: Pt | None, axes: Sequence[WallAxis], catalog: Catalog, s
     if element is None or hole is None:
         return None
     axis, center, width = hole
-    kind, type_id = hole_type(element)
+    kind, type_id = hole_type(element, catalog)
     data = get(catalog, type_id)
     elev = as_dict(element.get("elev")) or {}
     drawn = elev.get("height")

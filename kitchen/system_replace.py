@@ -172,7 +172,6 @@ def _inherited(spec: KitchenSpec, mods: list[Module], catalog: Catalog = builtin
     return out
 
 
-APPLIANCE_TYPES = ("cooktop", "sink", "hood", "fridge", "oven", "faucet", "tv")   # a sentence naming one (dictionary ``appliance.<type>``) asks for a new one
 
 
 def kept_models(spec: KitchenSpec, mods: list[Module], said: str = "", catalog: Catalog = builtin.CATALOG) -> dict[str, dict[str, Any]]:
@@ -185,7 +184,7 @@ def kept_models(spec: KitchenSpec, mods: list[Module], said: str = "", catalog: 
     for a in spec.appliances:
         mid = getattr(a, "model", None)
         if a.module in ids and isinstance(mid, str) and mid in by_id and a.type not in out \
-                and not (a.type in APPLIANCE_TYPES and lexicon.pattern(f"appliance.{a.type}", catalog).search(text)):
+                and not lexicon.pattern(f"appliance.{a.type}", catalog).search(text):     # a sentence naming the kind (dictionary ``appliance.<type>``; none: never) asks for a new one
             out[a.type] = by_id[mid]
     return out
 

@@ -1,0 +1,70 @@
+{
+ "function": "menu_commands.dropped",
+ "cases": [
+  {
+   "name": "pending dropped",
+   "input": {
+    "record": {
+     "id": "20261119-101500-ab12",
+     "designId": "d1",
+     "text": "đổi màu tủ dưới",
+     "place": {
+      "kind": "module",
+      "id": "TD1"
+     },
+     "baseRev": 3,
+     "lang": "vi",
+     "createdAt": "2026-11-19T10:15:00Z",
+     "status": "pending"
+    },
+    "now": "t"
+   },
+   "expected": {
+    "id": "20261119-101500-ab12",
+    "designId": "d1",
+    "text": "đổi màu tủ dưới",
+    "place": {
+     "kind": "module",
+     "id": "TD1"
+    },
+    "baseRev": 3,
+    "lang": "vi",
+    "createdAt": "2026-11-19T10:15:00Z",
+    "status": "dropped",
+    "answeredAt": "t"
+   }
+  },
+  {
+   "name": "done unchanged",
+   "input": {
+    "record": {
+     "id": "20261119-101500-ab12",
+     "designId": "d1",
+     "text": "đổi màu tủ dưới",
+     "place": {
+      "kind": "module",
+      "id": "TD1"
+     },
+     "baseRev": 3,
+     "lang": "vi",
+     "createdAt": "2026-11-19T10:15:00Z",
+     "status": "done"
+    },
+    "now": "t"
+   },
+   "expected": {
+    "id": "20261119-101500-ab12",
+    "designId": "d1",
+    "text": "đổi màu tủ dưới",
+    "place": {
+     "kind": "module",
+     "id": "TD1"
+    },
+    "baseRev": 3,
+    "lang": "vi",
+    "createdAt": "2026-11-19T10:15:00Z",
+    "status": "done"
+   }
+  }
+ ]
+}

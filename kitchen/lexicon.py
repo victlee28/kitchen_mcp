@@ -25,6 +25,7 @@ from . import builtin, vocab
 from .catalog import Catalog
 from .jsonview import as_dict, as_list
 from .errors import require
+from .words import say
 
 STATUSES = ("built", "exported", "ai-only", "unsupported", "ambiguous")
 FRONT_SLOTS = ("base", "upper", "tall")
@@ -71,7 +72,6 @@ def _squash(s: str) -> str:
 
 
 # ------------------------------------------------------------------ bảng thuật ngữ (catalog kind ``lexicon`` + colour words)
-COLOR_WEAK = {"đỏ", "đen", "cam", "tím", "kem", "be"}  # dạng không dấu trùng từ thường
 _EN_EXTRA = {"xám": "gray"}
 COMMAND_PREFIX = "edit-"   # groups of the edit commands (edit_intent), kept out of the description matcher
 ALIAS_LANGS = ("vi", "en")   # the order aliases are tried in (all of them are tried; a longer phrase wins)
@@ -113,7 +113,7 @@ class Lexicon:
 def _build(catalog: Catalog) -> Lexicon:
     entries = [_entry(it.id, it.data) for it in catalog.all("lexicon") if not str(it.data.get("group", "")).startswith(COMMAND_PREFIX) and it.data.get("group") != "regex"]
     entries += [E(id=f"color.{k}", kind="color", aliases=tuple([k, *([en] if en else []), *([_EN_EXTRA[k]] if k in _EN_EXTRA else [])]),
-                  label=k, value=hx, weak=(k in COLOR_WEAK)) for k, hx, en in vocab.colors(catalog)]
+                  label=k, value=hx, weak=(k in vocab.weak_words(catalog))) for k, hx, en in vocab.colors(catalog)]
     patterns: list[tuple[re.Pattern[str], E, frozenset[str] | None]] = []
     for e in entries:
         for a in e.aliases:
@@ -266,7 +266,7 @@ def _compose(ms: list[M], slots: list[str]) -> str | None:
             elif e.id == "wood.oak" and not colors:
                 add(e.label)                     # "sồi" đứng một mình = tên cũ của dự án
             else:
-                add("Gỗ " + e.wood_plain if e.id != "wood.generic" else "Gỗ")
+                add(say("material.wood-named", wood=e.wood_plain) if e.id != "wood.generic" else say("material.wood-generic"))
         elif e.kind == "stone":
             if e.id == "stone.generic" and stone_specific:
                 continue
@@ -277,11 +277,11 @@ def _compose(ms: list[M], slots: list[str]) -> str | None:
         return None
     res = " ".join(parts)
     if "wallTile" in slots and not any(m.e.kind in ("stone", "tile") for m in ms):
-        res = "Đá " + res                       # "ốp đá trắng" -> "Đá trắng"
+        res = say("material.stone-named", stone=res)                      # "ốp đá trắng" -> "Đá trắng"
     if "countertop" in slots and not (stone_specific or any(m.e.kind in ("stone", "tile") for m in ms)):
-        res = "Đá nhân tạo " + res          # "mặt bàn trắng" -> "Đá nhân tạo trắng"
-    if res == "Đá granite":
-        res = "Đá granite tối"
+        res = say("material.engineered-stone", name=res)          # "mặt bàn trắng" -> "Đá nhân tạo trắng"
+    if res == say("material.granite"):
+        res = say("material.granite-dark")
     return _cap(res) if res[:1].islower() else res
 
 
@@ -326,10 +326,10 @@ def interpret(text: str, catalog: Catalog = builtin.CATALOG) -> Result:
         pick = sup[-1]
         res.updates["geometry_edit"] = pick.e.value
         for m in sup:
-            items.append(_item(m, None, m.e.value, "whole", "geometry_edit", message="" if m is pick else f"Có nhiều bố cục; dùng '{pick.e.value}' (nêu sau cùng)."))
+            items.append(_item(m, None, m.e.value, "whole", "geometry_edit", message="" if m is pick else say("note.layout-several", layout=pick.e.value)))
     elif any(m.e.status == "unsupported" for m in layouts):
         items.append(_item(None, None, "I", "whole", "geometry_edit", "ambiguous",
-                           "Không dựng được bố cục bạn mô tả nên đã tạo bếp chữ I mặc định; thiết kế này KHÔNG phải bố cục đó."))
+                           say("note.layout-fallback")))
     # 4. phong cách
     smatch = [m for m in chosen if m.e.kind == "style"]
     bases = [m for m in smatch if m.e.value[0]]
@@ -341,22 +341,23 @@ def interpret(text: str, catalog: Catalog = builtin.CATALOG) -> Result:
         st, tag = m.e.value
         if st:
             msg = ""
-            if len({b.e.value[0] for b in bases}) > 1 and m is not bases[-1]:
-                msg = f"Nhiều phong cách; hình học theo '{bases[-1].e.value[0]}' (nêu sau cùng)."
+            several = len({b.e.value[0] for b in bases}) > 1 and m is not bases[-1]
+            if several:
+                msg = say("note.style-several", style=bases[-1].e.value[0])
             if tag:
-                msg = (msg + " " if msg else "") + f"Hình học theo {st}; nhãn {tag} ghi thêm cho prompt ảnh."
-            items.append(_item(m, None, st, "whole", "style", "ambiguous" if msg.startswith("Nhiều") else "built", msg))
+                msg = (msg + " " if msg else "") + say("note.style-tag", style=st, tag=tag)
+            items.append(_item(m, None, st, "whole", "style", "ambiguous" if several else "built", msg))
         if tag and tag not in tags:
             tags.append(tag)
             items.append(_item(m, None, tag, "whole", "styleTags", "exported",
-                               "Ghi vào thiết kế, file 3D và prompt ảnh; không đổi hình học. Vật liệu đi kèm cần nêu riêng (vd 'gỗ sáng')."))
+                               say("note.style-tag-exported")))
     if tags:
         res.updates["styleTags"] = tags
     # 5. kịch trần, kệ mở
     for m in chosen:
         if m.e.kind == "loft":
             res.updates["loft"] = True
-            items.append(_item(m, None, "tủ nóc / kịch trần", "whole", "loft"))
+            items.append(_item(m, None, say("term.loft"), "whole", "loft"))
         elif m.e.kind == "unsupported":
             items.append(_item(m, None, m.e.value, "whole", "-"))
         elif m.e.kind == "feature":
@@ -373,7 +374,7 @@ def interpret(text: str, catalog: Catalog = builtin.CATALOG) -> Result:
             res.updates["fridge"] = True
             if m.e.ai:
                 res.updates.setdefault("renderPreferences", []).append(m.e.ai)
-            items.append(_item(m, None, "tủ lạnh", "whole", "fridge", "built"))
+            items.append(_item(m, None, say("term.fridge"), "whole", "fridge", "built"))
     # 6. tay nắm không / âm
     for m in chosen:
         if m.e.kind == "handlevar":
@@ -426,7 +427,7 @@ def interpret(text: str, catalog: Catalog = builtin.CATALOG) -> Result:
                                   "scope": ["wallTile"], "target": "common.backsplashHeightMm", "status": "built", "message": ""})
                 else:
                     items.append({"term": raw[span[0]:span[1]], "id": "bs.mm", "kind": "bsheight", "canonical": f"{round_int(mm)} mm", "scope": ["wallTile"],
-                                  "target": "common.backsplashHeightMm", "status": "ambiguous", "message": "Chiều cao ốp ngoài khoảng 50–3000 mm nên bỏ qua."})
+                                  "target": "common.backsplashHeightMm", "status": "ambiguous", "message": say("note.backsplash-out-of-range")})
     # che đoạn chiều cao ốp dạng từ (đã khớp bsheight) khỏi regex số
     # 10. vật liệu theo mệnh đề / đoạn
     material: dict[str, str] = {}
@@ -453,21 +454,21 @@ def interpret(text: str, catalog: Catalog = builtin.CATALOG) -> Result:
             if not slots:
                 if main is not None:
                     slots = [main.e.slot] if main.e.slot else []
-                    guessed = (f"Không nêu phạm vi nên áp cho '{slots[0]}' (đoán theo loại vật liệu)."
+                    guessed = (say("note.scope-guessed", slot=slots[0])
                                if slots and main.e.kind not in ("tile", "metal") else "")
                 else:
                     cols = [m.e.label for m in ms if m.e.kind == "color"]
                     if cols and cols[0] == "trắng":
-                        slots, guessed = ["upper"], "Không nêu phạm vi nên áp màu trắng cho tủ trên (đoán)."
+                        slots, guessed = ["upper"], say("note.white-to-upper")
                     else:
                         for m in ms:
                             if len(m.e.label) > 4:   # màu ngắn (ghi, kem, be…) quá dễ trùng từ thường: không báo
-                                items.append(_item(m, None, m.e.label, "?", "-", "ambiguous", "Chưa rõ áp cho vùng nào; hãy nêu 'tủ dưới…', 'mặt bàn…', 'tay nắm…'."))
+                                items.append(_item(m, None, m.e.label, "?", "-", "ambiguous", say("note.scope-unknown")))
                         continue
             if main is not None and main.e.kind == "metal" and "handle" not in slots:
                 for m in ms:
                     items.append(_item(m, None, m.e.label, slots, "-", "ambiguous",
-                                       "Kim loại chỉ áp cho tay nắm khi nêu rõ ('tay nắm đồng thau xước'); chưa áp lên các vùng khác."))
+                                       say("note.metal-handles-only")))
                 continue
             label = _compose(ms, slots)
             if not label:

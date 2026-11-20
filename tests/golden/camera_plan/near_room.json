@@ -1,0 +1,78 @@
+{
+ "function": "camera_plan.near_room",
+ "cases": [
+  {
+   "name": "inside, near, far",
+   "input": {
+    "room": [
+     [
+      0,
+      0
+     ],
+     [
+      4000,
+      0
+     ],
+     [
+      4000,
+      3000
+     ],
+     [
+      0,
+      3000
+     ]
+    ],
+    "reach": 500,
+    "points": [
+     [
+      2000,
+      1500
+     ],
+     [
+      4300,
+      1500
+     ],
+     [
+      5000,
+      1500
+     ],
+     [
+      -499,
+      -1
+     ],
+     [
+      -600,
+      3000
+     ]
+    ]
+   },
+   "expected": {
+    "near": [
+     true,
+     true,
+     false,
+     true,
+     false
+    ]
+   }
+  },
+  {
+   "name": "no room outline",
+   "input": {
+    "room": [],
+    "reach": 500,
+    "points": [
+     [
+      0,
+      0
+     ]
+    ]
+   },
+   "expected": {
+    "near": [
+     false
+    ]
+   }
+  }
+ ]
+}

@@ -30,7 +30,7 @@ class Base(unittest.TestCase):
 
 class TestCatalogue(unittest.TestCase):
     def test_every_type_has_one_default_and_complete_models(self):
-        for t in am.TYPES:
+        for t in sorted({m["type"] for m in MODELS}):
             self.assertEqual(sum(1 for m in MODELS if m["type"] == t and m.get("default")), 1, t)
         for m in MODELS:
             for key in ("id", "type", "name", "size", "mount", "box", "visual", "prompt"):

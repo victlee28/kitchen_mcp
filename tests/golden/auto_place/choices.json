@@ -1,0 +1,228 @@
+{
+ "function": "auto_place.choices",
+ "cases": [
+  {
+   "name": "furniture and openings",
+   "input": {
+    "outlines": [
+     [
+      [
+       0,
+       0
+      ],
+      [
+       2000,
+       0
+      ],
+      [
+       2000,
+       600
+      ],
+      [
+       0,
+       600
+      ]
+     ],
+     [
+      [
+       0,
+       0
+      ],
+      [
+       1000,
+       1000
+      ],
+      [
+       1300,
+       700
+      ],
+      [
+       300,
+       -300
+      ]
+     ]
+    ],
+    "furniture": [
+     [
+      {
+       "tag": "tv_unit",
+       "label": "Kệ tivi"
+      },
+      450
+     ],
+     [
+      {
+       "tag": "wine_cabinet",
+       "label": ""
+      },
+      400
+     ],
+     [
+      {
+       "tag": "cabinet",
+       "label": "Tủ bếp"
+      },
+      600
+     ],
+     [
+      {
+       "tag": "cabinet_kitchen_set",
+       "label": ""
+      },
+      300
+     ],
+     [
+      {
+       "tag": "sofa",
+       "label": "Sofa"
+      },
+      900
+     ],
+     [
+      {
+       "tag": "cabinet",
+       "label": "Tủ"
+      },
+      200
+     ]
+    ],
+    "openings": [
+     [
+      "door",
+      "door-swing-1",
+      900
+     ],
+     [
+      "door",
+      "door-sliding-2",
+      3920
+     ],
+     [
+      "window",
+      "window-swing-2",
+      1200
+     ],
+     [
+      "passage",
+      "passage",
+      1500
+     ]
+    ]
+   },
+   "expected": {
+    "rules": [
+     "cabinetTags",
+     "kitchenMinDepth",
+     "kitchenTags",
+     "kitchenWords",
+     "shallowUnit",
+     "tvTags",
+     "unitMinDepth",
+     "unitTags"
+    ],
+    "depths": [
+     600.0,
+     424.2640687119285
+    ],
+    "furniture": [
+     {
+      "kind": "tv",
+      "prompt": "Kệ tivi",
+      "unit": null,
+      "reason": "label"
+     },
+     {
+      "kind": "unit",
+      "prompt": null,
+      "unit": "wine",
+      "reason": "tag"
+     },
+     {
+      "kind": "kitchen",
+      "prompt": "Tủ bếp",
+      "unit": null,
+      "reason": "tag"
+     },
+     {
+      "kind": "kitchen",
+      "prompt": "kitchen",
+      "unit": null,
+      "reason": "tag"
+     },
+     {
+      "kind": "skip",
+      "prompt": null,
+      "unit": null,
+      "reason": "not-cabinet"
+     },
+     {
+      "kind": "skip",
+      "prompt": null,
+      "unit": null,
+      "reason": "too-shallow"
+     }
+    ],
+    "openings": [
+     [
+      "door-swing-1",
+      null
+     ],
+     [
+      "door-sliding-4",
+      null
+     ],
+     [
+      "window-swing-2",
+      null
+     ],
+     [
+      "passage",
+      null
+     ]
+    ]
+   }
+  },
+  {
+   "name": "a hole too wide for any type, a point outline",
+   "input": {
+    "outlines": [
+     [
+      [
+       0,
+       0
+      ]
+     ]
+    ],
+    "openings": [
+     [
+      "door",
+      "door-swing-1",
+      20000
+     ]
+    ]
+   },
+   "expected": {
+    "rules": [
+     "cabinetTags",
+     "kitchenMinDepth",
+     "kitchenTags",
+     "kitchenWords",
+     "shallowUnit",
+     "tvTags",
+     "unitMinDepth",
+     "unitTags"
+    ],
+    "depths": [
+     0.0
+    ],
+    "furniture": [],
+    "openings": [
+     [
+      "door-swing-1",
+      "keep"
+     ]
+    ]
+   }
+  }
+ ]
+}

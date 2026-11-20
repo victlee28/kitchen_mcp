@@ -685,7 +685,7 @@ def openings_and_bodies(spec: KitchenSpec, scene: Scene, catalog: Catalog = buil
     overridden = {o.sourceElement for o in spec.openings if o.sourceElement}
     found = [item for item in found if item.id not in overridden]          # floorplan openings the design replaces or removes
     for opening, axis in design_openings(spec, scene, catalog, ctx):
-        found.append(room_openings.world_opening(opening, axis, catalog.data("opening-type", opening.opening_type)))
+        found.append(room_openings.world_opening(opening, axis, room_openings.types.get(catalog, opening.opening_type)))
     storey = {m.id: m.storey for m in spec.module}
     cooktops = {t.id for t in spec.appliances if t.type == "cooktop"}
     pts: dict[str, list[tuple[float, float]]] = {}
@@ -738,21 +738,21 @@ def design_openings(spec: KitchenSpec, scene: Scene, catalog: Catalog = builtin.
     return out
 
 
-def room_solids(spec: KitchenSpec, scene: Scene) -> tuple[list[tuple[float, float]] | None, list[camera_plan.Obstacle]]:
+def room_solids(spec: KitchenSpec, scene: Scene, catalog: Catalog = builtin.CATALOG) -> tuple[list[tuple[float, float]] | None, list[camera_plan.Obstacle]]:
     """The room's floor outline and the solids of the imported floorplan that are not cabinets, in the kitchen frame; ``(None, [])`` without a floorplan."""
     try:
         ctx = roomctx.for_spec(spec, scene.lsau, scene.lphai)
     except ValueError:
         ctx = None
-    doors = [camera_plan.Obstacle(o.id, "room-opening", tuple(room_openings.shape(o, axis, room_openings.types.get(builtin.CATALOG, o.opening_type))["hole"]),
-                                  o.sill, o.sill + o.height) for o, axis in design_openings(spec, scene, builtin.CATALOG, ctx)]   # their frames and leaves hide cabinets too
+    doors = [camera_plan.Obstacle(o.id, "room-opening", tuple(room_openings.shape(o, axis, room_openings.types.get(catalog, o.opening_type))["hole"]),
+                                  o.sill, o.sill + o.height) for o, axis in design_openings(spec, scene, catalog, ctx)]   # their frames and leaves hide cabinets too
     if ctx is None:   # no floorplan: the room is the box the floor of the scene covers (walls behind the cabinets, open on the viewer's side)
         return [(-scene.lsau, 0.0), (0.0, 0.0), (0.0, scene.lphai + 3000.0), (-scene.lsau, scene.lphai + 3000.0)], doors
     to_kitchen = ctx.placement.to_kitchen
     room = [to_kitchen(float(q["x"]), float(q["z"])) for q in ctx.floorplan.get("outline", [])]
     solids: list[camera_plan.Obstacle] = list(doors)
     hidden = {o.sourceElement for o in spec.openings if o.sourceElement}
-    infill = room_openings.infill_structures(to_data(spec), builtin.CATALOG, opening_axes(spec, scene)) if any(o.removed for o in spec.openings) else []
+    infill = room_openings.infill_structures(to_data(spec), catalog, opening_axes(spec, scene)) if any(o.removed for o in spec.openings) else []
     for st in [*(x for x in ctx.structures if str(x.get("sourceElement") or x.get("id")) not in hidden), *infill]:
         outline = tuple(to_kitchen(float(p["x"]), float(p["z"])) for p in st["outline"])
         if len(outline) >= 3 and float(st.get("height") or 0) > 0:
@@ -795,7 +795,7 @@ def default_views(spec: KitchenSpec, scene: Scene | None = None, catalog: Catalo
         zs = [reach["left"] / 1000, 0]
         mz = (min(zs) + max(zs)) / 2
         views["left-wall"] = ViewAngle(name=say("name.view.left-wall"), position=(-scene.lsau / 1000 + span * 1.4 + 0.6, camera_plan.EYE / 1000, mz), lookAt=(-scene.lsau / 1000, 1.25, mz), verticalFov=48)
-    room, solids = room_solids(spec, scene)
+    room, solids = room_solids(spec, scene, catalog)
     faces = cabinet_faces(spec, scene)
     if faces and room is None:         # the fixed views of a kitchen without a floorplan: turned and opened so the cabinets fit
         for key, v in list(views.items()):

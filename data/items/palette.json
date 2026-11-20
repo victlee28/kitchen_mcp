@@ -307,5 +307,20 @@
    "steel": null,
    "panel": null
   }
+ },
+ {
+  "id": "storey",
+  "description": {
+   "vi": "Màu theo tầng tủ trong hình mẫu nhìn từ trên (trình soạn mẫu bố trí)",
+   "en": "Colours by cabinet storey in the top-view samples (layout template editor)"
+  },
+  "colors": {
+   "base": "#c9a777",
+   "tall": "#8b6b45",
+   "upper": "#d9d2c3",
+   "loft": "#e8e3d8",
+   "corner": "#b8c4a8"
+  },
+  "fallback": "#cccccc"
  }
 ]

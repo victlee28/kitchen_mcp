@@ -17,38 +17,14 @@ ROUND_BASELINE: dict[str, int] = {}
 # (docstrings and comments do not count). THESE NUMBERS MAY ONLY GO DOWN: the test fails when a count goes up, when a file not listed here
 # gains one, and when a count went down without being lowered here.
 VIETNAMESE_BASELINE: dict[str, int] = {
-    # Data-driven stage 4 (command dictionary: words and patterns that read what people type)
-    "kitchen/lexicon.py": 30,
-    "kitchen/intent.py": 32,
-    "kitchen/regions.py": 4,
+    # What is left reads Vietnamese text itself: letter ranges in regexes ([a-zà-ỹ]), folding "đ", the unit "mét", yes/no cells of a CSV,
+    # a few colour / sink words of the matchers. Wording people read lives in data/i18n, the command words in the catalog.
     "kitchen/appliance_models.py": 1,
-    "kitchen/floorplan/structures.py": 2,
-    "kitchen/floorplan/document.py": 1,
-    "kitchen/prompts/photo.py": 19,
-    "kitchen/vocab.py": 4,
     "kitchen/catalog_csv.py": 3,
+    "kitchen/intent.py": 4,
+    "kitchen/lexicon.py": 3,
+    "kitchen/regions.py": 4,
     "kitchen/store.py": 1,
     "kitchen/tv_system.py": 1,
-    # Data-driven stage 5 (default material names, written into designs)
-    "kitchen/layers.py": 13,
-    "kitchen/threejs_export.py": 7,
-    "kitchen/handles.py": 3,
-    "kitchen/prompts/layer.py": 1,
-    "kitchen/geometry_edit.py": 8,
-    # Messages still to move to data/i18n (field descriptions of the design schema, request checks, image jobs, backends, notes)
-    "kitchen/ai_export.py": 1,
-    "kitchen/backends.py": 9,
-    "kitchen/floorplan/binding.py": 2,
-    "kitchen/images/base_images.py": 1,
-    "kitchen/images/common.py": 18,
-    "kitchen/images/packages.py": 1,
-    "kitchen/images/request_builder.py": 2,
-    "kitchen/images/results.py": 8,
-    "kitchen/images/runners.py": 2,
-    "kitchen/imaging.py": 4,
-    "kitchen/knowledge_seed.py": 1,
-    "kitchen/llm.py": 2,
-    "kitchen/render.py": 3,
-    "kitchen/request_check.py": 33,
-    "kitchen/spec.py": 37,
+    "kitchen/vocab.py": 4,
 }

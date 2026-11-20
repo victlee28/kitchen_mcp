@@ -14,32 +14,29 @@ from collections import Counter
 from pathlib import Path
 
 from .catalog import Catalog
-from . import appliance_models, backends, builtin, geometry, layers, prompts, vocab
+from . import appliance_models, backends, builtin, layers, prompts, vocab
 from .errors import InvalidInput
 
 SCHEMA = "kitchen-ai-image-request/1.0"
 
-_HANDLE_TEXT = {"bar": "slim bar pull handles", "knob": "round knob handles", "concealed": "recessed finger-pull handles",
-                "none": "handleless push-to-open fronts"}
-_STOREY_TEXT = {"base": "base cabinets", "upper": "wall cabinets", "loft": "top-row cabinets", "tall": "tall cabinets", "corner": "corner shelves"}
 
 
 def _hardware_text(spec, catalog: Catalog) -> str:
     """Handle description for the prompt: one sentence when every cabinet has the same handle, otherwise one clause per storey."""
     from .spec import effective_handle
+    handle_text, storey_text = prompts.table("handle-text", catalog), prompts.table("storey-text", catalog)   # catalog kind prompt-text
     per_storey: dict[str, list[str]] = {}
     for m in spec.module:
         h = effective_handle(spec.common, m)
-        text = _HANDLE_TEXT[h.variant] + (f" in {vocab.to_english(h.material, catalog)}" if h.variant != "none" and vocab.to_english(h.material, catalog) else "")
+        text = handle_text.get(h.variant, h.variant) + (f" in {vocab.to_english(h.material, catalog)}" if h.variant != "none" and vocab.to_english(h.material, catalog) else "")
         if text not in per_storey.setdefault(m.storey, []):
             per_storey[m.storey].append(text)
     distinct = {t for texts in per_storey.values() for t in texts}
     if len(distinct) <= 1:
-        return next(iter(distinct), _HANDLE_TEXT[spec.common.handle.variant])
-    return "; ".join(f"{_STOREY_TEXT[s]}: {' / '.join(texts)}" for s, texts in per_storey.items())
+        variant = str(spec.common.handle.variant)
+        return next(iter(distinct), handle_text.get(variant, variant))
+    return "; ".join(f"{storey_text.get(s, s)}: {' / '.join(texts)}" for s, texts in per_storey.items())
 IMAGE = ("beauty.png", "albedo.png", "lines.png", "depth.png", "normal.png", "seg.png", "instance.png")
-_DOOR_STYLES = {"slab": "flat slab cabinet doors without frames or panels", "shaker": "shaker-style framed cabinet doors",
-              "glass": "glass-front cabinet doors"}
 
 
 def _material(doc: dict, catalog: Catalog) -> list[dict]:
@@ -57,16 +54,16 @@ def _door_style(doc: dict) -> str:
     return c.most_common(1)[0][0]
 
 
-def _visible_appliances(rd, facts: dict) -> list[dict]:
-    """The appliances the render of one view shows (its instances.json): ``[{id, layer, bbox, pixels}]``. Without a render every appliance
-    is listed with ``visibility: "unknown"``."""
+def _visible_appliances(rd, facts: dict, min_pixels: int) -> list[dict]:
+    """The appliances the render of one view shows (its instances.json): ``[{id, layer, bbox, pixels}]``; fewer than ``min_pixels`` (catalog
+    image-rules ``minAppliancePixels``): not described. Without a render every appliance is listed with ``visibility: "unknown"``."""
     path = rd / "instances.json"
     if not path.exists():
         return [{"id": i, "visibility": "unknown"} for i in facts]
     meta = json.loads(path.read_text(encoding="utf-8"))
     out = []
     for x in meta.get("instances", []):
-        if x.get("module") in facts and int(x.get("pixels") or 0) >= MIN_APPLIANCE_PIXELS:
+        if x.get("module") in facts and int(x.get("pixels") or 0) >= min_pixels:
             out.append({"id": x["module"], "layer": x["id"], "bbox": x.get("bbox"), "pixels": x.get("pixels")})
     return out
 
@@ -82,7 +79,6 @@ def _appliance_text(seen: list[dict], facts: dict) -> str:
     return (" Appliances: " + " ".join(lines)) if lines else ""
 
 
-MIN_APPLIANCE_PIXELS = int(builtin.CATALOG.data("image-rules", "default")["minAppliancePixels"])   # fewer pixels: the appliance is not described (image-rules)
 
 
 def build(svc, did: str, rev: int | None = None, views: list[str] | None = None, country: str | None = None,
@@ -91,7 +87,7 @@ def build(svc, did: str, rev: int | None = None, views: list[str] | None = None,
     import base64
     spec, r = svc.store.get(did, rev)
     doc = svc.threejs(did, r, country)
-    all_views = geometry.views_of(spec)
+    all_views = svc.images.views(did, r)          # with the catalog the revision is built with
     chosen = views or list(all_views)
     bad = [v for v in chosen if v not in all_views]
     if bad:
@@ -102,7 +98,7 @@ def build(svc, did: str, rev: int | None = None, views: list[str] | None = None,
 
     style = _door_style(doc)
     tn = spec.common.handle
-    part = (f"Door style: {_DOOR_STYLES.get(style, style)}. Hardware: {_hardware_text(spec, catalog)}. "
+    part = (f"Door style: {prompts.table('door-style-text', catalog).get(style, style)}. Hardware: {_hardware_text(spec, catalog)}. "
                 + ("Classic crown and base moldings as drawn. " if spec.moldings else "No crown molding. "))
     common = prompts.global_prompt(spec, catalog)
     negative = prompts.negative_prompt(["changed door style", "extra cabinets", "missing cabinets", "different layout"], catalog)
@@ -137,7 +133,7 @@ def build(svc, did: str, rev: int | None = None, views: list[str] | None = None,
                     files[f.removesuffix(".png")] = f"../{v}/{f}"
         man = json.loads((rd / "manifest.json").read_text(encoding="utf-8")) if (rd / "manifest.json").exists() else {}
         camera = next((c for c in doc["cameras"] if c["id"] == f"CAM-{v}"), None)
-        seen = _visible_appliances(rd, facts)
+        seen = _visible_appliances(rd, facts, int(catalog.data("image-rules", "default")["minAppliancePixels"]))
         # each view's prompt tells of what its picture shows (its instances.json), the package's commonPrompt of the whole design
         in_view = prompts.seen_in(json.loads((rd / "instances.json").read_text(encoding="utf-8")),
                                   camera=json.loads((rd / "camera.json").read_text(encoding="utf-8")) if (rd / "camera.json").exists() else None) \
@@ -194,9 +190,9 @@ def build(svc, did: str, rev: int | None = None, views: list[str] | None = None,
                                "geminiApi": f"gemini/{x['id']}.json"})
         lean = {"schema": "kitchen-ai-image-request-lite/1.0", "designId": did, "revision": r, "createdAt": req["createdAt"],
                 "lighting": lighting,
-                "usage": ("Gemini API: gửi nguyên gemini/<góc>.json (ảnh trong inline_data được Gemini tự giải mã). "
-                             "Gemini web / chat: đính kèm ảnh 'anhDinhKem' của góc cần tạo rồi dán 'chiDan' — không dán chuỗi base64 "
-                             "vào khung chat (AI đọc như chữ, không thấy ảnh)."),
+                "usage": ("Gemini API: send gemini/<view>.json as is (Gemini decodes the images in inline_data itself). "
+                             "Gemini web / chat: attach the view's 'anhDinhKem' image, then paste 'chiDan'; do not paste base64 strings "
+                             "into the chat (the AI reads them as text and sees no image)."),
                 "notAllowed": negative, "views": lean_views}
         p = out_dir / "ai-request-short.json"
         p.write_text(json.dumps(lean, ensure_ascii=False, indent=1), encoding="utf-8")

@@ -1,0 +1,77 @@
+{
+ "function": "threejs_export.material_look",
+ "cases": [
+  {
+   "name": "names",
+   "input": {
+    "texts": [
+     "Gỗ sồi",
+     "Đá granite tối",
+     "Acrylic trắng bóng",
+     "Inox",
+     "Sơn xanh rêu mờ",
+     "Kính",
+     "???"
+    ]
+   },
+   "expected": {
+    "looks": {
+     "Gỗ sồi": {
+      "color": "#c49a6c",
+      "roughness": 0.6
+     },
+     "Đá granite tối": {
+      "color": "#3a3a3c",
+      "roughness": 0.3
+     },
+     "Acrylic trắng bóng": {
+      "color": "#e9e7e2",
+      "roughness": 0.08,
+      "clearcoat": 0.8,
+      "threeMaterialType": "MeshPhysicalMaterial"
+     },
+     "Inox": {
+      "color": "#b9bdc2",
+      "roughness": 0.35,
+      "metalness": 0.9
+     },
+     "Sơn xanh rêu mờ": {
+      "color": "#7d8a5f",
+      "roughness": 0.6
+     },
+     "Kính": {
+      "threeMaterialType": "MeshPhysicalMaterial",
+      "color": "#dfe9ec",
+      "roughness": 0.05,
+      "metalness": 0,
+      "transmission": 0.9,
+      "ior": 1.5,
+      "opacity": 0.35,
+      "transparent": true,
+      "side": "DoubleSide"
+     },
+     "???": {
+      "color": "#d9c3a0",
+      "roughness": 0.6
+     }
+    }
+   }
+  },
+  {
+   "name": "empty name",
+   "input": {
+    "texts": [
+     ""
+    ]
+   },
+   "expected": {
+    "looks": {
+     "": {
+      "color": "#d9c3a0",
+      "roughness": 0.6
+     }
+    }
+   }
+  }
+ ]
+}

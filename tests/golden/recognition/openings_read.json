@@ -1,0 +1,1219 @@
+{
+ "function": "recognition.openings.read",
+ "cases": [
+  {
+   "name": "runs with a window and a door",
+   "input": {
+    "doc": {
+     "schema": "recognized-runs/1",
+     "unit": "mm",
+     "layout": "l-shape",
+     "runs": [
+      {
+       "id": "left",
+       "length": 2130,
+       "end": "open",
+       "modules": [
+        {
+         "id": "TD5",
+         "type": "base-sink",
+         "sourceType": "base-sink",
+         "name": "Tủ chậu rửa 2 cánh",
+         "storey": "base",
+         "s": 160,
+         "width": 590,
+         "y": 0,
+         "height": 840,
+         "depth": 600,
+         "confidence": 0.7,
+         "doors": [
+          295,
+          295
+         ],
+         "appliances": [
+          {
+           "type": "sink",
+           "name": "Chậu rửa",
+           "note": "single bowl, top-mounted"
+          }
+         ],
+         "note": "sink above; oak end post at the open end"
+        },
+        {
+         "id": "TD4",
+         "type": "base",
+         "sourceType": "base",
+         "name": "Tủ dưới 2 cánh",
+         "storey": "base",
+         "s": 750,
+         "width": 480,
+         "y": 0,
+         "height": 840,
+         "depth": 600,
+         "confidence": 0.7,
+         "doors": [
+          230,
+          250
+         ]
+        },
+        {
+         "id": "TD3",
+         "type": "base",
+         "sourceType": "base",
+         "name": "Tủ dưới 1 cánh",
+         "storey": "base",
+         "s": 1230,
+         "width": 280,
+         "y": 0,
+         "height": 840,
+         "depth": 600,
+         "confidence": 0.7,
+         "doors": [
+          280
+         ]
+        },
+        {
+         "id": "TT6",
+         "type": "upper",
+         "sourceType": "upper",
+         "name": "Tủ trên 1 cánh",
+         "storey": "upper",
+         "s": 30,
+         "width": 520,
+         "y": 1400,
+         "height": 700,
+         "depth": 350,
+         "confidence": 0.7,
+         "doors": [
+          520
+         ],
+         "note": "oak end panel"
+        },
+        {
+         "id": "TT5",
+         "type": "upper",
+         "sourceType": "upper-lift-up",
+         "name": "Tủ trên cánh nâng",
+         "storey": "upper",
+         "s": 550,
+         "width": 680,
+         "y": 1400,
+         "height": 700,
+         "depth": 350,
+         "confidence": 0.7,
+         "note": "glass lift-up flap (dish rack) above an open oak niche · upper-lift-up"
+        },
+        {
+         "id": "TT4",
+         "type": "upper",
+         "sourceType": "upper",
+         "name": "Tủ trên 2 cánh",
+         "storey": "upper",
+         "s": 1230,
+         "width": 500,
+         "y": 1400,
+         "height": 700,
+         "depth": 350,
+         "confidence": 0.7,
+         "doors": [
+          260,
+          240
+         ]
+        },
+        {
+         "id": "TN5",
+         "type": "upper-loft",
+         "sourceType": "upper-top",
+         "name": "upper-top 1 cánh",
+         "storey": "upper-top",
+         "s": 0,
+         "width": 540,
+         "y": 2100,
+         "height": 330,
+         "depth": 350,
+         "confidence": 0.7,
+         "doors": [
+          540
+         ],
+         "note": "upper-top"
+        },
+        {
+         "id": "TN4",
+         "type": "upper-loft",
+         "sourceType": "upper-top",
+         "name": "upper-top 1 cánh",
+         "storey": "upper-top",
+         "s": 540,
+         "width": 690,
+         "y": 2100,
+         "height": 330,
+         "depth": 350,
+         "confidence": 0.7,
+         "doors": [
+          690
+         ],
+         "note": "upper-top"
+        },
+        {
+         "id": "TN3",
+         "type": "upper-loft",
+         "sourceType": "upper-top",
+         "name": "upper-top 1 cánh",
+         "storey": "upper-top",
+         "s": 1230,
+         "width": 480,
+         "y": 2100,
+         "height": 330,
+         "depth": 350,
+         "confidence": 0.7,
+         "doors": [
+          480
+         ],
+         "note": "upper-top"
+        }
+       ],
+       "openings": [
+        {
+         "id": "CS2",
+         "kind": "door",
+         "axes": [
+          {
+           "s": 1000,
+           "confidence": 0.9
+          },
+          {
+           "s": 1900,
+           "confidence": 0.3
+          }
+         ],
+         "sill": 0,
+         "head": 2100,
+         "edgesSeen": "hole",
+         "style": "swing",
+         "leaves": 1,
+         "confidence": 0.9
+        }
+       ]
+      },
+      {
+       "id": "back",
+       "length": 1970,
+       "end": "open",
+       "modules": [
+        {
+         "id": "TD1",
+         "type": "base",
+         "sourceType": "base-corner",
+         "name": "Tủ dưới góc 2 cánh",
+         "storey": "base",
+         "s": 0,
+         "width": 1340,
+         "y": 0,
+         "height": 840,
+         "depth": 600,
+         "confidence": 0.7,
+         "doors": [
+          430,
+          340
+         ],
+         "blindCorner": 570,
+         "note": "blind corner behind the left run, 2 oak doors visible · base-corner"
+        },
+        {
+         "id": "TD2",
+         "type": "base-drawers",
+         "sourceType": "base-drawer",
+         "name": "Tủ ngăn kéo 3 ngăn kéo",
+         "storey": "base",
+         "s": 1340,
+         "width": 630,
+         "y": 0,
+         "height": 840,
+         "depth": 600,
+         "confidence": 0.7,
+         "frontSections": [
+          {
+           "type": "drawer",
+           "height": 260
+          },
+          {
+           "type": "drawer",
+           "height": 260
+          },
+          {
+           "type": "drawer",
+           "height": 270
+          }
+         ],
+         "note": "3 oak drawers, ends with an oak end post; worktop continues over a white wall return · base-drawer"
+        },
+        {
+         "id": "TT1",
+         "type": "upper",
+         "sourceType": "upper-corner",
+         "name": "Tủ trên góc 1 cánh",
+         "storey": "upper",
+         "s": 0,
+         "width": 630,
+         "y": 1400,
+         "height": 700,
+         "depth": 350,
+         "confidence": 0.6,
+         "doors": [
+          350
+         ],
+         "blindCorner": 280,
+         "note": "corner cabinet, mostly hidden · upper-corner"
+        },
+        {
+         "id": "TT2",
+         "type": "upper",
+         "sourceType": "upper",
+         "name": "Tủ trên 2 cánh",
+         "storey": "upper",
+         "s": 630,
+         "width": 710,
+         "y": 1400,
+         "height": 700,
+         "depth": 350,
+         "confidence": 0.7,
+         "doors": [
+          355,
+          355
+         ],
+         "note": "open oak niche at the bottom of the cabinet"
+        },
+        {
+         "id": "TT3",
+         "type": "upper",
+         "sourceType": "upper-lift-up",
+         "name": "Tủ trên cánh nâng",
+         "storey": "upper",
+         "s": 1340,
+         "width": 630,
+         "y": 1400,
+         "height": 700,
+         "depth": 350,
+         "confidence": 0.7,
+         "note": "two stacked white lift-up flaps with an oak strip, oak end panel · upper-lift-up"
+        },
+        {
+         "id": "TN1",
+         "type": "upper-loft",
+         "sourceType": "upper-top",
+         "name": "upper-top 1 cánh",
+         "storey": "upper-top",
+         "s": 250,
+         "width": 860,
+         "y": 2100,
+         "height": 330,
+         "depth": 350,
+         "confidence": 0.6,
+         "doors": [
+          860
+         ],
+         "note": "upper-top"
+        },
+        {
+         "id": "TN2",
+         "type": "upper-loft",
+         "sourceType": "upper-top",
+         "name": "upper-top 1 cánh",
+         "storey": "upper-top",
+         "s": 1110,
+         "width": 860,
+         "y": 2100,
+         "height": 330,
+         "depth": 350,
+         "confidence": 0.7,
+         "doors": [
+          860
+         ],
+         "note": "upper-top"
+        }
+       ],
+       "openings": [
+        {
+         "id": "CS1",
+         "kind": "window",
+         "axes": [
+          {
+           "s": 300,
+           "confidence": 0.9
+          },
+          {
+           "s": 750,
+           "confidence": 0.9
+          },
+          {
+           "s": 1200,
+           "confidence": 0.9
+          }
+         ],
+         "sill": 1000,
+         "head": 2100,
+         "edgesSeen": "hole",
+         "style": "swing",
+         "leaves": 2,
+         "confidence": 0.9
+        }
+       ]
+      }
+     ],
+     "joints": [
+      {
+       "a": "left",
+       "b": "back",
+       "angle": 90
+      }
+     ],
+     "common": {
+      "plinthHeight": 50,
+      "baseTop": 840,
+      "countertop": 870,
+      "countertopThickness": 30,
+      "baseDepth": 600,
+      "upperBottom": 1400,
+      "upperTierSplit": 2100,
+      "cabinetTop": 2430,
+      "upperDepth": 350,
+      "material": {
+       "base": "white high-gloss acrylic (wall cabinets), light oak laminate (base)",
+       "upper": "white high-gloss acrylic (wall cabinets), light oak laminate (base)",
+       "tall": "white high-gloss acrylic (wall cabinets), light oak laminate (base)",
+       "countertop": "black granite",
+       "wallTile": "white glossy wall tiles",
+       "carcass": "light oak end panels and horizontal strips"
+      }
+     },
+     "issues": [
+      {
+       "code": "type-approximated",
+       "message": "upper-lift-up -> upper",
+       "module": "TT3"
+      },
+      {
+       "code": "type-approximated",
+       "message": "upper-lift-up -> upper",
+       "module": "TT5"
+      }
+     ]
+    }
+   },
+   "expected": {
+    "found": [
+     {
+      "run": "left",
+      "kind": "door",
+      "axes": [
+       [
+        1000.0,
+        0.9
+       ],
+       [
+        1900.0,
+        0.3
+       ]
+      ],
+      "sill": 0.0,
+      "head": 2100.0,
+      "h_axes": [],
+      "edges_seen": "hole",
+      "style": "swing",
+      "leaves": 1,
+      "confidence": 0.9,
+      "note": "",
+      "transom_panes": null,
+      "panels": null
+     },
+     {
+      "run": "back",
+      "kind": "window",
+      "axes": [
+       [
+        300.0,
+        0.9
+       ],
+       [
+        750.0,
+        0.9
+       ],
+       [
+        1200.0,
+        0.9
+       ]
+      ],
+      "sill": 1000.0,
+      "head": 2100.0,
+      "h_axes": [],
+      "edges_seen": "hole",
+      "style": "swing",
+      "leaves": 2,
+      "confidence": 0.9,
+      "note": "",
+      "transom_panes": null,
+      "panels": null
+     }
+    ],
+    "rejected": [],
+    "photo": [],
+    "photoRejected": [],
+    "flat": null
+   }
+  },
+  {
+   "name": "bad ones rejected",
+   "input": {
+    "doc": {
+     "schema": "recognized-runs/1",
+     "unit": "mm",
+     "layout": "l-shape",
+     "runs": [
+      {
+       "id": "left",
+       "length": 2130,
+       "end": "open",
+       "modules": [
+        {
+         "id": "TD5",
+         "type": "base-sink",
+         "sourceType": "base-sink",
+         "name": "Tủ chậu rửa 2 cánh",
+         "storey": "base",
+         "s": 160,
+         "width": 590,
+         "y": 0,
+         "height": 840,
+         "depth": 600,
+         "confidence": 0.7,
+         "doors": [
+          295,
+          295
+         ],
+         "appliances": [
+          {
+           "type": "sink",
+           "name": "Chậu rửa",
+           "note": "single bowl, top-mounted"
+          }
+         ],
+         "note": "sink above; oak end post at the open end"
+        },
+        {
+         "id": "TD4",
+         "type": "base",
+         "sourceType": "base",
+         "name": "Tủ dưới 2 cánh",
+         "storey": "base",
+         "s": 750,
+         "width": 480,
+         "y": 0,
+         "height": 840,
+         "depth": 600,
+         "confidence": 0.7,
+         "doors": [
+          230,
+          250
+         ]
+        },
+        {
+         "id": "TD3",
+         "type": "base",
+         "sourceType": "base",
+         "name": "Tủ dưới 1 cánh",
+         "storey": "base",
+         "s": 1230,
+         "width": 280,
+         "y": 0,
+         "height": 840,
+         "depth": 600,
+         "confidence": 0.7,
+         "doors": [
+          280
+         ]
+        },
+        {
+         "id": "TT6",
+         "type": "upper",
+         "sourceType": "upper",
+         "name": "Tủ trên 1 cánh",
+         "storey": "upper",
+         "s": 30,
+         "width": 520,
+         "y": 1400,
+         "height": 700,
+         "depth": 350,
+         "confidence": 0.7,
+         "doors": [
+          520
+         ],
+         "note": "oak end panel"
+        },
+        {
+         "id": "TT5",
+         "type": "upper",
+         "sourceType": "upper-lift-up",
+         "name": "Tủ trên cánh nâng",
+         "storey": "upper",
+         "s": 550,
+         "width": 680,
+         "y": 1400,
+         "height": 700,
+         "depth": 350,
+         "confidence": 0.7,
+         "note": "glass lift-up flap (dish rack) above an open oak niche · upper-lift-up"
+        },
+        {
+         "id": "TT4",
+         "type": "upper",
+         "sourceType": "upper",
+         "name": "Tủ trên 2 cánh",
+         "storey": "upper",
+         "s": 1230,
+         "width": 500,
+         "y": 1400,
+         "height": 700,
+         "depth": 350,
+         "confidence": 0.7,
+         "doors": [
+          260,
+          240
+         ]
+        },
+        {
+         "id": "TN5",
+         "type": "upper-loft",
+         "sourceType": "upper-top",
+         "name": "upper-top 1 cánh",
+         "storey": "upper-top",
+         "s": 0,
+         "width": 540,
+         "y": 2100,
+         "height": 330,
+         "depth": 350,
+         "confidence": 0.7,
+         "doors": [
+          540
+         ],
+         "note": "upper-top"
+        },
+        {
+         "id": "TN4",
+         "type": "upper-loft",
+         "sourceType": "upper-top",
+         "name": "upper-top 1 cánh",
+         "storey": "upper-top",
+         "s": 540,
+         "width": 690,
+         "y": 2100,
+         "height": 330,
+         "depth": 350,
+         "confidence": 0.7,
+         "doors": [
+          690
+         ],
+         "note": "upper-top"
+        },
+        {
+         "id": "TN3",
+         "type": "upper-loft",
+         "sourceType": "upper-top",
+         "name": "upper-top 1 cánh",
+         "storey": "upper-top",
+         "s": 1230,
+         "width": 480,
+         "y": 2100,
+         "height": 330,
+         "depth": 350,
+         "confidence": 0.7,
+         "doors": [
+          480
+         ],
+         "note": "upper-top"
+        }
+       ],
+       "openings": [
+        {
+         "id": "CS2",
+         "kind": "door",
+         "axes": [
+          {
+           "s": 1000,
+           "confidence": 0.9
+          },
+          {
+           "s": 1900,
+           "confidence": 0.3
+          }
+         ],
+         "sill": 0,
+         "head": 2100,
+         "edgesSeen": "hole",
+         "style": "swing",
+         "leaves": 1,
+         "confidence": 0.9
+        }
+       ]
+      },
+      {
+       "id": "back",
+       "length": 1970,
+       "end": "open",
+       "modules": [
+        {
+         "id": "TD1",
+         "type": "base",
+         "sourceType": "base-corner",
+         "name": "Tủ dưới góc 2 cánh",
+         "storey": "base",
+         "s": 0,
+         "width": 1340,
+         "y": 0,
+         "height": 840,
+         "depth": 600,
+         "confidence": 0.7,
+         "doors": [
+          430,
+          340
+         ],
+         "blindCorner": 570,
+         "note": "blind corner behind the left run, 2 oak doors visible · base-corner"
+        },
+        {
+         "id": "TD2",
+         "type": "base-drawers",
+         "sourceType": "base-drawer",
+         "name": "Tủ ngăn kéo 3 ngăn kéo",
+         "storey": "base",
+         "s": 1340,
+         "width": 630,
+         "y": 0,
+         "height": 840,
+         "depth": 600,
+         "confidence": 0.7,
+         "frontSections": [
+          {
+           "type": "drawer",
+           "height": 260
+          },
+          {
+           "type": "drawer",
+           "height": 260
+          },
+          {
+           "type": "drawer",
+           "height": 270
+          }
+         ],
+         "note": "3 oak drawers, ends with an oak end post; worktop continues over a white wall return · base-drawer"
+        },
+        {
+         "id": "TT1",
+         "type": "upper",
+         "sourceType": "upper-corner",
+         "name": "Tủ trên góc 1 cánh",
+         "storey": "upper",
+         "s": 0,
+         "width": 630,
+         "y": 1400,
+         "height": 700,
+         "depth": 350,
+         "confidence": 0.6,
+         "doors": [
+          350
+         ],
+         "blindCorner": 280,
+         "note": "corner cabinet, mostly hidden · upper-corner"
+        },
+        {
+         "id": "TT2",
+         "type": "upper",
+         "sourceType": "upper",
+         "name": "Tủ trên 2 cánh",
+         "storey": "upper",
+         "s": 630,
+         "width": 710,
+         "y": 1400,
+         "height": 700,
+         "depth": 350,
+         "confidence": 0.7,
+         "doors": [
+          355,
+          355
+         ],
+         "note": "open oak niche at the bottom of the cabinet"
+        },
+        {
+         "id": "TT3",
+         "type": "upper",
+         "sourceType": "upper-lift-up",
+         "name": "Tủ trên cánh nâng",
+         "storey": "upper",
+         "s": 1340,
+         "width": 630,
+         "y": 1400,
+         "height": 700,
+         "depth": 350,
+         "confidence": 0.7,
+         "note": "two stacked white lift-up flaps with an oak strip, oak end panel · upper-lift-up"
+        },
+        {
+         "id": "TN1",
+         "type": "upper-loft",
+         "sourceType": "upper-top",
+         "name": "upper-top 1 cánh",
+         "storey": "upper-top",
+         "s": 250,
+         "width": 860,
+         "y": 2100,
+         "height": 330,
+         "depth": 350,
+         "confidence": 0.6,
+         "doors": [
+          860
+         ],
+         "note": "upper-top"
+        },
+        {
+         "id": "TN2",
+         "type": "upper-loft",
+         "sourceType": "upper-top",
+         "name": "upper-top 1 cánh",
+         "storey": "upper-top",
+         "s": 1110,
+         "width": 860,
+         "y": 2100,
+         "height": 330,
+         "depth": 350,
+         "confidence": 0.7,
+         "doors": [
+          860
+         ],
+         "note": "upper-top"
+        }
+       ],
+       "openings": [
+        {
+         "id": "CS1",
+         "kind": "hatch",
+         "axes": [
+          {
+           "s": 300,
+           "confidence": 0.9
+          },
+          {
+           "s": 750,
+           "confidence": 0.9
+          },
+          {
+           "s": 1200,
+           "confidence": 0.9
+          }
+         ],
+         "sill": 1000,
+         "head": 2100,
+         "edgesSeen": "hole",
+         "style": "swing",
+         "leaves": 2,
+         "confidence": 0.9
+        },
+        {
+         "id": "CS1",
+         "kind": "window",
+         "axes": [
+          {
+           "s": 300
+          }
+         ],
+         "sill": 1000,
+         "head": 2100,
+         "edgesSeen": "hole",
+         "style": "swing",
+         "leaves": 2,
+         "confidence": 0.9
+        }
+       ]
+      }
+     ],
+     "joints": [
+      {
+       "a": "left",
+       "b": "back",
+       "angle": 90
+      }
+     ],
+     "common": {
+      "plinthHeight": 50,
+      "baseTop": 840,
+      "countertop": 870,
+      "countertopThickness": 30,
+      "baseDepth": 600,
+      "upperBottom": 1400,
+      "upperTierSplit": 2100,
+      "cabinetTop": 2430,
+      "upperDepth": 350,
+      "material": {
+       "base": "white high-gloss acrylic (wall cabinets), light oak laminate (base)",
+       "upper": "white high-gloss acrylic (wall cabinets), light oak laminate (base)",
+       "tall": "white high-gloss acrylic (wall cabinets), light oak laminate (base)",
+       "countertop": "black granite",
+       "wallTile": "white glossy wall tiles",
+       "carcass": "light oak end panels and horizontal strips"
+      }
+     },
+     "issues": [
+      {
+       "code": "type-approximated",
+       "message": "upper-lift-up -> upper",
+       "module": "TT3"
+      },
+      {
+       "code": "type-approximated",
+       "message": "upper-lift-up -> upper",
+       "module": "TT5"
+      }
+     ]
+    }
+   },
+   "expected": {
+    "found": [
+     {
+      "run": "left",
+      "kind": "door",
+      "axes": [
+       [
+        1000.0,
+        0.9
+       ],
+       [
+        1900.0,
+        0.3
+       ]
+      ],
+      "sill": 0.0,
+      "head": 2100.0,
+      "h_axes": [],
+      "edges_seen": "hole",
+      "style": "swing",
+      "leaves": 1,
+      "confidence": 0.9,
+      "note": "",
+      "transom_panes": null,
+      "panels": null
+     }
+    ],
+    "rejected": [
+     {
+      "run": "back",
+      "index": 0,
+      "reason": "kind must be one of door, window, passage"
+     },
+     {
+      "run": "back",
+      "index": 1,
+      "reason": "an opening needs both of its edges"
+     }
+    ],
+    "photo": [],
+    "photoRejected": [],
+    "flat": null
+   }
+  },
+  {
+   "name": "a picture's openings checked",
+   "input": {
+    "doc": {
+     "photoOpenings": [
+      {
+       "kind": "door",
+       "style": "swing",
+       "leaves": 2,
+       "edgesSeen": "hole",
+       "aspect": 1.625,
+       "axesRatio": [
+        0.503
+       ],
+       "hAxesRatio": [
+        0.818
+       ],
+       "confidence": 0.85
+      },
+      {
+       "kind": "door",
+       "style": "swing",
+       "leaves": 2,
+       "edgesSeen": "hole",
+       "aspect": 0,
+       "axesRatio": [
+        0.503
+       ],
+       "hAxesRatio": [
+        0.818
+       ],
+       "confidence": 0.85
+      },
+      {
+       "kind": "door",
+       "style": "swing",
+       "leaves": 2,
+       "edgesSeen": "hole",
+       "aspect": 1.625,
+       "axesRatio": [
+        1.2
+       ],
+       "hAxesRatio": [
+        0.818
+       ],
+       "confidence": 0.85
+      },
+      {
+       "kind": "x"
+      },
+      {
+       "kind": "door",
+       "style": "sliding",
+       "leaves": 4,
+       "edgesSeen": "hole",
+       "aspect": 1.4,
+       "axesRatio": [
+        0.25,
+        0.5,
+        0.75
+       ],
+       "hAxesRatio": [
+        0.86
+       ],
+       "transomPanes": 3,
+       "confidence": 0.9,
+       "panels": [
+        {
+         "row": 0,
+         "operation": "sliding"
+        },
+        {
+         "row": 0,
+         "operation": "sliding",
+         "handle": true
+        },
+        {
+         "row": 0,
+         "operation": "sliding",
+         "handle": true
+        },
+        {
+         "row": 0,
+         "operation": "sliding"
+        },
+        {
+         "row": 1,
+         "operation": "fixed"
+        },
+        {
+         "row": 1,
+         "operation": "fixed"
+        },
+        {
+         "row": 1,
+         "operation": "fixed"
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "expected": {
+    "found": [],
+    "rejected": [],
+    "photo": [
+     {
+      "kind": "door",
+      "style": "swing",
+      "leaves": 2,
+      "edges_seen": "hole",
+      "aspect": 1.625,
+      "axes_ratio": [
+       0.503
+      ],
+      "h_axes_ratio": [
+       0.818
+      ],
+      "confidence": 0.85,
+      "note": "",
+      "transom_panes": null,
+      "panels": null
+     },
+     {
+      "kind": "door",
+      "style": "sliding",
+      "leaves": 4,
+      "edges_seen": "hole",
+      "aspect": 1.4,
+      "axes_ratio": [
+       0.25,
+       0.5,
+       0.75
+      ],
+      "h_axes_ratio": [
+       0.86
+      ],
+      "confidence": 0.9,
+      "note": "",
+      "transom_panes": 3,
+      "panels": [
+       {
+        "row": 0,
+        "operation": "sliding",
+        "handle": false,
+        "front": false
+       },
+       {
+        "row": 0,
+        "operation": "sliding",
+        "handle": true,
+        "front": false
+       },
+       {
+        "row": 0,
+        "operation": "sliding",
+        "handle": true,
+        "front": false
+       },
+       {
+        "row": 0,
+        "operation": "sliding",
+        "handle": false,
+        "front": false
+       },
+       {
+        "row": 1,
+        "operation": "fixed",
+        "handle": false,
+        "front": false
+       },
+       {
+        "row": 1,
+        "operation": "fixed",
+        "handle": false,
+        "front": false
+       },
+       {
+        "row": 1,
+        "operation": "fixed",
+        "handle": false,
+        "front": false
+       }
+      ]
+     }
+    ],
+    "photoRejected": [
+     {
+      "run": "photo",
+      "index": 1,
+      "reason": "aspect (height / width) must be 0.1-10"
+     },
+     {
+      "run": "photo",
+      "index": 2,
+      "reason": "axesRatio and hAxesRatio must be fractions between 0 and 1"
+     },
+     {
+      "run": "photo",
+      "index": 3,
+      "reason": "kind must be one of door, window, passage"
+     }
+    ],
+    "flat": null
+   }
+  },
+  {
+   "name": "a flat draft mirrored like its cabinets",
+   "input": {
+    "doc": null,
+    "flat": [
+     {
+      "wall": "back",
+      "kind": "door",
+      "axes": [
+       {
+        "fromCorner": 100
+       },
+       {
+        "fromCorner": 1000
+       }
+      ]
+     },
+     {
+      "wall": "left",
+      "kind": "window",
+      "axes": [
+       {
+        "fromCorner": 200,
+        "confidence": 0.5
+       },
+       {
+        "fromCorner": 1400
+       }
+      ],
+      "sill": 900
+     }
+    ],
+    "lengths": {
+     "back": 3000,
+     "left": 2400
+    }
+   },
+   "expected": {
+    "found": [],
+    "rejected": [],
+    "photo": [],
+    "photoRejected": [],
+    "flat": {
+     "back": [
+      {
+       "kind": "door",
+       "axes": [
+        {
+         "s": 2900.0,
+         "confidence": null
+        },
+        {
+         "s": 2000.0,
+         "confidence": null
+        }
+       ]
+      }
+     ],
+     "left": [
+      {
+       "kind": "window",
+       "sill": 900,
+       "axes": [
+        {
+         "s": 2200.0,
+         "confidence": 0.5
+        },
+        {
+         "s": 1000.0,
+         "confidence": null
+        }
+       ]
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "nothing",
+   "input": {
+    "doc": null
+   },
+   "expected": {
+    "found": [],
+    "rejected": [],
+    "photo": [],
+    "photoRejected": [],
+    "flat": null
+   }
+  }
+ ]
+}

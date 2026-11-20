@@ -1,0 +1,71 @@
+{
+ "function": "menu_commands.followed",
+ "cases": [
+  {
+   "name": "a question is replied",
+   "input": {
+    "record": {
+     "id": "20261119-101500-ab12",
+     "designId": "d1",
+     "text": "đổi màu tủ dưới",
+     "place": {
+      "kind": "module",
+      "id": "TD1"
+     },
+     "baseRev": 3,
+     "lang": "vi",
+     "createdAt": "2026-11-19T10:15:00Z",
+     "status": "question"
+    },
+    "followId": "f1"
+   },
+   "expected": {
+    "id": "20261119-101500-ab12",
+    "designId": "d1",
+    "text": "đổi màu tủ dưới",
+    "place": {
+     "kind": "module",
+     "id": "TD1"
+    },
+    "baseRev": 3,
+    "lang": "vi",
+    "createdAt": "2026-11-19T10:15:00Z",
+    "status": "replied",
+    "followUp": "f1"
+   }
+  },
+  {
+   "name": "a done one keeps its status",
+   "input": {
+    "record": {
+     "id": "20261119-101500-ab12",
+     "designId": "d1",
+     "text": "đổi màu tủ dưới",
+     "place": {
+      "kind": "module",
+      "id": "TD1"
+     },
+     "baseRev": 3,
+     "lang": "vi",
+     "createdAt": "2026-11-19T10:15:00Z",
+     "status": "done"
+    },
+    "followId": "f1"
+   },
+   "expected": {
+    "id": "20261119-101500-ab12",
+    "designId": "d1",
+    "text": "đổi màu tủ dưới",
+    "place": {
+     "kind": "module",
+     "id": "TD1"
+    },
+    "baseRev": 3,
+    "lang": "vi",
+    "createdAt": "2026-11-19T10:15:00Z",
+    "status": "done",
+    "followUp": "f1"
+   }
+  }
+ ]
+}

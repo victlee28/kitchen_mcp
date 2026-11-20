@@ -2,7 +2,6 @@ import { tx } from './i18n.js';
 // Pure helpers for multi-selection in the "image editing by layers" tab. No DOM: used by imgedit.js and tested with node.
 // A selection is an ordered list of part IDs. Catalogue entries come from GET /api/designs/<id>/layers (variant: part | group).
 
-export const TIER_OF = { base: 'base', upper: 'upper', loft: 'upper', tall: 'tall', corner: 'corner' };  // loft shares the upper tier
 const FRONT = ['door', 'glass-door', 'drawer'];
 const ROLE_VI = { handle: tx('ui.tay-nam'), door: tx('ui.canh-tu'), 'glass-door': tx('ui.canh-kinh-2'), drawer: tx('ui.mat-ngan-keo'), carcass: tx('ui.than-tu'),
   'side-panel': tx('ui.tam-hong'), shelf: tx('ui.ke'), plinth: tx('ui.len-chan'), countertop: tx('ui.mat-da'), molding: tx('ui.phao'), 'wall-face': tx('ui.surface.one') };
@@ -13,7 +12,7 @@ export const partIndex = (layers) => new Map(layers.filter((l) => l.variant === 
 /** Group a Shift+click selects for a clicked part: the same role within the same tier, within the part's cabinet system when the design
  *  has several (the catalogue then has sys:<system>:tier:… groups). `layers`: the catalogue; null when no such group exists. */
 export function shiftGroupId(part, layers = []) {
-  const tier = TIER_OF[part.storey];
+  const tier = part.tier;            // the server gives each part's tier (kitchen/spec.py TIER_OF_STOREY: a loft shares the upper tier)
   if (!tier) return layers.some((l) => l.id === `type:${part.type}`) || !layers.length ? `type:${part.type}` : null;
   const role = part.type === 'handle' ? 'handle' : FRONT.includes(part.type) ? 'front' : 'all';      // a door or a drawer front picks both
   const roles = { front: ['front', 'door', 'drawer', 'all'], handle: ['handle'], all: ['all', 'front', 'door', 'drawer'] }[role];
